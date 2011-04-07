@@ -13,8 +13,8 @@ CPU_FREQ_DEFINE := -DF_CPU=16000000
 ##### Project to be built, and constituent object files and libraries #####
 
 # This is the paragraph that determines which files are being built into what.
-PROJNAME := simple_blink
-OBJS := simple_blink.o
+PROJNAME := uart_test
+OBJS := stdiodemo.o uart.o
 HEADERS := $(wildcard *.h)
 
 # Example of what to set for a hypothetical different project with two source
@@ -27,14 +27,6 @@ HEADERS := $(wildcard *.h)
 # files PC_Comm.o and Demonstrator.o.
 #PROJNAME := pc_comm
 #OBJS := PC_Comm.o Demonstrator.o
-
-# The library intended for use with arduino and wires and such.
-LIBARDUINO_DIR := libarduino
-LIBARDUINO_ARCHIVE := $(LIBARDUINO_DIR)/libarduino.a
-
-# My own library of custom Mega 328P code.
-LIBATMELMEGA328P_DIR := libatmelmega328p
-LIBATMELMEGA328P_ARCHIVE := $(LIBATMELMEGA328P_DIR)/libatmelmega328p.a
 
 ##### Programs used for building and uploading #####
 
@@ -51,13 +43,7 @@ AVRDUDE = avrdude
 ##### Computed files and directories #####
 
 CFILES := $(patsubst %.o,%.c,$(OBJS))
-LDLIBS := $(LIBARDUINO_ARCHIVE) $(LIBATMELMEGA328P_ARCHIVE)
-
-LIBARDUINO_SRC := $(wildcard $(LIBARDUINO_DIR)/*.c)
-LIBARDUINO_OBJS := $(LIBARDUINO_SRC:.c=.o)
-
-LIBATMELMEGA328P_SRC := $(wildcard $(LIBATMELMEGA328P_DIR)/*.c)
-LIBATMELMEGA328P_OBJS := $(LIBATMELMEGA328P_SRC:.c=.o)
+LDLIBS :=
 
 # Magical files that one doesn't see in non-uc gcc development.
 TRG = $(PROJNAME).out
@@ -79,9 +65,9 @@ HEXFORMAT := ihex
 OPTLEVEL := s
 
 CPPFLAGS +=
-INC := -I$(LIBARDUINO_DIR) -I$(LIBATMELMEGA328P_DIR)
-CFLAGS += -I. $(INC) -std=gnu99 -gstabs $(CPU_FREQ_DEFINE) -I./libarduino \
-          -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) $(CTUNING) -Wall \
+INC :=
+CFLAGS += -I. $(INC) -std=gnu99 -gstabs $(CPU_FREQ_DEFINE) \
+          -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) $(CTUNING) -Wall -Wextra -Wimplicit-int -Wold-style-declaration -Wredundant-decls \
           -Wstrict-prototypes -Wmissing-prototypes
 
 ASMFLAGS := -I. $(INC) -mmcu=$(COMPILER_MCU)-x assembler-with-cpp \
@@ -111,6 +97,23 @@ binaries_suid_root_stamp: $(shell which $(AVRDUDE)) $(AVARICE_BIN) $(AVRGDB_BIN)
 	touch $@
 	@echo good the binaries which need to be suid are
 
+PULSE_DTR = perl -e ' \
+  use Device::SerialPort; \
+  my $$port = Device::SerialPort->new("/dev/ttyUSB0") \
+      or die "Cannot open /dev/ttyUSB0: $$!\n"; \
+  $$port->pulse_dtr_on(100); '
+
+PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
+  echo "Upload failed.  Might need to press reset immediately after" ; \
+  echo "starting upload as required (with my Duimilanove anyway)" ; \
+  echo "if the above serial DTR pulse isn't doint it (the DTR pulse" ; \
+  echo "doesn't seem to work if the arduino has been running for a" ; \
+  echo "while without being programmed).  Or perhaps having the" ; \
+  echo "avrispmkII and the Arduino plugged in at the same time is" ; \
+  echo "causing problems?  Maybe you need to unplug the arduino for" ; \
+  echo "a while after replacing the bootloader?" ; \
+  echo ""
+
 # This target is special: it uses the bootloaded image that comes in the
 # arduino download package and some magic goop copied here from
 # arduino-0021/hardware/arduino/bootloaders/atmega/Makefile to replace the
@@ -125,13 +128,13 @@ replace_bootloader: LFUSE := FF
 replace_bootloader: EFUSE := 05
 replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
 	# This serial port reset may be uneeded these days.
-	perl -e 'use Device::SerialPort; \
-                 Device::SerialPort->new("/dev/ttyUSB0")->pulse_dtr_on(100);'
+	$(PULSE_DTR)
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -e -u -U lock:w:0x3f:m \
                    -U efuse:w:0x$(EFUSE):m \
                    -U hfuse:w:0x$(HFUSE):m \
-                   -U lfuse:w:0x$(LFUSE):m
+                   -U lfuse:w:0x$(LFUSE):m || \
+        ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -U flash:w:$< -U lock:w:0x0f:m
 
@@ -143,32 +146,14 @@ replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
 # I think means a 1024 word boot program (DA) or 2048 boot program (D8).
 .PHONY: writeflash
 writeflash: $(HEXTRG)
-	perl -e 'use Device::SerialPort; \
-                 Device::SerialPort->new("/dev/ttyUSB0")->pulse_dtr_on(100);'
+	$(PULSE_DTR)
 	$(AVRDUDE) -F -c $(AVRDUDE_PROGRAMMERID)   \
                    -p $(PROGRAMMER_MCU) -P $(AVRDUDE_PORT) -b $(AVRDUDE_BAUD) \
                    -U flash:w:$(HEXROMTRG) || \
-        ( \
-          echo "Upload failed.  Might need to press reset immediately after" ; \
-          echo "starting upload as required (with my Duimilanove anyway)" ; \
-          echo "if the above serial DTR pulse isn't doint it (the DTR pulse" ; \
-          echo "doesn't seem to work if the arduino has been running for a" ; \
-          echo "while without being programmed).  Or perhaps having the" ; \
-          echo "avrispmkII and the Arduino plugged in at the same time is" ; \
-          echo "causing problems?  Maybe you need to unplug the arduino for" ; \
-          echo "a while after replacing the bootloader?" ; \
-          echo "" ; \
-          false \
-        ) 1>&2
+        ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
 
 $(TRG): $(OBJS) $(LDLIBS)
 	$(CC) $(LDFLAGS) -o $(TRG) $^
-
-$(LIBARDUINO_ARCHIVE): $(LIBARDUINO_OBJS)
-	ar rcs $@ $^
-
-$(LIBATMELMEGA328P_ARCHIVE): $(LIBATMELMEGA328P_OBJS)
-	ar rcs $@ $^
 
 %.hex: %.out
 	$(OBJCOPY) -j .text -j .data -O $(HEXFORMAT) $< $@
@@ -195,12 +180,5 @@ clean:
 	rm -rf $(HEXTRG)
 	rm -rf libavr_hacked.a
 	rm -rf avrlib_hacked/*.o
-	rm -rf libarduino.a
-	rm -rf libarduino/libarduino.a
-	rm -rf libarduino/*.o
-	rm -rf libarduino/*.lst
-	rm -rf $(LIBATMELMEGA328P_DIR)/*.o
-	rm -rf $(LIBATMELMEGA328P_DIR)/*.lst
-	rm -rf $(LIBATMELMEGA328P_DIR)/*.a
 	rm -rf *.deps
 	rm -rf binaries_suid_root_stamp
