@@ -15,8 +15,8 @@
 # indicated, and bits not given to their default values (as listed in sections
 # 27.1 and 27.2).
 #
-# The program prints out a single line with avrdude -U options to get the lock
-# and fuse settings requested, for example:
+# The program prints out a single line containing the avrdude -U options
+# required to set the lock and fuse settings requested, for example:
 #
 #   $ ./generate_fuse_and_lock_bytes.perl -- m328p BLB12=0 BLB11=0
 #   -U lock:w:0xCF -U lfuse:w:0x62:m -U hfuse:w:0xD9:m -U efuse:w:0xFF:m
