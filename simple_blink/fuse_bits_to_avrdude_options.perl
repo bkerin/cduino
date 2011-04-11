@@ -1,1 +1,0 @@
-../generate_fuse_and_lock_bytes.perl

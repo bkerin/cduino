@@ -10,25 +10,43 @@
 #
 # Any additional arguments should be a strings containing comma-seperated
 # substrings of the form bit_name=value (where bit_name is one of the bit names
-# from section 27.1 or 27.2 of the ATMega 328P datasheet) , output one or more
-# avrdude -U options (and their arguments) sufficient to set the given bits as
-# indicated, and bits not given to their default values (as listed in sections
-# 27.1 and 27.2).
+# from section 27.1 or 27.2 of the ATMega 328P datasheet).
 #
-# The program prints out a single line containing the avrdude -U options
-# required to set the lock and fuse settings requested, for example:
+# The output consists of avrdude -U options (and their arguments) to control
+# avrdude such that:
 #
-#   $ ./generate_fuse_and_lock_bytes.perl -- m328p BLB12=0 BLB11=0
-#   -U lock:w:0xCF -U lfuse:w:0x62:m -U hfuse:w:0xD9:m -U efuse:w:0xFF:m
+#   * The bits mentioned as arguments are set as indicated.
+#
+#   * The unmentioned bits of bytes containing mentioned bits are set to their
+#     default values.
+#
+#   * The bits of bytes containing no mentioned bits are unchanged.
+#
+# For example:
+#
+#   $ ./lock_and_fuse_bits_to_avrdude_options.perl -- m328p LB2=0 LB1=0
+#   -U lock:w:0xFC:m 
+#
+#   $ ./lock_and_fuse_bits_to_avrdude_options.perl -- m328p LB2=0 LB1=0 DWEN=0
+#   -U lock:w:0xFC:m -U hfuse:w:0x99:m
 #
 # If the --reverse option is given, this program instead takes the processor
 # name and one or more argument like for example "-U efuse:w:0x05:m", and
 # prints out the bit settngs represented by the hexadecimal values, one per
 # line.  Note that the default bit values for bytes for which no corresponding
-# -U option is supplied aren't printed.  This is not an asymmetry: if the
-# generated setting strings are fed back into a forward translation, arvdude
-# options will be generated st the bits of unmentioned bytes are assigned their
-# default values.
+# -U option is supplied aren't printed.  Note also that when hexadecimal values
+# which would set unused bits to zero are encountered, the output doesn't
+# capture this fact, resulting in a (harmless) asymmetry if the output if fed
+# back into a forward run of this program.
+#
+# For example:
+#
+#   $ ./lock_and_fuse_bits_to_avrdude_options.perl --reverse -- m328p \
+#       -U efuse:w:0xFE:m
+#   BODLEVEL0=0
+#   BODLEVEL1=1
+#   BODLEVEL2=1
+
 
 use strict;
 
@@ -206,8 +224,7 @@ my %byte_values = map { $_ => 0 } keys(%bit_descriptions);
 # and 1 values for unused bits later.
 my %ess;
 
-# Add in the explicitly requested bit setting, and remember that we've done so.
-
+# Add in the explicitly requested bit settings, and remember that we've done so.
 foreach ( @bit_settings ) {
     m/([A-Z0-9]+)=([01])/ or die "malformed bit name setting string '$_'";
     my ($bit_name, $bit_value) = ($1, $2);
@@ -220,8 +237,10 @@ foreach ( @bit_settings ) {
     $ess{$byte_name}{$bit_name} = 1;
 }
 
-# Add in the defaults for fields that aren't explicitly set.
+# Add in the defaults for the unmentioned bit fields of bytes where at least
+# some bit is getting set explicitly.
 foreach my $byte_name ( keys(%byte_values) ) {
+    exists($ess{$byte_name}) or next;
     foreach my $bit_name ( keys(%{$bit_descriptions{$byte_name}}) ) {
         if ( not exists($ess{$byte_name}{$bit_name}) ) {
             my $bit_desc = $bit_descriptions{$byte_name}{$bit_name};
@@ -233,9 +252,10 @@ foreach my $byte_name ( keys(%byte_values) ) {
     }
 } 
 
-# Add in the 1 values that are used for unused bit fields.  This may not be
-# needed, but I don't know for sure.
+# Add in the 1 values that are used for unused bit fields of bytes where at
+# least oen bit is getting set explicitly.
 foreach my $byte_name ( keys(%byte_values) ) {
+    exists($ess{$byte_name}) or next;
     my $cbyted = $bit_descriptions{$byte_name};
     my %unused_positions = map { $_ => 1 } (0 .. 7);
     foreach my $cbitd ( values(%{$cbyted}) ) {
@@ -246,12 +266,26 @@ foreach my $byte_name ( keys(%byte_values) ) {
     }
 }
 
-print '-U lock:w:0x'.uc(sprintf('%x', $byte_values{lock_bits_byte})).':m';
-print ' ';
-print '-U lfuse:w:0x'.uc(sprintf('%x', $byte_values{low_fuse_byte})).':m';
-print ' ';
-print '-U hfuse:w:0x'.uc(sprintf('%x', $byte_values{high_fuse_byte})).':m';
-print ' ';
-print '-U efuse:w:0x'.uc(sprintf('%x', $byte_values{extended_fuse_byte})).':m';
+if ( exists($ess{lock_bits_byte}) ) {
+    print '-U lock:w:0x'.uc(sprintf('%x', $byte_values{lock_bits_byte})).':m';
+    print ' ';
+}
+if ( exists($ess{low_fuse_byte}) ) {
+    print '-U lfuse:w:0x'.uc(sprintf('%x', $byte_values{low_fuse_byte})).':m';
+    print ' ';
+}
+if ( exists($ess{high_fuse_byte}) ) {
+    print '-U hfuse:w:0x'.uc(sprintf('%x', $byte_values{high_fuse_byte})).':m';
+    print ' ';
+}
+
+if ( exists($ess{extended_fuse_byte}) ) {
+    print '-U efuse:w:0x'.uc(sprintf('%x', $byte_values{extended_fuse_byte}));
+    print ':m';
+    print ' ';
+}
+
 print "\n";
+
+exit 0;
 
