@@ -35,9 +35,13 @@
 # prints out the bit settngs represented by the hexadecimal values, one per
 # line.  Note that the default bit values for bytes for which no corresponding
 # -U option is supplied aren't printed.  Note also that when hexadecimal values
-# which would set unused bits to zero are encountered, the output doesn't
-# capture this fact, resulting in a (harmless) asymmetry if the output if fed
-# back into a forward run of this program.
+# which would set unused bits are encountered, the output doesn't capture this
+# fact, possibly resulting in a (harmless) asymmetry if the output if fed back
+# into a forward run of this program.  NOTE: at present we generate avrdude
+# options that set unused bits to zero, since avrdude seems to expect this.
+# The datasheets seem to expect one, but it apparently doesn't matter.  So at
+# the moment, its feeding one values for unused bits into a reverse run that
+# results in asymmetrical behavior if fed back to a forward run.
 #
 # For example:
 #
@@ -252,8 +256,12 @@ foreach my $byte_name ( keys(%byte_values) ) {
     }
 } 
 
-# Add in the 1 values that are used for unused bit fields of bytes where at
-# least oen bit is getting set explicitly.
+# NOTE: for now we put in zero values for unused bits, to keep avrdude happy 
+# (since that seems to be what it expects to see when it does its verification)
+# The datasheets for the parts seem to think it should be one, but setting them
+# to zero presumably doesn't cause any problems since avrdude expects it.
+# Add in the values that are used for unused bit fields of bytes where at
+# least one bit is getting set explicitly.
 foreach my $byte_name ( keys(%byte_values) ) {
     exists($ess{$byte_name}) or next;
     my $cbyted = $bit_descriptions{$byte_name};
@@ -262,25 +270,27 @@ foreach my $byte_name ( keys(%byte_values) ) {
         delete($unused_positions{$cbitd->{position}});
     }
     foreach ( keys(%unused_positions) ) {
-        $byte_values{$byte_name} += 2 ** $_;
+        # NOTE: change this 0 to 1 make unused bit fields 1 (see note above).
+        $byte_values{$byte_name} += 0 * 2 ** $_;
     }
 }
 
 if ( exists($ess{lock_bits_byte}) ) {
-    print '-U lock:w:0x'.uc(sprintf('%x', $byte_values{lock_bits_byte})).':m';
+    print '-U lock:w:0x'.uc(sprintf('%02x', $byte_values{lock_bits_byte})).':m';
     print ' ';
 }
 if ( exists($ess{low_fuse_byte}) ) {
-    print '-U lfuse:w:0x'.uc(sprintf('%x', $byte_values{low_fuse_byte})).':m';
+    print '-U lfuse:w:0x'.uc(sprintf('%02x', $byte_values{low_fuse_byte})).':m';
     print ' ';
 }
 if ( exists($ess{high_fuse_byte}) ) {
-    print '-U hfuse:w:0x'.uc(sprintf('%x', $byte_values{high_fuse_byte})).':m';
+    print '-U hfuse:w:0x'.uc(sprintf('%02x', $byte_values{high_fuse_byte}));
+    print ':m';
     print ' ';
 }
 
 if ( exists($ess{extended_fuse_byte}) ) {
-    print '-U efuse:w:0x'.uc(sprintf('%x', $byte_values{extended_fuse_byte}));
+    print '-U efuse:w:0x'.uc(sprintf('%02x', $byte_values{extended_fuse_byte}));
     print ':m';
     print ' ';
 }
