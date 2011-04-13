@@ -224,12 +224,16 @@ replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
 	# This serial port reset may be uneeded these days.
 	$(PULSE_DTR)
 	# FIXME: WORK POINT: verify that this command still works with gen cmd
-	false  # cp1
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
-                   -e -u -U lock:w:0x3f:m \
-                   -U efuse:w:0x$(EFUSE):m \
-                   -U hfuse:w:0x$(HFUSE):m \
-                   -U lfuse:w:0x$(LFUSE):m || \
+                   -e -u \
+                   `lock_and_fuse_bits_to_avrdude_options.perl -- \
+                      m328p \
+                      BLB12=1 BLB11=1 BLB02=1 BLB01=1 LB2=1 LB1=1 \
+                      BODLEVEL2=1 BODLEVEL1=0 BODLEVEL0=1 \
+                      RSTDISBL=1 DWEN=1 SPIEN=0 WDTON=1 \
+                      EESAVE=1 BOOTSZ1=0 BOOTSZ0=1 BOOTRST=0 \
+                      CKDIV8=1 CKOUT=1 SUT1=1 SUT0=1 \
+                      CKSEL3=1 CKSEL2=1 CKSEL1=1 CKSEL0=1` || \
         ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
 	# FIXME: would be nice to reprogram lock using out program, but its
 	# all or nothing...
