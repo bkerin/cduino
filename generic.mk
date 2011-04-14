@@ -142,9 +142,8 @@ define DO_AVRISPMKII_UPLOAD
 	# to search for usb automatically (but then do we need
 	# binaries_suid_root_stamp?)
 	$(POSSIBLE_FUSE_PROGRAMMING_COMMAND)
-	# FIXME: WORK POINT: resetting fuse bits here doesn't change problem
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
-                   `lock_and_fuse_bits_to_avrdude_options.perl -- \
+                   `./lock_and_fuse_bits_to_avrdude_options.perl -- \
                       m328p \
                       BLB12=1 BLB11=1 BLB02=1 BLB01=1 LB2=1 LB1=1 \
                       BODLEVEL2=1 BODLEVEL1=0 BODLEVEL0=1 \
@@ -172,7 +171,11 @@ ifeq ($(UPLOAD_METHOD), arduino_bl)
         ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   writeflash: $(HEXTRG) binaries_suid_root_stamp
-	$(DO_AVRISPMKII_UPLOAD)
+	# WORK POINT: working now with code fix to set bin for output, but do
+	# we need baud option and what about not nuking the bootloader?
+	$(AVRDUDE) -F -c avrispmkII \
+                   -p $(PROGRAMMER_MCU) -P usb \
+                   -U flash:w:$(HEXROMTRG)
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII_no_bl)
   writeflash: $(HEXTRG) binaries_suid_root_stamp
 	$(DO_AVRISPMKII_UPLOAD)
@@ -215,7 +218,7 @@ PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
   echo "starting upload as required (with my Duimilanove anyway)" ; \
   echo "if the above serial DTR pulse isn't doint it (the DTR pulse" ; \
   echo "doesn't seem to work if the arduino has been running for a" ; \
-  echo "while without being programmed)." ; \
+  echo "while without being programmed).  Or maybe bootloader is nuked?" ; \
   echo ""
 
 # This target is special: it uses an AVR ISPmkII and  the bootloaded image that
@@ -226,10 +229,9 @@ PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
 replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
 	# This serial port reset may be uneeded these days.
 	$(PULSE_DTR)
-	# FIXME: WORK POINT: verify that this command still works with gen cmd
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -e -u \
-                   `lock_and_fuse_bits_to_avrdude_options.perl -- \
+                   `./lock_and_fuse_bits_to_avrdude_options.perl -- \
                       m328p \
                       BLB12=1 BLB11=1 BLB02=1 BLB01=1 LB2=1 LB1=1 \
                       BODLEVEL2=1 BODLEVEL1=0 BODLEVEL0=1 \

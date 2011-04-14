@@ -6,6 +6,8 @@ PROGNAME = simple_blink
 OBJS = simple_blink.o
 HEADERS = $(wildcard *.h)
 
-UPLOAD_METHOD = AVRISPmkII_no_bl
+UPLOAD_METHOD = AVRISPmkII
+#UPLOAD_METHOD = AVRISPmkII_no_bl
+#UPLOAD_METHOD = arduino_bl
 
 include generic.mk
