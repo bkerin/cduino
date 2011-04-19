@@ -47,16 +47,11 @@ HEADERS ?= $(wildcard *.h)
 # This must be one of:
 #
 #    arduino_bl          Arduino bootloader over USB
-#    AVRISPmkII          AVR ISP mkII programmer, preserving target bootloader
-#    AVRISPmkII_no_bl    AVR ISP mkII programmer, overwriting any bootloader
+#    AVRISPmkII          AVR ISP mkII programmer, overwriting any bootloader
 #
-# WARNING: the last options will make your Arduino unprogrammable using the
-# normal bootloader method (though you can recover: see the replace_bootloader
-# target).
-#
-# Note also that the offset used with with AVRISPmkII method is sizable and may
-# fail with the small-memory AVR chips.  When migrating to really small chips
-# AVRISPmkII_no_bl is the way to go in the end.
+# WARNING: the AVRISPmkII options will make your Arduino unprogrammable using
+# the normal bootloader method (though you can recover: see the
+# replace_bootloader target).
 UPLOAD_METHOD ?= arduino_bl
 
 
@@ -79,8 +74,25 @@ AVRDUDE_BAUD ?= 57600
 AVRDUDE_PORT ?= /dev/ttyUSB0
 
 # These programs could be useful, but I don't use them at the moment.
-AVARICE =
-AVRGDB =
+AVARICE ?=
+AVRGDB ?=
+
+
+##### Fuse Settings (Overridable) {{{1
+
+# WARNING: UNTESTED.  Fuse settings to be programmed, in the form of a list of
+# setting for individual bits as they are named in for example the Mega328P
+# datasheet.  For example, setting this to 'BODLEVEL2=1 BODLEVEL1=0
+# BODLEVEL0=1' will enable brown out detection for a typical value of 2.7 V
+# supply as described in the datasheet.  Note that lock and fuse bits are
+# always written a byte at a time: if any bits of a byte are specified, all
+# should be (or else they will take their default values).  Note also that the
+# arduino uses a number of non-default lock and fuse settings; changing them
+# may break things.  On the other hand, if you want to use in-system
+# programming to program a minimal system at a different clock rate, you'll
+# need to learn about fuse settings.
+LOCK_AND_FUSE_SETTINGS ?=
+
 
 ##### Computed File Names {{{1
 
@@ -96,7 +108,7 @@ LSTFILES := $(patsubst %.o,%.c,$(OBJS))
 GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
 
 
-##### Build Settings {{{1
+##### Build Settings and Flags {{{1
 
 HEXFORMAT := ihex
 
@@ -112,76 +124,50 @@ CFLAGS += -I. $(INC) -std=gnu99 -gstabs $(CPU_FREQ_DEFINE) \
 ASMFLAGS := -I. $(INC) -mmcu=$(COMPILER_MCU)-x assembler-with-cpp \
             -Wa,-gstabs,-ahlms=$(firstword $(<:.S=.lst) $(<.s=.lst))
 
-# NORE: The arduino-0021/hardware/arduino/bootloaders/atmega/Makefile also
-# seems to end up  putting this in LDFLAGS:
-#      -Wl,--section-start=.text=0x7800
-# Is it needed?  Is it needed only for bootloaders?
-LDFLAGS := -mmcu=$(COMPILER_MCU) \
-           -Wl,-Map,$(TRG).map
+LDFLAGS := -mmcu=$(COMPILER_MCU) -Wl,-Map,$(TRG).map
 
 ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   # The AVR ISP mkII doesn't know not to nuke bootloader unless we tell it.
+  # We can't use the AVRISPmkII and not nuke the bootloader.  And this option
+  # I think doesn't get selected at the moment when using to bootloader or
+  # replacing the bootloader.  So what's it for and do we ever want it?
   LDFLAGS += -Wl,--section-start=.text=0x7800
 endif
 
 
 ##### Build Rules {{{1
 
-# FIXME: I'd like to put a ':=' at the end up this line for consistency but
-# there is a make bug in 3.81 and probably earlier that causes the define to
-# fail if this is done, so we hav enothing and this default to recursively
-# expanded.  FIXME: no worky, but replace_bootloader does, so probably the
-# fuses need programmed
-define DO_AVRISPMKII_UPLOAD
-	# FIXME: not sure what the heck the below (from long knight) was about
-	# FIXME: Since this command eventually makes the chip unprogrammable
-	# (at least with the settings currently in use), shouldn't we do the
-	# flash programming in the command below first?  It seems to work, I
-	# suspect because the chip doesn't get rebooted in between, but still...
-	# FIXME: -P usb ?!?  needa number?  Or not use one to cause avrdude
-	# to search for usb automatically (but then do we need
-	# binaries_suid_root_stamp?)
-	$(POSSIBLE_FUSE_PROGRAMMING_COMMAND)
-	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
-                   `./lock_and_fuse_bits_to_avrdude_options.perl -- \
-                      m328p \
-                      BLB12=1 BLB11=1 BLB02=1 BLB01=1 LB2=1 LB1=1 \
-                      BODLEVEL2=1 BODLEVEL1=0 BODLEVEL0=1 \
-                      RSTDISBL=1 DWEN=1 SPIEN=0 WDTON=1 \
-                      EESAVE=1 BOOTSZ1=0 BOOTSZ0=1 BOOTRST=0 \
-                      CKDIV8=1 CKOUT=1 SUT1=1 SUT0=1 \
-                      CKSEL3=1 CKSEL2=1 CKSEL1=1 CKSEL0=1` \
-                   -U flash:w:$(HEXROMTRG)
-endef
-
-
-# FIXME: one of these is needed to keep the bootloader update
-# method working: -Map in LDFLAGS or maybe --section-start=blah that also ends
-# up in LDFLAGS, see arduino-0021/hardware/arduino/bootloaders/atmega/Makefile
-# when LDSECTION gets mentioned.  Or maybe it was just that reset wasn't
-# getting pushed... There is also the DA versus D8 in HFUSE issue which
-# I think means a 1024 word boot program (DA) or 2048 boot program (D8).
 .PHONY: writeflash
+writeflash: LOCK_FUSE_AVRDUDE_OPTIONS := \
+  $(shell ./lock_and_fuse_bits_to_avrdude_options.perl \
+            $(PROGRAMMER_MCU) $(LOCK_AND_FUSE_SETTINGS))
+writeflash: $(HEXTRG) avrdude_version_check
 ifeq ($(UPLOAD_METHOD), arduino_bl)
-  writeflash: $(HEXTRG)
+  writeflash:
 	$(PULSE_DTR)
+	echo $(LOCK_FUSE_AVRDUDE_OPTIONS)
 	$(AVRDUDE) -F -c $(AVRDUDE_PROGRAMMERID)   \
                    -p $(PROGRAMMER_MCU) -P $(AVRDUDE_PORT) -b $(AVRDUDE_BAUD) \
-                   -U flash:w:$(HEXROMTRG) || \
+                   -U flash:w:$(HEXROMTRG) \
+                   $(LOCK_AND_FUSE_AVRDUDE_OPTIONS) || \
         ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
-  writeflash: $(HEXTRG) binaries_suid_root_stamp
-	# WORK POINT: working now with code fix to set bin for output, but do
-	# we need baud option and what about not nuking the bootloader?
-	$(AVRDUDE) -F -c avrispmkII \
+  writeflash: binaries_suid_root_stamp
+	$(AVRDUDE) -c avrispmkII \
                    -p $(PROGRAMMER_MCU) -P usb \
-                   -U flash:w:$(HEXROMTRG)
-else ifeq ($(UPLOAD_METHOD), AVRISPmkII_no_bl)
-  writeflash: $(HEXTRG) binaries_suid_root_stamp
-	$(DO_AVRISPMKII_UPLOAD)
+                   -U flash:w:$(HEXROMTRG) \
+                   $(LOCK_AND_FUSE_AVRDUDE_OPTIONS)
 else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
 endif
+
+avrdude_version_check: VERSION_CHECKER := \
+  perl -ne ' \
+    m/version (\d+\.\d+(?:\d+))/ and \
+     ($$1 >= 5.10 \
+       or die "avrdude version 5.10 or later required (found version $$1)"); #'
+avrdude_version_check:
+	avrdude -? 2>&1 | $(VERSION_CHECKER) \
 
 # A bunch of stuff only works when suid root, this verifies the permissions.
 # We're not trying to use avarice or avr-gdb at the moment, but if we were they
@@ -232,7 +218,7 @@ replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -e -u \
                    `./lock_and_fuse_bits_to_avrdude_options.perl -- \
-                      m328p \
+                      $(PROGRAMMER_MCU) \
                       BLB12=1 BLB11=1 BLB02=1 BLB01=1 LB2=1 LB1=1 \
                       BODLEVEL2=1 BODLEVEL1=0 BODLEVEL0=1 \
                       RSTDISBL=1 DWEN=1 SPIEN=0 WDTON=1 \
@@ -240,10 +226,11 @@ replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
                       CKDIV8=1 CKOUT=1 SUT1=1 SUT0=1 \
                       CKSEL3=1 CKSEL2=1 CKSEL1=1 CKSEL0=1` || \
         ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
-	# FIXME: would be nice to reprogram lock using out program, but its
-	# all or nothing...
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
-                   -U flash:w:$< -U lock:w:0x0f:m
+                   -U flash:w:$< \
+                   `./lock_and_fuse_bits_to_avrdude_options.perl -- \
+                      $(PROGRAMMER_MCU) \
+                      BLB12=0 BLB11=0 BLB02=1 BLB01=1 LB2=1 LB1=1`
 
 $(TRG): $(OBJS) $(LDLIBS)
 	$(CC) $(LDFLAGS) -o $(TRG) $^
