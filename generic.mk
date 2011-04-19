@@ -37,9 +37,12 @@ CPU_FREQ_DEFINE ?= -DF_CPU=16000000
 ##### Program Name, Constituent Object Files (Overridable) {{{1
 
 # This is the paragraph that determines which files are being built into what.
-PROGNAME ?= generic_program_name
+PROGNAME ?= program_to_upload
 OBJS ?= $(patsubst %.c,%.o,$(wildcard *.c))
 HEADERS ?= $(wildcard *.h)
+
+echo_pn:
+	echo $(PROGNAME)
 
 
 ##### Upload Method (Overridable) {{{1
