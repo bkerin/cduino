@@ -49,7 +49,7 @@ main(void)
 
   for (;;)
     {
-      printf_P(PSTR("Enter command: "));
+      printf_P(PSTR("\nAVR Ready.\nEnter command: "));
       if (fgets(buf, sizeof buf - 1, stdin) == NULL)
 	break;
       if (tolower(buf[0]) == 'q')
@@ -58,13 +58,15 @@ main(void)
       switch (tolower(buf[0]))
 	{
 	default:
-	  printf("Unknown command: %s\n", buf);
+	  printf("Unknown command: '%c'\n", buf[0]);
 	  break;
+
+        case '\n':
+          break;
 
 	case 'l':
 	  if (sscanf(buf, "%*s %s", s) > 0)
 	    {
-              assert(0);   // Hopefully a command for lcd that we won't use
 	      printf("AAAACCCckkkk we can't do that (LCD unimplemented)\n");
 	    }
 	  else
