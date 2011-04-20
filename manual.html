@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+  <title>Cduino Manual</title>
+  <meta name="keywords" content="arduino, Cduino, prerequisites, hardware" />
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+</head>
+
+<body>
+
+<h1>Cduino Manual</h1>
+
+<h2>Architecture Overview</h2>
+
+First take a look at <a href="home_page.html#abstract">the abstract</a> on the
+home page.
+<p />
+
+The common code (make plus a bit of perl) required to compile and upload
+programs lives in the top-level directory.  Modules live in their own
+subdirectories and link into the top level directory and each other as needed.
+For example, if a module needs to use serial communication, it will contain
+symbolic links to the serial communication implementation and headers in the
+uart module.  The uart module itself contains both the uart interface and
+implementation, and a demonstration program showing how to use the interface.
+The overall architecture is thus more <a
+  href="http://en.wikipedia.org/wiki/Prototype-based_programming">prototypal</a>
+than hierarchical.  This is a convenient arrangement for microcontrollers,
+where the target is often a self-contained or mostly self-contained system.
+
+<h2>Basic Strategies for Using and Modifying</h2>
+
+To start making your own stand-along program without caring about the rest of
+Cduino:
+<p />
+
+<ol>
+
+  <li>Do <code>cp --recursive --dereference some_module ~/new_program</code>
+  where <code>some_module</code> is the one that already comes closest to doing
+  what you want.</li>
+
+  <li>Grab code from other modules as needed and mix it in.  Note that you are
+  responsible for keeping track of the dependencies of this additional code.
+  Generally this means checking for included headers, which should appear as
+  symbolic links in the other module's subdirectories.</li>
+
+</ol>
+
+To add a new module to Cduino (a nice thing to do for others):
+
+<ol>
+
+  <li>Make a new subdirectory for it.</li>
+
+  <li> Give it its own minimal Makefile that includes generic.mk (see for
+  example the simple_blink module Makefile).</li>
+
+  <li> Link (<code>ln -s</code>) to existing headers and sources in other
+  modules as needed.</li>
+
+  <li>Write a program that exercises the module using the simplest possible
+  hardware setup.  This is the program that the writeflash target will put on
+  the chip when built in your module's subdirectory.</li>
+
+  <li> Give is a README in which you say what it does or give a pointer to that
+  information, and describe any hardware required to exercise the module
+  effectively.</li>
+
+</ol>
+
+<h2>generic.mk: What it Assumes and What it Provides</h2>
+
+The code in generic.mk contains most of the voodoo required to compile and
+upload C code for the arduino.  There are sensible defaults for all settings.
+The simplest possible Makefile for a module consists of a single line:
+<code>include generic.mk</code> (where <code>generic.mk</code> is a symbolic
+link to the file generic.mk in the distribution top-level directory).
+<p />
+
+To disable some troublesome crufty old Make behavior, the -R option must be
+passed to all make invocations that use <code>generic.mk</code>.
+
+The <code>generic.mk</code> file provides the following targets intended for
+public use:
+
+By default, the targets in <code>generic.mk</code> intended for public use
+behave like this:
+
+<ul>
+
+  <li><code>writeflash</code> -- Compile all .c files into object files using
+  settings appropriate for Arduino Duemilanove hardware, link them, and upload
+  them using the arduino bootloader method.  All <code>.c</code> files are
+  assumed to depend on all headers and on the Makefile (so everything is
+  recompiled if anything has changed).</li>
+
+  <li><code>replace_bootloader</code> -- replace the bootloader on the ATMega
+  on the arduino.  This is useful if an upload method that nukes the bootloader
+  has been used (see below).</li>
+
+</ul>
+
+So by default, you just write your code and type <code>make -R
+  writeflash</code> in your module subdirectory.  You may not need to know any
+further details.
+<p />
+
+If more control is needed, there are a number of Make variables that affect how
+generic.mk behaves.  These occur in sections marked "Overridable" in that file.
+
+<h3>Variable Overview</h3>
+
+<ul>
+
+  <li><code>COMPILER_MCU</code> -- The AVR microcontroller part name as known
+  by the avr-gcc compiler.  With only minimal variable settings, other parts
+  besides the atmega328p that ships with newish arduinos can be
+  programmed using this make setup.</li>
+
+  <li><code>PROGRAMMER_MCU</code> -- The AVR microcontroll part name as known
+  by the avrdude uploader program.</li>
+
+  <li><code>CPU_FREQ_DEFINE</code> -- A define which sets the F_CPU macro,
+  which AVR libc uses.  With some tweaking of this variable and the fuse
+  settings, parts running at other frequencies besides the default can be
+  programmed using this make setup.</li>
+
+  <li><code>PROGNAME</code> -- The basename of the binary output file that will
+  be uploaded.  By default the basename is <code>program_to_upload</code>.
+  </li>
+
+  <li><code>OBJS</code> -- space-delimited list of object files to be created
+  and linked together.  By default one object file is required for each
+  <code>.c</code> file (or symbolic link to a <code>.c</code> file) in the
+  module directory.</li>
+
+  <li><code>HEADERS</code> -- space-delimited list of headers used by the
+  <code>.c</code> files from which the object files are produced.  By default,
+  all <code>.c</code> files depend on all header files found in the module
+  directory.</li>
+
+  <li><code>UPLOAD_METHOD</code> -- This must be either "arduino_bl" or
+  "AVRISPmkII".  The defualt is "arduino_bl", meaning that the program should
+  be uploaded over the USB/serial line using the arduino bootloader.  The
+  AVRISPmkII method instead expects to find an AVRISPmkII device and uses that.
+  Note that this latter method overwrites the Arduino bootloader, which will
+  have to be replaced (probably using the replace_bootloader target; see above)
+  before the arduino_bl method can be used again.  This setting may be useful
+  for migrating to a stand-alone (non-arduino) design.</li>
+
+  <li>build and upload program variables -- a number of variables exist which
+  allow the compiler, uploader, etc. programs to bet set (e.g. CC, AVRDUDE,
+  etc.).  These are useful if you want to test the effects of different
+  compiler or uploader versions.</li>
+
+  <li><code>LOCK_AND_FUSE_SETTINGS</code> -- This variable can be used to set
+  the lock and fuse bytes of the arduino (normally they are left alone).  Doing
+  so is required for the use of different clock frequencies, clock sources,
+  power management, brown-out detection, watchdog timer, and other hardware
+  features.  However, certain settings are required for normal arduino
+  functionality, so changing them may break things.  They can hopefully be
+  reset using the replace_bootloader target, but this is not guaranteed.  For
+  example, setting the clock source to the low-frequency low-power internal
+  oscillator makes the chips unprogrammable for me.</li>
+
+</ul>
+
+</body>
+
+</html>

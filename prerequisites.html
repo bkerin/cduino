@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+  <title>Cduino Prerequisites</title>
+  <meta name="keywords" content="arduino, Cduino, prerequisites, hardware" />
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+</head>
+
+<body>
+
+<h1>Cduino Prerequisites</h1>
+ 
+The following hardware must be installed:
+
+<ul>
+
+  <li><a href="http://www.arduino.cc/en/Main/ArduinoBoardDuemilanove"> arduino
+    duemilanove</a> or <a
+    href="http://arduino.cc/en/Main/ArduinoBoardUno">arduino uno</a> with USB
+  programming cable</li>
+
+</ul>
+
+If in-system (non-arduino) ATMega programmig is going to be performed, an AVR
+ISP MkII device will also be needed.
+
+The following programs must be installed:
+
+<ul>
+
+  <li>GNU AVR GCC compiler (debian package: <a
+    href="http://packages.debian.org/squeeze/gcc-avr">gcc-avr</a>)</li>
+
+  <li>GNU AVR binutils (debian package:  <a
+    href="http://packages.debian.org/squeeze/binutils-avr">binutils-avr</a>)
+  </li>
+
+  <li><a href="http://www.nongnu.org/avr-libc/">GNU AVR libc</a> (debian
+  package: <a
+    href="http://packages.debian.org/squeeze/avr-libc">avr-libc</a>)</li>
+
+  <li><a href="http://savannah.nongnu.org/projects/avrdude/">avrdude</a>
+  (debian package: <a
+    href="http://packages.debian.org/squeeze/avrdude">avrdude</a>)</li>
+
+</ul>
+
+The AVR GCC compiler, toolchain and libc are a bit tricky to compile.  Its
+probably best to use the versions provided by your linux distribution.  If you
+do otherwise, you'll probably have to tweak some flags in the
+<code>generic.mk</code> file to tell it where things are.
+<p />
+
+The avrdude program is easy to build.
+<p />
+
+The avrdude program has its own dependencies: it requries at least access to a
+USB serial device.  If in-system programming (ISP) with an AVRISP MkII device
+is going to be done, the libusb library is also required.  Most modern linux
+distrubutions probably provide these prerequisites by default.
+<p />
+
+The Make program provided by this package attempts to detect and report on
+missing software dependencies and untested dependency versions.
+<p />
+
+</body>
+
+</html>

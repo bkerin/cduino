@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    
+<head>
+  <title>Cduino -- Arduino Programming with C and Make</title>
+  <meta name="keywords" content="arduino, programming, C programming,
+    make, vi, avrdude, atmel, microcontroller" />
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+</head>
+
+<body>
+
+<table style="text-align: left; width: 100%;" border="0" cellpadding="2"
+  cellspacing="10">
+
+  <tbody>
+  
+    <tr>
+      <td style="text-align: center; vertical-align: middle; width: 15%;">
+        <br />
+      </td>
+      <td style="text-align: center; vertical-align: middle;">
+        <h1>Cduino: Arduino Programming with C and Make</h1>
+      </td>
+    </tr>
+ 
+    <tr>
+
+      <td style="vertical-align: top; width: 15%; 
+        background-color: rgb(255, 255, 160);">
+
+        <h3><a href="why_cduino.html">Why Cduino?</a></h3>
+
+        <h3><a href="annotated_schematics.html">Annotated Hardware
+            Schematics</a></h3>
+
+        <h3><a href="releases/">Download</a></h3>
+
+        <h3><a href="manual.html">Manual</a></h3>
+        
+        <h3><a href="mailing_list.html">Mailing List</a></h3>
+
+        <h3><a href="FIXME.html">Contributing</a></h3>
+
+      </td>
+
+      <td style="vertical-align: top;">
+
+        <h2>Project Status</h2>
+
+        Just getting started.  Modules exist to blink the onboard led and talk
+        over the serial (to USB) line to a computer. 
+
+        <h2 name="abstract">Abstract</h2>
+
+        <p />
+        This package contains:
+       
+          <ul>
+            <li> a Makefile setup for programming an arduino (or other
+            Atmel ATMega chip) using unix command line tools
+            <li> a library of simple modules to do various interesting things
+            with an ATMega (blink a LED, talk over a serial line, etc.)
+          </ul>
+
+        In other words, its a lots like the excellent <a
+          href="http://www.arduino.cc/">arduino</a> project and uses the same
+        open hardware, but avoids the new wiring language, the C++ intermediate
+        layer, and the Java-based IDE.  Crusy old (and young) Unix/C
+        programmers rejoice!
+
+        <h2>Usage</h2>
+
+        After <a href="prerequisites.html">setting up the necessary hardware
+          and software</a>, getting started looks about like this:<p />
+
+        <code>
+          make -R -C simple_blink writeflash 
+        </code>
+
+        <h2>Features</h2>
+
+        <p /> 
+        <a name="feature_list">
+          <ul>
+
+            <li>Supports programming using the arduino bootloader or in-system
+            programming using AVRISPmkII programmer</li>
+
+            <li>Modules are designed to look as independent as possible: doing
+            <code>cp --recursive --dereference some_module ~/new_project</code>
+            yields a minimal stand-alone project.</li>
+
+            <li>Leverages all the convenient power options (USB or external)
+            and communication circuitry (Serial to USB) of the arduino hardware
+            platform, but provides a convenient migration path to programming
+            for simpler hardware.
+
+          </ul>
+        </a>
+
+        <h2>Bugs and Feature Requests</h2>
+        Please send these to <a
+          href="mailing_list.html">the mailing list</a>
+        <p />
+
+        Good luck!<br />
+        
+        <hr style="width: 100%; height: 2px;">
+
+      </td>
+
+    </tr>
+
+  </tbody>
+
+</table>
+
+<!-- Google analytics goop: -->  
+<!-- FIXME: put the analytics goop here if w ereally want it -->
+
+</body>
+
+</html>
