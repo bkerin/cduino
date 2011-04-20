@@ -12,14 +12,25 @@
 
 <h1>Cduino Prerequisites</h1>
  
-The following hardware must be installed:
+The following hardware must be available:
 
 <ul>
 
   <li><a href="http://www.arduino.cc/en/Main/ArduinoBoardDuemilanove"> arduino
     duemilanove</a> or <a
     href="http://arduino.cc/en/Main/ArduinoBoardUno">arduino uno</a> with USB
-  programming cable</li>
+  programming cable.  If you use an older duemilanove, some variable settings
+  may need to be tweaked away from the defaults (which assume a Mega328P
+  chip).</li>
+
+  <li>if you want to use in-system programming (ISP), an
+  <a href="http://www.atmel.com/dyn/products/tools_card.asp?tool_id=3808">
+    AVRISPmkII
+  </a>
+  or clone is needed.  Probably any programmer supported by avrdude could be
+  made to work with a trivial tweak or two to <code>generic.mk</code>, but I
+  don't own any other so I can't test them.
+
 
 </ul>
 
@@ -50,7 +61,8 @@ The following programs must be installed:
 The AVR GCC compiler, toolchain and libc are a bit tricky to compile.  Its
 probably best to use the versions provided by your linux distribution.  If you
 do otherwise, you'll probably have to tweak some flags in the
-<code>generic.mk</code> file to tell it where things are.
+<code>generic.mk</code> file to tell it where things are, I haven't done this
+myself.
 <p />
 
 The avrdude program is easy to build.
