@@ -11,7 +11,10 @@ run_screen: have_screen
 	@echo The fragile command used in this Makefile does nothing besides
 	@echo feed a return to screen so a prompt shows up without the user
 	@echo having to push enter.  It can be replaced with a simple
-	@echo "screen /dev/ttyUSB0".
+	@echo \'screen /dev/ttyUSB0\'.
+	@echo
+	@echo This works because the UART configuration selected for the
+	@echo microcontroller matches the screen defaults in our case.
 	@echo
 	@echo "Use C-a \ (no control on backslash) to exit screen";
 	@echo
