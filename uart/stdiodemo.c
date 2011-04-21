@@ -11,6 +11,10 @@
  * $Id: stdiodemo.c 1008 2005-12-28 21:38:59Z joerg_wunsch $
  */
 
+// This program shows how to set up an AVR libc FILE stream to communicate with
+// the microcontroller over the serial line.  The program accepts commands of
+// the form 'u some_string' and simply returns the string.
+
 #include "defines.h"
 
 #include <assert.h>

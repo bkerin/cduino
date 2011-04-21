@@ -1,7 +1,7 @@
 # To see this module in action, program the chip (make -R writeflash) then run
-# make run_screen from a terminal to run the screen program to talk to the chip
-# over the serial line.  There is only one demo command: 'u some_string', which
-# just echos the string back.
+# 'make run_screen' from a terminal to run the screen program to talk to the
+# chip over the serial line.  There is only one demo command: 'u some_string',
+# which just echos the string back.
 
 .PHONY: run_screen
 run_screen: have_screen
@@ -17,6 +17,8 @@ run_screen: have_screen
 	@echo
 	@echo "Press Enter to continue"
 	@read
+	# NOTE: this next command needs a literal Cntrl-M, not a two character
+	# string "^M".  In bash and vi this can be generated using C-v C-m.
 	(sleep 0.5 && screen -X stuff  &) ; screen -S arduino /dev/ttyUSB0
 
 .PHONY: have_screen
