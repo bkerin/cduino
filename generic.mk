@@ -140,6 +140,11 @@ endif
 
 ##### Build Rules {{{1
 
+########## Interface Targets {{{2
+
+# These are targets that users are likely to want to invoke directly (as
+# arguments to make).
+
 .PHONY: writeflash
 writeflash: LOCK_FUSE_AVRDUDE_OPTIONS := \
   $(shell ./lock_and_fuse_bits_to_avrdude_options.perl \
@@ -164,13 +169,76 @@ else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
 endif
 
+# This target is special: it uses an AVR ISPmkII and  the bootloaded image that
+# comes in the arduino download package and some magic goop copied here from
+# arduino-0021/hardware/arduino/bootloaders/atmega/Makefile to replace the
+# bootloader and program the fuses as required for bootloading to work.  This
+# is useful if we've managed to nuke the bootloader some way or other.
+replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
+	# This serial port reset may be uneeded these days.
+	$(PULSE_DTR)
+	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
+                   -e -u \
+                   `./lock_and_fuse_bits_to_avrdude_options.perl -- \
+                      $(PROGRAMMER_MCU) \
+                      BLB12=1 BLB11=1 BLB02=1 BLB01=1 LB2=1 LB1=1 \
+                      BODLEVEL2=1 BODLEVEL1=0 BODLEVEL0=1 \
+                      RSTDISBL=1 DWEN=1 SPIEN=0 WDTON=1 \
+                      EESAVE=1 BOOTSZ1=0 BOOTSZ0=1 BOOTRST=0 \
+                      CKDIV8=1 CKOUT=1 SUT1=1 SUT0=1 \
+                      CKSEL3=1 CKSEL2=1 CKSEL1=1 CKSEL0=1` || \
+        ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
+	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
+                   -U flash:w:$< \
+                   `./lock_and_fuse_bits_to_avrdude_options.perl -- \
+                      $(PROGRAMMER_MCU) \
+                      BLB12=0 BLB11=0 BLB02=1 BLB01=1 LB2=1 LB1=1`
+
+COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+%.o: %.c
+	$(COMPILE)
+
+# Clean everything imaginable.
+.PHONY: clean
+clean:
+	rm -rf $(TRG) $(TRG).map $(DUMPTRG) $(PROGNAME).out $(PROGNAME).out.map
+	rm -rf $(OBJS)
+	rm -rf $(LST) $(GDBINITFILE)
+	rm -rf $(GENASMFILES)
+	rm -rf $(HEXTRG)
+	rm -rf *.deps
+	rm -rf binaries_suid_root_stamp
+
+########## Supporting Targets (Implementation) {{{2
+
+dependency_checks: avrdude_version_check \
+                   avrgcc_check \
+                   avrlibc_check
+
+.PHONY: avrdude_version_check
 avrdude_version_check: VERSION_CHECKER := \
   perl -ne ' \
     m/version (\d+\.\d+(?:\d+))/ and \
      ($$1 >= 5.10 \
        or die "avrdude version 5.10 or later required (found version $$1)"); #'
 avrdude_version_check:
-	avrdude -? 2>&1 | $(VERSION_CHECKER) \
+	avrdude -? 2>&1 | $(VERSION_CHECKER)
+
+.PHONY: avrgcc_check
+avrgcc_check:
+	@which fweg || \
+        ( \
+          echo -e "\navr-gcc binary '$(CC)' not found\n" 1>&2 ; \
+          echo -e "Perhaps the CC make variable is set wrong, or perhaps no" ; \
+          echo -e "AVR GCC cross compiler is installed?\n" \
+          && false \
+        )
+
+.PHONY: avrlibc_check
+avrlibc_check:
+	@echo I do not know offhand a reliable way to check for avrlibc
+	@echo availability...
 
 # A bunch of stuff only works when suid root, this verifies the permissions.
 # We're not trying to use avarice or avr-gdb at the moment, but if we were they
@@ -210,31 +278,6 @@ PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
   echo "while without being programmed).  Or maybe bootloader is nuked?" ; \
   echo ""
 
-# This target is special: it uses an AVR ISPmkII and  the bootloaded image that
-# comes in the arduino download package and some magic goop copied here from
-# arduino-0021/hardware/arduino/bootloaders/atmega/Makefile to replace the
-# bootloader and program the fuses as required for bootloading to work.  This
-# is useful if we've managed to nuke the bootloader some way or other.
-replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
-	# This serial port reset may be uneeded these days.
-	$(PULSE_DTR)
-	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
-                   -e -u \
-                   `./lock_and_fuse_bits_to_avrdude_options.perl -- \
-                      $(PROGRAMMER_MCU) \
-                      BLB12=1 BLB11=1 BLB02=1 BLB01=1 LB2=1 LB1=1 \
-                      BODLEVEL2=1 BODLEVEL1=0 BODLEVEL0=1 \
-                      RSTDISBL=1 DWEN=1 SPIEN=0 WDTON=1 \
-                      EESAVE=1 BOOTSZ1=0 BOOTSZ0=1 BOOTRST=0 \
-                      CKDIV8=1 CKOUT=1 SUT1=1 SUT0=1 \
-                      CKSEL3=1 CKSEL2=1 CKSEL1=1 CKSEL0=1` || \
-        ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
-	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
-                   -U flash:w:$< \
-                   `./lock_and_fuse_bits_to_avrdude_options.perl -- \
-                      $(PROGRAMMER_MCU) \
-                      BLB12=0 BLB11=0 BLB02=1 BLB01=1 LB2=1 LB1=1`
-
 $(TRG): $(OBJS) $(LDLIBS)
 	$(CC) $(LDFLAGS) -o $(TRG) $^
 
@@ -248,21 +291,7 @@ $(TRG): $(OBJS) $(LDLIBS)
 # General build-too-much strategy.
 $(OBJS): $(HEADERS) Makefile generic.mk
 
-COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
-%.o: %.c
-	$(COMPILE)
-
+# WARNING: I don't think I've ever exercised this target.
 %.s: %.c
 	$(CC) -S $(CPPFLAGS) $(CFLAGS) $< -o $@
 
-# Clean everything imaginable.
-.PHONY: clean
-clean:
-	rm -rf $(TRG) $(TRG).map $(DUMPTRG) $(PROGNAME).out $(PROGNAME).out.map
-	rm -rf $(OBJS)
-	rm -rf $(LST) $(GDBINITFILE)
-	rm -rf $(GENASMFILES)
-	rm -rf $(HEXTRG)
-	rm -rf *.deps
-	rm -rf binaries_suid_root_stamp
