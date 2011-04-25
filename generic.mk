@@ -20,7 +20,8 @@
 # here, default values for variables can screw things up).
 HAVE_NO_BUILTIN_VARIABLES_OPTION := $(shell echo $(MAKEFLAGS) | grep -e R)
 ifndef HAVE_NO_BUILTIN_VARIABLES_OPTION
-   $(error This makefile requires use of the -R/--no-builtin-variables option)
+   $(error This makefile requires use of the -R/--no-builtin-variables make \
+           option)
 endif
 
 
@@ -57,6 +58,12 @@ echo_pn:
 # replace_bootloader target).
 UPLOAD_METHOD ?= arduino_bl
 
+# If this is set to true, then if the perl modules required to pulse the DTR
+# line of the serial port aren't found or the DTR pulse code fails for some
+# reason, it is not considered a fatal error (but the user will then have to
+# push the reset button on the arduino immediately after the avrdude
+# programming command goes off to program the device).
+DTR_PULSE_NOT_REQUIRED ?= false
 
 ##### Programs for Building and Uploading (Overridable) {{{1
 
@@ -152,7 +159,7 @@ writeflash: LOCK_FUSE_AVRDUDE_OPTIONS := \
 writeflash: $(HEXTRG) avrdude_version_check
 ifeq ($(UPLOAD_METHOD), arduino_bl)
   writeflash:
-	$(PULSE_DTR)
+	$(PROBABLY_PULSE_DTR)
 	echo $(LOCK_FUSE_AVRDUDE_OPTIONS)
 	$(AVRDUDE) -F -c $(AVRDUDE_PROGRAMMERID)   \
                    -p $(PROGRAMMER_MCU) -P $(AVRDUDE_PORT) -b $(AVRDUDE_BAUD) \
@@ -176,7 +183,7 @@ endif
 # is useful if we've managed to nuke the bootloader some way or other.
 replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
 	# This serial port reset may be uneeded these days.
-	$(PULSE_DTR)
+	$(PROBABLY_PULSE_DTR)
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -e -u \
                    `./lock_and_fuse_bits_to_avrdude_options.perl -- \
@@ -241,8 +248,8 @@ avrlibc_check:
 	@echo availability...
 
 # A bunch of stuff only works when suid root, this verifies the permissions.
-# We're not trying to use avarice or avr-gdb at the moment, but if we were they
-# would probably need this to talk over libusb as well.
+# We are not trying to use avarice or avr-gdb at the moment, but if we were
+# they would probably need this to talk over libusb as well.
 binaries_suid_root_stamp: $(shell which $(AVRDUDE)) $(AVARICE) $(AVRGDB)
 	ls -l $$(which $(AVRDUDE)) | grep --quiet -- '^-rws' || \
           ( \
@@ -259,23 +266,50 @@ binaries_suid_root_stamp: $(shell which $(AVRDUDE)) $(AVARICE) $(AVRGDB)
 	touch $@
 	@echo -e \\ngood the binaries which need to be suid are\\n
 
+# In case the user is confused about quoting.
+ifeq ($(DTR_PULSE_NOT_REQUIRED),"true")
+  $(error "value of DTR_PULSE_NOT_REQUIRED shouldn't have quotes around it.")
+endif
+ifeq ($(DTR_PULSE_NOT_REQUIRED),'true')
+  $(error "value of DTR_PULSE_NOT_REQUIRED shouldn't have quotes around it.")
+endif
+
 # Arduino Duemilanove and newer allow you to pulse the DTR line to trigger a
 # reset, after which the bootloaded takes over so a new sketch can be uploaded
 # without having to putsh the reset button on the board.  In theory.  In
-# practice it doesn't seem to work well for me with this code at least.  And I
-# dont' know how it interacts with serial line use exactly.
-PULSE_DTR := perl -e ' \
-  use Device::SerialPort; \
+# practice it doesn't always work for me with this code at least.  And I dont'
+# know how it interacts with serial line use exactly.  In case the user doesn't
+# have the perl module we use for this and/or doesn't want to deal with it,
+# they can set the DTR_PULSE_NOT_REQUIRED make variable to true.
+PROBABLY_PULSE_DTR := perl -e ' \
+  eval "require Device::SerialPort;" or ( \
+    ($$@ =~ m/^Can.t locate Device\/SerialPort/ or die $$@) and \
+    ("$(DTR_PULSE_NOT_REQUIRED)" eq "true" and exit(0)) or ( \
+      print \
+        $$@. \
+        "\nDevice::SerialPort perl module not found.  You will need to set". \
+        "\nDTR_PULSE_NOT_REQUIRED make variable to \"true\" and manually". \
+        "\npress the reset button on the arduino immediately after the". \
+        "\navrdude programming command goes off to successfully program the". \
+        "\nchip.\n\n" \
+      and exit(1) ) ); \
   my $$port = Device::SerialPort->new("/dev/ttyUSB0") \
       or die "Cannot open /dev/ttyUSB0: $$!\n"; \
-  $$port->pulse_dtr_on(100); '
+  $$port->pulse_dtr_on(100);' || \
+  [ '$(DTR_PULSE_NOT_REQUIRED)' = true ]
+
+# This target is just for testing out the PROBABLY_PULSE_DTR code.
+test_probably_pulse_dtr:
+	$(PROBABLY_PULSE_DTR)
 
 PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
-  echo "Upload failed.  Might need to press reset immediately after" ; \
-  echo "starting upload as required (with my Duimilanove anyway)" ; \
-  echo "if the above serial DTR pulse isn't doint it (the DTR pulse" ; \
-  echo "doesn't seem to work if the arduino has been running for a" ; \
-  echo "while without being programmed).  Or maybe bootloader is nuked?" ; \
+  echo "Upload failed.  You might need to press reset immediately after" ; \
+  echo "avrdude starts as required (with my Duemilanove anyway) if the" ; \
+  echo "above serial DTR pulse isn't doing it (the DTR pulse doesn't seem" ; \
+  echo "to work if the arduino has been running for a while without being" ; \
+  echo "programmed, or if the program running on the arduino is using the" ; \
+  echo "serial line itself).  Or maybe the bootloader has been nuked (by" ; \
+  echo "programming with the AVRISPmkII for example)?" ; \
   echo ""
 
 $(TRG): $(OBJS) $(LDLIBS)

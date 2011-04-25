@@ -151,6 +151,12 @@ generic.mk behaves.  These occur in sections marked "Overridable" in that file.
   before the arduino_bl method can be used again.  This setting may be useful
   for migrating to a stand-alone (non-arduino) design.</li>
 
+  <li><code>DTR_PULSE_NOT_REQUIRED</code> -- If this is set to "true", the DTR
+  pulse that the arduino normall uses to save the user having to push the reset
+  button immediately after avrdude programming begins is not considered
+  essential (os the perl modules used to do it aren't required).  Of course,
+  now you will have to push the reset button all the time.</li>
+
   <li>build and upload program variables -- a number of variables exist which
   allow the compiler, uploader, etc. programs to bet set (e.g. CC, AVRDUDE,
   etc.).  These are useful if you want to test the effects of different
