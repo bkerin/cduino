@@ -56,6 +56,20 @@ The following programs must be installed:
   (debian package: <a
     href="http://packages.debian.org/squeeze/avrdude">avrdude</a>)</li>
 
+  <li>
+    If you don't want to have to press the reset button on the arduino every
+    time you program using the arduino bootloader method, you'll need the
+    <a
+      href="http://search.cpan.org/~cook/Device-SerialPort-1.04/SerialPort.pm">
+      Device::SerialPort
+    </a>
+    perl module (debian package:
+    <a href="http://packages.debian.org/search?keywords=device-serialport&searchon=names&suite=stable&section=all">
+      libdevice-serialport-perl
+    </a>
+    ).
+  </li>
+
 </ul>
 
 The AVR GCC compiler, toolchain and libc are a bit tricky to compile.  Its
