@@ -62,7 +62,10 @@ main(void)
       switch (tolower(buf[0]))
 	{
 	default:
-	  printf("Unknown command: '%c'\n", buf[0]);
+	  printf(
+              "Unknown command: '%c'\n\n"
+              "'u some_string' is the only working command at present\n",
+              buf[0]);
 	  break;
 
         case '\n':
