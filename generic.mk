@@ -137,11 +137,14 @@ ASMFLAGS := -I. $(INC) -mmcu=$(COMPILER_MCU)-x assembler-with-cpp \
 LDFLAGS := -mmcu=$(COMPILER_MCU) -Wl,-Map,$(TRG).map
 
 ifeq ($(UPLOAD_METHOD), AVRISPmkII)
-  # The AVR ISP mkII doesn't know not to nuke bootloader unless we tell it.
-  # We can't use the AVRISPmkII and not nuke the bootloader.  And this option
-  # I think doesn't get selected at the moment when using to bootloader or
-  # replacing the bootloader.  So what's it for and do we ever want it?
-  LDFLAGS += -Wl,--section-start=.text=0x7800
+  # This flag shows up somewhere in the arduino build files.  But it seems to
+  # cause trouble by making the built files different so things don't work when
+  # the upload method is changed.  And it makes the uploads take longer.  And
+  # it doesn't seem necessary.  And I originally thought it might be useful to
+  # avoid nuking the bootloader when using AVRISPmkII programming, but it turns
+  # out its impossible to prevent that.  So Its not enabled at the moment.
+
+  #LDFLAGS += -Wl,--section-start=.text=0x7800
 endif
 
 
