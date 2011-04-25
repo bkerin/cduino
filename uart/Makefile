@@ -13,15 +13,16 @@ run_screen: have_screen
 	@echo having to push enter.  It can be replaced with a simple
 	@echo \'screen /dev/ttyUSB0\'.
 	@echo
-	@echo This works because the UART configuration selected for the
-	@echo microcontroller matches the screen defaults in our case.
+	@echo This screen invocation works without options because the UART
+	@echo configuration selected for the microcontroller matches the screen
+	@echo defaults in our case.
 	@echo
 	@echo "Use C-a \ (no control on backslash) to exit screen";
 	@echo
 	@echo "Press Enter to continue"
 	@read
-	# NOTE: this next command needs a literal Cntrl-M, not a two character
-	# string "^M".  In bash and vi this can be generated using C-v C-m.
+	@# NOTE: this next command needs a literal Cntrl-M, not a two character
+	@# string "^M".  In bash and vi this can be generated using C-v C-m.
 	(sleep 0.5 && screen -X stuff  &) ; screen -S arduino /dev/ttyUSB0
 
 .PHONY: have_screen
