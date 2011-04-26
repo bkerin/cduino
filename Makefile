@@ -28,6 +28,17 @@ targzball:
 
 .PHONY: upload
 upload: targzball upload_html
-	scp /tmp/cduino-$(VERSION).tgz $(WEB_SSH):$(WEB_ROOT)/releases
+	scp /tmp/cduino-$(VERSION).tgz $(WEB_SSH):$(WEB_ROOT)/releases/
+	ssh $(WEB_SSH) rm -f '$(WEB_ROOT)/releases/LATEST_IS_*'
 	ssh $(WEB_SSH) ln -s --force cduino-$(VERSION).tgz \
             $(WEB_ROOT)/releases/LATEST_IS_cduino-$(VERSION).tgz
+
+.PHONY: update_unstable
+update_unstable:
+	ssh $(WEB_SSH) mkdir -p $(WEB_ROOT)/unstable/
+	ssh $(WEB_SSH) rm -f '$(WEB_ROOT)/unstable/cduino_unstable*'
+	cd /tmp ; cp -r $(shell pwd) . && \
+          UNSTABLE_NAME=cduino_unstable_`date +%Y-%m-%d-%H-%M-%S` && \
+          mv cduino $$UNSTABLE_NAME && \
+          tar czvf $$UNSTABLE_NAME.tgz $$UNSTABLE_NAME && \
+          scp $$UNSTABLE_NAME.tgz $(WEB_SSH):$(WEB_ROOT)/unstable/
