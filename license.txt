@@ -1,26 +1,12 @@
-Different parts of this software are covered by different licences.
-Unless otherwise stated, the code is covered by the LGPL (see below).
-However, other potions  are covered by the below beer-ware licence.
+Different parts of this software are covered by different licences.  Unless
+otherwise stated in the individual files, the code is covered by the LGPL
+(see below).
 
-The file ATmegaBOOT_168_atmega328.hex is from the arduino distribution
-(available at http://www.arduino.cc/).  It is provided here in
-binary form to allow easy recovery of the default arduino state.  The
-ATmegaBOOT_168_atmega328.hex file is NOT covered by the below beer-ware
+The binary file ATmegaBOOT_168_atmega328.hex is from the arduino
+distribution (available at http://www.arduino.cc/).  It is provided
+here in binary form to allow easy recovery of the default arduino state.
+The ATmegaBOOT_168_atmega328.hex file is NOT covered by the below beer-ware
 licence, but by the GNU General Public Licence (see below).
-
-.....................................................................
-
- * ----------------------------------------------------------------------------
- * "THE BEER-WARE LICENSE" (Revision 42):
- * <britton.kerin@gmail.com> wrote a lot of this stuff.  The parts that other
- * people have written have their own licences in the respective files.  As
- * long as you retain this notice you can do whatever you want with this stuff.
- * If we meet some day, and you think this stuff is worth it, you can buy me a
- * beer in return.        Britton Kerin
- * 
- * Licence inspired by Joerg Wunsch
- * ----------------------------------------------------------------------------
-
 
 .....................................................................
 
