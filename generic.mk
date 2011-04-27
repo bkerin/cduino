@@ -163,12 +163,16 @@ writeflash: $(HEXTRG) avrdude_version_check
 ifeq ($(UPLOAD_METHOD), arduino_bl)
   writeflash:
 	$(PROBABLY_PULSE_DTR)
-	echo $(LOCK_FUSE_AVRDUDE_OPTIONS)
-	$(AVRDUDE) -F -c $(AVRDUDE_PROGRAMMERID)   \
+	$(AVRDUDE) -c $(AVRDUDE_PROGRAMMERID)   \
                    -p $(PROGRAMMER_MCU) -P $(AVRDUDE_PORT) -b $(AVRDUDE_BAUD) \
                    -U flash:w:$(HEXROMTRG) \
                    $(LOCK_AND_FUSE_AVRDUDE_OPTIONS) || \
         ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
+        # FIXME: sometimes the chip doesn't seem to reset after programming.
+        # And sometimes the pulse to program doesn't work for unknown reasons
+        # as noted elsewhere.  WHY?!?!  For now we pulse DTR again here which
+        # seems to wake it up after programming which it sometimes needs.
+	$(PROBABLY_PULSE_DTR)
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   writeflash: binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII \
