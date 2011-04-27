@@ -1,7 +1,7 @@
 # Make code common to all the different modules.  Some things defined here are
 # easy to override in modules, those section titles contain "(Overridable)".
 
-# vim: set foldmethod=marker
+# vim: foldmethod=marker
 
 ##### Make Settings {{{1
 
@@ -148,7 +148,7 @@ ifeq ($(UPLOAD_METHOD), AVRISPmkII)
 endif
 
 
-##### Build Rules {{{1
+##### Rules {{{1
 
 ########## Interface Targets {{{2
 
