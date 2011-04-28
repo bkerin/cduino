@@ -14,7 +14,8 @@ WEB_ROOT := public_html/cduino
 # (probably from the command line, e.g. 'make new_module NEW_MODULE_NAME=foo').
 .PHONY: new_module
 new_module:
-	[ -n "$(NEW_MODULE_NAME)" ] || (echo VERSION not set 1>&2 && false)
+	[ -n "$(NEW_MODULE_NAME)" ] || \
+          (echo NEW_MODULE_NAME not set 1>&2 && false)
 	mkdir $(NEW_MODULE_NAME)
 	cd $(NEW_MODULE_NAME) && \
           ln -s ../ATmegaBOOT_168_atmega328.hex && \
