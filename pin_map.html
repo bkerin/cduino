@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+<title>Arduino Pin Mapping</title></head><body>
+
+<h1>Arduino Pin Mapping</h1>
+
+<table border="1" cellpadding="2" cellspacing="2">
+  <tbody>
+    <tr>
+      <td valign="top">ATMega168/328/328p - 28DIP</td>
+      <td valign="top">ATMega168/328/328p - 32MLF</td>
+      <td valign="top">ATMega644P - 40PDIP</td>
+    </tr>
+    <tr>
+      <td valign="top">
+      <ol>
+	<li><tt>PC6 - PCINT14, Reset <font color="#009900">[RESET]</font> </tt></li>
+	<li><tt>PD0 - PCINT16, RXD <font color="#009900">[PIN0]</font> </tt></li>
+	<li><tt>PD1 -</tt><tt> PCINT17,</tt><tt> TXD <font color="#009900">[PIN1]</font> </tt></li>
+	<li><tt>PD2 -</tt><tt> PCINT18,</tt><tt> INT0 <font color="#009900">[PIN2]</font> </tt></li>
+	<li><tt>PD3 - </tt><tt>PCINT19, </tt><tt>INT1, OC2B <font color="#009900">[PIN3]</font> </tt></li>
+	<li><tt>PD4 - PCINT20, XCK, T0 <font color="#009900">[PIN4]</font> </tt></li>
+	<li><tt>VCC</tt></li>
+	<li><tt>GND</tt></li>
+	<li><tt>PB6 - PCINT6, XTAL1, TOSC1 </tt></li>
+	<li><tt>PB7</tt><tt> - PCINT7, XTAL2, TOSC2</tt></li>
+	<li><tt>PD5 - PCINT21, OC0B, T1 <font color="#009900">[PIN5/PWM]</font> </tt></li>
+	<li><tt>PD6 - PCINT22, OC0A, AIN0 <font color="#009900">[PIN6/PWM]</font> </tt></li>
+	<li><tt>PD7 - PCINT23, AIN1 <font color="#009900">[PIN7]</font> </tt></li>
+	<li><tt>PB0 - PCINT0, CLKO, ICP1 <font color="#009900">[PIN8]</font> </tt></li>
+	<li><tt>PB1 - PCINT1, OC1A <font color="#009900">[PIN9/PWM]</font> </tt></li>
+	<li><tt>PB2 - PCINT2, OC1B, SS <font color="#009900">[PIN10/PWM]</font> </tt></li>
+	<li><tt>PB3 - PCINT3, OC2A, MOSI <font color="#009900">[PIN11/PWM]</font> </tt></li>
+	<li><tt>PB4 - PCINT4, MISO <font color="#009900">[PIN12]</font> </tt></li>
+	<li><tt>PB5 - PCINT5, SCK <font color="#009900">[PIN13]</font> <font color="red"><blink>LED</blink></font></tt></li>
+	<li><tt>AVCC</tt></li>
+	<li><tt>AREF</tt></li>
+	<li><tt>GND</tt></li>
+	<li><tt>PC0</tt><tt> - PCINT8, ADC0 <font color="#009900">[ANALOG0]</font> </tt></li>
+	<li><tt>PC1</tt><tt> - PCINT9, ADC1 <font color="#009900">[ANALOG1]</font> </tt></li>
+	<li><tt>PC2</tt><tt> - PCINT10, ADC2 <font color="#009900">[ANALOG2]</font> </tt></li>
+	<li><tt>PC3 - PCINT11, ADC3 <font color="#009900">[ANALOG3]</font> </tt></li>
+	<li><tt>PC4 - PCINT12, ADC4, SDA <font color="#009900">[ANALOG4]</font> </tt></li>
+	<li><tt>PC5 - PCINT13, ADC5, SCL <font color="#009900">[ANALOG5]</font> </tt></li>
+      </ol>
+      </td>
+      <td valign="top">
+      <ol>
+	<li><tt>PD3 - PCINT19, OC2B, INT1</tt></li>
+	<li><tt>PD4 - PCINT20, XCK, T0</tt></li>
+	<li><tt>GND</tt></li>
+	<li><tt>VCC</tt></li>
+	<li><tt>GND</tt></li>
+	<li><tt>VCC</tt></li>
+	<li><tt>PB6 - PCINT6, XTAL1, TOSC1</tt></li>
+	<li><tt>PB7 - PCINT7, XTAL2, TOSC2</tt></li>
+	<li><tt>PD5 - PCINT21, OCB0, T1</tt></li>
+	<li><tt>PD6 - PCINT22, OC0A, AIN0 </tt></li>
+	<li><tt>PD7 - PCINT23, OC0B, </tt></li>
+	<li><tt>PB0 - PCINT0, CLKO, ICP1 </tt></li>
+	<li><tt>PB1 - PCINT1, OC1A </tt></li>
+	<li><tt>PB2 - PCINT2, OC1B, SS </tt></li>
+	<li><tt>PB3 - PCINT3, OC2A, MOSI </tt></li>
+	<li><tt>PB4 - PCINT4, MISO </tt></li>
+	<li><tt>PB5 - PCINT5, SCK </tt></li>
+	<li><tt>AVCC</tt></li>
+	<li><tt>ADC6</tt></li>
+	<li><tt>AREF</tt></li>
+	<li><tt>GND</tt></li>
+	<li><tt>ADC7</tt></li>
+	<li><tt>PC0 - PCINT8, ADC0</tt></li>
+	<li><tt>PC1 - PCINT9, ADC1</tt></li>
+	<li><tt>PC2 - PCINT10, ADC2 </tt></li>
+	<li><tt>PC3 - PCINT11, ADC3 </tt></li>
+	<li><tt>PC4 - PCINT12, ADC4, SDA </tt></li>
+	<li><tt>PC5 - PCINT13, ADC5, SCL </tt></li>
+	<li><tt>PC6 - PCINT15, RESET </tt></li>
+	<li><tt>PD0 - PCINT16, RXD </tt></li>
+	<li><tt>PD1 - PCINT17, TXD </tt></li>
+	<li><tt>PD2 - PCINT18, INT0 </tt></li>
+      </ol>
+      </td>
+      <td valign="top">
+      <ol>
+	<li><tt>PB0 - PCINT8, XCK0, T0  <font color="#009900">[PIN0]</font> <font color="red"><blink>LED</blink></font></tt></li>
+	<li><tt>PB1 - PCINT9, CLKO, T1 <font color="#009900">[PIN1]</font></tt></li>
+	<li><tt>PB2 - PCINT10, INT2, AIN0 <font color="#009900">[PIN2]</font></tt></li>
+	<li><tt>PB3 - PCINT11, OC0A, AIN1 <font color="#009900">[PIN3/PWM]</font></tt></li>
+	<li><tt>PB4 - PCINT12, OC0B, SS <font color="#009900">[PIN4/PWM]</font></tt></li>
+	<li><tt>PB5 - PCINT13, MOSI <font color="#009900">[PIN5]</font></tt></li>
+	<li><tt>PB6 - PCINT14, MISO <font color="#009900">[PIN6]</font></tt></li>
+	<li><tt>PB7 - PCINT15, SCK <font color="#009900">[PIN7]</font></tt></li>
+	<li><tt>RESET</tt></li>
+	<li><tt>VCC</tt></li>
+	<li><tt>GND</tt></li>
+	<li><tt>XTAL2</tt></li>
+	<li><tt>XTAL1</tt></li>
+	<li><tt>PD0 - PCINT24, RXD0 <font color="#009900">[PIN8]</font></tt></li>
+	<li><tt>PD1 - PCINT25, TXD0 <font color="#009900">[PIN9]</font></tt></li>
+	<li><tt>PD2 - PCINT26, RXD1, INT0 <font color="#009900">[PIN10]</font></tt></li>
+	<li><tt>PD3 - PCINT27, TXD1, INT1 <font color="#009900">[PIN11]</font></tt></li>
+	<li><tt>PD4 - PCINT28, OC1B <font color="#009900">[PIN12/PWM]</font></tt></li>
+	<li><tt>PD5 - PCINT29, OC1A <font color="#009900">[PIN13/PWM]</font></tt></li>
+	<li><tt>PD6 - PCINT30, OC2B <font color="#009900">[PIN14/PWM]</font></tt></li>
+	<li><tt>PD7 - PCINT31, OC2A <font color="#009900">[PIN15/PWM]</font></tt></li>
+	<li><tt>PC0 - PCINT16, SCL <font color="#009900">[PIN16]</font></tt></li>
+	<li><tt>PC1 - PCINT17, SDA <font color="#009900">[PIN17]</font></tt></li>
+	<li><tt>PC2 - PCINT18, TCK <font color="#009900">[PIN18]</font></tt></li>
+	<li><tt>PC3 - PCINT19, TMS <font color="#009900">[PIN19]</font></tt></li>
+	<li><tt>PC4 - PCINT20, TDO <font color="#009900">[PIN20]</font></tt></li>
+	<li><tt>PC5 - PCINT21, TDI <font color="#009900">[PIN21]</font></tt></li>
+	<li><tt>PC6 - PCINT22, TOSC1 <font color="#009900">[PIN22]</font></tt></li>
+	<li><tt>PC7 - PCINT23, TOSC2 <font color="#009900">[PIN23]</font></tt></li>
+	<li><tt>AVCC</tt></li>
+	<li><tt>GND</tt></li>
+	<li><tt>AREF</tt></li>
+	<li><tt>PA7</tt><tt> - PCINT7, ADC7 <font color="#009900">[ANALOG7]</font></tt></li>
+	<li><tt>PA6</tt><tt> - PCINT6, ADC6</tt><tt> <font color="#009900">[ANALOG6]</font></tt></li>
+	<li><tt>PA5</tt><tt> - PCINT5, ADC5</tt><tt> <font color="#009900">[ANALOG5]</font></tt></li>
+	<li><tt>PA4</tt><tt> - PCINT4, ADC4</tt><tt> <font color="#009900">[ANALOG4]</font></tt></li>
+	<li><tt>PA3</tt><tt> - PCINT3, ADC3</tt><tt> <font color="#009900">[ANALOG3]</font></tt></li>
+	<li><tt>PA2</tt><tt> - PCINT2, ADC2</tt><tt> <font color="#009900">[ANALOG2]</font></tt></li>
+	<li><tt>PA1</tt><tt> - PCINT1, ADC1</tt><tt> <font color="#009900">[ANALOG1]</font></tt></li>
+	<li><tt>PA0</tt><tt> - PCINT0, ADC0</tt><tt> <font color="#009900">[ANALOG0]</font></tt></li>
+      </ol>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+</body></html>

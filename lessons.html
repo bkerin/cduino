@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+
+<!--
+/*
+ * Copyright (c) 2008-2010 Chris Kuethe <chris.kuethe@gmail.com>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+-->
+
+<html lang="en">
+  
+<head>
+
+  <title>A Brief Tutorial on Programming the ATMega (Arduino) Without
+    Arduino Software</title>
+
+  <meta name="keywords" content="Arduino, arduino, Cduino, cduino, AVR, avr,
+                                 ATMega, atmega" />
+
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  
+</head>
+  
+<body>
+  
+<table width="720"><tbody><tr><td>
+
+<h2>A Brief Tutorial on Programming the ATMega (Arduino) without Arduino
+  Software</h2>
+
+This series of tutorials cover programming of many features of the ATMega chip
+using the C programming language.  They are available as modules in the <a
+  href="home_page.html">cduino</a> system, so building and
+uploading them should be pretty easy.
+<p />
+<ol>
+<li><a href="#blinky1">A blinking LED - Busy Waits and IO ports</a></li>
+<li><a href="#blinky2">Two blinking LEDs - Addressing Pins</a></li>
+<li><a href="#digital-in">A switched LED - Digital Input and output</a></li>
+<li><a href="#usart-out">Serial Output</a></li>
+<li><a href="#usart-in">Serial Input</a></li>
+<li><a href="#lesson06">Putting it together: printing button presses and controlling LEDs</a></li>
+<li><a href="#pwm-out">Pulse Width Modulated (PWM) Output</a></li>
+<li><a href="#avr-libc-goodies">avr-libc goodies</a></li>
+
+<!-- These modules aren't ported and verified in cduino yet
+<li><a href="#adc-in">Analog Input</a></li>
+<li><a href="#blinky3">A blinking LED - Interrupts and timers</a></li>
+<li><a href="#eeprom">Persistent Storage</a></li>
+<li><a href="#input-capture">Input Capture</a></li>
+<li><a href="#watchdog">Watchdog</a></li>
+<li><a href="#i2c-spi">I2C/SPI peripherals</a></li>
+-->
+
+</ol>
+
+<ul>
+<li><a href="#atmega644p-only">ATmega644P-specific</a></li>
+<li><a href="#attiny85-only">ATtiny85-specific</a></li>
+<li><a href="#at90usb162-only">AT90USB162-specific</a></li>
+</ul>
+
+<hr>
+<h3><a name="blinky1">Lesson 1: A blinking LED - Busy Waits and IO ports</a></h3>
+<p align="justify">This section is an introduction to microcontrollers. Out of
+the box, your microcontroller won't do anything - you need to load a program
+before it's useful. Here I present the the hardware equivalent of "Hello
+World" - a blinking light.</p><p>
+
+</p><p align="justify">To begin, let's look at the <a href="pin_map.html">pin
+map</a>.  We see that Arduino pin 13 is PB5 on the ATmega168 - part of port B.
+To use this pin, port B must first be set to be an output pin. There are
+various ways to do this[2] - writing to Port B Data Direction Register[3] at
+address 0x24 or the lazy/better way, using the DDRB macro. Let's keep things
+simple and set the whole port to output with <tt>DDRB
+  = 0xff;</tt>. Finally, we can start writing to PORTB (address 0x25).</p>
+
+<p align="justify">A simple approach would would be to do something like
+this:</p><pre>while(1){
+	PORTB = 0xff;
+	_delay_ms(500);
+	PORTB = 0x00;
+	_delay_ms(500);
+}</pre>
+which makes use of the delay routines defined in <tt>&lt;util/delay.h&gt;</tt>.
+If you try run this, you'll find your LED blinking very rapidly. Far more
+rapidly than you'd like.<p></p>
+
+<p align="justify">A brief inspection of delay.h is instructive: with respect
+to _delay_ms, "The maximal possible delay is 262.14 ms / F_CPU in MHz." This
+can easily be addressed by computing the maximum time _delay_ms will sleep,
+and given that, the number of times to call _delay_ms to achieve the desired
+delay interval. You may wish to put this computation into a separate function
+which you can call whenever you need to delay.</p>
+
+<p align="justify"><a href="lessons/lesson1.c">lesson1.c</a> is one possible
+solution.</p>
+
+<hr>
+
+<h3><a name="blinky2">Lesson 2: Two blinking LEDs - Addressing
+    Pins</a></h3> <p align="justify">This section builds on the previous
+section. By now you're probably bored of looking at the onboard LED blinking.
+That's good. Let's try hooking up some other LEDS. If you try this, you'll find
+they'll all blink together. Why?</p>
+
+<p align="justify">Because you asked for it with <tt>PORTB = 0xff;</tt>. More
+astute readers may have figured out that writing all 1's to the port would
+set all the pins to 1. If you're new to this... well, I just said it. By the
+same token, writing 1 to only a single bit in the port's register will only
+turn that pin on.</p>
+
+<p align="justify">Recall that the Arduino pin map said that pin 13 - the LED -
+is PB5. In other words, bit 5 of port B, or 0x20. Take a copy of your solution
+from lesson 1, and change it to write 0x20 to PORTB, rather than 0xff. After
+doing this, your program should blink just the onboard LED.</p>
+
+<p align="justify">Now that you have control over a given port, extend your
+program to alternate or cycle the LEDs <a
+  href="lessons/lesson2.c">lesson2.c</a> is one possible solution.</p>
+
+<hr> 
+
+<h3><a name="digital-in">Lesson 3: A switched LED - Digital Input and
+    output</a></h3> <p align="justify">We've now become comfortable with basic
+digital output, let's work on getting signals in.</p>
+
+<p align="justify">Bear with me a moment while we look at some background on
+inputs. We like to think of processors as purely digital entities - ones and
+zeros, highs and lows. Alas, there are plenty of analog signals inside, and
+depending on your processor (like AVRs and PICs) you may even have specific
+analog inputs. A pin connected to ground is logic 0, and a pin connected to
+power is logic 1, but what value does an unconnected pin have? Indeterminate.
+The pin is said to be floating.</p>
+
+<p align="justify">Typically, pins are connected to high or low through a
+relatively high-value resistor, called a pull-up or pull-down. This offers a
+weak signal to that pin, putting it into a known state. This known state is
+then selectively overriden by shorting the pin to low or high. Think of it as
+someone yelling "zero", and someone whispering "one". The very loud zero will
+overpower the quiet one, but in the absence of other input, you'll hear the
+one. As to what value of resistor to use, I've heard "it depends", "low enough
+to get the signal, high enough to not waste power", and "47K". My point in
+mentioning this is to let you know that something will need to be done to the
+input signal so the AVR knows it's there.</p>
+
+<p align="justify">If you're lazy (or wise), you can tell the AVR to use
+internal pull-ups rather than having to mess with them on your own. Using Port
+D as an example, let's set up Digital Pin 2 (PD2) as an input with internal
+pull-up:</p><pre>DDRD &amp;= 0xFB; /* leave all the other bits alone, just zero
+bit 2 */ PORTD |= 0x04 /* leave all the other bits alone, just set bit 2 */
+value = PORTD &amp; 0x04; /* and that's what's on the pin... */ </pre><p></p>
+
+<p align="justify">Try a program to read a switch connected between digital pin
+2 and ground, and use this to control an LED. One possible solution is </a><a
+href="lessons/lesson3.c">lesson3.c</p>
+
+<hr>
+
+<h3><a name="usart-out">Lesson 4: Serial Output</a></h3> <p
+align="justify">Serial is icky. It took several passes through chapter 19 of
+the ATmega168 datasheet before all the pieces started to come together. I'd
+advise against copying the sample code from the datasheet, at least until you
+understand where the magic bits come from. I'd also recommend against making
+the init function too configurable; just set up the com port once and be done
+with it. Flexible configuration makes your program significantly larger.</p>
+
+<p align="justify">The first set of magic bits (Baud Rate Register) is found in
+table 19-1. This is very machine dependent; you must recompile if you change
+your device's clock rate. The datasheet also includes tables listing the magic
+values. The BRR value is written into a clock generator which clocks the UART.
+Since the baud rate register is 12 bits wide and the AVR is an 8-bit core, we
+need to split the write into two halves. According to the datasheet the clock
+generator is updated when the low byte is written. Thus the baud rate register
+should be written to high-byte first.</p>
+
+<p align="justify">Next is framing, most things these days default to "8N1",
+and that's what we will do here. Section 19.10.4 (UCSR0C) describes the framing
+controls. To use asynchronous mode, set the top 2 bits to 00. To inhibit parity
+generation and checking, set the next 2 bits to 00. To use 1 stop bit, set the
+next bit to 0. To use 8 data bits, set the next 2 bits to 11 (decimal 3). In
+async mode, the bottom bit should be 0. Altogether, <tt>UCSR0C = 0x06; </tt> or
+<tt>UCSR0c = (3 &lt;&lt; UCSZ00);</tt> will program the register correctly.</p>
+
+<p align="justify">Once the serial port is initialized, you can write to it by
+writing to <tt>UDR0</tt>. You should check that the port is actually ready to
+transmit; the usual way to do this seems to be a busy wait that tests if the
+USART Data Register is Empty - <tt>(UCSR0A &amp; (1 &lt;&lt; UDRE0))</tt>.</p>
+
+<p align="justify">Try write a program that prints a fixed string to the serial
+port. One way to do this is </a><a href="lessons/lesson4.c">lesson4.c</p>
+
+<hr>
+<h3><a name="usart-in">Lesson 5: Serial Input</a></h3>
+<p align="justify">Building on lesson 4, we can now handle serial input. The
+companion function - receive - busy waits on USART Receive Complete, and then
+returns the Data Register <tt>(UCSR0A &amp; (1 &lt;&lt; RXC0))</tt>. The busy
+wait is not good for applications that shouldn't block on serial IO, but for
+now it's good enough.</p>
+
+<p align="justify">Reusing your code from lesson 4, write a
+  program to read a character from the serial port and echo the next one back.
+  If you type 'A' it should echo 'B'. One way to do this is </a><a
+  href="lessons/lesson5.c">lesson5.c.</p>
+
+<hr><h3><a name="lesson06">Lesson 6: Putting it
+    together: printing button presses and controlling LEDs</a></h3> <p
+align="justify">I haven't written a sample solution to this
+  yet, but at this point you should know everything you need to read a switch
+  or the serial port and use this to control an LED (and print its status to
+  the serial port). When I do finish this example, you can see </a><a
+  href="lessons/lesson6.c">lesson6.c</p>
+
+<hr><h3><a name="pwm-out">Lesson 7: Pulse Width
+    Modulated (PWM) Output</a></h3> <p align="justify"> Digital outputs have a
+hard time generating outputs other than logic low and high - probably +0 and
++Vcc in Arduino applications. It's easy enough to set an LED on a digital pin
+to 0% or 100% brightness, and we know it's possible to make LEDs glow at less
+than full brightness, but how? The
+  answer is PWM - Pulse Width Modulation.</p>
+
+<p align="justify">PWM works by exploiting the fact that we're using rapidly
+changing signals to manipulate physical objects that can't react as quickly.
+By sending a series of fast, short pulses we can simulate their average effect.
+The math is simple: 100ms@100%+900ms@0% has the same average power over 1
+second as 1000ms@10%. In other words, a low-pass filter. With that in mind,
+let's set up the the AVR to do PWM output.</p>
+
+<p align="justify">Try writing a program to slowly ramp the
+  brightness of the LED. Or maybe have it fade in and out. <a
+    href="lessons/lesson7a.c">lesson7a.c</a> is one way to do this. Alas, this
+  solution sucks - it's basically a big nasty busy wait that prevents you from
+  getting any real work done while generating the PWM waveform.</p>
+
+<p align="justify">As we learn about hardware PWM, application Note 130 will
+be your friend. Though it's written for the AT90S8535 and doesn't use gcc,
+the general principles are still useful. First off, you need a timer to
+generate pulses. This is created from a counter, a periodic increment and a
+compare register.</p>
+
+<p align="justify">For this example, TCNT0 is the counter, the system clock is
+the periodic increment (CS = 1), and OCR0A as the compare register. Section
+13.3.3 of the ATmega168 datasheet says that PORTD.6 is the output pin for OC0A.
+First, the control register TCCR0A should be set for Fast PWM mode. Then the
+compare mode (inverting/non-inverting) is also set in the control register. At
+this point, it would be good to initialize the timer and comparator values
+because the timer isn't ticking until the clock source is set (control register
+TCCR0B). It is now safe to set the output bits on the output port.  One way to
+do hardware PWM is <a href="lessons/lesson7b.c">lesson7b.c</a>.</p>
+
+<hr>
+<h3><a name="avr-libc-goodies">Lesson 8: avr-libc goodies</a></h3>
+<p align="justify">Now that you've written a few programs, I imagine you're
+getting tired of typing in certain constructs (and your eyeballs are probably
+bleeding from the aggregated ugliness). It's time to introduce a few macros
+to make things simpler:</a></p>
+<table border="1">
+<tbody><tr><td><b>By hand</b></td><td><b>Macro</b></td></tr>
+<tr><td><code>while ( (UCSR0A &amp; (1 &lt;&lt; UDRE0)) ){ ; }</code></td>
+    <td><code>loop_until_bit_is_clear(UCSR0A, UDRE0);</code></td></tr>
+
+<tr><td><code>while (!(PORTD &amp; 0x4) ){ ; }</code></td>
+    <td><code>loop_until_bit_is_set(PORTD, _BV(PD2));</code></td></tr>
+
+<tr><td><code>PORTD = 0x4;</code></td>
+    <td><code>PORTD = _BV(PD2);</code></td></tr>
+
+<tr><td><code>
+#define BAUD 9600<br>
+UBRR0H = (((F_CPU/BAUD/16)-1) &gt;&gt; 8);<br>
+UBRR0L = ((F_CPU/BAUD/16)-1);<br>
+UCSR0C = (3 &lt;&lt; UCSZ00);<br>
+UCSR0B = (1 &lt;&lt; RXEN0) | (1 &lt;&lt; TXEN0);<br>
+</code></td>
+    <td><code>
+#define BAUD 9600<br>
+#include &lt;util/setbaud.h&gt;<br>
+UBRR0H = UBRRH_VALUE;<br>
+UBRR0L = UBRRL_VALUE;<br>
+UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);<br>
+UCSR0B = _BV(RXEN0) | _BV(TXEN0);<br> </code></td></tr>
+
+</tbody></table> <p align="justify">I'm rather fond of stdio and formatted IO.
+I've been spoiled by big machines with multiple multi-GHz cpus, a few GB of
+memory and a few TB of storage. Programming an embedded device makes me realize
+how wonderful <tt>printf("sensor %d value %f\n", n, values[n])</tt> is.
+Avr-libc has some glue to simulate stdio. Here's an example of how to use this:
+</a><a href="lessons/lesson8.c">lesson8.c</a>. The manual warns that printf and
+scanf are quite resource-intensive. This is not even a little bit of an
+exaggeration.  Have a look at the annotated assembly files and be afraid. Be
+very afraid.  In my example implementation, I also use the program space macros
+to avoid keeping constant strings in RAM when they could simply be used
+straight from flash.</p>
+
+<!-- FIXME: these modules haven't been added to cduino yet
+
+<hr>
+<a name="adc-in"></a><h3><a name="adc-in">Lesson 9: Analog Input</a></h3>
+<p align="justify"><a name="adc-in">In this example, I will be using a thermistor to provide
+analog input. Actually setting up the ADC is pretty straightforward; Because
+I'm using a thermistor as my analog device, I added some "fluff" to help
+visualize the input, but it's not strictly necessary.</a></p>
+
+<p align="justify"><a name="adc-in">There are a few little things to do for a
+  simple, polled analog sample. Ensure that the pin you're reading has pull-ups
+  disabled, since these interfere with the sampling. Writing 0 to the pin
+  register (PORTC = 0) or setting it to output mode (DDRC = 0) Set the ADC
+  clock correctly - it needs to be clocked at 50kHz-200kHz. The Arduino's 16MHz
+  clock divided by 128 is a very comfortable 165kHz. Set the reference voltage
+  correctly. This determines the upper limit for measurement; using Vcc is
+  probably the best bet. USB power will probably be very stable. Finally, set
+  the ADC enable bit and force one conversion - the first conversion takes
+  extra time due to some internal setup that is required. Here is </a><a
+  href="lessons/lesson9.c">lesson9.c</a>.</p>
+
+<hr>
+<a name="blinky3"></a><h3><a name="blinky3">Lesson 10: A blinking LED - Interrupts and timers</a></h3>
+<p align="justify"><a name="blinky3">Like the serial ports, it took a bit of studying of the
+datasheets to understand how to make timers work. A large part of this was
+due to one incorrectly set bit - it compiled and didn't do what I thought
+it should do. As it turns out, a simple blinky light was easier to figure
+out than PWM.</a></p>
+
+<p align="justify"><a name="blinky3">In this example, I'm using the TIMER0_OVERFLOW interrupt
+to decide what to do when the timer overflows - whether to toggle the LED
+or not. Interrupt handlers must be written carefully if they are run often
+since they can cut into more useful processing time. Setting up an interrupt
+handler has some noticeable overhead - 14 instructions for the prologue and
+epilogue - before the main body of the handler is executed. Furthermore, a
+since line of C might be translated into 10 instruction it is very easy to
+write an interrupt handler that takes a long time to run. Depending on the
+length of the handler and the frequency of interrupts, you may run out of
+stack space and crash. The example compiler invokation below includes flags
+to emit source-annotated-assembly language.</a></p>
+
+<p align="justify"><a name="blinky3">Using the 8-bit timer0 is fairly straightforward. There are
+four things to be done:</a></p>
+<ol>
+<li><a name="blinky3">select the timer's clock source</a></li>
+<li><a name="blinky3">allow the timer to generate interrupts</a></li>
+<li><a name="blinky3">reset the timer</a></li>
+<li><a name="blinky3">enable interrupt processing</a></li>
+</ol>
+<p align="justify"><a name="blinky3">Each of these items takes a just single line of code. First,
+the clock source must be configured. The timer system can accept external
+inputs or use the system clock - optionally divided down to a slower rate.
+The Clock Select (CS00-CS02) bits in the timer/counter control register B
+(TCCR0B) are used.  Assuming a 16MHz clock, a prescale of 1024 will cause
+15625 increment operations per second. Since the counter can hold 256 unique
+values, it will overflow at 61Hz. If a higher interrupt rate is needed, the
+prescaler can be set lower, or a smaller Output Compare (OCR0A) can be used.
+The timer/counter interrupt mask register defaults to 0 - no interrupts will
+be generated by the timer/counter system. To enable timer overflow interrupts,
+set the TOIE0 bit of TIMSK0. Timers can be set and reset by storing into them,
+in this case <tt>TCNT0 = 0</tt>. Finally, the <tt>sei()</tt> function enables
+interrupt processing.</a></p>
+
+<p align="justify"><a name="blinky3">One way to do this is </a><a
+  href="lessons/lesson10.c">lesson10.c</a>.  My version can blink either the
+onboard LED on PORTB.5 or a set of LEDs on PORTB.1 - PORTB.3.</p>
+
+<a name="eeprom"></a><h3><a name="eeprom">Lesson 11: Persistent Storage</a></h3>
+<p align="justify"><a name="eeprom">EEPROM provides developers with the ability to persistently
+store data on chip, inside the running program. It requires no peripherals,
+and doesn't place the program code at risk like writing the flash. Of course,
+EEPROM is much slower than RAM access. You should be prepared to deal with
+power failures while writing to EEPROM.</a></p>
+
+<p align="justify"><a name="eeprom">EEPROM use is easy. Because EEPROM is slower than memory,
+you first need to check that the EEPROM is ready to accept operations. There
+is a function - eeprom_is_ready() - to do this, and this is the core of the
+eeprom_busy_wait() function. Once the EEPROM is ready, it can be written with
+eeprom_write_{byte,word,dword,block} and read back with
+eeprom_read_{byte,word,dword,block}. See </a><a href="lessons/lesson11.c">lesson11.c</a>
+for an example.</p>
+
+<p align="justify">To safely use EEPROM storage in applications where power
+loss is a significant risk, consider storing a version counter and a validity
+flag in the structure. The structure should be marked invalid before any
+changes are made, and should only be marked valid once all other changes are
+made. Keep two (or more) copies of the structure and rotate through them;
+The version counter can be used to determine which is the most current copy.
+In the event power is lost during a write, older versions remain intact. You
+may want to have a look at "AVR101: High Endurance EEPROM Storage".</p>
+
+<a name="input-capture"></a><h3><a name="input-capture">Lesson 12: Input Capture</a></h3>
+<p align="justify"><a name="input-capture">One of the useful features of the AVR is the input capture
+system. An application requiring low latency timestamping (a stopwatch or a
+pwm detector) could benefit from this. Input capture works by atomically
+copying the current value of the Timer/Counter Register into the Input Capture
+Register. The timer continues running and can optionally be reset to zero.
+Inside the input capture interrupt handler the user code can run without
+having to take heroic measures to minimize time spent reading the timer or
+resetting it - this is all done in hardware.</a></p>
+
+
+<a name="watchdog"></a><h3><a name="watchdog">Lesson 13: Watchdog</a></h3>
+<p align="justify"><a name="watchdog">From time to time, it may be useful to have an interrupt or
+reset delivered independently of the main program code. This may be to wake
+the AVR from sleep mode or to reset when the program gets stuck in a loop;
+that's where the watchdog timer comes in. An onboard 128kHz oscillator is used
+to drive the watchdog with intervals from 16ms to 8s. If the watchdog expires
+without being touched, the system can catch an interrupt, be reset or both. If
+you "kick the dog" before the time expires, no action is taken.</a></p><p>
+
+</p><p align="justify"><a name="watchdog">While it can be slightly complicated to set up the watchdog
+by hand, avr-libc has some convenience functions. To enable the watchdog, call
+<tt>watchdog_enable()</tt> with the desired duration. Refreshing the watchdog
+is as simple as a call to <tt>watchdog_reset()</tt>. If the <tt>WDTON</tt>
+fuse is set the watchdog activates automatically, rather than requiring manual
+activation.</a></p>
+
+<p align="justify"><a name="watchdog">A short example of using the watchdog timer to wake from a
+deep sleep mode is found in </a><a href="lessons/lesson13.c">lesson13.c</a>.</p>
+
+<a name="i2c-spi"></a><h3><a name="i2c-spi">Lesson 14: I2C/SPI peripherals</a></h3>
+
+-->
+
+<h3><a name="atmega644p-only">ATmega644P-specific</a></h3> <p
+align="justify">Most of this document should be applicable to any AVR board.  I
+wrote it using a Freeduino SB which has an ATmega168. I'm also running a
+Sanguino which is based on the ATmega644P. This section covers some of the
+differences when running on this hardware.</p>
+
+<p align="justify">I recently ported an application I built on the '168 to the
+'644P. The only changes I needed to make were to the pins with the LEDs and the
+input capture pin. Most Arduino compatible boards seem to use PORTD.5 for the
+on-board <i>blinkenlicht</i> - the Sanguino I'm working with uses PORTB.0.
+Input capture moves from PORTB.0 to PORTD.6. After some thought I changed all
+of the program's references to specific ports and pins to preprocessor macros
+allowing me to use a different set of pins depending on the board I'm running.
+</p>
+
+<h3><a name="attiny85-only">ATtiny85-specific</a></h3> <p align="justify">Most
+of this document should be applicable to any AVR board.  I wrote it using a
+Freeduino SB which has an ATmega168. I'm also running some ATtiny85 parts. This
+section covers some of the differences when running on this hardware.</p>
+
+<p align="justify">While porting my firefly simulator to the tiny85, I found
+the smaller peripheral mix got to be very annoying. In particular, TIMER2 which
+can wake the AVR from sleep does not exist, nor does the SLEEP_MODE_PWR_SAVE.
+Power down mode does exist, but it may disable too many other parts of the
+processor. In this case, I was able to use the watchdog timer to wake from
+SLEEP_MODE_PWR_DOWN, but the big lesson was to carefully read the datasheets
+before committing to a particular part.</p>
+
+<h3><a name="at90usb162-only">AT90USB162-specific</a></h3>
+<p align="justify">Most of this document should be applicable to any AVR board.
+I wrote it using a Freeduino SB which has an ATmega168. I'm also running a
+Teensy which is based on the AT90USB162. This section covers some of the
+differences when running on this hardware.</p>
+
+<h3>References</h3>
+        <li>[1] <a href="pin_map.html">pin_map.html</a></li>
+	<li>[2] http://www.atmel.com/dyn/resources/prod_documents/avr_3_04.pdf</li>
+	<li>[3] http://www.atmel.com/dyn/resources/prod_documents/doc2545.pdf</li>
+	<li>http://avrbasiccode.wikispaces.com/Atmega168</li>
+	<li>http://javiervalcarce.es/wiki/Program_Arduino_with_AVR-GCC</li>
+	<li>http://www.ladyada.net/learn/Arduino/</li>
+	<li>http://ccrma.stanford.edu/courses/250a/docs/avrlib/html/</li>
+	<li>http://www.nongnu.org/avr-libc/user-manual/</li>
+	<li>http://www.engbedded.com/cgi-bin/fc.cgi</li>
+	<li>http://piconomic.berlios.de/</li>
+	<li>http://www.sanguino.cc/</li>
+	<li>http://www.pjrc.com/teensy/</li>
+	<li>... and the rest of atmel's ginormous tech library</li>
+
+<h3>Appendix A: compiling and loading your code</h3>
+
+The simple way is to use the build framework in <a
+  href="home_page.html">cduino</a>.
+<p />
+
+It's also possible to run the build commands yourself.  It should look
+something like the example below.  Note that you'll probably have to change
+some file and processor names to make this work:
+<p />
+
+<pre>avr-gcc -g -mmcu=atmega168 -c example.c -Wa,-alh,-L -o example.o &gt; example.asm
+avr-gcc -g -mmcu=atmega168 -Wl,-Map,example.map -o example.elf example.o
+avr-objdump -h -S example.elf &gt; example.lst
+avr-objcopy -j .text -j .data -O ihex example.elf example.hex
+avr-size example.elf
+avrdude -b19200 -P /dev/cuaU0 -c avrisp -p m168 -U flash:w:example.hex
+</pre>
+
+<pre>avr-gcc -g -mmcu=atmega644p -c blinkprint.c -Wa,-alh,-L -o blinkprint.o &gt; blinkprint.asm
+avr-gcc -g -mmcu=atmega644p -Wl,-Map,blinkprint.map -o blinkprint.elf blinkprint.o
+avr-objdump -h -S blinkprint.elf &gt; blinkprint.lst
+avr-objcopy -j .text -j .data -O ihex blinkprint.elf blinkprint.hex
+avr-size blinkprint.elf
+avrdude -c usbtiny -p atmega644p -U flash:w:blinkprint.hex
+</pre>
+
+<p align="justify">NB: older versions of GCC may not support newer mcu types
+like <tt>-mmcu=atmega168</tt> or <tt>-mmcu=atmega644p</tt>. For some of
+these examples you may be able to use <tt>-mmcu=avr5</tt>, but things like
+the serial port won't work correctly or at all without the correct mcu flag.
+Arduino-0011 uses GCC 4.0.4, that should be considered the minimum required
+version.</p>
+
+<p>Copyright 2008,2009 Chris Kuethe &lt;chris.kuethe@gmail.com&gt;<br>
+</p></td></tr></tbody></table>
+</body></html>

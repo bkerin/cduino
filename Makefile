@@ -27,6 +27,8 @@ new_module:
 .PHONY: upload_html
 upload_html:
 	scp *.html $(WEB_SSH):$(WEB_ROOT)
+	ssh $(WEB_SSH) rm -rf '$(WEB_ROOT)/lessons/'
+	scp -r lessons $(WEB_SSH):$(WEB_ROOT)
 	ssh $(WEB_SSH) ln -s --force home_page.html $(WEB_ROOT)/index.html
 
 # Make a release targzball.  The make variable VERSION must be set (probably 
