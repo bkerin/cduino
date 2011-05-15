@@ -65,6 +65,7 @@ UPLOAD_METHOD ?= arduino_bl
 # programming command goes off to program the device).
 DTR_PULSE_NOT_REQUIRED ?= false
 
+
 ##### Programs for Building and Uploading (Overridable) {{{1
 
 # Probaly the only reason to override these is if you have your own builds
@@ -104,6 +105,19 @@ AVRGDB ?=
 LOCK_AND_FUSE_SETTINGS ?=
 
 
+##### printf() Feature Support
+
+# AVR libc provides minimal, standard, and (mostly) full-featured printf
+# implementations, allowing you to trade features for small code size.  See the
+# discussion in
+# http://www.nongnu.org/avr-libc/user-manual/group__avr__stdio.html for
+# details.  The default is to use the AVR libc default printf implementation,
+# which supports most normal printf features except floating point support.
+# Other possible values which individual modules may use are "-Wl,-u,vfprintf
+# -lprintf_min" and "-Wl,-u,vfprintf -lprintf_flt -lm".
+AVRLIBC_PRINTF_LDFLAGS ?=
+
+
 ##### Computed File Names {{{1
 
 CFILES := $(patsubst %.o,%.c,$(OBJS))
@@ -134,7 +148,7 @@ CFLAGS += -I. $(INC) -std=gnu99 -gstabs $(CPU_FREQ_DEFINE) \
 ASMFLAGS := -I. $(INC) -mmcu=$(COMPILER_MCU)-x assembler-with-cpp \
             -Wa,-gstabs,-ahlms=$(firstword $(<:.S=.lst) $(<.s=.lst))
 
-LDFLAGS := -mmcu=$(COMPILER_MCU) -Wl,-Map,$(TRG).map
+LDFLAGS := -mmcu=$(COMPILER_MCU) $(AVRLIBC_PRINTF_LDFLAGS) -Wl,-Map,$(TRG).map
 
 ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   # This flag shows up somewhere in the arduino build files.  But it seems to
