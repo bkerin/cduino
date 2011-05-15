@@ -67,9 +67,9 @@ uploading them should be pretty easy.
 <li><a href="#lesson06">Putting it together: printing button presses and controlling LEDs</a></li>
 <li><a href="#pwm-out">Pulse Width Modulated (PWM) Output</a></li>
 <li><a href="#avr-libc-goodies">avr-libc goodies</a></li>
+<li><a href="#adc-in">Analog Input</a></li>
 
 <!-- These modules aren't ported and verified in cduino yet
-<li><a href="#adc-in">Analog Input</a></li>
 <li><a href="#blinky3">A blinking LED - Interrupts and timers</a></li>
 <li><a href="#eeprom">Persistent Storage</a></li>
 <li><a href="#input-capture">Input Capture</a></li>
@@ -317,16 +317,15 @@ very afraid.  In my example implementation, I also use the program space macros
 to avoid keeping constant strings in RAM when they could simply be used
 straight from flash.</p>
 
-<!-- FIXME: these modules haven't been added to cduino yet
-
 <hr>
-<a name="adc-in"></a><h3><a name="adc-in">Lesson 9: Analog Input</a></h3>
-<p align="justify"><a name="adc-in">In this example, I will be using a thermistor to provide
-analog input. Actually setting up the ADC is pretty straightforward; Because
-I'm using a thermistor as my analog device, I added some "fluff" to help
-visualize the input, but it's not strictly necessary.</a></p>
 
-<p align="justify"><a name="adc-in">There are a few little things to do for a
+<h3><a name="adc-in">Lesson 9: Analog Input</a></h3>
+
+<p align="justify">In this example, we'll use a 10 kohm potentiometer to
+provide an analog voltage to sample. 
+</p>
+
+<p align="justify">There are a few little things to do for a
   simple, polled analog sample. Ensure that the pin you're reading has pull-ups
   disabled, since these interfere with the sampling. Writing 0 to the pin
   register (PORTC = 0) or setting it to output mode (DDRC = 0) Set the ADC
@@ -336,7 +335,9 @@ visualize the input, but it's not strictly necessary.</a></p>
   probably the best bet. USB power will probably be very stable. Finally, set
   the ADC enable bit and force one conversion - the first conversion takes
   extra time due to some internal setup that is required. Here is </a><a
-  href="lessons/lesson9.c">lesson9.c</a>.</p>
+  href="lessons/lesson9.c">lesson9.c.</p>
+
+<!-- FIXME: these modules haven't been added to cduino yet
 
 <hr>
 <a name="blinky3"></a><h3><a name="blinky3">Lesson 10: A blinking LED - Interrupts and timers</a></h3>
