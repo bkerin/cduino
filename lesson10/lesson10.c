@@ -15,49 +15,64 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+//
+// Assumptions:
+// 	- LED connected to PORTB (arduino boards have LED L onboard)
+// 	- F_CPU is defined to be your cpu speed (preprocessor define)
+//
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
 volatile uint8_t intrs;
 
-ISR(TIMER0_OVF_vect) {
-	/* this ISR is called when TIMER0 overflows */
-	intrs++;
+ISR (TIMER0_OVF_vect)
+{
+  // This ISR is called when TIMER0 overflows.
+  intrs++;
+
 #if 1
-	/* strobe PORTB.5 - the LED on arduino boards */
-	if (intrs >= 61){
-		PORTB ^= _BV(5);
-		intrs = 0;
-	}
+  // Strobe PORTB.5 - the LED on arduino boards.
+  if ( intrs >= 61 ) {
+    PORTB ^= _BV(5);
+    intrs = 0;
+  }
 #else
-	/* color cycle RGB LED connected to pins 9,10,11 */
-	PORTB = ((intrs >> 2) & 0x0e);
+  // Color cycle RGB LED connected to pins 9,10,11
+  PORTB = ((intrs >> 2) & 0x0e);
 #endif
 }
 
 
 int
-main(void) {
-	/* 
-	 * set up cpu clock divider. the TIMER0 overflow ISR toggles the
-	 * output port after enough interrupts have happened.
-	 * 16MHz (FCPU) / 1024 (CS0 = 5) -> 15625 incr/sec
-	 * 15625 / 256 (number of values in TCNT0) -> 61 overflows/sec
-	 */
-	TCCR0B |= _BV(CS02) | _BV(CS00);
+main (void) {
+  // Set up cpu clock divider.  The TIMER0 overflow ISR toggles the output port
+  // after enough interrupts have happened.
+  //    
+  //   16MHz (FCPU) / 1024 (CS0 = 5)
+  //   -> 15625 incr/sec 
+  //   -> 15625 / 256 (number of values in TCNT0)
+  //   -> 61 overflows/sec
+  //
+  TCCR0B |= _BV(CS02) | _BV(CS00);   // Set timer to click at F_CPU / 1024.
 
-	/* Enable Timer Overflow Interrupts */
-	TIMSK0 |= _BV(TOIE0);
+  // Enable timer overflow interrupts.
+  TIMSK0 |= _BV(TOIE0);
 
-	/* other set up */
-	DDRB = 0xff;
-	TCNT0 = 0;
-	intrs = 0;
+  DDRB = 0xff;   // Set LED port for output.
 
-	/* Enable Interrupts */
-	sei();
+  TCNT0 = 0;   // Reset timer/counter zero.
 
-	while (1)
-		; /* empty loop */
+  intrs = 0;   // Zero our interupt counter variable.
+
+  // Enable interrupts.
+  sei();
+
+  while (1) {
+    // Here we do nothing while waiting for an interrupt.  So in effect we're
+    // still performing a busy wait still in this example.  But note that we
+    // could be doing real work here instead -- we aren't dependent on this
+    // busy wait for the LED blink timing.
+    ; 
+  }
 }
-
