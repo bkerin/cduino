@@ -18,11 +18,11 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-/*
- * Assumptions:
- * 	- LED connected to PORTB
- * 	- F_CPU is defined to be your cpu speed (preprocessor define)
- */
+//
+// Assumptions:
+// 	- LED connected to PORTB (arduino boards have LED L onboard)
+// 	- F_CPU is defined to be your cpu speed (preprocessor define)
+//
 
 int main (void)
 {
