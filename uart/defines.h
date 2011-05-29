@@ -15,16 +15,11 @@
 // Defined in Makefile now:
 //#define F_CPU 1000000UL
 
+// F_CPU is supposed to be defined in the Makefile (because that's where
+// the other part and programmer specs go).
+#ifndef F_CPU
+#  error "F_CPU not defined"
+#endif
+
 /* UART baud rate */
 #define UART_BAUD  9600
-
-/* HD44780 LCD port connections */
-#define HD44780_RS C, 6
-#define HD44780_RW C, 4
-#define HD44780_E  C, 5
-/* The data bits have to be in ascending order. */
-#define HD44780_D4 C, 0
-
-/* Whether to read the busy flag, or fall back to
-   worst-time delays. */
-#define USE_BUSY_BIT 1
