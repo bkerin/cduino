@@ -11,15 +11,11 @@
  * $Id: defines.h 2002 2009-06-25 20:21:16Z joerg_wunsch $
  */
 
-/* CPU frequency */
-// Defined in Makefile now:
-//#define F_CPU 1000000UL
-
 // F_CPU is supposed to be defined in the Makefile (because that's where
 // the other part and programmer specs go).
 #ifndef F_CPU
 #  error "F_CPU not defined"
 #endif
 
-/* UART baud rate */
+// UART baud rate.
 #define UART_BAUD  9600
