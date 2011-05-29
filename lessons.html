@@ -69,8 +69,8 @@ uploading them should be pretty easy.
 <li><a href="#avr-libc-goodies">avr-libc Goodies</a></li>
 <li><a href="#adc-in">Analog Input</a></li>
 <li><a href="#blinky3">Interrupts and Timers (Blink a LED Efficiently)</a></li>
+<li><a href="#eeprom">Persistent Storage Using EEPROM</a></li>
 <!-- These modules aren't ported and verified in cduino yet
-<li><a href="#eeprom">Persistent Storage</a></li>
 <li><a href="#input-capture">Input Capture</a></li>
 <li><a href="#watchdog">Watchdog</a></li>
 <li><a href="#i2c-spi">I2C/SPI peripherals</a></li>
@@ -385,23 +385,21 @@ interrupt processing.</a></p>
   href="lessons/lesson10.c">lesson10.c</a>.  My version can blink either the
 onboard LED on PORTB.5 or a set of LEDs on PORTB.1 - PORTB.3.</p>
 
-<!-- FIXME: these modules haven't been added to cduino yet
 
-
-<a name="eeprom"></a><h3><a name="eeprom">Lesson 11: Persistent Storage</a></h3>
-<p align="justify"><a name="eeprom">EEPROM provides developers with the ability to persistently
-store data on chip, inside the running program. It requires no peripherals,
-and doesn't place the program code at risk like writing the flash. Of course,
+<h3><a name="eeprom">Lesson 11: Persistent Storage Using EEPROM</a></h3> <p
+align="justify">EEPROM provides developers with the ability to persistently
+store data on chip, inside the running program. It requires no peripherals, and
+doesn't place the program code at risk like writing the flash. Of course,
 EEPROM is much slower than RAM access. You should be prepared to deal with
-power failures while writing to EEPROM.</a></p>
+power failures while writing to EEPROM.</p>
 
-<p align="justify"><a name="eeprom">EEPROM use is easy. Because EEPROM is slower than memory,
-you first need to check that the EEPROM is ready to accept operations. There
-is a function - eeprom_is_ready() - to do this, and this is the core of the
+<p align="justify">EEPROM use is easy. Because EEPROM is slower than memory,
+you first need to check that the EEPROM is ready to accept operations. There is
+a function - eeprom_is_ready() - to do this, and this is the core of the
 eeprom_busy_wait() function. Once the EEPROM is ready, it can be written with
 eeprom_write_{byte,word,dword,block} and read back with
-eeprom_read_{byte,word,dword,block}. See </a><a href="lessons/lesson11.c">lesson11.c</a>
-for an example.</p>
+eeprom_read_{byte,word,dword,block}. See
+<a href="lessons/lesson11.c">lesson11.c</a> for an example.</p>
 
 <p align="justify">To safely use EEPROM storage in applications where power
 loss is a significant risk, consider storing a version counter and a validity
@@ -411,6 +409,8 @@ made. Keep two (or more) copies of the structure and rotate through them;
 The version counter can be used to determine which is the most current copy.
 In the event power is lost during a write, older versions remain intact. You
 may want to have a look at "AVR101: High Endurance EEPROM Storage".</p>
+
+<!-- FIXME: these modules haven't been added to cduino yet
 
 <a name="input-capture"></a><h3><a name="input-capture">Lesson 12: Input Capture</a></h3>
 <p align="justify"><a name="input-capture">One of the useful features of the AVR is the input capture

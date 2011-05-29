@@ -22,103 +22,111 @@
 #include <stdio.h>
 #include <string.h>
 
-/* let the compiler do some of this, to avoid malloc */
+// Let the compiler do some of this, to avoid malloc.
 static int cput(char, FILE *);
 static int cget(FILE *);
 static FILE O = FDEV_SETUP_STREAM(cput, NULL, _FDEV_SETUP_WRITE);
 static FILE I = FDEV_SETUP_STREAM(NULL, cget, _FDEV_SETUP_READ );
 
-static int cput(char c, FILE *f)
+static int
+cput (char c, FILE *f)
 {
-	if (c == '\n')
-		cput((char)'\r', f);
-	loop_until_bit_is_set(UCSR0A, UDRE0);
-	UDR0 = c;
-	return 0;
+  if ( c == '\n' ) {
+    cput ((char) '\r', f);
+  }
+
+  loop_until_bit_is_set (UCSR0A, UDRE0);
+  UDR0 = c;
+
+  return 0;
 }
 
-static int cget(FILE *f __attribute__((unused)))
+static int
+cget (FILE *f __attribute__((unused)))
 {
-	loop_until_bit_is_set(UCSR0A, RXC0);
+	loop_until_bit_is_set (UCSR0A, RXC0);
 	return UDR0;
 }
 
-#define OFF_SIG (uint32_t *)0
-#define OFF_CTR (uint8_t *)4
-#define OFF_LEN (uint8_t *)5
-#define OFF_TXT (uint8_t *)6
+#define OFF_SIG ((uint32_t *) 0)
+#define OFF_CTR ((uint8_t *) 4)
+#define OFF_LEN ((uint8_t *) 5)
+#define OFF_TXT ((uint8_t *) 6)
 
-int main (void)
+int
+main (void)
 {
-	char s[80], a[5], *sig = "AVRm";
-	uint8_t b = 0, l = 0;
+  char s[80], a[5], *sig = "AVRm";
+  uint8_t b = 0, l = 0;
 
-	/* set up stdio */
+  // Set up stdio.
 #define BAUD 9600
 #include <util/setbaud.h>
-	UBRR0H = UBRRH_VALUE;
-	UBRR0L = UBRRL_VALUE;
-	UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);
-	UCSR0B = _BV(RXEN0) | _BV(TXEN0);
-	stdout = &O;
-	stdin  = &I;
+  UBRR0H = UBRRH_VALUE;
+  UBRR0L = UBRRL_VALUE;
+  UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);
+  UCSR0B = _BV(RXEN0) | _BV(TXEN0);
+  stdout = &O;
+  stdin  = &I;
 
-	printf_P(PSTR("eeprom test\n"));
-	if (!eeprom_is_ready()) {
-		printf_P(PSTR("waiting for eeprom to become ready\n"));
-		eeprom_busy_wait();
-	}
-	printf_P(PSTR("eeprom ready\n"));
+  printf_P (PSTR ("eeprom test\n"));
+  if ( !eeprom_is_ready () ) {
+    printf_P(PSTR("waiting for eeprom to become ready\n"));
+    eeprom_busy_wait();
+  }
+  printf_P(PSTR("eeprom ready\n"));
 
-	/* check for signature */
-	eeprom_read_block(&a, OFF_SIG, 4);
-	if ( memcmp(a, sig, 4) == 0){
-		printf_P(PSTR("eeprom formatted\n"));
-		b = eeprom_read_byte(OFF_CTR);
-	} else {
-		printf_P(PSTR("eeprom blanked\n"));
-	}
-	eeprom_write_block(sig, OFF_SIG, 4);
+  // Check for signature.
+  eeprom_read_block(&a, OFF_SIG, 4);
+  if ( memcmp (a, sig, 4) == 0 ) {
+    printf_P (PSTR ("eeprom formatted\n"));
+    b = eeprom_read_byte (OFF_CTR);
+  }
+  else {
+    printf_P (PSTR ("eeprom blanked\n"));
+  }
+  eeprom_write_block (sig, OFF_SIG, 4);
 
-	while (1) {
-		printf_P(PSTR("(%d) [r]ead or [w]rite: "), b);
-		scanf("%3s", s);
-		switch(s[0]){
-			case 'W':
-			case 'w':
-				printf_P(PSTR("enter a string to store in eeprom\n>"));
-				scanf("%s", s);
-				l = strlen(s);
+  while (1) {
+    printf_P (PSTR ("(%d) [r]ead or [w]rite: "), b);
+    scanf ("%3s", s);
+    switch ( s[0] ) {
+      case 'W':
+      case 'w':
+        printf_P (PSTR ("enter a string to store in eeprom\n>"));
+        scanf ("%s", s);
+        l = strlen (s);
 
-				/* increment the counter */
-				eeprom_busy_wait();
-				b = eeprom_read_byte(OFF_CTR)+1;
-				eeprom_busy_wait();
-				eeprom_write_byte(OFF_CTR, b);
+        // Increment the counter.
+        eeprom_busy_wait ();
+        b = eeprom_read_byte(OFF_CTR) + 1;
+        eeprom_busy_wait ();
+        eeprom_write_byte(OFF_CTR, b);
 
-				/* stash the length */
-				eeprom_busy_wait();
-				eeprom_write_byte(OFF_LEN, l);
+        // Stash the length.
+        eeprom_busy_wait ();
+        eeprom_write_byte(OFF_LEN, l);
 
-				/* and write out the input text */
-				eeprom_busy_wait();
-				eeprom_write_block (&s, OFF_TXT, l);
-				break;
-			case 'R':
-			case 'r':
-				eeprom_busy_wait();
-				b = eeprom_read_byte(OFF_CTR);
+        // Write out the input text.
+        eeprom_busy_wait ();
+        eeprom_write_block (&s, OFF_TXT, l);
+        break;
+      case 'R':
+      case 'r':
+        eeprom_busy_wait ();
+        b = eeprom_read_byte (OFF_CTR);
 
-				eeprom_busy_wait();
-				l = eeprom_read_byte(OFF_LEN);
+        eeprom_busy_wait ();
+        l = eeprom_read_byte (OFF_LEN);
 
-				eeprom_busy_wait();
-				eeprom_read_block(&s, OFF_TXT, l);
-				printf_P(PSTR("contents of eeprom\n>%s\n"), s);
-				break;
-			default:
-				printf_P(PSTR("invalid operation\n"));
-		}
-	}
-	return 0;
+        eeprom_busy_wait ();
+        eeprom_read_block (&s, OFF_TXT, l);
+        printf_P (PSTR ("contents of eeprom\n>%s\n"), s);
+        break;
+      default:
+        printf_P (PSTR ("invalid operation\n"));
+    }
+  }
+
+  return 0;
 }
