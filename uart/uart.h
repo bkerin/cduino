@@ -11,6 +11,14 @@
  * $Id: uart.h 1008 2005-12-28 21:38:59Z joerg_wunsch $
  */
 
+// F_CPU is supposed to be defined in the Makefile (because that's where
+// the other part and programmer specs go).
+#ifndef F_CPU
+#  error "F_CPU not defined"
+#endif
+
+#define UART_BAUD 9600
+
 // Initialize the UART to 9600 Bd, tx/rx, 8N1.
 void
 uart_init(void);

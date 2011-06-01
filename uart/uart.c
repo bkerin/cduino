@@ -14,8 +14,6 @@
 // See the interface description in uart.h for details of otherwise uncommented
 // functions.
 
-#include "defines.h"
-
 #include <stdint.h>
 #include <stdio.h>
 
@@ -26,23 +24,21 @@
 void
 uart_init (void)
 {
+
+  // Set up clocking.
 #if F_CPU < 2000000UL && defined(U2X)
   UCSR0A = _BV(U2X0);   // Improve baud rate error by using 2x clk.
   UBRR0L = (F_CPU / (8UL * UART_BAUD)) - 1;
 #else
   UBRR0L = (F_CPU / (16UL * UART_BAUD)) - 1;
 #endif
+
   UCSR0B = _BV(TXEN0) | _BV(RXEN0);   // Enable TX/RX.
 }
 
 int
 uart_putchar (char c, FILE *stream)
 {
-  if ( c == '\a' ) {
-    fputs ("*ring*\n", stderr);
-    return 0;
-  }
-
   if ( c == '\n' ) {
     uart_putchar ('\r', stream);
   }
@@ -147,4 +143,3 @@ uart_getchar (FILE *stream)
 
   return c;
 }
-

@@ -35,19 +35,19 @@
  * Do all the startup-time peripheral initializations.
  */
 static void
-ioinit(void)
+ioinit (void)
 {
-  uart_init();
+  uart_init ();
 }
 
-FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
+FILE uart_str = FDEV_SETUP_STREAM (uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 
 int
-main(void)
+main (void)
 {
   char buf[20], s[20];
 
-  ioinit();
+  ioinit ();
 
   stdout = stdin = &uart_str;
 
