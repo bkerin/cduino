@@ -11,6 +11,11 @@
  * $Id: uart.h 1008 2005-12-28 21:38:59Z joerg_wunsch $
  */
 
+#ifndef UART_H
+#define UART_H
+
+#include <stdio.h>
+
 // F_CPU is supposed to be defined in the Makefile (because that's where
 // the other part and programmer specs go).
 #ifndef F_CPU
@@ -28,7 +33,7 @@ int
 uart_putchar (char c, FILE *stream);
 
 // Size of internal line buffer used by uart_getchar().
-#define RX_BUFSIZE 80
+#define RX_BUFSIZE 81
 
 // Receive one character from the UART.  The actual reception is line-buffered,
 // and one character is returned from the buffer at each invokation.
@@ -63,3 +68,5 @@ uart_putchar (char c, FILE *stream);
 // buffer until that buffer is emptied again.
 int
 uart_getchar (FILE *stream);
+
+#endif // UART_H
