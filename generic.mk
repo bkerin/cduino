@@ -105,7 +105,7 @@ AVRGDB ?=
 LOCK_AND_FUSE_SETTINGS ?=
 
 
-##### printf() Feature Support
+##### printf() Feature Support (Overridable) {{{1
 
 # AVR libc provides minimal, standard, and (mostly) full-featured printf
 # implementations, allowing you to trade features for small code size.  See the
