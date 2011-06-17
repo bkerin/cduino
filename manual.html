@@ -189,6 +189,12 @@ generic.mk behaves.  These occur in sections marked "Overridable" in that file.
   example, setting the clock source to the low-frequency low-power internal
   oscillator makes the chips unprogrammable for me.</li>
 
+  <li><code>AVRLIBC_PRINTF_LDFLAGS</code> -- This variable can be used to get a
+  more feature-complete (and bigger) or more minimal (and smaller)
+  implementation of <code>printf()</code> and friends.  By default, most
+  <code>printf()</code> features are supported, with the notable exception of
+  floating point output.  See the comments in the Makefile for details.</li>
+
 </ul>
 
 </body>
