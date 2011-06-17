@@ -101,7 +101,8 @@ AVRGDB ?=
 # arduino uses a number of non-default lock and fuse settings; changing them
 # may break things.  On the other hand, if you want to use in-system
 # programming to program a minimal system at a different clock rate, you'll
-# need to learn about fuse settings.
+# need to learn about fuse settings.  See the uses of this variable for more
+# details.
 LOCK_AND_FUSE_SETTINGS ?=
 
 
