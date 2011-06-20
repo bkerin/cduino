@@ -6,6 +6,9 @@
 
 #include "uart.h"
 
+// FIXME: should this module or the uart module use the util/setbaud.h
+// interface from AVR libc.
+
 // Set up the uart and AVR libc stdio interface such that printf() (and
 // friends) can be used for output, and term_io_getline() used for input
 // via a GNU screen session (with default settings) or something similar.
