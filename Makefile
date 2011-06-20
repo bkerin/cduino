@@ -23,6 +23,11 @@ new_module:
           ln -s ../lock_and_fuse_bits_to_avrdude_options.perl && \
           echo 'include generic.mk' >Makefile
 
+# Clean up all the modules.
+.PHONY: clean_all_modules
+clean_all_modules:
+	-find . -type d -maxdepth 1 -exec $(MAKE) -C \{\} -R clean \;
+
 # Note this doesn't nuke old pages with different names
 .PHONY: upload_html
 upload_html:
@@ -31,10 +36,10 @@ upload_html:
 	scp -r lessons $(WEB_SSH):$(WEB_ROOT)
 	ssh $(WEB_SSH) ln -s --force home_page.html $(WEB_ROOT)/index.html
 
-# Make a release targzball.  The make variable VERSION must be set (probably 
+# Make a release targzball.  The make variable VERSION must be set (probably
 # from the command line, e.g. make targzball VERSION=0.42.42').
 .PHONY: targzball
-targzball:
+targzball: clean_all_modules
 	[ -n "$(VERSION)" ] || (echo VERSION not set 1>&2 && false)
 	cd /tmp ; cp -r $(shell pwd) .
 	cd /tmp/cduino && rm -rf .git .gitignore ; cd .. ; \
