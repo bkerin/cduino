@@ -70,9 +70,18 @@
         modules exist (thanks to Chris Kuethe).  There is also a nice uart
         modules that provides a simple command-line approach to talk to the
         ATMega from the PC (thanks to Joerg Wunsch).
-
         <p />
-        Latest news: a timer/counter lesson is now included.
+
+        <!-- FIXME: these instruction should move somewhere usefule later -->
+
+        <h2>Latest News</h2> Even easier terminal I/O.  With one function call
+        (<code>term_io_init()</code>) and a screen session (<code>make -R
+          run_screen</code>) from your module directory, you can be ready to
+        hear from the microcontroller (<code>printf()</code> and friends).  One
+        more call (<code>term_io_getline()</code>) and you can send things the
+        other direction as well, with command line editing.  Take a look at
+        <code>term_io/term_io.h</code>.
+        <p />
 
         <h2 id="abstract">Abstract</h2>
 
