@@ -64,15 +64,34 @@
 
       <td style="vertical-align: top;">
 
-        <h2>Project Status</h2>
+        <h2>Quick Start</h2>
 
-        Getting going.  A nice series of <a href="lessons.html">lesson</a>
-        modules exist (thanks to Chris Kuethe).  There is also a nice uart
-        modules that provides a simple command-line approach to talk to the
-        ATMega from the PC (thanks to Joerg Wunsch).
+        First, <a href="prerequisites.html">set up the prerequisite hardward
+          and software</a>.  Then unpack the distribution and try the following
+        from the top level directory:
         <p />
 
-        <!-- FIXME: these instruction should move somewhere usefule later -->
+        <blockquote>
+          <code>
+            make -R -C blink writeflash 
+          </code>
+        </blockquote>
+        <p />
+
+        Now your arduino's LED should be blinking.
+        <p />
+
+        To talk over the USB/serial port:
+        <p />
+
+        <blockquote>
+          <code>
+            make -R -C term_io writeflash<br />
+            # Wait a few seconds for the AVR to finish rebooting... <br />
+            make -R -C term_io run_screen<br />
+          </code>
+        </blockquote>
+        <p />
 
         <h2>Latest News</h2> Even easier terminal I/O.  With one function call
         (<code>term_io_init()</code>) and a screen session (<code>make -R
@@ -103,15 +122,6 @@
         open hardware, but avoids the new wiring language, the C++ intermediate
         layer, and the Java-based IDE.  Crusy old (and young) Unix/C
         programmers rejoice!
-
-        <h2>Usage</h2>
-
-        After <a href="prerequisites.html">setting up the necessary hardware
-          and software</a>, getting started looks about like this:<p />
-
-        <code>
-          make -R -C blink writeflash 
-        </code>
 
         <h2>Features</h2>
 
