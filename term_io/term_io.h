@@ -22,13 +22,14 @@ void
 term_io_init (void);
 
 // The buffer used for the term_io_getline() must be at least this big.
-#define LINEBUFSIZE (RX_BUFSIZE + 1)
+#define TERM_IO_LINE_BUFFER_MIN_SIZE (RX_BUFSIZE + 1)
+#define LINEBUFSIZE (RX_BUFSIZE + 1)  // Old name
 
 // Get a line of input from the terminal, and save it in linebuf (which
-// must be at least LINEBUFSIZE bytes long).  Basic command line editing
-// is available for the user entering the line; see uart.h for details.
-// Returns the number of characters retrieved (including trailing newline
-// but not including trailing null), or -1 if an error occurs.
+// must be at least TERM_IO_LINE_BUFFER_MIN_SIZE bytes long).  Basic command
+// line editing is available for the user entering the line; see uart.h for
+// details.  Returns the number of characters retrieved (including trailing
+// newline but not including trailing null), or -1 if an error occurs.
 int
 term_io_getline (char *linebuf);
 

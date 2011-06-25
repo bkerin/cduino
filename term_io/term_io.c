@@ -40,7 +40,7 @@ term_io_getline (char *linebuf)
         *lbp = c;
         lbp++;
         char_count++;
-        if ( char_count == LINEBUFSIZE ) {
+        if ( char_count == TERM_IO_LINE_BUFFER_MIN_SIZE ) {
           return -1;
         }
         *lbp = '\0';
@@ -51,7 +51,7 @@ term_io_getline (char *linebuf)
         lbp++;
         char_count++;
         // FIXME: see other fixme
-        if ( char_count == LINEBUFSIZE ) {
+        if ( char_count == TERM_IO_LINE_BUFFER_MIN_SIZE ) {
           return -1;
         }
         break;
