@@ -87,29 +87,22 @@ main (void)
         printf_P (PSTR ("EEPROM written.\n\n"));
 
         // Increment the counter.
-        eeprom_busy_wait ();
         write_counter = eeprom_read_byte (OFF_CTR) + 1;
-        eeprom_busy_wait ();
         eeprom_write_byte (OFF_CTR, write_counter);
 
         // Stash the length.
-        eeprom_busy_wait ();
         eeprom_write_byte (OFF_LEN, str_length);
 
         // Write out the input text (+1 for trailing null byte).
-        eeprom_busy_wait ();
         eeprom_write_block (&buffer, OFF_TXT, str_length + 1);
         break;
 
       case 'R':
       case 'r':
-        eeprom_busy_wait ();
         write_counter = eeprom_read_byte (OFF_CTR);
 
-        eeprom_busy_wait ();
         str_length = eeprom_read_byte (OFF_LEN);
 
-        eeprom_busy_wait ();
         eeprom_read_block (&buffer, OFF_TXT, str_length + 1);
         printf_P (PSTR ("Contents of string in EEPROM: %s\n"), buffer);
         break;
