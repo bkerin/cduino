@@ -15,118 +15,119 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <assert.h>
 #include <avr/io.h>
 #include <avr/eeprom.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-// Let the compiler do some of this, to avoid malloc.
-static int cput(char, FILE *);
-static int cget(FILE *);
-static FILE O = FDEV_SETUP_STREAM(cput, NULL, _FDEV_SETUP_WRITE);
-static FILE I = FDEV_SETUP_STREAM(NULL, cget, _FDEV_SETUP_READ );
+#include "term_io.h"
 
-static int
-cput (char c, FILE *f)
-{
-  if ( c == '\n' ) {
-    cput ((char) '\r', f);
-  }
-
-  loop_until_bit_is_set (UCSR0A, UDRE0);
-  UDR0 = c;
-
-  return 0;
-}
-
-static int
-cget (FILE *f __attribute__((unused)))
-{
-	loop_until_bit_is_set (UCSR0A, RXC0);
-	return UDR0;
-}
-
-#define OFF_SIG ((uint32_t *) 0)
-#define OFF_CTR ((uint8_t *) 4)
-#define OFF_LEN ((uint8_t *) 5)
-#define OFF_TXT ((uint8_t *) 6)
+#define SIG_LEN 4               // Length of our signature string
+#define OFF_SIG ((uint32_t *) 0)   // Our signature offset
+#define OFF_CTR ((uint8_t *) 4)    // Write counter offset
+#define OFF_LEN ((uint8_t *) 5)    // String length offset
+#define OFF_TXT ((uint8_t *) 6)    // String text offset
 
 int
 main (void)
 {
-  char s[80], a[5], *sig = "AVRm";
-  uint8_t b = 0, l = 0;
+  char *signature = "AVRm";
+  char buffer[TERM_IO_LINE_BUFFER_MIN_SIZE];
+  uint8_t write_counter = 0;
+  uint8_t str_length;
 
-  // Set up stdio.
-#define BAUD 9600
-#include <util/setbaud.h>
-  UBRR0H = UBRRH_VALUE;
-  UBRR0L = UBRRL_VALUE;
-  UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);
-  UCSR0B = _BV(RXEN0) | _BV(TXEN0);
-  stdout = &O;
-  stdin  = &I;
+  term_io_init ();
 
-  printf_P (PSTR ("eeprom test\n"));
+  // NOTE: you may have to connect to the AVR right after a reboot to see
+  // this startup stuff happen...
+
+  // Make sure the EEPROM is ready. 
   if ( !eeprom_is_ready () ) {
-    printf_P(PSTR("waiting for eeprom to become ready\n"));
-    eeprom_busy_wait();
+    printf_P (PSTR ("Waiting for EEPROM to become ready...\n"));
+    eeprom_busy_wait ();
   }
-  printf_P(PSTR("eeprom ready\n"));
+  printf_P (PSTR ("EEPROM ready.\n"));
 
-  // Check for signature.
-  eeprom_read_block(&a, OFF_SIG, 4);
-  if ( memcmp (a, sig, 4) == 0 ) {
-    printf_P (PSTR ("eeprom formatted\n"));
-    b = eeprom_read_byte (OFF_CTR);
+  // Check for signature, report what we find, and format if necessary.
+  printf_P (PSTR ("Checking EEPROM format...\n"));
+  eeprom_read_block (&buffer, OFF_SIG, 4);
+  if ( memcmp (buffer, signature, SIG_LEN) == 0 ) {
+    printf_P (PSTR ("EEPROM already formatted.\n\n"));
+    write_counter = eeprom_read_byte (OFF_CTR);
   }
   else {
-    printf_P (PSTR ("eeprom blanked\n"));
+    printf_P (PSTR ("EEPROM is blank, formatting...\n"));
+    eeprom_write_block (signature, OFF_SIG, 4);
+    eeprom_write_byte (OFF_CTR, (int8_t) 0);
+    eeprom_write_byte (OFF_LEN, (int8_t) 0);
+    // Null byte at start of string effectively blanks the whole string.
+    eeprom_write_byte (OFF_TXT, (int8_t) 0);  
+    printf_P (PSTR ("EEPROM formatted.\n\n"));
   }
-  eeprom_write_block (sig, OFF_SIG, 4);
 
   while (1) {
-    printf_P (PSTR ("(%d) [r]ead or [w]rite: "), b);
-    scanf ("%3s", s);
-    switch ( s[0] ) {
+
+    // Prompt to determine if we want to read or write EEPROM.
+    printf_P (PSTR ("(writes: %d) [r]ead, [w]rite, [e]rase: "), write_counter);
+    int char_count = term_io_getline (buffer);
+    assert (char_count != -1);
+
+    switch ( buffer[0] ) {
+
       case 'W':
       case 'w':
-        printf_P (PSTR ("enter a string to store in eeprom\n>"));
-        scanf ("%s", s);
-        l = strlen (s);
+        printf_P (PSTR ("Enter a string to store in EEPROM: "));
+        int char_count = term_io_getline (buffer);
+        assert (char_count != -1);
+        str_length = strlen (buffer);
+        printf_P (PSTR ("EEPROM written.\n\n"));
 
         // Increment the counter.
         eeprom_busy_wait ();
-        b = eeprom_read_byte(OFF_CTR) + 1;
+        write_counter = eeprom_read_byte (OFF_CTR) + 1;
         eeprom_busy_wait ();
-        eeprom_write_byte(OFF_CTR, b);
+        eeprom_write_byte (OFF_CTR, write_counter);
 
         // Stash the length.
         eeprom_busy_wait ();
-        eeprom_write_byte(OFF_LEN, l);
+        eeprom_write_byte (OFF_LEN, str_length);
 
-        // Write out the input text.
+        // Write out the input text (+1 for trailing null byte).
         eeprom_busy_wait ();
-        eeprom_write_block (&s, OFF_TXT, l);
+        eeprom_write_block (&buffer, OFF_TXT, str_length + 1);
         break;
+
       case 'R':
       case 'r':
         eeprom_busy_wait ();
-        b = eeprom_read_byte (OFF_CTR);
+        write_counter = eeprom_read_byte (OFF_CTR);
 
         eeprom_busy_wait ();
-        l = eeprom_read_byte (OFF_LEN);
+        str_length = eeprom_read_byte (OFF_LEN);
 
         eeprom_busy_wait ();
-        eeprom_read_block (&s, OFF_TXT, l);
-        printf_P (PSTR ("contents of eeprom\n>%s\n"), s);
+        eeprom_read_block (&buffer, OFF_TXT, str_length + 1);
+        printf_P (PSTR ("Contents of string in EEPROM: %s\n"), buffer);
         break;
+
+      case 'E':
+      case 'e':
+        eeprom_write_dword (OFF_SIG, 0x0000);
+        eeprom_write_byte (OFF_CTR, (int8_t) 0);
+        eeprom_write_byte (OFF_LEN, (int8_t) 0);
+        // Null byte at start of string effectively blanks the whole string.
+        eeprom_write_byte (OFF_TXT, (int8_t) 0);
+        write_counter = 0;
+        printf_P (PSTR ("EEPROM erased.\n\n"));
+        break;
+
       default:
-        printf_P (PSTR ("invalid operation\n"));
+        printf_P (PSTR ("Invalid operation (first letter not r,w, or e)\n"));
+        break;
     }
   }
-
-  return 0;
 }
