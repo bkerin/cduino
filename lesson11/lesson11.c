@@ -16,13 +16,14 @@
  */
 
 #include <assert.h>
-#include <avr/io.h>
 #include <avr/eeprom.h>
+#include <avr/interrupt.h>
+#include <avr/io.h>
 #include <avr/pgmspace.h>
-#include <util/delay.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <util/delay.h>
 
 #include "term_io.h"
 
@@ -40,7 +41,17 @@ main (void)
   uint8_t write_counter = 0;
   uint8_t str_length;
 
+  // The eeprom_* routines are not reentrant, so they must not be used
+  // from both the main context and interrupt context without ensuring that
+  // interrupts are disabled before accessing them from the main context.
+  // This isn't an issue for this program since interrupts aren't used,
+  // just to make the point we disable them anyway :)
+  cli ();
+
   term_io_init ();
+
+  // FIXME: should make a note about non-reentrance of eeprom functions,
+  // and perhaps disable interrupts to make the point...
 
   // NOTE: you may have to connect to the AVR right after a reboot to see
   // this startup stuff happen...
@@ -63,13 +74,14 @@ main (void)
     printf_P (PSTR ("EEPROM is blank, formatting...\n"));
     eeprom_write_block (signature, OFF_SIG, 4);
     eeprom_write_byte (OFF_CTR, (int8_t) 0);
+    write_counter = 0;
     eeprom_write_byte (OFF_LEN, (int8_t) 0);
     // Null byte at start of string effectively blanks the whole string.
     eeprom_write_byte (OFF_TXT, (int8_t) 0);  
     printf_P (PSTR ("EEPROM formatted.\n\n"));
   }
 
-  while (1) {
+  while ( 1 ) {
 
     // Prompt to determine if we want to read or write EEPROM.
     printf_P (PSTR ("(writes: %d) [r]ead, [w]rite, [e]rase: "), write_counter);
