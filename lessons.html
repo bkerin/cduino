@@ -432,12 +432,12 @@ to drive the watchdog with intervals from 16ms to 8s. If the watchdog expires
 without being touched, the system can catch an interrupt, be reset or both. If
 you "kick the dog" before the time expires, no action is taken.</a></p><p>
 
-</p><p align="justify"><a name="watchdog">While it can be slightly complicated to set up the watchdog
-by hand, avr-libc has some convenience functions. To enable the watchdog, call
-<tt>watchdog_enable()</tt> with the desired duration. Refreshing the watchdog
-is as simple as a call to <tt>watchdog_reset()</tt>. If the <tt>WDTON</tt>
-fuse is set the watchdog activates automatically, rather than requiring manual
-activation.</a></p>
+</p><p align="justify"><a name="watchdog">While it can be slightly complicated
+to set up the watchdog by hand, avr-libc has some convenience functions. To
+enable the watchdog, call <tt>watchdog_enable()</tt> with the desired duration.
+Refreshing the watchdog is as simple as a call to <tt>watchdog_reset()</tt>.
+Note that if the <tt>WDTON</tt> fuse is set the watchdog activates
+automatically, rather than requiring explicit activation.</a></p>
 
 <p align="justify"><a name="watchdog">A short example of using the watchdog timer to wake from a
 deep sleep mode is found in </a><a href="lessons/lesson13.c">lesson13.c</a>.</p>
