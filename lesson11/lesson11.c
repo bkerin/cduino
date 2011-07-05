@@ -50,9 +50,6 @@ main (void)
 
   term_io_init ();
 
-  // FIXME: should make a note about non-reentrance of eeprom functions,
-  // and perhaps disable interrupts to make the point...
-
   // NOTE: you may have to connect to the AVR right after a reboot to see
   // this startup stuff happen...
 
