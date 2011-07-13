@@ -1,3 +1,3 @@
-$(error FIXME: this lesson isn't vetter)
+UPLOAD_METHOD = AVRISPmkII
 
 include generic.mk
