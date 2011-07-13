@@ -21,23 +21,27 @@
 #include <avr/sleep.h>
 #include <util/delay.h>
 
-#define soft_reset()        \
-do                          \
-{                           \
-    wdt_enable(WDTO_15MS);  \
-    for(;;)                 \
-    {                       \
-    }                       \
-} while(0)
+// FIXME: WORK POINT: sync documentation in lessons.html, fix arduino now
+// that we've nuked bootloaded (at least before expecting it to work).
+// FIXME: and verify that link referred to in the Makefile works.
 
-// Storage for the contents of the MCURS (which must be cleared during system
+// WARNING WARNING WARNING: you really shouldn't be depending on the
+// watchdog timer for anything without a really careful reading of Atmel
+// document AVR132 "Using the Enhanced Watchdog Timer".  And while you're
+// at it re-read the above disclaimer as well.
+
+// This lesson demonstrates the simnplest kind of use of the watchdog
+// timer system: resetting the system if a the watchdog timer isn't reset
+// frequently.  Other techniques exist (see the above mentioned document).
+
+// Storage for the contents of the MCUSR (which must be cleared during system
 // initialization to ensure that continuous watchdog reset doesn't occur;
 // see http://www.nongnu.org/avr-libc/user-manual/group__avr__watchdog.html
 // for details).
 uint8_t mcusr_mirror __attribute__ ((section (".noinit")));
 
-// Backup and clear the MCUSR regester (to ensure we don't enter a continual
-// reset loop; see above comment).
+// Backup and clear the MCUSR regester early in the AVR boot process (to
+// ensure we don't enter a continual reset loop; see above comment).
 void
 fetch_and_clear_mcusr (void)
   __attribute__((naked))
@@ -67,31 +71,6 @@ quick_portb5_blink_sequence (void)
   }
 }
 
-//ISR (WDT_vect, ISR_NAKED)
-//{
-  // FIXME: docs for WDIE say shouldnt do this in interrupt routing itself
-  // but later, to avoid busting the safety feature by which WDIE is cleared
-  // the first time, and a reset triggered the next time.
-
-  // We're not supposed to do this here, according to one part of spec sheet,
-  // since it might compromize the escalation trick whereby WDIE is cleared
-  // st the next wd timeout causes a reset.  But elsewhere it says WDT can
-  // be used a general interrupt mechanism, in which case it seemt that one
-  // might want to do this in the handler, idk.  Maybe it can always be done
-  // after the handler as well if done right.
-
-  // _WD_CONTROL_REG = _BV (WDIE); // Must reset interrupt after trigger
-
-  // FIXME: WHY does this seem to toggle the light rather than just turning
-  // it on over and over?  Or is the reset interaction jus making it look
-  // like this is what happens?
-  //PINB = _BV (PORTB5); /* toggle the pin */
-
-  //quick_portb5_blink_sequence ();
-
-  //reti();   // Enable interrupts and return from (naked handler).
-//}
-
 int
 main (void) {
 
@@ -102,28 +81,21 @@ main (void) {
   // Make sure we can tell when a watchdog reset has occurred.
   quick_portb5_blink_sequence ();
 
-  // Enable the watchdog timer.  Note that if the WDTON fuse is
-  // programmed, watchdog resets will be enabled (and watchdog
-  // interrupts disabled) and calling wdt_enable() is needed.
+  // Enable the watchdog timer.  Note that if the WDTON fuse is programmed,
+  // watchdog resets will be enabled (and watchdog interrupts disabled)
+  // and calling wdt_enable() is not needed.
   wdt_enable (WDTO_4S);
-
-  // Generate interrupts for watchdog timer expiration events.  Note that
-  // since we haven't disabled watchdog timer resets, we'll get a reset
-  // after the interrupt handler completes.
-  // FIXME: why does disabling this cause the led to just blink crazily after
-  // the first reset (which looks like continual reseting due to non-reset
-  // MCUSR as discussed in spec sheet and avr libc page).
-  //_WD_CONTROL_REG = _BV (WDIE);
-
-  //sei ();   // Enable interrupts
 
   while ( 1 ) {
 
+    // Here we use sleep mode to emulate a software hang-up.  If this
+    // was a real application, we would want to ensure that wdt_reset()
+    // was called often enough to prevent the WDT reset from triggering.
+    // Note that using the watchdog timer to wake from sleep mode via an
+    // WDT interrupt (without a reset) is also a common practice, but that
+    // method is not covered here.
     set_sleep_mode (SLEEP_MODE_PWR_DOWN);
     sleep_mode ();
-
-    // Here is where we would do things after the watchdog wakes us up.
-    // _WD_CONTROL_REG = _BV (WDIE); // Must reset interrupt after trigger
   }
 }
 
