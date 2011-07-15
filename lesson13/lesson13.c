@@ -15,14 +15,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <avr/io.h>
-#include <avr/interrupt.h>
 #include <avr/wdt.h>
-#include <avr/power.h>
-#include <avr/sleep.h>
 #include <util/delay.h>
 
-// FIXME: WORK POINT: sync documentation in lessons.html, fix arduino now
-// that we've nuked bootloaded (at least before expecting it to work).
 // FIXME: and verify that link referred to in the Makefile works.
 
 // WARNING WARNING WARNING: you really shouldn't be depending on the
@@ -35,9 +30,9 @@
 // frequently.  Other techniques exist (see the above mentioned document).
 
 // Storage for the contents of the MCUSR (which must be cleared during system
-// initialization to ensure that continuous watchdog reset doesn't occur;
-// see http://www.nongnu.org/avr-libc/user-manual/group__avr__watchdog.html
-// for details).
+// initialization to ensure that continuous watchdog reset doesn't occur; see
+// http://www.nongnu.org/avr-libc/user-manual/group__avr__watchdog.html for
+// details).  This can be used to investigate the cause of a reset on reboot.
 uint8_t mcusr_mirror __attribute__ ((section (".noinit")));
 
 // Backup and clear the MCUSR regester early in the AVR boot process (to
@@ -84,18 +79,24 @@ main (void) {
   // Enable the watchdog timer.  Note that if the WDTON fuse is programmed,
   // watchdog resets will be enabled (and watchdog interrupts disabled)
   // and calling wdt_enable() is not needed.
-  wdt_enable (WDTO_4S);
+  wdt_enable (WDTO_2S);
+
+  // This delay doesn't cause a problem, since its shorter than the watchdog
+  // timeout value set above.
+  _delay_ms (1500);
+
+  // Reset the watchdog timer.
+  wdt_reset ();
+
+  // This delay is longer than the watchdog timeout value, so a WDT reset
+  // will be triggered, restarting the program.  Here we are in effect 
+
+  // Here we simulate a software hangup.  Since the resulting delay is longer
+  // than the timeout period, a reset will be triggered.  Note that using
+  // the watchdog timer to wake from sleep mode via an WDT interrupt (without
+  // a reset) is also a common practice, but that method is not covered here.
 
   while ( 1 ) {
-
-    // Here we use sleep mode to emulate a software hang-up.  If this
-    // was a real application, we would want to ensure that wdt_reset()
-    // was called often enough to prevent the WDT reset from triggering.
-    // Note that using the watchdog timer to wake from sleep mode via an
-    // WDT interrupt (without a reset) is also a common practice, but that
-    // method is not covered here.
-    set_sleep_mode (SLEEP_MODE_PWR_DOWN);
-    sleep_mode ();
+    ;
   }
 }
-
