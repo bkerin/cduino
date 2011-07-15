@@ -85,7 +85,8 @@
         Now your arduino's LED should be blinking.
         <p />
 
-        To talk over the USB/serial port:
+        Talking to the arduino over the serial port takes only two function
+        calls from the term_io module:
         <p />
 
         <blockquote>
@@ -98,13 +99,8 @@
         </blockquote>
         <p />
 
-        <h2>Latest News</h2> Even easier terminal I/O.  With one function call
-        (<code>term_io_init()</code>) and a screen session (<code>make -R
-          run_screen</code>) from your module directory, you can be ready to
-        hear from the microcontroller (<code>printf()</code> and friends).  One
-        more call (<code>term_io_getline()</code>) and you can send things the
-        other direction as well, with command line editing.  Take a look at
-        <code>term_io/term_io.h</code>.
+        <h2>Latest News</h2>
+        A new lesson showing basic use of the watchdog timer has been added. 
         <p />
 
         <h2 id="abstract">Abstract</h2>
