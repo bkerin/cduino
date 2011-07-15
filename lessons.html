@@ -91,9 +91,9 @@ uploading them should be pretty easy.
 <p align="justify">This section is an introduction to microcontrollers. Out of
 the box, your microcontroller won't do anything - you need to load a program
 before it's useful. Here I present the the hardware equivalent of "Hello
-World" - a blinking light.</p><p>
+World" - a blinking light.</p>
 
-</p><p align="justify">To begin, let's look at the <a href="pin_map.html">pin
+<p align="justify">To begin, let's look at the <a href="pin_map.html">pin
 map</a>.  We see that Arduino pin 13 is PB5 on the ATmega168 - part of port B.
 To use this pin, port B must first be set to be an output pin. There are
 various ways to do this[2] - writing to Port B Data Direction Register[3] at
@@ -110,7 +110,7 @@ this:</p><pre>while(1){
 }</pre>
 which makes use of the delay routines defined in <tt>&lt;util/delay.h&gt;</tt>.
 If you try run this, you'll find your LED blinking very rapidly. Far more
-rapidly than you'd like.<p></p>
+rapidly than you'd like.</p>
 
 <p align="justify">A brief inspection of delay.h is instructive: with respect
 to _delay_ms, "The maximal possible delay is 262.14 ms / F_CPU in MHz." This
@@ -119,8 +119,8 @@ and given that, the number of times to call _delay_ms to achieve the desired
 delay interval. You may wish to put this computation into a separate function
 which you can call whenever you need to delay.</p>
 
-<p align="justify"><a href="lessons/lesson1.c">lesson1.c</a> is one possible
-solution.</p>
+<p align="justify"><code><a href="lessons/lesson1.c">lesson1.c</a></code> is
+one possible solution.</p>
 
 <hr>
 
@@ -142,8 +142,9 @@ from lesson 1, and change it to write 0x20 to PORTB, rather than 0xff. After
 doing this, your program should blink just the onboard LED.</p>
 
 <p align="justify">Now that you have control over a given port, extend your
-program to alternate or cycle the LEDs <a
-  href="lessons/lesson2.c">lesson2.c</a> is one possible solution.</p>
+program to alternate or cycle the LEDs.
+<code><a href="lessons/lesson2.c">lesson2.c</a></code> is one possible
+solution.</p>
 
 <hr> 
 
@@ -175,11 +176,11 @@ internal pull-ups rather than having to mess with them on your own. Using Port
 D as an example, let's set up Digital Pin 2 (PD2) as an input with internal
 pull-up:</p><pre>DDRD &amp;= 0xFB; /* leave all the other bits alone, just zero
 bit 2 */ PORTD |= 0x04 /* leave all the other bits alone, just set bit 2 */
-value = PORTD &amp; 0x04; /* and that's what's on the pin... */ </pre><p></p>
+value = PORTD &amp; 0x04; /* and that's what's on the pin... */ </pre></p>
 
 <p align="justify">Try a program to read a switch connected between digital pin
-2 and ground, and use this to control an LED. One possible solution is </a><a
-href="lessons/lesson3.c">lesson3.c</p>
+2 and ground, and use this to control an LED. One possible solution is
+<code><a href="lessons/lesson3.c">lesson3.c</a></code></p>
 
 <hr>
 
@@ -214,7 +215,8 @@ transmit; the usual way to do this seems to be a busy wait that tests if the
 USART Data Register is Empty - <tt>(UCSR0A &amp; (1 &lt;&lt; UDRE0))</tt>.</p>
 
 <p align="justify">Try write a program that prints a fixed string to the serial
-port. One way to do this is </a><a href="lessons/lesson4.c">lesson4.c</p>
+port. One way to do this is
+<code><a href="lessons/lesson4.c">lesson4.c</a></code></p>
 
 <hr>
 
@@ -227,8 +229,8 @@ now it's good enough.</p>
 
 <p align="justify">Reusing your code from lesson 4, write a
   program to read a character from the serial port and echo the next one back.
-  If you type 'A' it should echo 'B'. One way to do this is </a><a
-  href="lessons/lesson5.c">lesson5.c.</p>
+  If you type 'A' it should echo 'B'. One way to do this is
+  <code><a href="lessons/lesson5.c">lesson5.c</a></code>.</p>
 
 <hr>
 
@@ -237,8 +239,8 @@ now it's good enough.</p>
 align="justify">I haven't written a sample solution to this yet, but at this
 point you should know everything you need to read a switch or the serial port
 and use this to control an LED (and print its status to the serial port). When
-I do finish this example, you can see </a>
-<a href="lessons/lesson6.c">lesson6.c</p>
+I do finish this example, you can see
+<code><a href="lessons/lesson6.c">lesson6.c</a></code></p>
 
 <hr>
 
@@ -258,9 +260,9 @@ let's set up the the AVR to do PWM output.</p>
 
 <p align="justify">Try writing a program to slowly ramp the brightness of the
 LED. Or maybe have it fade in and out.
-<a href="lessons/lesson7a.c">lesson7a.c</a> is one way to do this. Alas, this
-solution sucks - it's basically a big nasty busy wait that prevents you from
-getting any real work done while generating the PWM waveform.</p>
+<code><a href="lessons/lesson7a.c">lesson7a.c</a></code> is one way to do this.
+Alas, this solution sucks - it's basically a big nasty busy wait that prevents
+you from getting any real work done while generating the PWM waveform.</p>
 
 <p align="justify">As we learn about hardware PWM, application Note 130 will
 be your friend. Though it's written for the AT90S8535 and doesn't use gcc,
@@ -276,7 +278,8 @@ compare mode (inverting/non-inverting) is also set in the control register. At
 this point, it would be good to initialize the timer and comparator values
 because the timer isn't ticking until the clock source is set (control register
 TCCR0B). It is now safe to set the output bits on the output port.  One way to
-do hardware PWM is <a href="lessons/lesson7b.c">lesson7b.c</a>.</p>
+do hardware PWM is <code><a href="lessons/lesson7b.c">lesson7b.c</a></code>.
+</p>
 
 <hr>
 
@@ -311,17 +314,19 @@ UBRR0L = UBRRL_VALUE;<br>
 UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);<br>
 UCSR0B = _BV(RXEN0) | _BV(TXEN0);<br> </code></td></tr>
 
-</tbody></table> <p align="justify">I'm rather fond of stdio and formatted IO.
-I've been spoiled by big machines with multiple multi-GHz cpus, a few GB of
-memory and a few TB of storage. Programming an embedded device makes me realize
-how wonderful <tt>printf("sensor %d value %f\n", n, values[n])</tt> is.
-Avr-libc has some glue to simulate stdio. Here's an example of how to use this:
-</a><a href="lessons/lesson8.c">lesson8.c</a>. The manual warns that printf and
-scanf are quite resource-intensive. This is not even a little bit of an
-exaggeration.  Have a look at the annotated assembly files and be afraid. Be
-very afraid.  In my example implementation, I also use the program space macros
-to avoid keeping constant strings in RAM when they could simply be used
-straight from flash.</p>
+</tbody></table>
+
+<p align="justify">I'm rather fond of stdio and formatted IO.  I've been
+spoiled by big machines with multiple multi-GHz cpus, a few GB of memory and a
+few TB of storage. Programming an embedded device makes me realize how
+wonderful <tt>printf("sensor %d value %f\n", n, values[n])</tt> is.  Avr-libc
+has some glue to simulate stdio. Here's an example of how to use this:
+<code><a href="lessons/lesson8.c">lesson8.c</a></code>. The manual warns
+that printf and scanf are quite resource-intensive. This is not even a little
+bit of an exaggeration.  Have a look at the annotated assembly files and be
+afraid. Be very afraid.  In my example implementation, I also use the program
+space macros to avoid keeping constant strings in RAM when they could simply be
+used straight from flash.</p>
 
 <hr>
 
@@ -332,16 +337,17 @@ provide an analog voltage to sample.
 </p>
 
 <p align="justify">There are a few little things to do for a
-  simple, polled analog sample. Ensure that the pin you're reading has pull-ups
-  disabled, since these interfere with the sampling. Writing 0 to the pin
-  register (PORTC = 0) or setting it to output mode (DDRC = 0) Set the ADC
-  clock correctly - it needs to be clocked at 50kHz-200kHz. The Arduino's 16MHz
-  clock divided by 128 is a very comfortable 165kHz. Set the reference voltage
-  correctly. This determines the upper limit for measurement; using Vcc is
-  probably the best bet. USB power will probably be very stable. Finally, set
-  the ADC enable bit and force one conversion - the first conversion takes
-  extra time due to some internal setup that is required. Here is </a><a
-  href="lessons/lesson9.c">lesson9.c.</p>
+
+simple, polled analog sample. Ensure that the pin you're reading has pull-ups
+disabled, since these interfere with the sampling. Writing 0 to the pin
+register (PORTC = 0) or setting it to output mode (DDRC = 0) Set the ADC clock
+correctly - it needs to be clocked at 50kHz-200kHz. The Arduino's 16MHz clock
+divided by 128 is a very comfortable 165kHz. Set the reference voltage
+correctly. This determines the upper limit for measurement; using Vcc is
+probably the best bet. USB power will probably be very stable. Finally, set the
+ADC enable bit and force one conversion - the first conversion takes extra time
+due to some internal setup that is required. Here is
+<code><a href="lessons/lesson9.c">lesson9.c</a></code>.</p>
 
 <hr>
 
@@ -374,23 +380,23 @@ four things to be done:</p>
 <li>enable interrupt processing</li>
 </ol>
 
-<p align="justify"><a name="blinky3">Each of these items takes a just single line of code. First,
+<p align="justify">Each of these items takes a just single line of code. First,
 the clock source must be configured. The timer system can accept external
-inputs or use the system clock - optionally divided down to a slower rate.
-The Clock Select (CS00-CS02) bits in the timer/counter control register B
-(TCCR0B) are used.  Assuming a 16MHz clock, a prescale of 1024 will cause
-15625 increment operations per second. Since the counter can hold 256 unique
-values, it will overflow at 61Hz. If a higher interrupt rate is needed, the
-prescaler can be set lower, or a smaller Output Compare (OCR0A) can be used.
-The timer/counter interrupt mask register defaults to 0 - no interrupts will
-be generated by the timer/counter system. To enable timer overflow interrupts,
-set the TOIE0 bit of TIMSK0. Timers can be set and reset by storing into them,
-in this case <tt>TCNT0 = 0</tt>. Finally, the <tt>sei()</tt> function enables
-interrupt processing.</a></p>
+inputs or use the system clock - optionally divided down to a slower rate.  The
+Clock Select (CS00-CS02) bits in the timer/counter control register B (TCCR0B)
+are used.  Assuming a 16MHz clock, a prescale of 1024 will cause 15625
+increment operations per second. Since the counter can hold 256 unique values,
+it will overflow at 61Hz. If a higher interrupt rate is needed, the prescaler
+can be set lower, or a smaller Output Compare (OCR0A) can be used.  The
+timer/counter interrupt mask register defaults to 0 - no interrupts will be
+generated by the timer/counter system. To enable timer overflow interrupts, set
+the TOIE0 bit of TIMSK0. Timers can be set and reset by storing into them, in
+this case <tt>TCNT0 = 0</tt>. Finally, the <tt>sei()</tt> function enables
+interrupt processing.</p>
 
-<p align="justify"><a name="blinky3">One way to do this is </a>
-<a href="lessons/lesson10.c">lesson10.c</a>.  My version can blink either the
-onboard LED on PORTB.5 or a set of LEDs on PORTB.1 - PORTB.3.</p>
+<p align="justify">One way to do this is
+<code><a href="lessons/lesson10.c">lesson10.c</a></code>.  My version can blink
+either the onboard LED on PORTB.5 or a set of LEDs on PORTB.1 - PORTB.3.</p>
 
 <h3><a name="eeprom">Lesson 11: Persistent Storage Using EEPROM</a></h3> <p
 align="justify">EEPROM provides developers with the ability to persistently
@@ -405,7 +411,7 @@ a function - <code>eeprom_is_ready()</code> - to do this, and this is the core
 of the <code>eeprom_busy_wait()</code> function. Once the EEPROM is ready, it
 can be written with <code>eeprom_write_{byte,word,dword,block}</code> and read
 back with <code>eeprom_read_{byte,word,dword,block}</code>. See
-<a href="lessons/lesson11.c">lesson11.c</a> for an example.</p>
+<code><a href="lessons/lesson11.c">lesson11.c</a></code> for an example.</p>
 
 <p align="justify">To safely use EEPROM storage in applications where power
 loss is a significant risk, consider storing a version counter and a validity
@@ -425,12 +431,18 @@ application needs this functionality for anything important, you have some
 careful thinking to do to make sure the watchdog timer really offers the
 robustness you're looking for.  </p>
 
+<p align="justify">Because some arduino bootloaders do not clear the watchdog
+timer reset flag early in the boot sequence (potentially resulting in infinite
+reset loops), the AVRISPmkII programming method (and a connected AVRISPmkII
+programmer) must be used for this lesson.  </p>
+
 <p align="justify"> The onboard watchdog timer can be used to reset the AVR if
 the program unexpectedly hangs.  The timer is first enabled, and after being
 enabled must be reset more frequently than the interrupt interval to avoid
-triggering a reset.  If your code hangs somewhere, the interrupt won't happen,
-and so the reset will.  The program in
-<a href="lessons/lesson12/c">lesson12.c</a> shows how this works.</p>
+triggering a reset.  If your code hangs somewhere, the timer reset won't
+happen, and so the whole processor will be reset.  The program in
+<code><a href="lessons/lesson12.c">lesson12.c</a></code> shows how this works.
+</p>
 
 <p align="justify">The newer AVR chips (including the ones on the arduino) also
 allow an interrupt to be generated instead of or in addition to (before) the
@@ -439,8 +451,11 @@ reset.  This usage is not covered here.  </p>
 <p align="justify">  Finally, because the newer AVRs use a reset flag that must
 be cleared early the AVR boot process to avoid re-resetting after a watchdog
 reset, careful programs will want to clear this flag early in the boot process.
+Even if your code never explicitly enables the watchdog timer at all, it is
+possible that it could get turned on by erroneous code or electrical noise.
 The <code>fetch_and_clear_mcusr()</code> declaration in
-<a href="lessons/lesson12/c">lesson12.c</a> shows how to do this. </p>
+<code><a href="lessons/lesson12.c">lesson12.c</a></code> shows how to ensure
+that the watchdog timer bit is always cleared early in the boot process.  </p>
 
 <!-- This is the old description of the interrupt-generation WDT usage, whic
      we don't do yet.
