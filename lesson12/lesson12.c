@@ -88,15 +88,15 @@ main (void) {
   // Reset the watchdog timer.
   wdt_reset ();
 
-  // This delay is longer than the watchdog timeout value, so a WDT reset
-  // will be triggered, restarting the program.  Here we are in effect 
+  // Now we can safely do some more work, since the timer has been reset.
+  _delay_ms (1500);
 
   // Here we simulate a software hangup.  Since the resulting delay is longer
   // than the timeout period, a reset will be triggered.  Note that using
   // the watchdog timer to wake from sleep mode via an WDT interrupt (without
   // a reset) is also a common practice, but that method is not covered here.
-
   while ( 1 ) {
     ;
   }
+
 }
