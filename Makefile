@@ -27,6 +27,9 @@ new_module:
 .PHONY: clean_all_modules
 clean_all_modules:
 	-find . -type d -maxdepth 1 -exec $(MAKE) -C \{\} -R clean \;
+	# This is needed because this lesson requires a non-bootloader upload
+	# method at the moment (FIXME: remove this when fixed upstream)
+	$(MAKE) -C lesson12 -R 'UPLOAD_METHOD = AVRISPmkII' clean
 
 # Note this doesn't nuke old pages with different names
 .PHONY: upload_html
