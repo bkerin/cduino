@@ -5,6 +5,8 @@
 # to restore it, this line must be uncommented by the user.
 #UPLOAD_METHOD = AVRISPmkII
 
+# FIXME: if/when an updated "official" arduino bootloader image gets released
+# that fixes this we should supply it instead of the current 0022 version one
 define UPLOAD_METHOD_ERROR_TEXT =
 
   This module requires the arduino to be programmed using an AVRISPmkII or
