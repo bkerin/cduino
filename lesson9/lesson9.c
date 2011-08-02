@@ -26,8 +26,6 @@
 // 	  ATMega328P datasheet discusses these.  For simplicity, we assume 
 // 	  that they aren't needed here.
 
-// FIXME: this should use the term_io interface
-
 #include <avr/io.h>
 #include <stdio.h>
 #include <avr/pgmspace.h>
