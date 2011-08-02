@@ -1,0 +1,5 @@
+For those who want to see the details of ADC use from the implementation
+side, there is a lesson module which may be more useful.  See
+http://brittonkerin.com/cduino/lessons.html#adc-in for details.
+
+For details about this module itself see the Makefile.
