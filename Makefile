@@ -49,9 +49,11 @@ targzball: clean_all_modules
           mv cduino cduino-$(VERSION) ; \
           tar czvf cduino-$(VERSION).tgz cduino-$(VERSION)
 
-# Upload the targzball and documentation to the web site.
+# Upload the targzball and documentation to the web site.  The unstable
+# snapshot that we provide is uploaded first, since it should never be behind
+# the stable version.  FIXME: test this and verify working.
 .PHONY: upload
-upload: targzball upload_html
+upload: targzball upload_html update_unstable
 	scp /tmp/cduino-$(VERSION).tgz $(WEB_SSH):$(WEB_ROOT)/releases/
 	ssh $(WEB_SSH) rm -f '$(WEB_ROOT)/releases/LATEST_IS_*'
 	ssh $(WEB_SSH) ln -s --force cduino-$(VERSION).tgz \
