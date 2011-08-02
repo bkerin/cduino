@@ -67,7 +67,7 @@ adc_read (unsigned char pin)
 
   // Select the input channel.
   ADMUX = r;
-  ADCSRA |= _BV(ADSC);
+  ADCSRA |= _BV (ADSC);
   loop_until_bit_is_clear (ADCSRA, ADSC);
 
   // It is required to read the low ADC byte before the high byte.
