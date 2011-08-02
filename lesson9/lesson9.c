@@ -39,8 +39,8 @@ static void
 adc_init (void)
 {
   // Internal pull-ups interfere with the ADC. disable the pull-up on the
-  // pin ifit's being used for ADC. either writing 0 to the port register or
-  // setting it to output should be enough to disable pull-ups.  PORTC = 0x00;
+  // pin ifit's being used for ADC. either writing 0 to the port register
+  // or setting it to output should be enough to disable pull-ups.
   DDRC = 0x00;
 
   // Unless otherwise configured, arduinos use the internal Vcc reference. MUX
