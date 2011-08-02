@@ -46,13 +46,13 @@ adc_init (void)
   // Unless otherwise configured, arduinos use the internal Vcc reference. MUX
   // 0x0f samples the ground (0.0V) (we'll change this before each actual
   // ADC read).
-  ADMUX = _BV(REFS0) | 0x0f;
+  ADMUX = _BV (REFS0) | 0x0f;
   
   // Enable the ADC system, use 128 as the clock divider on a 16MHz arduino
   // (ADC needs a 50 - 200kHz clock) and start a sample.  The AVR needs to
   // do some set-up the first time the ADC is used; this first, discarded,
   // sample primes the system for later use.
-  ADCSRA |= _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0) | _BV(ADSC);
+  ADCSRA |= _BV (ADEN) | _BV (ADPS2) | _BV (ADPS1) | _BV (ADPS0) | _BV (ADSC);
   
   // Wait for the ADC to return a sample.
   loop_until_bit_is_clear (ADCSRA, ADSC);
