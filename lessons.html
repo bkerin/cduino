@@ -174,9 +174,17 @@ input signal so the AVR knows it's there.</p>
 <p align="justify">If you're lazy (or wise), you can tell the AVR to use
 internal pull-ups rather than having to mess with them on your own. Using Port
 D as an example, let's set up Digital Pin 2 (PD2) as an input with internal
-pull-up:</p><pre>DDRD &amp;= 0xFB; /* leave all the other bits alone, just zero
-bit 2 */ PORTD |= 0x04 /* leave all the other bits alone, just set bit 2 */
-value = PORTD &amp; 0x04; /* and that's what's on the pin... */ </pre></p>
+pull-up:</p>
+<blockquote>
+<code>
+<pre>
+DDRD &amp;= 0xFB; /* leave all the other bits alone, just zero bit 2 */
+PORTD |= 0x04 /* leave all the other bits alone, just set bit 2 */
+value = PIND &amp; 0x04; /* and that's what's on the pin... */
+</pre>
+</code>
+</blockquote>
+</p>
 
 <p align="justify">Try a program to read a switch connected between digital pin
 2 and ground, and use this to control an LED. One possible solution is
