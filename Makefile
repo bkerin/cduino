@@ -31,9 +31,17 @@ clean_all_modules:
 	# method at the moment (FIXME: remove this when fixed upstream)
 	$(MAKE) -C lesson12 -R 'UPLOAD_METHOD = AVRISPmkII' clean
 
+# Push all the latest changes to gitorious (tolerate untracked files but
+# not changed files or uncommited changes).
+.PHONY: git_push
+git_push:
+	! (git status | grep 'Changed but not updated:')
+	! (git status | grep 'Changes to be committed:')
+	git push origin master
+
 # Note this doesn't nuke old pages with different names
 .PHONY: upload_html
-upload_html:
+upload_html: git_push
 	scp *.html $(WEB_SSH):$(WEB_ROOT)
 	ssh $(WEB_SSH) rm -rf '$(WEB_ROOT)/lessons/'
 	scp -r lessons $(WEB_SSH):$(WEB_ROOT)
@@ -53,7 +61,7 @@ targzball: clean_all_modules
 # snapshot that we provide is uploaded first, since it should never be behind
 # the stable version.  FIXME: test this and verify working.
 .PHONY: upload
-upload: targzball upload_html update_unstable
+upload: targzball upload_html update_unstable git_push
 	scp /tmp/cduino-$(VERSION).tgz $(WEB_SSH):$(WEB_ROOT)/releases/
 	ssh $(WEB_SSH) rm -f '$(WEB_ROOT)/releases/LATEST_IS_*'
 	ssh $(WEB_SSH) ln -s --force cduino-$(VERSION).tgz \
