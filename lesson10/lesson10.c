@@ -17,7 +17,7 @@
 
 //
 // Assumptions:
-// 	- LED connected to PORTB (arduino boards have LED L onboard)
+// 	- LED connected to PORTB.5 (arduino boards have LED L onboard)
 // 	- F_CPU is defined to be your cpu speed (preprocessor define)
 //
 
@@ -34,11 +34,11 @@ ISR (TIMER0_OVF_vect)
 #if 1
   // Strobe PORTB.5 - the LED on arduino boards.
   if ( intrs >= 61 ) {
-    PORTB ^= _BV(5);
+    PORTB ^= _BV (5);
     intrs = 0;
   }
 #else
-  // Color cycle RGB LED connected to pins 9,10,11
+  // Color cycle RGB LED connected to pins 9,10,11.  WARNING: untested.
   PORTB = ((intrs >> 2) & 0x0e);
 #endif
 }
