@@ -65,8 +65,16 @@ UPLOAD_METHOD ?= arduino_bl
 # programming command goes off to program the device).
 DTR_PULSE_NOT_REQUIRED ?= false
 
+# Uploader program.
+AVRDUDE ?= avrdude
 
-##### Programs for Building and Uploading (Overridable) {{{1
+# Upload program parameters for when the arduino_bl UPLOAD_METHOD is used.
+AVRDUDE_ARDUINO_PROGRAMMERID ?= arduino
+AVRDUDE_ARDUINO_PORT ?= /dev/ttyUSB0
+AVRDUDE_ARDUINO_BAUD ?= 57600
+
+
+##### Compilers, Assemblers, Binutils, Debuggers, etc. (Overridable) {{{1
 
 # Probaly the only reason to override these is if you have your own builds
 # somewhere special, or need to use something other than /dev/ttyUSB0.
@@ -77,12 +85,6 @@ CC ?= avr-gcc
 OBJCOPY ?= avr-objcopy
 OBJDUMP ?= avr-objdump
 SIZE ?= avr-size
-
-# Uploader
-AVRDUDE ?= avrdude
-AVRDUDE_PROGRAMMERID ?= arduino
-AVRDUDE_BAUD ?= 57600
-AVRDUDE_PORT ?= /dev/ttyUSB0
 
 # These programs could be useful, but I don't use them at the moment.
 AVARICE ?=
@@ -171,15 +173,17 @@ endif
 # arguments to make).
 
 .PHONY: writeflash
-writeflash: LOCK_FUSE_AVRDUDE_OPTIONS := \
+writeflash: LOCK_AND_FUSE_AVRDUDE_OPTIONS := \
   $(shell ./lock_and_fuse_bits_to_avrdude_options.perl \
             $(PROGRAMMER_MCU) $(LOCK_AND_FUSE_SETTINGS))
 writeflash: $(HEXTRG) avrdude_version_check
 ifeq ($(UPLOAD_METHOD), arduino_bl)
   writeflash:
 	$(PROBABLY_PULSE_DTR)
-	$(AVRDUDE) -c $(AVRDUDE_PROGRAMMERID)   \
-                   -p $(PROGRAMMER_MCU) -P $(AVRDUDE_PORT) -b $(AVRDUDE_BAUD) \
+	$(AVRDUDE) -c $(AVRDUDE_ARDUINO_PROGRAMMERID)   \
+                   -p $(PROGRAMMER_MCU) \
+                   -P $(AVRDUDE_ARDUINO_PORT) \
+                   -b $(AVRDUDE_ARDUINO_BAUD) \
                    -U flash:w:$(HEXROMTRG) \
                    $(LOCK_AND_FUSE_AVRDUDE_OPTIONS) || \
         ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
