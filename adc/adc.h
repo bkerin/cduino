@@ -9,6 +9,8 @@
 //
 // See the ATMega328P datasheet for details of other options.
 
+#include <stdint.h>
+
 // Prepare port C pins for use by the ADC, and ready the ADC.  See the
 // warning above for more details.
 void
