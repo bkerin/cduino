@@ -123,12 +123,11 @@ AVRLIBC_PRINTF_LDFLAGS ?=
 
 ##### Debugging Macro CPP Flag (Overridable) {{{1
 
-# Its often convenient to have a way to compile code when debugging will be
-# done, this variable gets put in CPPFLAGS st you can say things like '#ifdef
-# DEBUG' in the code to do logging and such.  Commenting this variable out
-# or set it to empty to disable debugging.  Set it to some other -D option
-# (or more than one) to make different conditional debug features.
-CPP_DEBUG_DEFINE_FLAGS = -DDEBUG
+# Its often convenient to have a way to compile code when debugging will
+# be done, this variable gets put in CPPFLAGS st you can say things like
+# '#ifdef DEBUG' in the code to do logging and such.  For example one might
+# assign it a value of '-DDEBUG'.
+CPP_DEBUG_DEFINE_FLAGS ?=
 
 
 ##### Computed File Names {{{1
