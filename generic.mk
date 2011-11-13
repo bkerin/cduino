@@ -74,7 +74,7 @@ AVRDUDE_ARDUINO_PORT ?= /dev/ttyUSB0
 AVRDUDE_ARDUINO_BAUD ?= 57600
 
 
-##### Compilers, Assemblers, Binutils, Debuggers, etc. (Overridable) {{{1
+##### Compilers, Assemblers, etc. (Overridable) {{{1
 
 # Probaly the only reason to override these is if you have your own builds
 # somewhere special, or need to use something other than /dev/ttyUSB0.
@@ -121,6 +121,16 @@ LOCK_AND_FUSE_SETTINGS ?=
 AVRLIBC_PRINTF_LDFLAGS ?=
 
 
+##### Debugging Macro CPP Flag (Overridable) {{{1
+
+# Its often convenient to have a way to compile code when debugging will be
+# done, this variable gets put in CPPFLAGS st you can say things like '#ifdef
+# DEBUG' in the code to do logging and such.  Commenting this variable out
+# or set it to empty to disable debugging.  Set it to some other -D option
+# (or more than one) to make different conditional debug features.
+CPP_DEBUG_DEFINE_FLAGS = -DDEBUG
+
+
 ##### Computed File Names {{{1
 
 CFILES := $(patsubst %.o,%.c,$(OBJS))
@@ -141,13 +151,15 @@ HEXFORMAT := ihex
 
 OPTLEVEL := s
 
-CPPFLAGS +=
+CPPFLAGS += $(CPP_DEBUG_DEFINE_FLAGS)
 INC :=
+# FIXME: -I and $(INC) should be in CPPFLAGS, do and test.
 CFLAGS += -I. $(INC) -std=gnu99 -gstabs $(CPU_FREQ_DEFINE) \
           -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) $(CTUNING) -Wall -Wextra \
           -Wimplicit-int -Wold-style-declaration -Wredundant-decls \
           -Wstrict-prototypes -Wmissing-prototypes
 
+# FIXME: -I and $(INC) should be in CPPFLAGS? do and test.
 ASMFLAGS := -I. $(INC) -mmcu=$(COMPILER_MCU)-x assembler-with-cpp \
             -Wa,-gstabs,-ahlms=$(firstword $(<:.S=.lst) $(<.s=.lst))
 
