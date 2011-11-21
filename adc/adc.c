@@ -5,23 +5,39 @@
 #include "adc.h"
 
 void
-adc_init (void)
+adc_init (adc_reference_source_t reference_source)
 {
-  // Internal pull-ups interfere with the ADC. disable the pull-up on the
-  // pin ifit's being used for ADC. either writing 0 to the port register
-  // or setting it to output should be enough to disable pull-ups.
+  // Internal pull-ups interfere with the ADC. We need to disable the pull-up
+  // on the pin if it's being used for ADC. either writing 0 to the port
+  // register or setting it to output should be enough to disable pull-ups.
   DDRC = 0x00;
 
-  // Unless otherwise configured, arduinos use the internal Vcc reference. MUX
-  // 0x0f samples the ground (0.0V) (we'll change this before each actual
-  // ADC read).
-  ADMUX = _BV(REFS0) | 0x0f;
-  
+  // NOTE: ADMUX is full of zeros by default.
+
+  switch ( reference_source ) {
+    case ADC_REFERENCE_AREF:
+      // Nothing to set since ADMUX bits default to 0.
+      // FIXME: this path hasn't been tested.
+      break;
+    case ADC_REFERENCE_AVCC:
+      ADMUX |= _BV (REFS0);
+      break;
+    case ADC_REFERENCE_INTERNAL:
+      ADMUX |= _BV (REFS0) | _BV (REFS1);
+      break;
+    default:
+      // Shouldn't be here.
+      break;
+  }
+
+  // Sample the ground for now (we'll change this before taking real samples). 
+  ADMUX |= _BV (MUX3) | _BV (MUX2) | _BV (MUX1) | _BV (MUX0);
+
   // Enable the ADC system, use 128 as the clock divider on a 16MHz arduino
   // (ADC needs a 50 - 200kHz clock) and start a sample.  The AVR needs to
   // do some set-up the first time the ADC is used; this first, discarded,
   // sample primes the system for later use.
-  ADCSRA |= _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0) | _BV(ADSC);
+  ADCSRA |= _BV (ADEN) | _BV (ADPS2) | _BV (ADPS1) | _BV (ADPS0) | _BV (ADSC);
   
   // Wait for the ADC to return a sample.
   loop_until_bit_is_clear (ADCSRA, ADSC);
@@ -46,11 +62,11 @@ adc_read_raw (uint8_t pin)
 }
 
 float
-adc_read_voltage (uint8_t pin, float supply_voltage)
+adc_read_voltage (uint8_t pin, float reference_voltage)
 {
     uint16_t raw = adc_read_raw (pin);
 
     const uint16_t a2d_steps = 1024;
 
-    return ((float) raw / a2d_steps) * supply_voltage;
+    return ((float) raw / a2d_steps) * reference_voltage;
 }

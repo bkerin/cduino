@@ -4,23 +4,35 @@
 // it always:
 //
 //   * monopolizes port C pins (sets DDRC to 0x00)
-//   * uses the internal Vcc reference
 //   * uses a 125 kHz clock
 //
 // See the ATMega328P datasheet for details of other options.
 
 #include <stdint.h>
 
+// Possible reference sources for the ADC.  See section 23.5.2 of ATMegs328P
+// datasheet Rev. 8271C.  Note that Arduinos connect AVCC to VCC, so both
+// ADC_REFERENCE_AVCC and ADC_REFERENCE_INTERNAL are pretty easy to use.
+// FIXME: ADC_REFERENCE_AREF hasn't been tested (thouth its a dead-simple
+// difference from the tested paths).
+typedef enum {
+  ADC_REFERENCE_AREF,
+  ADC_REFERENCE_AVCC,
+  ADC_REFERENCE_INTERNAL
+} adc_reference_source_t;
+
 // Prepare port C pins for use by the ADC, and ready the ADC.  See the
 // warning above for more details.
 void
-adc_init (void);
+adc_init (adc_reference_source_t reference_source);
 
 // Read a raw sample value from pin (which must be on of 0 through 5).
 uint16_t
 adc_read_raw (uint8_t pin);
 
-// Read a voltage value from pin (which must be on of 0 through 5), assuming
-// that the supply voltage is supply_voltage.
+// Read a voltage value from pin (which must be on of 0 through 5),
+// assuming reference_voltage.  Note that if ADC_REFERENCE_INTERNAL was
+// used with adc_init(), reference_voltage should be 1.1 for most (all?) AVR
+// microcontrollers.
 float
-adc_read_voltage (uint8_t pin, float supply_voltage);
+adc_read_voltage (uint8_t pin, float reference_voltage);
