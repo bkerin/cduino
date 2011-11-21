@@ -106,8 +106,8 @@ upload_html targzball: samesys
 
 
 # Upload the targzball and documentation to the web site.  The unstable
-# snapshot that we provide is uploaded first, since it should never be behind
-# the stable version.  FIXME: test this and verify working.
+# snapshot that we provide is uploaded first, since it should never be
+# behind the stable version.
 .PHONY: upload
 upload: targzball upload_html update_unstable git_push
 	scp /tmp/cduino-$(VERSION).tgz $(WEB_SSH):$(WEB_ROOT)/releases/
