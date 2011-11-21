@@ -1,6 +1,8 @@
 # This Makefile handles jobs related to the development of the package itself,
 # the useful content is in generic.mk (see manual.html for details).
 
+# vim: foldmethod=marker
+
 # Delete files produced by rules the commands of which return non-zero.
 .DELETE_ON_ERROR:
 # Disable all suffix rules.
@@ -56,6 +58,52 @@ targzball: clean_all_modules
 	cd /tmp/cduino && rm -rf .git .gitignore ; cd .. ; \
           mv cduino cduino-$(VERSION) ; \
           tar czvf cduino-$(VERSION).tgz cduino-$(VERSION)
+
+# Check for Consistency of Certain Files Across Projects {{{1
+
+# Any SAMESY_FILES appearing in more than one of SAMESY_DIRS must be the
+# same in each directory in which they occur (though they can be totally
+# absent in some dirs and that is ok).
+
+SAMESY_FILES := generic.mk \
+                adc.h \
+                adc.c \
+                uart.h \
+                uart.c
+
+SAMESY_DIRS := ~/projects/temp_logger/microcode/ \
+               ~/projects/smartcord/microcode/ \
+               ~/projects/cduino/ \
+               ~/projects/cduino/adc \
+               ~/projects/cduino/uart
+
+# WARNING: this really pushes the shell with a potentially giant cross
+# product as a command line.
+SAMESY_CHECK_CODE := \
+  $(foreach sf,$(SAMESY_FILES), \
+    $(foreach dira,$(SAMESY_DIRS), \
+      $(foreach dirb,$(SAMESY_DIRS), \
+        ( \
+          (! [ -a $(dira)/$(sf) ]) || \
+          (! [ -a $(dirb)/$(sf) ]) || \
+          diff -u $(dira)/$(sf) $(dirb)/$(sf) \
+        ) &&))) \
+  true
+
+# For debugging:
+.PHONY: escc
+escc:
+	@echo '$(SAMESY_CHECK_CODE)'
+
+.PHONY: samesys
+samesys:
+	$(SAMESY_CHECK_CODE)
+
+# Make sure our samsys desire are satisfied before doing anything important.
+upload_html targzball: samesys
+
+# }}}
+
 
 # Upload the targzball and documentation to the web site.  The unstable
 # snapshot that we provide is uploaded first, since it should never be behind
