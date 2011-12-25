@@ -1,8 +1,22 @@
+// Blink a led attached to pin PB5 on an off.
 
 #include <avr/io.h>
 #include <util/delay.h>
 
 #include "util.h"
+
+//
+// Assumptions:
+// 	- LED connected to PORTB (arduino boards have LED L onboard)
+// 	- F_CPU is defined to be your cpu speed (preprocessor define)
+//
+
+// WARNING: this technique doesn't translate to all the other IO pins on a
+// typical arduino, because the arduino bootloader uses some of them for its
+// own purposes (e.g. PD0 is set up as the RX pin for serial communication,
+// which precludes its use as an output).  The unconnected IO pins are
+// presumably ok to use, or you can just nuke the bootloader with an
+// AVRISPmkII or similar device.
 
 static void
 set_pin_pb5_for_output (uint8_t initial_value)
@@ -32,7 +46,6 @@ set_pin_pb5 (uint8_t value)
     loop_until_bit_is_clear (PORTB, PORTB5);
   }
 }
-
 
 int
 main (void)

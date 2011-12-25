@@ -23,18 +23,27 @@
 // 	- LED connected to PORTB (arduino boards have LED L onboard)
 // 	- F_CPU is defined to be your cpu speed (preprocessor define)
 //
+// NOTE: the file in blink/blink.c is a better place for look for an example of 
+// how to address individual IO pins.
+//
+// WARNING: this technique doesn't translate to all the other IO pins on a
+// typical arduino, because the arduino bootloader uses some of them for its
+// own purposes (e.g. PD0 is set up as the RX pin for serial communication,
+// which precludes its use as an output).  The unconnected IO pins are
+// presumably ok to use, or you can just nuke the bootloader with an
+// AVRISPmkII or similar device.
 
 int main (void)
 {
-	/* set PORTB for output*/
+	/* set all pins of PORTB for output*/
 	DDRB = 0xFF;
 
 	while (1) {
-		/* set PORTB high */
+		/* set all pins of PORTB high */
 		PORTB = 0xFF;
 		_delay_ms(500);
 
-		/* set PORTB low */
+		/* set all pins of PORTB low */
 		PORTB = 0x00;
 		_delay_ms(500);
 	}

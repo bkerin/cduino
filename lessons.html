@@ -119,6 +119,13 @@ and given that, the number of times to call _delay_ms to achieve the desired
 delay interval. You may wish to put this computation into a separate function
 which you can call whenever you need to delay.</p>
 
+<p align="justify"> WARNING: this technique doesn't translate to all the other
+IO pins on a typical arduino, because the arduino bootloader uses some of them
+for its own purposes (e.g. PD0 is set up as the RX pin for serial
+communication, which precludes its use as an output).  The unconnected IO pins
+are presumably ok to use, or you can just nuke the bootloader with an
+AVRISPmkII or similar device.  </p>
+
 <p align="justify"><code><a href="lessons/lesson1.c">lesson1.c</a></code> is
 one possible solution.</p>
 
