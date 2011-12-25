@@ -9,15 +9,23 @@
 // FIXME: should this module or the uart module use the util/setbaud.h
 // interface from AVR libc.
 
-// Set up the uart and AVR libc stdio interface such that printf() (and
+// Set up USART0 and AVR libc stdio interface such that printf() (and
 // friends) can be used for output, and term_io_getline() used for input
 // via a GNU screen session (with default settings) or something similar.
-// Note that the AVR libc input functions (scanf() and friends) do not by
-// themselves provide any screen echo or command-line editing capability
-// (hence the term_io_getline() function).  Note also that some of the AVR
-// libc output functions (printf() and friends) profide different levels
-// of functionality and libc-ishness depending on the linker flags used;
-// see AVRLIBC_PRINTF_LDFLAGS in generic.mk for details.
+//
+// Things to consider:
+//
+//   * Calling term_io_init() sets up the PD0 (RXD) and PD1 (TXD) pins such
+//     that they cannot be used for normal digital IO.
+//
+//   * The AVR libc input functions (scanf() and friends) do not by
+//     themselves provide provide any screen echo or command-line editing
+//     capability (hence the term_io_getline() function).
+//
+//   * Some of the AVR libc output functions (printf() and friends) provide
+//     different levels of functionality and libc-ishness depending on
+//     the linker flags used; see AVRLIBC_PRINTF_LDFLAGS in generic.mk
+//     for details.
 void
 term_io_init (void);
 

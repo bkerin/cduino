@@ -24,9 +24,11 @@
 
 #define UART_BAUD 9600
 
-// Initialize the UART to 9600 Bd, tx/rx, 8N1.
+// Initialize the USART0 to 9600 Bd, TX/RX, 8N1.  Note that this sets up
+// the PD0 (RXD) and PD1 (TXD) pins such that they cannot be used for normal
+// digital IO.
 void
-uart_init(void);
+uart_init (void);
 
 // Send character c down the UART Tx, wait until tx holding register is empty.
 int
