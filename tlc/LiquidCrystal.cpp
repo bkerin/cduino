@@ -58,10 +58,8 @@ void LiquidCrystal::init(uint8_t fourbitmode, uint8_t rs, uint8_t rw, uint8_t en
 
   dio_pin_initialize ('B', 1, DIO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_enable_pin, OUTPUT);
   
-  if (fourbitmode)
-    _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
-  else 
-    _displayfunction = LCD_8BITMODE | LCD_1LINE | LCD_5x8DOTS;
+  assert (fourbitmode);
+  _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
   
   begin(16, 1);  
 }
@@ -275,10 +273,11 @@ void LiquidCrystal::pulseEnable(void) {
   delayMicroseconds(100);   // commands need > 37us to settle
 }
 
-void LiquidCrystal::write4bits(uint8_t value) {
+void LiquidCrystal::write4bits(uint8_t value)
+{
   for (int i = 0; i < 4; i++) {
-    pinMode(_data_pins[i], OUTPUT);
-    digitalWrite(_data_pins[i], (value >> i) & 0x01);
+    dio_pin_initialize ('D', _data_pins[i], DIO_PIN_DIRECTION_OUTPUT, 0, 0);
+    dio_pin_set ('D', _data_pins[i], (value >> i) & 0x01);
   }
 
   pulseEnable();
