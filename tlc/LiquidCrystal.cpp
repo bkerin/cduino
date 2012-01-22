@@ -53,11 +53,11 @@ void LiquidCrystal::init(uint8_t fourbitmode, uint8_t rs, uint8_t rw, uint8_t en
   _data_pins[6] = d6;
   _data_pins[7] = d7; 
 
-  dio_pin_initialize ('B', 0, DIO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_rs_pin, OUTPUT);
+  dio_pin_initialize ('B', 0, DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_rs_pin, OUTPUT);
 
   assert (_rw_pin == 255);  // We don't intend to support _rw_pin
 
-  dio_pin_initialize ('B', 1, DIO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_enable_pin, OUTPUT);
+  dio_pin_initialize ('B', 1, DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_enable_pin, OUTPUT);
   
   assert (fourbitmode);
   _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
@@ -77,46 +77,46 @@ void LiquidCrystal::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
     _displayfunction |= LCD_5x10DOTS;
   }
 
-  // SEE PAGE 45/46 FOR INITIALIZATION SPECIFICATION!
-  // according to datasheet, we need at least 40ms after power rises above 2.7V
-  // before sending commands. Arduino can turn on way befer 4.5V so we'll wait 50
-  _delay_us (50000); //delayMicroseconds(50000); 
+  // SEE PAGE 45/46 FOR INITIALIZATION SPECIFICATION!  According to the
+  // datasheet, we need at least 40ms after power rises above 2.7V before
+  // sending commands. And arduino can turn on way befer 4.5V so we'll wait 50
+  // ms.
+  _delay_ms (50); //delayMicroseconds(50000); 
   
   // Now we pull both RS and R/W low to begin commands
-  dio_pin_set ('B', 0, 0); //digitalWrite(_rs_pin, LOW);
-  dio_pin_set ('B', 1, 0); //digitalWrite(_enable_pin, LOW);
+  dio_pin_set ('B', 0, 0);
+  dio_pin_set ('B', 1, 0);
   
   //put the LCD into 4 bit mode
   assert (! (_displayfunction & LCD_8BITMODE));
-  // this is according to the hitachi HD44780 datasheet
-  // figure 24, pg 46
-  // we start in 8bit mode, try to set 4 bit mode
-  write4bits(0x03);
-  _delay_us (4500); //delayMicroseconds(4500); // wait min 4.1ms
-  // second try
-  write4bits(0x03);
-  _delay_us (4500); //delayMicroseconds(4500); // wait min 4.1ms
-  // third go!
-  write4bits(0x03); 
-  _delay_us (150); //delayMicroseconds(150);
-  // finally, set to 4-bit interface
-  write4bits(0x02); 
 
-  // finally, set # lines, font size, etc.
+  // This is done according to the hitachi HD44780 datasheet figure 24, pg 46.
+  // We start in 8bit mode, then try to set 4 bit mode.
+  write4bits (0x03);
+  _delay_us (4500);
+  // Second try
+  write4bits (0x03);
+  _delay_us (4500);
+  // Third go!
+  write4bits (0x03); 
+  _delay_us (150);
+  // Finally, set to 4-bit interface
+  write4bits (0x02); 
+
+  // Finally, set # lines, font size, etc.
   command(LCD_FUNCTIONSET | _displayfunction);  
 
   // turn the display on with no cursor or blinking default
   _displaycontrol = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;  
   display();
 
-  // clear it off
+  // Clear display. 
   clear();
 
   // Initialize to default text direction (for romance languages)
   _displaymode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
   // set the entry mode
   command(LCD_ENTRYMODESET | _displaymode);
-
 }
 
 /********** high level commands, for the user! */
@@ -232,7 +232,7 @@ void LiquidCrystal::send(uint8_t value, uint8_t mode) {
   dio_pin_set ('B', 0, mode); //digitalWrite(_rs_pin, mode);
 
   assert (! (_displayfunction & LCD_8BITMODE));
-  write4bits(value>>4);
+  write4bits(value >> 4);
   write4bits(value);
 }
 
@@ -250,7 +250,7 @@ void LiquidCrystal::pulseEnable(void) {
 void LiquidCrystal::write4bits(uint8_t value)
 {
   for (int i = 0; i < 4; i++) {
-    dio_pin_initialize ('D', _data_pins[i], DIO_PIN_DIRECTION_OUTPUT, 0, 0);
+    dio_pin_initialize ('D', _data_pins[i], DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);
     dio_pin_set ('D', _data_pins[i], (value >> i) & 0x01);
   }
 
