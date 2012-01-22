@@ -83,9 +83,6 @@ void LiquidCrystal::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
   // Now we pull both RS and R/W low to begin commands
   dio_pin_set ('B', 0, 0); //digitalWrite(_rs_pin, LOW);
   dio_pin_set ('B', 1, 0); //digitalWrite(_enable_pin, LOW);
-  if (_rw_pin != 255) { 
-    digitalWrite(_rw_pin, LOW);
-  }
   
   //put the LCD into 4 bit or 8 bit mode
   if (! (_displayfunction & LCD_8BITMODE)) {
@@ -251,17 +248,9 @@ inline size_t LiquidCrystal::write(uint8_t value) {
 void LiquidCrystal::send(uint8_t value, uint8_t mode) {
   dio_pin_set ('B', 0, mode); //digitalWrite(_rs_pin, mode);
 
-  // if there is a RW pin indicated, set it low to Write
-  if (_rw_pin != 255) { 
-    digitalWrite(_rw_pin, LOW);
-  }
-  
-  if (_displayfunction & LCD_8BITMODE) {
-    write8bits(value); 
-  } else {
-    write4bits(value>>4);
-    write4bits(value);
-  }
+  assert (! (_displayfunction & LCD_8BITMODE));
+  write4bits(value>>4);
+  write4bits(value);
 }
 
 void LiquidCrystal::pulseEnable(void) {
