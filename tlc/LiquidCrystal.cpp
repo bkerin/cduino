@@ -1,5 +1,6 @@
 #include "LiquidCrystal.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
@@ -51,14 +52,11 @@ void LiquidCrystal::init(uint8_t fourbitmode, uint8_t rs, uint8_t rw, uint8_t en
   _data_pins[6] = d6;
   _data_pins[7] = d7; 
 
-  dio_pin_initialize ('B', 0, DIO_PIN_DIRECTION_OUTPUT, 0, 0);
-  //pinMode(_rs_pin, OUTPUT);
+  dio_pin_initialize ('B', 0, DIO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_rs_pin, OUTPUT);
 
-  // we can save 1 pin by not using RW. Indicate by passing 255 instead of pin#
-  if (_rw_pin != 255) { 
-    pinMode(_rw_pin, OUTPUT);
-  }
-  pinMode(_enable_pin, OUTPUT);
+  assert (_rw_pin == 255);  // We don't intend to support _rw_pin
+
+  dio_pin_initialize ('B', 1, DIO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_enable_pin, OUTPUT);
   
   if (fourbitmode)
     _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
@@ -86,7 +84,7 @@ void LiquidCrystal::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
   delayMicroseconds(50000); 
   // Now we pull both RS and R/W low to begin commands
   dio_pin_set ('B', 0, 0); //digitalWrite(_rs_pin, LOW);
-  digitalWrite(_enable_pin, LOW);
+  dio_pin_set ('B', 1, 0); //digitalWrite(_enable_pin, LOW);
   if (_rw_pin != 255) { 
     digitalWrite(_rw_pin, LOW);
   }
@@ -269,11 +267,11 @@ void LiquidCrystal::send(uint8_t value, uint8_t mode) {
 }
 
 void LiquidCrystal::pulseEnable(void) {
-  digitalWrite(_enable_pin, LOW);
+  dio_pin_set ('B', 1, 0); //digitalWrite(_enable_pin, LOW);
   delayMicroseconds(1);    
-  digitalWrite(_enable_pin, HIGH);
+  dio_pin_set ('B', 1, 1); //digitalWrite(_enable_pin, HIGH);
   delayMicroseconds(1);    // enable pulse must be >450ns
-  digitalWrite(_enable_pin, LOW);
+  dio_pin_set ('B', 1, 0); //digitalWrite(_enable_pin, LOW);
   delayMicroseconds(100);   // commands need > 37us to settle
 }
 
