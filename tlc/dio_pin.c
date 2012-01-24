@@ -22,16 +22,14 @@
 #define DDRD_REGISTER 0x0A
 #define PORTD_REGISTER 0x0B
 
-void
-digital_io_pin_init (
-    digital_io_pin_name_t        pin,
-    digital_io_pin_direction_t   direction,
-    uint8_t                      enable_pullup,
-    uint8_t                      initial_value )
+static void
+lookup_pin_registers (
+    digital_io_pin_name_t   pin,
+    uint8_t                 *pin_register,
+    uint8_t                 *dd_register,
+    uint8_t                 *port_register,
+    uint8_t                  *port_pin_number )
 {
-  uint8_t pin_register, dd_register, port_register;
-  uint8_t ppn;   // Port pin number (0-7).
-
   // This code saves a bit of code and a few comparisons by depending on
   // the order of the constants in the digital_io_pin_name_t enumeration
   // (including the values that don't guarantee a particular value to the
@@ -39,163 +37,76 @@ digital_io_pin_init (
   assert (DIGITAL_IO_PIN_PB6 == 14); 
   assert (DIGITAL_IO_PIN_PC5 == 21); 
   if ( pin <= 7 ) {
-    pin_register = PIND_REGISTER;
-    dd_register = DDRD_REGISTER;
-    port_register = PORTD_REGISTER;
-    ppn = pin;
+    *pin_register = PIND_REGISTER;
+    *dd_register = DDRD_REGISTER;
+    *port_register = PORTD_REGISTER;
+    *port_pin_number = pin;
   }
   else if ( pin > 15 ) {
-    pin_register = PINC_REGISTER;
-    dd_register = DDRC_REGISTER;
-    port_register = PORTC_REGISTER;
-    ppn = pin - 16;
+    *pin_register = PINC_REGISTER;
+    *dd_register = DDRC_REGISTER;
+    *port_register = PORTC_REGISTER;
+    *port_pin_number = pin - 16;
   }
   else {
-    pin_register = PINB_REGISTER;
-    dd_register = DDRB_REGISTER;
-    port_register = PORTB_REGISTER;
-    ppn = pin - 8;
+    *pin_register = PINB_REGISTER;
+    *dd_register = DDRB_REGISTER;
+    *port_register = PORTB_REGISTER;
+    *port_pin_number = pin - 8;
   }
+}
 
-// FIXME: compare this for code size to above value comparer.
-//  switch ( DIGITAL_IO_PIN_NAME ) {
-//    case DIGITAL_IO_PIN_PB0:
-//      pin_register = PINB_REGISTER;
-//      dd_register = DDRB_REGISTER;
-//      port_register = PORTB_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PB1:
-//      pin_register = PINB_REGISTER;
-//      dd_register = DDRB_REGISTER;
-//      port_register = PORTB_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PB2 :
-//      pin_register = PINB_REGISTER;
-//      dd_register = DDRB_REGISTER;
-//      port_register = PORTB_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PB3 :
-//      pin_register = PINB_REGISTER;
-//      dd_register = DDRB_REGISTER;
-//      port_register = PORTB_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PB4:
-//      pin_register = PINB_REGISTER;
-//      dd_register = DDRB_REGISTER;
-//      port_register = PORTB_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PB5:
-//      pin_register = PINB_REGISTER;
-//      dd_register = DDRB_REGISTER;
-//      port_register = PORTB_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PB6:
-//      pin_register = PINB_REGISTER;
-//      dd_register = DDRB_REGISTER;
-//      port_register = PORTB_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PB7:
-//      pin_register = PINB_REGISTER;
-//      dd_register = DDRB_REGISTER;
-//      port_register = PORTB_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PD0:
-//      pin_register = PIND_REGISTER;
-//      dd_register = DDRD_REGISTER;
-//      port_register = PORTD_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PD1 :
-//      pin_register = PIND_REGISTER;
-//      dd_register = DDRD_REGISTER;
-//      port_register = PORTD_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PD2 :
-//      pin_register = PIND_REGISTER;
-//      dd_register = DDRD_REGISTER;
-//      port_register = PORTD_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PD3 :
-//      pin_register = PIND_REGISTER;
-//      dd_register = DDRD_REGISTER;
-//      port_register = PORTD_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PD4 :
-//      pin_register = PIND_REGISTER;
-//      dd_register = DDRD_REGISTER;
-//      port_register = PORTD_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PD5:
-//      pin_register = PIND_REGISTER;
-//      dd_register = DDRD_REGISTER;
-//      port_register = PORTD_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PD6 :
-//      pin_register = PIND_REGISTER;
-//      dd_register = DDRD_REGISTER;
-//      port_register = PORTD_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PD7:
-//      pin_register = PIND_REGISTER;
-//      dd_register = DDRD_REGISTER;
-//      port_register = PORTD_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PC0:
-//      pin_register = PINC_REGISTER;
-//      dd_register = DDRC_REGISTER;
-//      port_register = PORTC_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PC1:
-//      pin_register = PINC_REGISTER;
-//      dd_register = DDRC_REGISTER;
-//      port_register = PORTC_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PC2:
-//      pin_register = PINC_REGISTER;
-//      dd_register = DDRC_REGISTER;
-//      port_register = PORTC_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PC3:
-//      pin_register = PINC_REGISTER;
-//      dd_register = DDRC_REGISTER;
-//      port_register = PORTC_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PC4:
-//      pin_register = PINC_REGISTER;
-//      dd_register = DDRC_REGISTER;
-//      port_register = PORTC_REGISTER;
-//      break;
-//    case DIGITAL_IO_PIN_PC5:
-//      pin_register = PINC_REGISTER;
-//      dd_register = DDRC_REGISTER;
-//      port_register = PORTC_REGISTER;
-//      break;
-//    default:
-//      assert (0);   // Shouldn't be here
-//  }
+void
+digital_io_pin_init (
+    digital_io_pin_name_t        pin,
+    digital_io_pin_direction_t   direction,
+    uint8_t                      enable_pullup,
+    uint8_t                      initial_value )
+{
+  uint8_t pin_reg, dd_reg, port_reg;
+  uint8_t ppn;   // Port pin number (0-7).
+  lookup_pin_registers (pin, &pin_reg, &dd_reg, &port_reg, &ppn);
 
   if ( direction == DIGITAL_IO_PIN_DIRECTION_INPUT ) {
-    _SFR_IO8 (dd_register) &= ~(_BV (ppn));
-    loop_until_bit_is_clear (_SFR_IO8 (dd_register), ppn);
+    _SFR_IO8 (dd_reg) &= ~(_BV (ppn));
+    loop_until_bit_is_clear (_SFR_IO8 (dd_reg), ppn);
     if ( enable_pullup ) {
-      _SFR_IO8 (port_register) |= _BV (ppn);
-      loop_until_bit_is_set (_SFR_IO8 (port_register), ppn);
+      _SFR_IO8 (port_reg) |= _BV (ppn);
+      loop_until_bit_is_set (_SFR_IO8 (port_reg), ppn);
     }
     else {
-      _SFR_IO8 (port_register) &= ~(_BV (ppn));
-      loop_until_bit_is_clear (_SFR_IO8 (port_register), ppn);
+      _SFR_IO8 (port_reg) &= ~(_BV (ppn));
+      loop_until_bit_is_clear (_SFR_IO8 (port_reg), ppn);
     }
   }
   else {
-    _SFR_IO8 (dd_register) |= _BV (pin);
-    loop_until_bit_is_set (_SFR_IO8 (dd_register), pin);
+    _SFR_IO8 (dd_reg) |= _BV (pin);
+    loop_until_bit_is_set (_SFR_IO8 (dd_reg), pin);
     if ( initial_value ) {
-      _SFR_IO8 (port_register) |= _BV (pin);
-      loop_until_bit_is_set (_SFR_IO8 (port_register), pin);
+      _SFR_IO8 (port_reg) |= _BV (pin);
+      loop_until_bit_is_set (_SFR_IO8 (port_reg), pin);
     }
     else {
-      _SFR_IO8 (port_register) &= ~(_BV (pin));
-      loop_until_bit_is_clear (_SFR_IO8 (port_register), pin);
+      _SFR_IO8 (port_reg) &= ~(_BV (pin));
+      loop_until_bit_is_clear (_SFR_IO8 (port_reg), pin);
     }
+  }
+}
+
+void
+digital_io_pin_set (digital_io_pin_name_t pin, uint8_t value)
+{
+  uint8_t pin_reg, dd_reg, port_reg;   // Register values.
+  uint8_t ppn;   // Port pin number (0-7).
+  lookup_pin_registers (pin, &pin_reg, &dd_reg, &port_reg, &ppn);
+    
+  if ( value ) {
+    _SFR_IO8 (port_reg) |= _BV (pin);
+    loop_until_bit_is_set (_SFR_IO8 (port_reg), pin);
+  }
+  else {
+    _SFR_IO8 (port_reg) &= ~(_BV (pin));
+    loop_until_bit_is_clear (_SFR_IO8 (port_reg), pin);
   }
 }
 
