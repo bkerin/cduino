@@ -8,7 +8,7 @@
 // fixed this include could go.
 #include <stdlib.h>  
 
-#include "dio_pin.h"
+#include "dio.h"
 
 #ifndef HIGH
 #  define HIGH 1
