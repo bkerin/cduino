@@ -10,14 +10,6 @@
 
 #include "dio.h"
 
-#ifndef HIGH
-#  define HIGH 1
-#endif
-
-#ifndef LOW
-#  define LOW 0
-#endif
-
 // Blink the PB5 LED quickly.
 static void
 quick_pb5_blink (void)

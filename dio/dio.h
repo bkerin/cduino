@@ -9,6 +9,8 @@
 #include <avr/io.h>
 #include <inttypes.h>
 
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // 
 // How This Interface Works
@@ -124,6 +126,21 @@
 // single *hardware* no-ops.  I'm just haven't looked up how to produce
 // them with for sure with C or GCC.
 
+// I can't bring myself to drag in another utility header just for this junk.
+#ifndef HIGH
+#  define HIGH 0x1
+#else
+#  if HIGH != 1
+#    error uh oh, HIGH != 1
+#  endif
+#endif
+#ifndef LOW
+#  define LOW 0x0
+#else
+#  if LOW != 0
+#    error uh oh, LOW != 0
+#  endif
+#endif
 
 // Pin Initialization {{{1
 
