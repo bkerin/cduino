@@ -13,7 +13,7 @@
 // Possible reference sources for the ADC.  See section 23.5.2 of ATMegs328P
 // datasheet Rev. 8271C.  Note that Arduinos connect AVCC to VCC, so both
 // ADC_REFERENCE_AVCC and ADC_REFERENCE_INTERNAL are pretty easy to use.
-// FIXME: ADC_REFERENCE_AREF hasn't been tested (thouth its a dead-simple
+// FIXME: ADC_REFERENCE_AREF hasn't been tested (though its a dead-simple
 // difference from the tested paths).
 typedef enum {
   ADC_REFERENCE_AREF,
@@ -21,8 +21,9 @@ typedef enum {
   ADC_REFERENCE_INTERNAL
 } adc_reference_source_t;
 
-// Prepare port C pins for use by the ADC, and ready the ADC.  See the
-// warning above for more details.
+// WARNING: using ADC_REFERENCE_INTERNAL when the AREF pin is connected to
+// an extern DC voltage can destroy the ADC.  Prepare port C pins for use
+// by the ADC, and ready the ADC.  See the warning above for more details.
 void
 adc_init (adc_reference_source_t reference_source);
 
