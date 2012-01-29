@@ -10,373 +10,109 @@
 
 #include "dio.h"
 
-// Blink the PB5 LED quickly.
+// Signal a checkpoint by blinking the PB5 LED quickly.
 static void
-quick_pb5_blink (void)
-{
-  const int blink_count = 6, blinks_per_second = 4;
+signal_checkpoint_with_pb5_blinks (void)
+// {{{1
+{ 
+
+  DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+
+  const int blink_count = 3, blinks_per_second = 4;
+  const int post_blink_pause_ms = 500;
 
   for ( int ii = 0 ; ii < blink_count ; ii++ ) {
 #define MILLISECONDS_PER_SECOND 1000
-    DIO_SET_PB5 (1);
+    DIO_SET_PB5 (HIGH);
     _delay_ms (MILLISECONDS_PER_SECOND / (blinks_per_second * 2));
-    DIO_SET_PB5 (0);
+    DIO_SET_PB5 (LOW);
     _delay_ms (MILLISECONDS_PER_SECOND / (blinks_per_second * 2));
   }
+
+  _delay_ms (post_blink_pause_ms);
 }
+// }}}1
 
 int
 main (void)
 {
-  // To keep things simple, we just use assert and blink on-board PB5 LED
-  // a bit when the right stuff happens, or expect the user to check the
-  // blinking LEDs to verify that the right thing is happening.  These tests
-  // therefore require some human attention to switches to connect the outputs
-  // to the expected rails at the expected times, and to monitor LED output.
-  // Closing all the top level folds will and reading the comments above
-  // them give a step-by-step description of what should be done and expected.
-  
-  uint8_t value;   // Holds value set to or read from a pin.
-  const double milliseconds_per_second = 1000;
+
+  // Its a sin in my book to distribute untested code without clearly
+  // acknowledging the fact.
+#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
+#  error The PB6, PB7, and PC6 control macros are identical in form to the \
+   other macros in this interface, but have not been tested.  The Makefile \
+   for this module includes a line which may be uncommented to override \
+   this failure.
+#endif
+
+// We're going to be a bit careless with out lack of namespace prefixes
+// here so we have this check.
+#ifdef INIT
+#  error uh oh, INIT is already defined
+#endif
+#ifdef SET
+#  error uh oh, SET is already defined
+#endif
+#ifdef READ
+#  error uh oh, READ is already defined
+#endif
+
+  // The time we allow to give the pull-up resistors a chance to get their
+  // pins pulled high.  Note that in practice they shouldn't need a full this
+  // long to settle, at least with the anticipated capacitances connected
+  // to them.  But the chip runs fast enough that not waiting at all can be
+  // to fast.
+  const double settling_time_ms = 10;
+
+  uint8_t value = 0;   // Holds value set to or read from a pin.
+  value = value;   // Prevent compiler from whining
+
+#ifdef TEST_CONDITION_ALL_PINS_NC
 
   // For this test, we assume all the pins have nothing connected externally.
-  // We then set the pins for input, with pullups enabled, and read all
-  // their values.  They should all read as high.
+  // We then set the pins for input with pullups enabled, wait a few
+  // milliseconds for the pins to settle high, and read all their values.
+  // They should all read as high.
   // {{{1
 
   DIO_INIT_PB0 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB0 ();
-  assert (value);
-  
   DIO_INIT_PB1 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB1 ();
-  assert (value);
-
   DIO_INIT_PB2 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB2 ();
-  assert (value);
-
+#  ifdef TEST_ISP_PINS
   DIO_INIT_PB3 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB3 ();
-  assert (value);
-
   DIO_INIT_PB4 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB4 ();
-  assert (value);
-
-  // NOTE: on the Arduino, PB5 is pulled towards ground via one or two 1
-  // kohm resistors in parallel and a LED.  This is a stronger pull than
-  // that exerted by the internal pull-up resistor, and so we expect to read
-  // a low value from this pin even with the pull-up enabled.
   DIO_INIT_PB5 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB5 ();
-  assert (!value);
-
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PB6 and PB7 control macros are identical in form to the other \
-   macros in this interface, but have not been tested.  The Makefile for this \
-   module includes a line which may be uncommented to override this failure.
-#endif
-
+#  endif
   DIO_INIT_PC0 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC0 ();
-  assert (value);
-  
   DIO_INIT_PC1 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC1 ();
-  assert (value);
-  
   DIO_INIT_PC2 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC2 ();
-  assert (value);
-  
   DIO_INIT_PC3 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC3 ();
-  assert (value);
-  
   DIO_INIT_PC4 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC4 ();
-  assert (value);
-  
   DIO_INIT_PC5 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC5 ();
-  assert (value);
-  
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PC6 control macros are identical in form to the other macros in \
-   this interface, but have not been tested.  The Makefile for this module \
-   includes a line which may be uncommented to override this failure.
-#endif
-  
-  // These we can test only if the Arduino isn't hogging the serial line.
-#ifndef NO_TEST_SERIAL_PINS
-  //assert (0);
+#  ifdef TEST_SERIAL_PINS
   DIO_INIT_PD0 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD0 ();
-  assert (value);
-  
   DIO_INIT_PD1 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD1 ();
-  assert (value);
-#endif
-  
+#  endif
   DIO_INIT_PD2 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD2 ();
-  assert (value);
-  
   DIO_INIT_PD3 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD3 ();
-  assert (value);
-  
   DIO_INIT_PD4 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD4 ();
-  assert (value);
-  
   DIO_INIT_PD5 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD5 ();
-  assert (value);
-
   DIO_INIT_PD6 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD6 ();
-  assert (value);
-
   DIO_INIT_PD7 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD7 ();
-  assert (value);
-  
-  // Signal we got through the test.
-  DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, 0);
-  quick_pb5_blink ();
 
-  // }}}1
-
-  // For this test, we expect all pins except PB5 (which is held somewhat
-  // low by its resistor-LED combination anyway) to be held low, and test
-  // the operation of the pins both with the pull-ups still on.
-  // {{{1
-  
-  // Delay for a second to give the user time to close a switch connecting
-  // all pins to ground.
-  _delay_ms (milliseconds_per_second);
-
-  value = DIO_READ_PB0 ();
-  assert (!value);
-  
-  value = DIO_READ_PB1 ();
-  assert (!value);
-
-  value = DIO_READ_PB2 ();
-  assert (!value);
-
-  value = DIO_READ_PB3 ();
-  assert (!value);
-
-  value = DIO_READ_PB4 ();
-  assert (!value);
-
-  value = DIO_READ_PB5 ();
-  assert (!value);
-
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PB6 and PB7 control macros are identical in form to the other \
-   macros in this interface, but have not been tested.  The Makefile for this \
-   module includes a line which may be uncommented to override this failure.
-#endif
-
-  value = DIO_READ_PC0 ();
-  assert (!value);
-  
-  value = DIO_READ_PC1 ();
-  assert (!value);
-  
-  value = DIO_READ_PC2 ();
-  assert (!value);
-  
-  value = DIO_READ_PC3 ();
-  assert (!value);
-  
-  value = DIO_READ_PC4 ();
-  assert (!value);
-  
-  value = DIO_READ_PC5 ();
-  assert (!value);
-  
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PC6 control macros are identical in form to the other macros in \
-   this interface, but have not been tested.  The Makefile for this module \
-   includes a line which may be uncommented to override this failure.
-#endif
-  
-  // These we can test only if the Arduino isn't hogging the serial line.
-#ifndef NO_TEST_SERIAL_PINS
-  value = DIO_READ_PD0 ();
-  assert (!value);
-  
-  value = DIO_READ_PD1 ();
-  assert (!value);
-#endif
-  
-  value = DIO_READ_PD2 ();
-  assert (!value);
-  
-  value = DIO_READ_PD3 ();
-  assert (!value);
-  
-  value = DIO_READ_PD4 ();
-  assert (!value);
-  
-  value = DIO_READ_PD5 ();
-  assert (!value);
-
-  value = DIO_READ_PD6 ();
-  assert (!value);
-
-  value = DIO_READ_PD7 ();
-  assert (!value);
-  
-  // Signal we got through the test.
-  DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, 0);
-  quick_pb5_blink ();
-
-  // }}}1
-
-  // For this test, we disable all internal pull-up resistors, and expect
-  // all pins except PB5 (which is held somewhat low by its resistor-LED
-  // combination anyway) to be held low.
-  // {{{1
-  
-  // Delay for a second between tests.
-  _delay_ms (milliseconds_per_second);
-
-  DIO_INIT_PB0 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB0 ();
-  assert (!value);
-  
-  DIO_INIT_PB1 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB1 ();
-  assert (!value);
-
-  DIO_INIT_PB2 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB2 ();
-  assert (!value);
-
-  DIO_INIT_PB3 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB3 ();
-  assert (!value);
-
-  DIO_INIT_PB4 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB4 ();
-  assert (!value);
-
-  DIO_INIT_PB5 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PB5 ();
-  assert (!value);
-
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PB6 and PB7 control macros are identical in form to the other \
-   macros in this interface, but have not been tested.  The Makefile for this \
-   module includes a line which may be uncommented to override this failure.
-#endif
-
-  DIO_INIT_PC0 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC0 ();
-  assert (!value);
-  
-  DIO_INIT_PC1 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC1 ();
-  assert (!value);
-  
-  DIO_INIT_PC2 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC2 ();
-  assert (!value);
-  
-  DIO_INIT_PC3 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC3 ();
-  assert (!value);
-  
-  DIO_INIT_PC4 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC4 ();
-  assert (!value);
-  
-  DIO_INIT_PC5 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PC5 ();
-  assert (!value);
-  
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PC6 control macros are identical in form to the other macros in \
-   this interface, but have not been tested.  The Makefile for this module \
-   includes a line which may be uncommented to override this failure.
-#endif
-  
-  // These we can test only if the Arduino isn't hogging the serial line.
-#ifndef NO_TEST_SERIAL_PINS
-  DIO_INIT_PD0 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD0 ();
-  assert (!value);
-  
-  DIO_INIT_PD1 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD1 ();
-  assert (!value);
-#endif
-  
-  DIO_INIT_PD2 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD2 ();
-  assert (!value);
-  
-  DIO_INIT_PD3 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD3 ();
-  assert (!value);
-  
-  DIO_INIT_PD4 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD4 ();
-  assert (!value);
-  
-  DIO_INIT_PD5 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD5 ();
-  assert (!value);
-
-  DIO_INIT_PD6 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD6 ();
-  assert (!value);
-
-  DIO_INIT_PD7 (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  value = DIO_READ_PD7 ();
-  assert (!value);
-  
-  // Signal we got through the test.
-  DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, 0);
-  quick_pb5_blink ();
-
-  // }}}1
-  
-  // For this test, leave all internal pull-up resistors disabled, and expect
-  // all pins to be held high.
-  // {{{1
-  
-  // Delay for a second to give the user time to close a switch connecting
-  // all pins to high.
-  _delay_ms (milliseconds_per_second);
+  _delay_ms (settling_time_ms);
 
   value = DIO_READ_PB0 ();
   assert (value);
-  
+
   value = DIO_READ_PB1 ();
   assert (value);
 
   value = DIO_READ_PB2 ();
   assert (value);
+
+#  ifdef TEST_ISP_PINS
 
   value = DIO_READ_PB3 ();
   assert (value);
@@ -384,16 +120,15 @@ main (void)
   value = DIO_READ_PB4 ();
   assert (value);
 
+  // NOTE: on the Arduino, PB5 is pulled towards ground via one or two 1 kohm
+  // resistors in parallel and a LED.  This is a stronger pull than that
+  // exerted by the internal pull-up resistor (which is at least 20 kohm),
+  // and so we would expect to read a low value from this pin even with the
+  // pull-up enabled.
   value = DIO_READ_PB5 ();
-  assert (value);
+  assert (!value);
 
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PB6 and PB7 control macros are identical in form to the other \
-   macros in this interface, but have not been tested.  The Makefile for this \
-   module includes a line which may be uncommented to override this failure.
-#endif
+#  endif // TEST_ISP_PINS
 
   value = DIO_READ_PC0 ();
   assert (value);
@@ -409,36 +144,27 @@ main (void)
   
   value = DIO_READ_PC4 ();
   assert (value);
-  
+
   value = DIO_READ_PC5 ();
   assert (value);
-  
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PC6 control macros are identical in form to the other macros in \
-   this interface, but have not been tested.  The Makefile for this module \
-   includes a line which may be uncommented to override this failure.
-#endif
-  
-  // These we can test only if the Arduino isn't hogging the serial line.
-#ifndef NO_TEST_SERIAL_PINS
+
+#  ifdef TEST_SERIAL_PINS
   value = DIO_READ_PD0 ();
   assert (value);
   
   value = DIO_READ_PD1 ();
   assert (value);
-#endif
+#  endif
   
   value = DIO_READ_PD2 ();
   assert (value);
-  
+
   value = DIO_READ_PD3 ();
   assert (value);
-  
+
   value = DIO_READ_PD4 ();
   assert (value);
-  
+
   value = DIO_READ_PD5 ();
   assert (value);
 
@@ -448,313 +174,264 @@ main (void)
   value = DIO_READ_PD7 ();
   assert (value);
   
-  // Signal we got through the test.
-  DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, 0);
-  quick_pb5_blink ();
+  signal_checkpoint_with_pb5_blinks ();
 
+  return 0;
+// }}}1
+
+#endif // TEST_CONDITION_ALL_PINS_NC
+
+  // Macros for pin INIT/SET/READ dependinf on which TEST_CONDITION_* is
+  // in effect.
+// {{{1
+
+#if defined(TEST_CONDITION_PB0_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB0_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB0_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PB0 
+#  define SET DIO_SET_PB0 
+#  define READ DIO_READ_PB0 
+#elif defined(TEST_CONDITION_PB1_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB1_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB1_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PB1 
+#  define SET DIO_SET_PB1 
+#  define READ DIO_READ_PB1 
+#elif defined(TEST_CONDITION_PB2_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB2_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB2_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PB2 
+#  define SET DIO_SET_PB2 
+#  define READ DIO_READ_PB2 
+#elif defined(TEST_CONDITION_PB3_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB3_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB3_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PB3 
+#  define SET DIO_SET_PB3 
+#  define READ DIO_READ_PB3 
+#elif defined(TEST_CONDITION_PB4_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB4_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB4_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PB4 
+#  define SET DIO_SET_PB4 
+#  define READ DIO_READ_PB4 
+#elif defined(TEST_CONDITION_PB5_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB5_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB5_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PB5 
+#  define SET DIO_SET_PB5 
+#  define READ DIO_READ_PB5 
+
+#elif defined(TEST_CONDITION_PC0_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC0_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC0_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PC0 
+#  define SET DIO_SET_PC0 
+#  define READ DIO_READ_PC0 
+#elif defined(TEST_CONDITION_PC1_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC1_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC1_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PC1 
+#  define SET DIO_SET_PC1 
+#  define READ DIO_READ_PC1 
+#elif defined(TEST_CONDITION_PC2_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC2_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC2_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PC2 
+#  define SET DIO_SET_PC2 
+#  define READ DIO_READ_PC2 
+#elif defined(TEST_CONDITION_PC3_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC3_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC3_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PC3 
+#  define SET DIO_SET_PC3 
+#  define READ DIO_READ_PC3 
+#elif defined(TEST_CONDITION_PC4_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC4_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC4_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PC4 
+#  define SET DIO_SET_PC4 
+#  define READ DIO_READ_PC4 
+#elif defined(TEST_CONDITION_PC5_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC5_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PC5_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PC5 
+#  define SET DIO_SET_PC5 
+#  define READ DIO_READ_PC5 
+
+#elif defined(TEST_CONDITION_PD0_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD0_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD0_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PD0 
+#  define SET DIO_SET_PD0 
+#  define READ DIO_READ_PD0 
+#elif defined(TEST_CONDITION_PD1_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD1_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD1_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PD1 
+#  define SET DIO_SET_PD1 
+#  define READ DIO_READ_PD1 
+#elif defined(TEST_CONDITION_PD2_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD2_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD2_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PD2 
+#  define SET DIO_SET_PD2 
+#  define READ DIO_READ_PD2 
+#elif defined(TEST_CONDITION_PD3_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD3_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD3_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PD3 
+#  define SET DIO_SET_PD3 
+#  define READ DIO_READ_PD3 
+#elif defined(TEST_CONDITION_PD4_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD4_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD4_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PD4 
+#  define SET DIO_SET_PD4 
+#  define READ DIO_READ_PD4 
+#elif defined(TEST_CONDITION_PD5_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD5_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD5_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PD5 
+#  define SET DIO_SET_PD5 
+#  define READ DIO_READ_PD5 
+#endif
+
+// }}}1
+
+  // Macros describing particular condition of pind being tested, depending
+  // on which TEST_CONDITION_* is in effect.
+  // {{{1
+#if defined(TEST_CONDITION_PB0_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB1_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB2_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB3_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB4_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB5_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC0_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC1_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC2_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC3_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC4_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC5_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD0_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD1_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD2_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD3_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD4_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD5_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD6_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD7_HIGH_OTHERS_NC)
+#  define INPUT_HIGH
+#elif defined(TEST_CONDITION_PB0_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB1_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB2_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB3_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB4_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB5_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC0_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC1_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC2_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC3_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC4_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC5_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD0_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD1_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD2_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD3_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD4_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD5_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD6_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD7_LOW_OTHERS_NC)
+#  define INPUT_LOW
+#elif defined(TEST_CONDITION_PB0_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB1_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB2_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB3_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB4_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB5_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC0_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC1_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC2_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC3_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC4_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PC5_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD0_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD1_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD2_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD3_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD4_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD5_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD6_LED_OTHERS_NC) || \
+    defined(TEST_CONDITION_PD7_LED_OTHERS_NC)
+#  define OUTPUT_LED 
+#endif
   // }}}1
 
-  // When blinking LEDs to test output function, we use these timing values.
-#define OUTPUT_TEST_POST_INIT_WAIT_SECONDS 5.0
-#define OUTPUT_TEST_TOGGLE_SECONDS 60.0
-  // This can't be changed without changing other things to match.
-#define OUTPUT_TEST_BLINK_ON_TIME 0.5
-  
-  // For this test, we configure all pins as outputs, with initial_value HIGH.
-  // Then we wait OUTPUT_TEST_POST_INIT_WAIT_SECONDS.  Then we toggle the
-  // value off and on for OUTPUT_TEST_TOGGLE_SECONDS seconds.  This test
-  // depends on a human user to monitor one or more connected LEDs to verify
-  // correct operation.
+  // Test particular pins as inputs or outputs (depending ultimately on
+  // which TEST_CONDITION_* is in effect).
   // {{{1
+
+#if defined(INPUT_HIGH) || defined(INPUT_LOW)
+
+  // NOTE: these tests depend on the pin in question being connected as
+  // indicated by the test condition name.
+
+  // Test pin as input with pull-up enabled.
+  INIT (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE); 
+  _delay_ms (settling_time_ms);
   
-  // Delay for a second to give the user time to close switches used for
-  // testing pins as inputs.
-  _delay_ms (milliseconds_per_second);
+  value = READ ();
+#  if defined(INPUT_HIGH)
+  assert (value == HIGH);
+#  elif defined(INPUT_LOW)
+  assert (value == LOW);
+#  else
+#    error Should not be here
+#  endif
 
-  DIO_INIT_PB0 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PB1 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PB2 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PB3 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PB4 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PB6 and PB7 control macros are identical in form to the other \
-   macros in this interface, but have not been tested.  The Makefile for this \
-   module includes a line which may be uncommented to override this failure.
-#endif
-
-  DIO_INIT_PC0 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PC1 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PC2 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PC3 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PC4 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PC5 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PC6 control macros are identical in form to the other macros in \
-   this interface, but have not been tested.  The Makefile for this module \
-   includes a line which may be uncommented to override this failure.
-#endif
+  // Test pin again as input but this time with pull-up disabled.
+  INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE); 
+  _delay_ms (settling_time_ms);
   
-  // These we can test only if the Arduino isn't hogging the serial line.
-#ifndef NO_TEST_SERIAL_PINS
-  //assert (0);
-  DIO_INIT_PD0 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PD1 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-#endif
+  value = READ ();
+#  if defined(INPUT_HIGH)
+  assert (value == HIGH);
+#  elif defined(INPUT_LOW)
+  assert (value == LOW);
+#  else
+#    error Should not be here
+#  endif
+
+#elif defined(OUTPUT_LED)
+
+  // NOTE: these tests depend on a LED being connected in the manner indicated
+  // by the test condition name and also no careful human observation of
+  // the LED during the test.
+
+  // Initialize pin off, then turn on for one second.
+  INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+  _delay_ms (second_in_ms);
+  SET (HIGH);
+  _delay_ms (second_in_ms);
+  SET (LOW);
+  _delay_ms (second_in_ms);
+
+  // Now initialize pin on, then turn off for one second.
+  INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
+  SET (LOW);
+  _delay_ms (second_in_ms);
+  SET (HIGH);
+  _delay_ms (second_in_ms);
   
-  DIO_INIT_PD2 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PD3 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PD4 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PD5 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PD6 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  DIO_INIT_PD7 (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-
-  _delay_ms (OUTPUT_TEST_POST_INIT_WAIT_SECONDS * milliseconds_per_second);
-
-  for ( int ii = 0 ; ii < OUTPUT_TEST_TOGGLE_SECONDS ; ii++ ) {
-    DIO_SET_PB0 (LOW);
-    DIO_SET_PB1 (LOW);
-    DIO_SET_PB2 (LOW);
-    DIO_SET_PB3 (LOW);
-    DIO_SET_PB4 (LOW);
-    DIO_SET_PB5 (LOW);
-    // Its a sin in my book to distribute untested code without clearly
-    // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PB6 and PB7 control macros are identical in form to the other \
-   macros in this interface, but have not been tested.  The Makefile for this \
-   module includes a line which may be uncommented to override this failure.
+#elif defined(TEST_CONDITION_ALL_PINS_NC)
+#else
+#  error Should not be here
 #endif
 
-    DIO_SET_PC0 (LOW);
-    DIO_SET_PC1 (LOW);
-    DIO_SET_PC2 (LOW);
-    DIO_SET_PC3 (LOW);
-    DIO_SET_PC4 (LOW);
-    DIO_SET_PC5 (LOW);
-    // Its a sin in my book to distribute untested code without clearly
-    // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PC6 control macros are identical in form to the other macros in \
-   this interface, but have not been tested.  The Makefile for this module \
-   includes a line which may be uncommented to override this failure.
-#endif
-  
-  // These we can test only if the Arduino isn't hogging the serial line.
-#ifndef NO_TEST_SERIAL_PINS
-    DIO_SET_PD0 (LOW);
-    DIO_SET_PD1 (LOW);
-#endif
-    DIO_SET_PD2 (LOW);
-    DIO_SET_PD3 (LOW);
-    DIO_SET_PD4 (LOW);
-    DIO_SET_PD5 (LOW);
-    DIO_SET_PD6 (LOW);
-    DIO_SET_PD7 (LOW);
-    
-    _delay_ms (OUTPUT_TEST_BLINK_ON_TIME);  
-    
-    DIO_SET_PB0 (HIGH);
-    DIO_SET_PB1 (HIGH);
-    DIO_SET_PB2 (HIGH);
-    DIO_SET_PB3 (HIGH);
-    DIO_SET_PB4 (HIGH);
-    DIO_SET_PB5 (HIGH);
-    // Its a sin in my book to distribute untested code without clearly
-    // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PB6 and PB7 control macros are identical in form to the other \
-   macros in this interface, but have not been tested.  The Makefile for this \
-   module includes a line which may be uncommented to override this failure.
-#endif
+  signal_checkpoint_with_pb5_blinks ();
 
-    DIO_SET_PC0 (HIGH);
-    DIO_SET_PC1 (HIGH);
-    DIO_SET_PC2 (HIGH);
-    DIO_SET_PC3 (HIGH);
-    DIO_SET_PC4 (HIGH);
-    DIO_SET_PC5 (HIGH);
-    // Its a sin in my book to distribute untested code without clearly
-    // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PC6 control macros are identical in form to the other macros in \
-   this interface, but have not been tested.  The Makefile for this module \
-   includes a line which may be uncommented to override this failure.
-#endif
-  
-  // These we can test only if the Arduino isn't hogging the serial line.
-#ifndef NO_TEST_SERIAL_PINS
-    DIO_SET_PD0 (HIGH);
-    DIO_SET_PD1 (HIGH);
-#endif
-    DIO_SET_PD2 (HIGH);
-    DIO_SET_PD3 (HIGH);
-    DIO_SET_PD4 (HIGH);
-    DIO_SET_PD5 (HIGH);
-    DIO_SET_PD6 (HIGH);
-    DIO_SET_PD7 (HIGH);
-  
-    _delay_ms (OUTPUT_TEST_BLINK_ON_TIME);  
-  }
-
-  // Signal we finished the test.
-  DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, 0);
-  quick_pb5_blink ();
-
-  // }}}1
-  
-  // For this test, we configure all pins as outputs, with initial_value LOW.
-  // Then we wait OUTPUT_TEST_POST_INIT_WAIT_SECONDS.  Then we toggle the
-  // value off and on for OUTPUT_TEST_TOGGLE_SECONDS seconds.  This test
-  // depends on a human user to monitor one or more connected LEDs to verify
-  // correct operation.
-  // {{{1
-  
-  // Delay for a second to give the user time to close switches used for
-  // testing pins as inputs.
-  _delay_ms (milliseconds_per_second);
-
-  DIO_INIT_PB0 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PB1 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PB2 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PB3 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PB4 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PB6 and PB7 control macros are identical in form to the other \
-   macros in this interface, but have not been tested.  The Makefile for this \
-   module includes a line which may be uncommented to override this failure.
-#endif
-
-  DIO_INIT_PC0 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PC1 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PC2 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PC3 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PC4 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PC5 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-
-  // Its a sin in my book to distribute untested code without clearly
-  // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PC6 control macros are identical in form to the other macros in \
-   this interface, but have not been tested.  The Makefile for this module \
-   includes a line which may be uncommented to override this failure.
-#endif
-  
-  // These we can test only if the Arduino isn't hogging the serial line.
-#ifndef NO_TEST_SERIAL_PINS
-  //assert (0);
-  DIO_INIT_PD0 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PD1 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-#endif
-  
-  DIO_INIT_PD2 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PD3 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PD4 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PD5 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PD6 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  DIO_INIT_PD7 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-
-  _delay_ms (OUTPUT_TEST_POST_INIT_WAIT_SECONDS * milliseconds_per_second);
-
-  for ( int ii = 0 ; ii < OUTPUT_TEST_TOGGLE_SECONDS ; ii++ ) {
-    DIO_SET_PB0 (HIGH);
-    DIO_SET_PB1 (HIGH);
-    DIO_SET_PB2 (HIGH);
-    DIO_SET_PB3 (HIGH);
-    DIO_SET_PB4 (HIGH);
-    DIO_SET_PB5 (HIGH);
-    // Its a sin in my book to distribute untested code without clearly
-    // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PB6 and PB7 control macros are identical in form to the other \
-   macros in this interface, but have not been tested.  The Makefile for this \
-   module includes a line which may be uncommented to override this failure.
-#endif
-
-    DIO_SET_PC0 (HIGH);
-    DIO_SET_PC1 (HIGH);
-    DIO_SET_PC2 (HIGH);
-    DIO_SET_PC3 (HIGH);
-    DIO_SET_PC4 (HIGH);
-    DIO_SET_PC5 (HIGH);
-    // Its a sin in my book to distribute untested code without clearly
-    // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PC6 control macros are identical in form to the other macros in \
-   this interface, but have not been tested.  The Makefile for this module \
-   includes a line which may be uncommented to override this failure.
-#endif
-  
-  // These we can test only if the Arduino isn't hogging the serial line.
-#ifndef NO_TEST_SERIAL_PINS
-    DIO_SET_PD0 (HIGH);
-    DIO_SET_PD1 (HIGH);
-#endif
-    DIO_SET_PD2 (HIGH);
-    DIO_SET_PD3 (HIGH);
-    DIO_SET_PD4 (HIGH);
-    DIO_SET_PD5 (HIGH);
-    DIO_SET_PD6 (HIGH);
-    DIO_SET_PD7 (HIGH);
-    
-    _delay_ms (OUTPUT_TEST_BLINK_ON_TIME);  
-    
-    DIO_SET_PB0 (LOW);
-    DIO_SET_PB1 (LOW);
-    DIO_SET_PB2 (LOW);
-    DIO_SET_PB3 (LOW);
-    DIO_SET_PB4 (LOW);
-    DIO_SET_PB5 (LOW);
-    // Its a sin in my book to distribute untested code without clearly
-    // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PB6 and PB7 control macros are identical in form to the other \
-   macros in this interface, but have not been tested.  The Makefile for this \
-   module includes a line which may be uncommented to override this failure.
-#endif
-
-    DIO_SET_PC0 (LOW);
-    DIO_SET_PC1 (LOW);
-    DIO_SET_PC2 (LOW);
-    DIO_SET_PC3 (LOW);
-    DIO_SET_PC4 (LOW);
-    DIO_SET_PC5 (LOW);
-    // Its a sin in my book to distribute untested code without clearly
-    // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
-#  error The PC6 control macros are identical in form to the other macros in \
-   this interface, but have not been tested.  The Makefile for this module \
-   includes a line which may be uncommented to override this failure.
-#endif
-  
-  // These we can test only if the Arduino isn't hogging the serial line.
-#ifndef NO_TEST_SERIAL_PINS
-    DIO_SET_PD0 (LOW);
-    DIO_SET_PD1 (LOW);
-#endif
-    DIO_SET_PD2 (LOW);
-    DIO_SET_PD3 (LOW);
-    DIO_SET_PD4 (LOW);
-    DIO_SET_PD5 (LOW);
-    DIO_SET_PD6 (LOW);
-    DIO_SET_PD7 (LOW);
-  
-    _delay_ms (OUTPUT_TEST_BLINK_ON_TIME);  
-  }
-
-  // Signal we finished the test.
-  DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, 0);
-  quick_pb5_blink ();
+  return 0;
 
   // }}}1
 }
