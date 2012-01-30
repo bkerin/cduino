@@ -126,8 +126,8 @@
 // in a momentarily floating input pin (and potential interrupt).
 
 // FIXME: possibly all the loop_until_bit_is_* calls could be replaced with
-// single *hardware* no-ops.  I'm just haven't looked up how to produce
-// them with for sure with C or GCC.
+// single *hardware* no-ops.  Recent versions of AVR libc have added a _NOP
+// macro in avr/cpufunc.h that would probably work.
 
 // I can't bring myself to drag in another utility header just for this junk.
 #ifndef HIGH
