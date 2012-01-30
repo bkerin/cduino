@@ -37,14 +37,14 @@ CPPFLAGS += -DUNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
 # Each condition here represents a different hardware setup capable of
 # exercising different uses of the interface (e.g. input, output, pullups).
 
-CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
+#CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
 
 #CPPFLAGS += -DTEST_CONDITION_PB0_HIGH_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB1_HIGH_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB2_HIGH_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB3_HIGH_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB4_HIGH_OTHERS_NC
-#CPPFLAGS += -DTEST_CONDITION_PB5_HIGH_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PB5_HIGH_PB0_SIGNAL_LED_OTHERS_NC
 
 #CPPFLAGS += -DTEST_CONDITION_PC0_HIGH_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PC1_HIGH_OTHERS_NC
@@ -67,7 +67,7 @@ CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB2_LOW_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB3_LOW_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB4_LOW_OTHERS_NC
-#CPPFLAGS += -DTEST_CONDITION_PB5_LOW_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PB5_LOW_PB0_SIGNAL_LED_OTHERS_NC
 
 #CPPFLAGS += -DTEST_CONDITION_PC0_LOW_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PC1_LOW_OTHERS_NC
@@ -92,7 +92,7 @@ CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB4_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB5_LED_OTHERS_NC
 
-#CPPFLAGS += -DTEST_CONDITION_PC0_LED_OTHERS_NC
+CPPFLAGS += -DTEST_CONDITION_PC0_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PC1_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PC2_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PC3_LED_OTHERS_NC
@@ -108,7 +108,10 @@ CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD6_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD7_LED_OTHERS_NC
 
-ifneq (,$(findstring -DTEST_ISP_PINS,$(CPPFLAGS)))
+# Ensure that the macros declaring in-system programming (ISP) pins to be
+# ok to test are defined if the TEST_CONDITION_* that will be using those
+# pins is defined.
+ifeq (,$(findstring -DTEST_ISP_PINS,$(CPPFLAGS)))
   ifneq (,$(findstring -DTEST_CONDITION_PB3_,$(CPPFLAGS)))
     $(error Cannot test pin PB3 when TEST_ISP_PINS is not defined)
   endif
@@ -120,11 +123,18 @@ ifneq (,$(findstring -DTEST_ISP_PINS,$(CPPFLAGS)))
   endif
 endif
 
-ifneq (,$(findstring -DTEST_SERIAL_PINS,$(CPPFLAGS)))
+# Ensure that the macros declaring serial pins to be ok to test are defined
+# if the TEST_CONDITION_* that will be using those pins is defined.
+ifeq (,$(findstring -DTEST_SERIAL_PINS,$(CPPFLAGS)))
   ifneq (,$(findstring -DTEST_CONDITION_PD0_,$(CPPFLAGS)))
     $(error Cannot test pin PD0 when TEST_ISP_PINS is not defined)
   endif
   ifneq (,$(findstring -DTEST_CONDITION_PD1_,$(CPPFLAGS)))
     $(error Cannot test pin PD1 when TEST_ISP_PINS is not defined)
   endif
+endif
+
+# Ensure that exactly one test condition is defined.
+ifneq ($(words $(filter -DTEST_CONDITION_%,$(CPPFLAGS))),1)
+  $(error Exactly one test condition must be defined)
 endif

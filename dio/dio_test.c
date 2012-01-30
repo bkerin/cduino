@@ -11,7 +11,9 @@
 #include "dio.h"
 
 // Signal a checkpoint by blinking the PB5 LED quickly.
-static void
+void
+signal_checkpoint_with_pb5_blinks (void) __attribute__ ((unused));
+void
 signal_checkpoint_with_pb5_blinks (void)
 // {{{1
 { 
@@ -33,10 +35,44 @@ signal_checkpoint_with_pb5_blinks (void)
 }
 // }}}1
 
+// Signal a checkpoint by blinking the PB0 LED quickly.
+void
+signal_checkpoint_with_pb0_blinks (void) __attribute__ ((unused));
+void
+signal_checkpoint_with_pb0_blinks (void)
+// {{{1
+{ 
+
+  DIO_INIT_PB0 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+
+  const int blink_count = 3, blinks_per_second = 4;
+  const int post_blink_pause_ms = 500;
+
+  for ( int ii = 0 ; ii < blink_count ; ii++ ) {
+#define MILLISECONDS_PER_SECOND 1000
+    DIO_SET_PB0 (HIGH);
+    _delay_ms (MILLISECONDS_PER_SECOND / (blinks_per_second * 2));
+    DIO_SET_PB0 (LOW);
+    _delay_ms (MILLISECONDS_PER_SECOND / (blinks_per_second * 2));
+  }
+
+  _delay_ms (post_blink_pause_ms);
+}
+// }}}1
+
+// Normally we signal checkpoints by blinking the LED attached to PB5,
+// but if we're testing the pin for some other purpose we have to use a
+// different pin for signalling.
+#if (! defined(TEST_CONDITION_PB5_HIGH_PB0_SIGNAL_LED_OTHERS_NC)) && \
+    (! defined(TEST_CONDITION_PB5_LOW_PB0_SIGNAL_LED_OTHERS_NC))
+#  define SIGNAL_CHECKPOINT signal_checkpoint_with_pb5_blinks
+#else
+#  define SIGNAL_CHECKPOINT signal_checkpoint_with_pb0_blinks
+#endif
+
 int
 main (void)
 {
-
   // Its a sin in my book to distribute untested code without clearly
   // acknowledging the fact.
 #ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
@@ -63,7 +99,7 @@ main (void)
   // long to settle, at least with the anticipated capacitances connected
   // to them.  But the chip runs fast enough that not waiting at all can be
   // to fast.
-  const double settling_time_ms = 10;
+  const double settling_time_ms __attribute__ ((unused)) = 10;
 
   uint8_t value = 0;   // Holds value set to or read from a pin.
   value = value;   // Prevent compiler from whining
@@ -174,9 +210,9 @@ main (void)
   value = DIO_READ_PD7 ();
   assert (value);
   
-  signal_checkpoint_with_pb5_blinks ();
+  SIGNAL_CHECKPOINT ();
+  return 0;   // Success;
 
-  return 0;
 // }}}1
 
 #endif // TEST_CONDITION_ALL_PINS_NC
@@ -215,8 +251,8 @@ main (void)
 #  define INIT DIO_INIT_PB4 
 #  define SET DIO_SET_PB4 
 #  define READ DIO_READ_PB4 
-#elif defined(TEST_CONDITION_PB5_HIGH_OTHERS_NC) || \
-      defined(TEST_CONDITION_PB5_LOW_OTHERS_NC) || \
+#elif defined(TEST_CONDITION_PB5_HIGH_PB0_SIGNAL_LED_OTHERS_NC) || \
+      defined(TEST_CONDITION_PB5_LOW_PB0_SIGNAL_LED_OTHERS_NC) || \
       defined(TEST_CONDITION_PB5_LED_OTHERS_NC)
 #  define INIT DIO_INIT_PB5 
 #  define SET DIO_SET_PB5 
@@ -295,6 +331,18 @@ main (void)
 #  define INIT DIO_INIT_PD5 
 #  define SET DIO_SET_PD5 
 #  define READ DIO_READ_PD5 
+#elif defined(TEST_CONDITION_PD6_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD6_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD6_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PD6 
+#  define SET DIO_SET_PD6 
+#  define READ DIO_READ_PD6 
+#elif defined(TEST_CONDITION_PD7_HIGH_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD7_LOW_OTHERS_NC) || \
+      defined(TEST_CONDITION_PD7_LED_OTHERS_NC)
+#  define INIT DIO_INIT_PD7 
+#  define SET DIO_SET_PD7 
+#  define READ DIO_READ_PD7 
 #endif
 
 // }}}1
@@ -307,7 +355,7 @@ main (void)
     defined(TEST_CONDITION_PB2_HIGH_OTHERS_NC) || \
     defined(TEST_CONDITION_PB3_HIGH_OTHERS_NC) || \
     defined(TEST_CONDITION_PB4_HIGH_OTHERS_NC) || \
-    defined(TEST_CONDITION_PB5_HIGH_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB5_HIGH_PB0_SIGNAL_LED_OTHERS_NC) || \
     defined(TEST_CONDITION_PC0_HIGH_OTHERS_NC) || \
     defined(TEST_CONDITION_PC1_HIGH_OTHERS_NC) || \
     defined(TEST_CONDITION_PC2_HIGH_OTHERS_NC) || \
@@ -328,7 +376,7 @@ main (void)
     defined(TEST_CONDITION_PB2_LOW_OTHERS_NC) || \
     defined(TEST_CONDITION_PB3_LOW_OTHERS_NC) || \
     defined(TEST_CONDITION_PB4_LOW_OTHERS_NC) || \
-    defined(TEST_CONDITION_PB5_LOW_OTHERS_NC) || \
+    defined(TEST_CONDITION_PB5_LOW_PB0_SIGNAL_LED_OTHERS_NC) || \
     defined(TEST_CONDITION_PC0_LOW_OTHERS_NC) || \
     defined(TEST_CONDITION_PC1_LOW_OTHERS_NC) || \
     defined(TEST_CONDITION_PC2_LOW_OTHERS_NC) || \
@@ -380,7 +428,7 @@ main (void)
   // Test pin as input with pull-up enabled.
   INIT (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE); 
   _delay_ms (settling_time_ms);
-  
+
   value = READ ();
 #  if defined(INPUT_HIGH)
   assert (value == HIGH);
@@ -409,6 +457,8 @@ main (void)
   // by the test condition name and also no careful human observation of
   // the LED during the test.
 
+  const float second_in_ms = 1000.0;
+
   // Initialize pin off, then turn on for one second.
   INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   _delay_ms (second_in_ms);
@@ -419,6 +469,7 @@ main (void)
 
   // Now initialize pin on, then turn off for one second.
   INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
+  _delay_ms (second_in_ms);
   SET (LOW);
   _delay_ms (second_in_ms);
   SET (HIGH);
@@ -429,9 +480,8 @@ main (void)
 #  error Should not be here
 #endif
 
-  signal_checkpoint_with_pb5_blinks ();
-
-  return 0;
+  SIGNAL_CHECKPOINT ();
+  return 0;   // Success (assuming observed LED behaved correctly).
 
   // }}}1
 }
