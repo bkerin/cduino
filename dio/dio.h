@@ -60,8 +60,11 @@
 // Notes About Particular Pins
 //
 // All the IO pins on the ATMega chips can be set to perform alternate
-// functions other than general digital IO.  The Arduino uses some pins
-// for its own pre-set hardware or software purposes:
+// functions other than general digital IO, or controlled in alternate ways
+// as described in section 13.3 of the ATMegs328P datasheet Rev. 8271C.
+// This interface assumes the normal settings for the Arduino are in effect.
+// These are mostly the default setting for the ATMega.  However, the
+// Arduino uses some pins for its own pre-set hardware or software purposes:
 //
 //   * PB3, PB4     used for in-system programming (ISP)
 //
@@ -82,23 +85,24 @@
 // provides macros for these pins.  At least the following considerations
 // apply to their use:
 //
-//   * PB3 and PB4 can be used, although tying them firmly low or high
-//     seems certain to interfere with in-system programming (ISP).  I don't
-//     fully understand ISP/digital IO interaction.
+//   * PB3 and PB4 can be used, although tying them firmly low or high will
+//     prevent in-system programming (ISP) from working.  I don't fully
+//     understand ISP/digital IO interaction.
 //
-//   * PB5 can be used, provided one doesn't mind it being pulled low and
-//     driving the on-board LED as a side effect (note that activating the
-//     internal pull-up resistor will result in a pointless current drain
-//     and still fail to pull the input high).  Also, tying it firmly low
-//     or high seem certain to interfere with in-system programming (ISP).
+//   * PB5 can be used, provided one doesn't mind it being pulled strongly low
+//     and/or driving the on-board LED as a side effect (note that activating
+//     the internal pull-up resistor will result in a pointless current
+//     drain and still fail to pull the input high).  Also, tying it firmly
+//     low or high will prevent in-system programming (ISP) from working.
 //
 //   * PD0 and PD1 can be utilized as general digital IO when using
 //     an in-system programmer (instead of serial programming via the
 //     bootloader).  Note that the bootloader must be fully removed (which
-//     ISP does) before this can work.
+//     ISP does) or the pins reconfigured in software before this can work.
+//     The DIO_INIT_PD0/DIO_INIT_PD1 macros are not sufficient.
 //
 //   * PB6, PB7 and PC6 cannot be used for general digital IO without
-//     hardware changes.
+//     hardware and/or fuse bit changes.
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1254,39 +1258,45 @@
 
 // Pin Reading {{{1
 
-#define DIO_READ_PB0() (PINB & _BV (PINB0))
-#define DIO_READ_PB1() (PINB & _BV (PINB1))
-#define DIO_READ_PB2() (PINB & _BV (PINB2))
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PB3() (PINB & _BV (PINB3))
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PB4() (PINB & _BV (PINB4))
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PB5() (PINB & _BV (PINB5))
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PB6() (PINB & _BV (PINB6))
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PB7() (PINB & _BV (PINB7))
+// NOTE: The bit shifts are only included so that the results will work in
+// case the user actually compares the result to the value of the 'HIGH'
+// macro.  We waste an instruction doing this, but the Arduino libraries
+// define HIGH this way and its kind of nice to keep everything symbolic,
+// so we do the same.
 
-#define DIO_READ_PC0() (PINC & _BV (PINC0))
-#define DIO_READ_PC1() (PINC & _BV (PINC1))
-#define DIO_READ_PC2() (PINC & _BV (PINC2))
-#define DIO_READ_PC3() (PINC & _BV (PINC3))
-#define DIO_READ_PC4() (PINC & _BV (PINC4))
-#define DIO_READ_PC5() (PINC & _BV (PINC5))
+#define DIO_READ_PB0() ((PINB & _BV (PINB0)) >> PINB0)
+#define DIO_READ_PB1() ((PINB & _BV (PINB1)) >> PINB1)
+#define DIO_READ_PB2() ((PINB & _BV (PINB2)) >> PINB2)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PC6() (PINC & _BV (PINC6))
+#define DIO_READ_PB3() ((PINB & _BV (PINB3)) >> PINB3)
+// WARNING: See comments in 'Notes About Particular Pins' above.
+#define DIO_READ_PB4() ((PINB & _BV (PINB4)) >> PINB4)
+// WARNING: See comments in 'Notes About Particular Pins' above.
+#define DIO_READ_PB5() ((PINB & _BV (PINB5)) >> PINB5)
+// WARNING: See comments in 'Notes About Particular Pins' above.
+#define DIO_READ_PB6() ((PINB & _BV (PINB6)) >> PINB6)
+// WARNING: See comments in 'Notes About Particular Pins' above.
+#define DIO_READ_PB7() ((PINB & _BV (PINB7)) >> PINB7)
+
+#define DIO_READ_PC0() ((PINC & _BV (PINC0)) >> PINC0)
+#define DIO_READ_PC1() ((PINC & _BV (PINC1)) >> PINC1)
+#define DIO_READ_PC2() ((PINC & _BV (PINC2)) >> PINC2)
+#define DIO_READ_PC3() ((PINC & _BV (PINC3)) >> PINC3)
+#define DIO_READ_PC4() ((PINC & _BV (PINC4)) >> PINC4)
+#define DIO_READ_PC5() ((PINC & _BV (PINC5)) >> PINC5)
+// WARNING: See comments in 'Notes About Particular Pins' above.
+#define DIO_READ_PC6() ((PINC & _BV (PINC6)) >> PINC6)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PD0() (PIND & _BV (PIND0))
+#define DIO_READ_PD0() ((PIND & _BV (PIND0)) >> PIND0)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PD1() (PIND & _BV (PIND1))
-#define DIO_READ_PD2() (PIND & _BV (PIND2))
-#define DIO_READ_PD3() (PIND & _BV (PIND3))
-#define DIO_READ_PD4() (PIND & _BV (PIND4))
-#define DIO_READ_PD5() (PIND & _BV (PIND5))
-#define DIO_READ_PD6() (PIND & _BV (PIND6))
-#define DIO_READ_PD7() (PIND & _BV (PIND7))
+#define DIO_READ_PD1() ((PIND & _BV (PIND1)) >> PIND1)
+#define DIO_READ_PD2() ((PIND & _BV (PIND2)) >> PIND2)
+#define DIO_READ_PD3() ((PIND & _BV (PIND3)) >> PIND3)
+#define DIO_READ_PD4() ((PIND & _BV (PIND4)) >> PIND4)
+#define DIO_READ_PD5() ((PIND & _BV (PIND5)) >> PIND5)
+#define DIO_READ_PD6() ((PIND & _BV (PIND6)) >> PIND6)
+#define DIO_READ_PD7() ((PIND & _BV (PIND7)) >> PIND7)
 
 // }}}1
 
