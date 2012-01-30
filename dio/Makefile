@@ -1,5 +1,7 @@
 # vim: foldmethod=marker
 
+# To test some pins we have to use an in-system programmer (see comment
+# elsewhere in this file).
 #UPLOAD_METHOD = AVRISPmkII
 
 include generic.mk
@@ -37,7 +39,7 @@ CPPFLAGS += -DUNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
 # Each condition here represents a different hardware setup capable of
 # exercising different uses of the interface (e.g. input, output, pullups).
 
-#CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
+CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
 
 #CPPFLAGS += -DTEST_CONDITION_PB0_HIGH_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB1_HIGH_OTHERS_NC
@@ -92,7 +94,7 @@ CPPFLAGS += -DUNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
 #CPPFLAGS += -DTEST_CONDITION_PB4_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB5_LED_OTHERS_NC
 
-CPPFLAGS += -DTEST_CONDITION_PC0_LED_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PC0_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PC1_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PC2_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PC3_LED_OTHERS_NC
@@ -127,14 +129,14 @@ endif
 # if the TEST_CONDITION_* that will be using those pins is defined.
 ifeq (,$(findstring -DTEST_SERIAL_PINS,$(CPPFLAGS)))
   ifneq (,$(findstring -DTEST_CONDITION_PD0_,$(CPPFLAGS)))
-    $(error Cannot test pin PD0 when TEST_ISP_PINS is not defined)
+    $(error Cannot test pin PD0 when TEST_SERIAL_PINS is not defined)
   endif
   ifneq (,$(findstring -DTEST_CONDITION_PD1_,$(CPPFLAGS)))
-    $(error Cannot test pin PD1 when TEST_ISP_PINS is not defined)
+    $(error Cannot test pin PD1 when TEST_SERIAL_PINS is not defined)
   endif
 endif
 
 # Ensure that exactly one test condition is defined.
 ifneq ($(words $(filter -DTEST_CONDITION_%,$(CPPFLAGS))),1)
-  $(error Exactly one test condition must be defined)
+  $(error Exactly one TEST_CONDITION_* must be defined)
 endif
