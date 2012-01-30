@@ -44,14 +44,18 @@ void LiquidCrystal::init(uint8_t fourbitmode, uint8_t rs, uint8_t rw, uint8_t en
   _rw_pin = rw;
   _enable_pin = enable;
   
-  _data_pins[0] = d0;
-  _data_pins[1] = d1;
-  _data_pins[2] = d2;
-  _data_pins[3] = d3; 
-  _data_pins[4] = d4;
-  _data_pins[5] = d5;
-  _data_pins[6] = d6;
-  _data_pins[7] = d7; 
+  //_data_pins[0] = d0;
+  //_data_pins[1] = d1;
+  //_data_pins[2] = d2;
+  //_data_pins[3] = d3; 
+  //_data_pins[4] = d4;
+  //_data_pins[5] = d5;
+  //_data_pins[6] = d6;
+  //_data_pins[7] = d7; 
+  _data_pins[0] = DIGITAL_IO_PIN_PD4; 
+  _data_pins[1] = DIGITAL_IO_PIN_PD5; 
+  _data_pins[2] = DIGITAL_IO_PIN_PD6; 
+  _data_pins[3] = DIGITAL_IO_PIN_PD7; 
 
   dio_pin_initialize ('B', 0, DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_rs_pin, OUTPUT);
 
@@ -237,21 +241,30 @@ void LiquidCrystal::send(uint8_t value, uint8_t mode) {
 }
 
 void LiquidCrystal::pulseEnable(void) {
-  dio_pin_set ('B', 1, 0); //digitalWrite(_enable_pin, LOW);
-  //delayMicroseconds(1);    
+  DIO_PIN_SET_PB1 (0);
+  //digital_io_pin_set (DIGITAL_IO_PIN_PB1, 0);
+  //PORTB &= ~(_BV (PORTB1));
+  //dio_pin_set ('B', 1, 0);
   _delay_us (1);
-  dio_pin_set ('B', 1, 1); //digitalWrite(_enable_pin, HIGH);
-  //delayMicroseconds(1);    // enable pulse must be >450ns
+
+  //digital_io_pin_set (DIGITAL_IO_PIN_PB1, 1);
+  DIO_PIN_SET_PB1 (1);
+  //PORTB |= _BV (PORTB1);
+  //dio_pin_set ('B', 1, 1);
   _delay_us (1);
-  dio_pin_set ('B', 1, 0); //digitalWrite(_enable_pin, LOW);
-  _delay_us (100);//delayMicroseconds(100);   // commands need > 37us to settle
+
+  DIO_PIN_SET_PB1 (0); 
+  //digital_io_pin_set (DIGITAL_IO_PIN_PB1, 0);
+  //PORTB &= ~(_BV (PORTB1));
+  //dio_pin_set ('B', 1, 0);
+  _delay_us (100);   // commands need > 37us to settle
 }
 
-void LiquidCrystal::write4bits(uint8_t value)
+void LiquidCrystal::write4bits (uint8_t value)
 {
   for (int i = 0; i < 4; i++) {
-    dio_pin_initialize ('D', _data_pins[i], DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);
-    dio_pin_set ('D', _data_pins[i], (value >> i) & 0x01);
+    digital_io_pin_init (_data_pins[i], DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);
+    digital_io_pin_set (_data_pins[i], (value >> i) & 0x01);
   }
 
   pulseEnable();

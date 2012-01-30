@@ -4,6 +4,10 @@
 #include <inttypes.h>
 #include "Print.h"
 
+extern "C" {
+  #include "dio_pin.h"
+}
+
 // commands
 #define LCD_CLEARDISPLAY 0x01
 #define LCD_RETURNHOME 0x02
@@ -83,7 +87,7 @@ private:
   uint8_t _rs_pin; // LOW: command.  HIGH: character.
   uint8_t _rw_pin; // LOW: write to LCD.  HIGH: read from LCD.
   uint8_t _enable_pin; // activated by a HIGH pulse.
-  uint8_t _data_pins[8];
+  digital_io_pin_name_t _data_pins[4];
 
   uint8_t _displayfunction;
   uint8_t _displaycontrol;
