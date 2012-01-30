@@ -8,7 +8,7 @@
 #include "Arduino.h"
 
 extern "C" {
-  #include "dio_pin.h"
+  #include "dio.h"
 }
 
 // When the display powers up, it is configured as follows:
@@ -44,24 +44,11 @@ void LiquidCrystal::init(uint8_t fourbitmode, uint8_t rs, uint8_t rw, uint8_t en
   _rw_pin = rw;
   _enable_pin = enable;
   
-  //_data_pins[0] = d0;
-  //_data_pins[1] = d1;
-  //_data_pins[2] = d2;
-  //_data_pins[3] = d3; 
-  //_data_pins[4] = d4;
-  //_data_pins[5] = d5;
-  //_data_pins[6] = d6;
-  //_data_pins[7] = d7; 
-  _data_pins[0] = DIGITAL_IO_PIN_PD4; 
-  _data_pins[1] = DIGITAL_IO_PIN_PD5; 
-  _data_pins[2] = DIGITAL_IO_PIN_PD6; 
-  _data_pins[3] = DIGITAL_IO_PIN_PD7; 
-
-  dio_pin_initialize ('B', 0, DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_rs_pin, OUTPUT);
+  LCD_RS_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);//dio_pin_initialize ('B', 0, DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_rs_pin, OUTPUT);
 
   assert (_rw_pin == 255);  // We don't intend to support _rw_pin
 
-  dio_pin_initialize ('B', 1, DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_enable_pin, OUTPUT);
+  LCD_ENABLE_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);//dio_pin_initialize ('B', 1, DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_enable_pin, OUTPUT);
   
   assert (fourbitmode);
   _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
@@ -88,8 +75,8 @@ void LiquidCrystal::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
   _delay_ms (50); //delayMicroseconds(50000); 
   
   // Now we pull both RS and R/W low to begin commands
-  dio_pin_set ('B', 0, 0);
-  dio_pin_set ('B', 1, 0);
+  LCD_RS_SET_LOW ();//dio_pin_set ('B', 0, 0);
+  LCD_ENABLE_SET_LOW ();//dio_pin_set ('B', 1, 0);
   
   //put the LCD into 4 bit mode
   assert (! (_displayfunction & LCD_8BITMODE));
@@ -233,7 +220,7 @@ inline size_t LiquidCrystal::write(uint8_t value) {
 
 // write either command or data, with automatic 4/8-bit selection
 void LiquidCrystal::send(uint8_t value, uint8_t mode) {
-  dio_pin_set ('B', 0, mode); //digitalWrite(_rs_pin, mode);
+  LCD_RS_SET_LOW ();//dio_pin_set ('B', 0, mode); //digitalWrite(_rs_pin, mode);
 
   assert (! (_displayfunction & LCD_8BITMODE));
   write4bits(value >> 4);
@@ -241,19 +228,19 @@ void LiquidCrystal::send(uint8_t value, uint8_t mode) {
 }
 
 void LiquidCrystal::pulseEnable(void) {
-  DIO_PIN_SET_PB1 (0);
+  LCD_ENABLE_SET_LOW ();//DIO_SET_PB1 (0);
   //digital_io_pin_set (DIGITAL_IO_PIN_PB1, 0);
   //PORTB &= ~(_BV (PORTB1));
   //dio_pin_set ('B', 1, 0);
   _delay_us (1);
 
   //digital_io_pin_set (DIGITAL_IO_PIN_PB1, 1);
-  DIO_PIN_SET_PB1 (1);
+  LCD_ENABLE_SET_HIGH ();//DIO_PIN_SET_PB1 (1);
   //PORTB |= _BV (PORTB1);
   //dio_pin_set ('B', 1, 1);
   _delay_us (1);
 
-  DIO_PIN_SET_PB1 (0); 
+  LCD_ENABLE_SET_LOW ();//DIO_PIN_SET_PB1 (0); 
   //digital_io_pin_set (DIGITAL_IO_PIN_PB1, 0);
   //PORTB &= ~(_BV (PORTB1));
   //dio_pin_set ('B', 1, 0);
@@ -262,10 +249,18 @@ void LiquidCrystal::pulseEnable(void) {
 
 void LiquidCrystal::write4bits (uint8_t value)
 {
-  for (int i = 0; i < 4; i++) {
-    digital_io_pin_init (_data_pins[i], DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);
-    digital_io_pin_set (_data_pins[i], (value >> i) & 0x01);
-  }
+  LCD_DATA0_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+  LCD_DATA0_SET ((value >> 0) & 0x01);
+  LCD_DATA1_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+  LCD_DATA1_SET ((value >> 1) & 0x01);
+  LCD_DATA2_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+  LCD_DATA2_SET ((value >> 2) & 0x01);
+  LCD_DATA3_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+  LCD_DATA3_SET ((value >> 3) & 0x01);
+  //for (int i = 0; i < 4; i++) {
+  //  digital_io_pin_init (_data_pins[i], DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);
+  //  digital_io_pin_set (_data_pins[i], (value >> i) & 0x01);
+  //}
 
   pulseEnable();
 }
