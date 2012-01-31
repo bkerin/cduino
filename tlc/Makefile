@@ -54,5 +54,5 @@ wfovn:
                        -e '$$mvn = $$1;' \
                        -e '$$nmvn = $$mvn + 1;' \
                        -e 's/42\.$$mvn/42.$$nmvn/;' \
-                       main.cpp ; \
+                       main.c ; \
                        $(MAKE) writeflash

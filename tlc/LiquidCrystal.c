@@ -5,9 +5,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-extern "C" {
-  #include "dio.h"
-}
+#include "dio.h"
 
 // When the display powers up, it is configured as follows:
 //

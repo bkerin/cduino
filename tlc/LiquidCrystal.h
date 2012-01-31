@@ -4,9 +4,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-extern "C" {
-  #include "dio.h"
-}
+#include "dio.h"
 
 // commands
 #define LCD_CLEARDISPLAY 0x01
