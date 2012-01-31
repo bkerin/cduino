@@ -1,11 +1,9 @@
 #include "LiquidCrystal.h"
 
-#include <avr/delay.h>
 #include <assert.h>
-#include <stdio.h>
+#include <avr/delay.h>
 #include <string.h>
 #include <inttypes.h>
-#include "Arduino.h"
 
 extern "C" {
   #include "dio.h"

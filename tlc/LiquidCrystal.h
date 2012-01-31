@@ -2,7 +2,7 @@
 #define LCD_H
 
 #include <inttypes.h>
-#include "Print.h"
+#include <stddef.h>
 
 extern "C" {
   #include "dio.h"
@@ -68,31 +68,31 @@ void
 noBlink (void);
   
 void
-blink();
+blink(void);
 
 void
-noCursor();
+noCursor(void);
 
 void
-cursor();
+cursor(void);
 
 void
-scrollDisplayLeft();
+scrollDisplayLeft(void);
 
 void
-scrollDisplayRight();
+scrollDisplayRight(void);
 
 void
-leftToRight();
+leftToRight(void);
 
 void
-rightToLeft();
+rightToLeft(void);
 
 void
-autoscroll();
+autoscroll(void);
 
 void
-noAutoscroll();
+noAutoscroll(void);
 
 
 void
