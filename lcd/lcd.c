@@ -1,4 +1,4 @@
-#include "LiquidCrystal.h"
+// Implementation of the interface described in lcd.h.
 
 #include <assert.h>
 #include <avr/delay.h>
@@ -6,6 +6,7 @@
 #include <inttypes.h>
 
 #include "dio.h"
+#include "lcd.h"
 
 // When the display powers up, it is configured as follows:
 //

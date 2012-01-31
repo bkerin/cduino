@@ -36,7 +36,7 @@
  */
 
 // include the library code:
-#include <LiquidCrystal.h>
+#include "lcd.h"
 
 int
 main (void)
@@ -55,6 +55,6 @@ main (void)
     // (note: line 1 is the second row, since counting begins with 0):
     setCursor(0, 1);
     // print the number of seconds since reset:
-    write_string("42.34");
+    write_string("42.44");
   }
 }
