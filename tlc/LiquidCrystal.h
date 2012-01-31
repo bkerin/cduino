@@ -1,5 +1,5 @@
-#ifndef LiquidCrystal_h
-#define LiquidCrystal_h
+#ifndef LCD_H
+#define LCD_H
 
 #include <inttypes.h>
 #include "Print.h"
@@ -46,55 +46,75 @@ extern "C" {
 #define LCD_5x10DOTS 0x04
 #define LCD_5x8DOTS 0x00
 
-class LiquidCrystal : public Print {
-public:
-  LiquidCrystal(uint8_t rs, uint8_t enable,
-		uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3);
+void
+lcd_begin (uint8_t cols, uint8_t lines);
 
-  void init(uint8_t fourbitmode, uint8_t rs, uint8_t rw, uint8_t enable,
-	    uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3,
-	    uint8_t d4, uint8_t d5, uint8_t d6, uint8_t d7);
-    
-  void begin(uint8_t cols, uint8_t rows, uint8_t charsize = LCD_5x8DOTS);
+void
+lcd_init (void);
 
-  void clear();
-  void home();
+void
+clear (void);
 
-  void noDisplay();
-  void display();
-  void noBlink();
-  void blink();
-  void noCursor();
-  void cursor();
-  void scrollDisplayLeft();
-  void scrollDisplayRight();
-  void leftToRight();
-  void rightToLeft();
-  void autoscroll();
-  void noAutoscroll();
+void
+home (void);
 
-  void createChar(uint8_t, uint8_t[]);
-  void setCursor(uint8_t, uint8_t); 
-  virtual size_t write(uint8_t);
-  void command(uint8_t);
+void
+noDisplay (void);
+
+void
+display (void);
+
+void
+noBlink (void);
   
-  using Print::write;
-private:
-  void send(uint8_t, uint8_t);
-  void write4bits(uint8_t);
-  void pulseEnable();
+void
+blink();
 
-  uint8_t _rs_pin; // LOW: command.  HIGH: character.
-  uint8_t _rw_pin; // LOW: write to LCD.  HIGH: read from LCD.
-  uint8_t _enable_pin; // activated by a HIGH pulse.
+void
+noCursor();
 
-  uint8_t _displayfunction;
-  uint8_t _displaycontrol;
-  uint8_t _displaymode;
+void
+cursor();
 
-  uint8_t _initialized;
+void
+scrollDisplayLeft();
 
-  uint8_t _numlines,_currline;
-};
+void
+scrollDisplayRight();
 
-#endif
+void
+leftToRight();
+
+void
+rightToLeft();
+
+void
+autoscroll();
+
+void
+noAutoscroll();
+
+
+void
+createChar(uint8_t, uint8_t[]);
+
+void
+setCursor(uint8_t, uint8_t); 
+
+size_t
+write(uint8_t);
+
+// FIXME: sort out char vs. uint8_t nonsense
+size_t
+write_string (const char *buffer);
+
+// FIXME: was command public in original interface?
+void
+command (uint8_t);
+
+
+// uh oh, write() was declared virtual and we had some BS using Print::write;
+// in the public part of the class.  and the class declaration looked like this:
+// class LiquidCrystal : public Print {
+
+#endif // LCD_H

@@ -30,43 +30,94 @@ extern "C" {
 // can't assume that its in that state when a sketch starts (and the
 // LiquidCrystal constructor is called).
 
-LiquidCrystal::LiquidCrystal(uint8_t rs,  uint8_t enable,
-			     uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3)
-{
-  init(1, rs, 255, enable, d0, d1, d2, d3, 0, 0, 0, 0);
+static uint8_t _displayfunction;
+static uint8_t _displaycontrol;
+static uint8_t _displaymode;
+static uint8_t _initialized;
+static uint8_t _numlines, _currline;
+
+/************ low level data pushing command  **********/
+static void
+pulseEnable (void) {
+  LCD_ENABLE_SET_LOW ();
+  _delay_us (1);
+
+  LCD_ENABLE_SET_HIGH ();
+  _delay_us (1);
+
+  LCD_ENABLE_SET_LOW ();
+  _delay_us (100);   // commands need > 37us to settle
 }
 
-void LiquidCrystal::init(uint8_t fourbitmode, uint8_t rs, uint8_t rw, uint8_t enable,
-			 uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3,
-			 uint8_t d4, uint8_t d5, uint8_t d6, uint8_t d7)
+/************ low level data pushing command **********/
+static void
+write4bits (uint8_t value)
 {
-  _rs_pin = rs;
-  _rw_pin = rw;
-  _enable_pin = enable;
-  
-  LCD_RS_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);//dio_pin_initialize ('B', 0, DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_rs_pin, OUTPUT);
+  LCD_DATA0_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 0) & 0x01);
+  LCD_DATA1_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 1) & 0x01);
+  LCD_DATA2_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 2) & 0x01);
+  LCD_DATA3_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 3) & 0x01);
 
-  assert (_rw_pin == 255);  // We don't intend to support _rw_pin
+  pulseEnable();
+}
 
-  LCD_ENABLE_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);//dio_pin_initialize ('B', 1, DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);//pinMode(_enable_pin, OUTPUT);
+/************ low level data pushing command **********/
+static void
+send (uint8_t value, uint8_t mode)
+{
+  LCD_RS_SET (mode);
+
+  assert (! (_displayfunction & LCD_8BITMODE));
+  write4bits(value >> 4);
+  write4bits(value);
+}
+
+/*********** mid level command, for sending data/cmds */
+void
+command (uint8_t value)
+{
+  send (value, LOW);
+}
+
+/*********** mid level command, for sending data/cmds */
+size_t
+write (uint8_t value)
+{
+  send (value, HIGH);
+  return 1;   // Assume success
+}
+
+size_t
+write_string (const char *buffer)
+{
+  // FIXME: sort out casting mess
+  size_t size = strlen ((const char *) buffer);
+  size_t n = 0;
+  while (size--) {
+    n += write(*buffer++);
+  }
+  return n;
+}
+
+void
+lcd_init(void)
+{
+  LCD_RS_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+
+  LCD_ENABLE_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   
-  assert (fourbitmode);
   _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
   
-  begin(16, 1);  
+  lcd_begin(16, 1);  
 }
 
-void LiquidCrystal::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
+void
+lcd_begin (uint8_t cols, uint8_t lines) {
   if (lines > 1) {
     _displayfunction |= LCD_2LINE;
   }
   _numlines = lines;
   _currline = 0;
-
-  // for some 1 line displays you can select a 10 pixel high font
-  if ((dotsize != 0) && (lines == 1)) {
-    _displayfunction |= LCD_5x10DOTS;
-  }
 
   // SEE PAGE 45/46 FOR INITIALIZATION SPECIFICATION!  According to the
   // datasheet, we need at least 40ms after power rises above 2.7V before
@@ -111,19 +162,20 @@ void LiquidCrystal::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
 }
 
 /********** high level commands, for the user! */
-void LiquidCrystal::clear()
+void clear(void)
 {
   command(LCD_CLEARDISPLAY);  // clear display, set cursor position to zero
   _delay_us (2000);//delayMicroseconds(2000);  // this command takes a long time!
 }
 
-void LiquidCrystal::home()
+void home(void)
 {
   command(LCD_RETURNHOME);  // set cursor position to zero
   _delay_us (2000);//delayMicroseconds(2000);  // this command takes a long time!
 }
 
-void LiquidCrystal::setCursor(uint8_t col, uint8_t row)
+void
+setCursor (uint8_t col, uint8_t row)
 {
   int row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
   if ( row >= _numlines ) {
@@ -134,129 +186,87 @@ void LiquidCrystal::setCursor(uint8_t col, uint8_t row)
 }
 
 // Turn the display on/off (quickly)
-void LiquidCrystal::noDisplay() {
+void
+noDisplay (void) {
   _displaycontrol &= ~LCD_DISPLAYON;
   command(LCD_DISPLAYCONTROL | _displaycontrol);
 }
-void LiquidCrystal::display() {
+
+void
+display(void) {
   _displaycontrol |= LCD_DISPLAYON;
   command(LCD_DISPLAYCONTROL | _displaycontrol);
 }
 
 // Turns the underline cursor on/off
-void LiquidCrystal::noCursor() {
+void
+noCursor(void) {
   _displaycontrol &= ~LCD_CURSORON;
   command(LCD_DISPLAYCONTROL | _displaycontrol);
 }
-void LiquidCrystal::cursor() {
+void
+cursor(void) {
   _displaycontrol |= LCD_CURSORON;
   command(LCD_DISPLAYCONTROL | _displaycontrol);
 }
 
 // Turn on and off the blinking cursor
-void LiquidCrystal::noBlink() {
+void
+noBlink (void) {
   _displaycontrol &= ~LCD_BLINKON;
   command(LCD_DISPLAYCONTROL | _displaycontrol);
 }
-void LiquidCrystal::blink() {
+void
+blink (void) {
   _displaycontrol |= LCD_BLINKON;
   command(LCD_DISPLAYCONTROL | _displaycontrol);
 }
 
 // These commands scroll the display without changing the RAM
-void LiquidCrystal::scrollDisplayLeft(void) {
+void
+scrollDisplayLeft (void) {
   command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT);
 }
-void LiquidCrystal::scrollDisplayRight(void) {
+void
+scrollDisplayRight (void) {
   command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT);
 }
 
 // This is for text that flows Left to Right
-void LiquidCrystal::leftToRight(void) {
+void
+leftToRight (void) {
   _displaymode |= LCD_ENTRYLEFT;
   command(LCD_ENTRYMODESET | _displaymode);
 }
 
 // This is for text that flows Right to Left
-void LiquidCrystal::rightToLeft(void) {
+void
+rightToLeft (void) {
   _displaymode &= ~LCD_ENTRYLEFT;
   command(LCD_ENTRYMODESET | _displaymode);
 }
 
 // This will 'right justify' text from the cursor
-void LiquidCrystal::autoscroll(void) {
+void
+autoscroll (void) {
   _displaymode |= LCD_ENTRYSHIFTINCREMENT;
   command(LCD_ENTRYMODESET | _displaymode);
 }
 
 // This will 'left justify' text from the cursor
-void LiquidCrystal::noAutoscroll(void) {
+void
+noAutoscroll (void) {
   _displaymode &= ~LCD_ENTRYSHIFTINCREMENT;
   command(LCD_ENTRYMODESET | _displaymode);
 }
 
 // Allows us to fill the first 8 CGRAM locations
 // with custom characters
-void LiquidCrystal::createChar(uint8_t location, uint8_t charmap[]) {
+void
+createChar(uint8_t location, uint8_t charmap[]) {
   location &= 0x7; // we only have 8 locations 0-7
   command(LCD_SETCGRAMADDR | (location << 3));
   for (int i=0; i<8; i++) {
     write(charmap[i]);
   }
-}
-
-/*********** mid level commands, for sending data/cmds */
-
-inline void LiquidCrystal::command(uint8_t value) {
-  send(value, LOW);
-}
-
-inline size_t LiquidCrystal::write(uint8_t value) {
-  send(value, HIGH);
-  return 1; // assume sucess
-}
-
-/************ low level data pushing commands **********/
-
-// write either command or data, with automatic 4/8-bit selection
-void LiquidCrystal::send(uint8_t value, uint8_t mode) {
-  LCD_RS_SET (mode);//dio_pin_set ('B', 0, mode); //digitalWrite(_rs_pin, mode);
-
-  assert (! (_displayfunction & LCD_8BITMODE));
-  write4bits(value >> 4);
-  write4bits(value);
-}
-
-void LiquidCrystal::pulseEnable(void) {
-  LCD_ENABLE_SET_LOW ();//DIO_SET_PB1 (0);
-  //digital_io_pin_set (DIGITAL_IO_PIN_PB1, 0);
-  //PORTB &= ~(_BV (PORTB1));
-  //dio_pin_set ('B', 1, 0);
-  _delay_us (1);
-
-  //digital_io_pin_set (DIGITAL_IO_PIN_PB1, 1);
-  LCD_ENABLE_SET_HIGH ();//DIO_PIN_SET_PB1 (1);
-  //PORTB |= _BV (PORTB1);
-  //dio_pin_set ('B', 1, 1);
-  _delay_us (1);
-
-  LCD_ENABLE_SET_LOW ();//DIO_PIN_SET_PB1 (0); 
-  //digital_io_pin_set (DIGITAL_IO_PIN_PB1, 0);
-  //PORTB &= ~(_BV (PORTB1));
-  //dio_pin_set ('B', 1, 0);
-  _delay_us (100);   // commands need > 37us to settle
-}
-
-void LiquidCrystal::write4bits (uint8_t value)
-{
-  LCD_DATA0_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 0) & 0x01);
-  LCD_DATA1_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 1) & 0x01);
-  LCD_DATA2_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 2) & 0x01);
-  LCD_DATA3_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 3) & 0x01);
-  //for (int i = 0; i < 4; i++) {
-  //  digital_io_pin_init (_data_pins[i], DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);
-  //  digital_io_pin_set (_data_pins[i], (value >> i) & 0x01);
-  //}
-
-  pulseEnable();
 }
