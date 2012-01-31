@@ -49,64 +49,70 @@ void
 lcd_init (void);
 
 void
-clear (void);
+lcd_clear (void);
 
 void
-home (void);
+lcd_home (void);
 
 void
-noDisplay (void);
+lcd_noDisplay (void);
 
 void
-display (void);
+lcd_display (void);
 
 void
-noBlink (void);
+lcd_noBlink (void);
   
 void
-blink(void);
+lcd_blink(void);
 
 void
-noCursor(void);
+lcd_noCursor(void);
 
 void
-cursor(void);
+lcd_cursor(void);
 
 void
-scrollDisplayLeft(void);
+lcd_scrollDisplayLeft(void);
 
 void
-scrollDisplayRight(void);
+lcd_scrollDisplayRight(void);
 
 void
-leftToRight(void);
+lcd_leftToRight(void);
 
 void
-rightToLeft(void);
+lcd_rightToLeft(void);
 
 void
-autoscroll(void);
+lcd_autoscroll(void);
 
 void
-noAutoscroll(void);
-
-
-void
-createChar(uint8_t, uint8_t[]);
+lcd_noAutoscroll(void);
 
 void
-setCursor(uint8_t, uint8_t); 
+lcd_createChar(uint8_t, uint8_t[]);
+
+void
+lcd_setCursor(uint8_t, uint8_t); 
 
 size_t
-write(uint8_t);
+lcd_write(uint8_t);
+
+// Messages for lcd_printf that are longer than this somewhat arbitrary
+// lengh will be truncated.
+#define LCD_PRINTF_MAX_MESSAGE_LENGTH 100
+
+int
+lcd_printf (const char *format, ...)
+  __attribute__ ((format (printf, 1, 2)));
 
 // FIXME: sort out char vs. uint8_t nonsense
 size_t
-write_string (const char *buffer);
+lcd_write_string (const char *buffer);
 
-// FIXME: was command public in original interface?
 void
-command (uint8_t);
+lcd_command (uint8_t);
 
 
 // uh oh, write() was declared virtual and we had some BS using Print::write;

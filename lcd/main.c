@@ -41,20 +41,19 @@
 int
 main (void)
 {
-  // initialize the library with the numbers of the interface pins
-  lcd_init ();//LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
+  lcd_init ();
 
+  // Set up the LCD's number of columns and rows: 
+  lcd_begin (16, 2);
 
-  // set up the LCD's number of columns and rows: 
-  lcd_begin(16, 2);
   // Print a message to the LCD.
-  write_string("hello, world!");
+  lcd_write_string ("hello, world!");
 
   for ( ; ; ) {
-    // set the cursor to column 0, line 1
-    // (note: line 1 is the second row, since counting begins with 0):
-    setCursor(0, 1);
-    // print the number of seconds since reset:
-    write_string("42.44");
+    // Set the cursor to column 0, line 1.  Note: line 1 is the second row,
+    // since counting begins with 0.
+    lcd_setCursor (0, 1);
+ 
+    lcd_printf ("%.2f", 42.43);
   }
 }

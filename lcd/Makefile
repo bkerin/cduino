@@ -1,7 +1,11 @@
 
-include generic.mk
+# Support reasonably full-featured printf-style functionality for
+# lcd_printf().  Commenting this out will give significantly smaller code
+# but no floating point output support, see the comments about this variable
+# in generic.mk for details.
+AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
-CXX := avr-g++
+include generic.mk
 
 # These defines specify which pins are used for communication with the LCD.
 # The right hand sides of these definitions are the initialization/set
@@ -27,6 +31,8 @@ CPPFLAGS += -DLCD_RS_INIT=DIO_INIT_DIGITAL_8 \
             -DLCD_DATA3_INIT=DIO_INIT_DIGITAL_7 \
             -DLCD_DATA3_SET=DIO_SET_DIGITAL_7
 
+CXX := avr-g++
+
 NONCXXFLAGS = -std=gnu99 \
               -Wimplicit-int \
               -Wmissing-prototypes \
@@ -42,7 +48,7 @@ $(TRG): $(OBJS)
 %.o: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-# WARNING: THIS TARGET PLUS VERSION CONTROL AND ROUNDING IS A BIG FAT
+# WARNING: THIS NEXT TARGET PLUS VERSION CONTROL AND ROUNDING IS A BIG FAT
 # CONFUSING FALSE FAIL WAITING TO HAPPEN.
 #
 # This silly little target just increments a number in the test text we
