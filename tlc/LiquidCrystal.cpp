@@ -220,7 +220,7 @@ inline size_t LiquidCrystal::write(uint8_t value) {
 
 // write either command or data, with automatic 4/8-bit selection
 void LiquidCrystal::send(uint8_t value, uint8_t mode) {
-  LCD_RS_SET_LOW ();//dio_pin_set ('B', 0, mode); //digitalWrite(_rs_pin, mode);
+  LCD_RS_SET (mode);//dio_pin_set ('B', 0, mode); //digitalWrite(_rs_pin, mode);
 
   assert (! (_displayfunction & LCD_8BITMODE));
   write4bits(value >> 4);
@@ -249,14 +249,10 @@ void LiquidCrystal::pulseEnable(void) {
 
 void LiquidCrystal::write4bits (uint8_t value)
 {
-  LCD_DATA0_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  LCD_DATA0_SET ((value >> 0) & 0x01);
-  LCD_DATA1_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  LCD_DATA1_SET ((value >> 1) & 0x01);
-  LCD_DATA2_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  LCD_DATA2_SET ((value >> 2) & 0x01);
-  LCD_DATA3_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  LCD_DATA3_SET ((value >> 3) & 0x01);
+  LCD_DATA0_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 0) & 0x01);
+  LCD_DATA1_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 1) & 0x01);
+  LCD_DATA2_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 2) & 0x01);
+  LCD_DATA3_INIT (DIO_OUTPUT, DIO_DONT_CARE, (value >> 3) & 0x01);
   //for (int i = 0; i < 4; i++) {
   //  digital_io_pin_init (_data_pins[i], DIGITAL_IO_PIN_DIRECTION_OUTPUT, 0, 0);
   //  digital_io_pin_set (_data_pins[i], (value >> i) & 0x01);
