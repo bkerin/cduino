@@ -116,8 +116,8 @@ LOCK_AND_FUSE_SETTINGS ?=
 # http://www.nongnu.org/avr-libc/user-manual/group__avr__stdio.html for
 # details.  The default is to use the AVR libc default printf implementation,
 # which supports most normal printf features except floating point support.
-# Other possible values which individual modules may use are "-Wl,-u,vfprintf
-# -lprintf_min" and "-Wl,-u,vfprintf -lprintf_flt -lm".
+# Other possible values which individual modules may use are
+# "-Wl,-u,vfprintf -lprintf_min" and "-Wl,-u,vfprintf -lprintf_flt -lm".
 AVRLIBC_PRINTF_LDFLAGS ?=
 
 
