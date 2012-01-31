@@ -7,6 +7,7 @@ CXX := avr-g++
 # The right hand sides of these definitions are the initialization/set
 # macros from dio.h.
 CPPFLAGS += -DLCD_RS_INIT=DIO_INIT_DIGITAL_8 \
+            -DLCD_RS_SET=DIO_SET_DIGITAL_8 \
             -DLCD_RS_SET_HIGH=DIO_SET_DIGITAL_8_HIGH \
             -DLCD_RS_SET_LOW=DIO_SET_DIGITAL_8_LOW \
              \
@@ -41,6 +42,9 @@ $(TRG): $(OBJS)
 %.o: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
+# WARNING: THIS TARGET PLUS VERSION CONTROL AND ROUNDING IS A BIG FAT
+# CONFUSING FALSE FAIL WAITING TO HAPPEN.
+#
 # This silly little target just increments a number in the test text we
 # print, to let us feel sure that what we are seeing on the LCD is actually
 # the new version (since the LCD doesn't necessarilly get reset with the
