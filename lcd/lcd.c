@@ -195,15 +195,15 @@ lcd_begin (uint8_t cols, uint8_t lines) {
 /********** high level commands, for the user! */
 void lcd_clear(void)
 {
-  command(LCD_CLEARDISPLAY);  // clear display, set cursor position to zero
-  _delay_us (2000);//delayMicroseconds(2000);  // this command takes a long time!
+  command (LCD_CLEARDISPLAY);  // Clear display, set cursor position to zero.
+  _delay_us (2000);   // This command takes a long time.
 }
 
 void
 lcd_home (void)
 {
-  command(LCD_RETURNHOME);  // set cursor position to zero
-  _delay_us (2000);//delayMicroseconds(2000);  // this command takes a long time!
+  command (LCD_RETURNHOME);  // set cursor position to zero
+  _delay_us (2000);  // This command takes a long time.
 }
 
 void
@@ -211,10 +211,10 @@ lcd_setCursor (uint8_t col, uint8_t row)
 {
   int row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
   if ( row >= _numlines ) {
-    row = _numlines-1;    // we count rows starting w/0
+    row = _numlines-1;    // We count rows starting from 0.
   }
   
-  command(LCD_SETDDRAMADDR | (col + row_offsets[row]));
+  command (LCD_SETDDRAMADDR | (col + row_offsets[row]));
 }
 
 // Turn the display on/off (quickly)
@@ -222,57 +222,57 @@ void
 lcd_display_off (void)
 {
   _displaycontrol &= ~LCD_DISPLAYON;
-  command(LCD_DISPLAYCONTROL | _displaycontrol);
+  command (LCD_DISPLAYCONTROL | _displaycontrol);
 }
 
 void
 lcd_display_on (void)
 {
   _displaycontrol |= LCD_DISPLAYON;
-  command(LCD_DISPLAYCONTROL | _displaycontrol);
+  command (LCD_DISPLAYCONTROL | _displaycontrol);
 }
 
 // Turns the underline cursor on/off
 void
 lcd_noCursor(void) {
   _displaycontrol &= ~LCD_CURSORON;
-  command(LCD_DISPLAYCONTROL | _displaycontrol);
+  command (LCD_DISPLAYCONTROL | _displaycontrol);
 }
 void
 lcd_cursor(void) {
   _displaycontrol |= LCD_CURSORON;
-  command(LCD_DISPLAYCONTROL | _displaycontrol);
+  command (LCD_DISPLAYCONTROL | _displaycontrol);
 }
 
 // Turn on and off the blinking cursor
 void
 lcd_noBlink (void) {
   _displaycontrol &= ~LCD_BLINKON;
-  command(LCD_DISPLAYCONTROL | _displaycontrol);
+  command (LCD_DISPLAYCONTROL | _displaycontrol);
 }
 void
 lcd_blink (void) {
   _displaycontrol |= LCD_BLINKON;
-  command(LCD_DISPLAYCONTROL | _displaycontrol);
+  command (LCD_DISPLAYCONTROL | _displaycontrol);
 }
 
 // These commands scroll the display without changing the RAM
 void
 lcd_scroll_left (void) {
-  command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT);
+  command (LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT);
 }
 void
 lcd_scroll_right (void) {
-  command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT);
+  command (LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT);
 }
 
 // Allows us to fill the first 8 CGRAM locations
 // with custom characters
 void
-lcd_createChar(uint8_t location, uint8_t charmap[]) {
-  location &= 0x7; // we only have 8 locations 0-7
-  command(LCD_SETCGRAMADDR | (location << 3));
-  for (int i=0; i<8; i++) {
-    lcd_write(charmap[i]);
+lcd_createChar (uint8_t location, uint8_t charmap[]) {
+  location &= 0x7;   // we only have 8 locations 0-7
+  command (LCD_SETCGRAMADDR | (location << 3));
+  for ( int ii = 0 ; ii < 8 ; ii++ ) {
+    lcd_write (charmap[ii]);
   }
 }
