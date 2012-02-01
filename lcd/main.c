@@ -53,7 +53,7 @@ main (void)
   // Print a message to the LCD.
   lcd_write_string ("hello, world!");
 
-  double magic_number = 42.54;   // Something to output.
+  double magic_number = 42.55;   // Something to output.
 
   double time_per_test_ms = 1000.0;   // Time we spend on most tests, in ms.
 
@@ -79,10 +79,10 @@ main (void)
   _delay_ms (time_per_test_ms);
   lcd_noBlink ();
 
-  // Test turning display on/off.
-  lcd_noDisplay ();
+  // Test turning display off and on again.
+  lcd_display_off ();
   _delay_ms (time_per_test_ms);
-  lcd_display ();
+  lcd_display_on ();
 
   // Test setting the cursor somewhere exotic.
   uint8_t test_start_col = 12, test_start_row = 1;

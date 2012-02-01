@@ -55,10 +55,10 @@ void
 lcd_home (void);
 
 void
-lcd_noDisplay (void);
+lcd_display_off (void);
 
 void
-lcd_display (void);
+lcd_display_on (void);
 
 void
 lcd_noBlink (void);
@@ -87,7 +87,7 @@ lcd_setCursor(uint8_t, uint8_t);
 // Write a single character to the LCD at the current cursor position.
 // NOTE: newline characters ('\n') don't do anything useful.
 size_t
-lcd_write(uint8_t);
+lcd_write (uint8_t);
 
 // Messages for lcd_printf that are longer than this somewhat arbitrary
 // lengh will be truncated.
@@ -109,13 +109,5 @@ lcd_printf_P (const char *format, ...)
 // FIXME: sort out char vs. uint8_t nonsense
 size_t
 lcd_write_string (const char *buffer);
-
-void
-lcd_command (uint8_t);
-
-
-// uh oh, write() was declared virtual and we had some BS using Print::write;
-// in the public part of the class.  and the class declaration looked like this:
-// class LiquidCrystal : public Print {
 
 #endif // LCD_H
