@@ -109,14 +109,14 @@ send (uint8_t value, uint8_t mode)
   write4bits(value);
 }
 
-/*********** mid level command, for sending data/cmds */
+/*********** mid level command, for sending cmds */
 static void
 command (uint8_t value)
 {
   send (value, LOW);
 }
 
-/*********** mid level command, for sending data/cmds */
+/*********** mid level command, for sending data*/
 size_t
 lcd_write (uint8_t value)
 {
@@ -245,7 +245,7 @@ lcd_home (void)
 }
 
 void
-lcd_setCursor (uint8_t col, uint8_t row)
+lcd_set_cursor_position (uint8_t col, uint8_t row)
 {
   int row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
   if ( row >= _numlines ) {
@@ -272,24 +272,28 @@ lcd_display_on (void)
 
 // Turns the underline cursor on/off
 void
-lcd_noCursor(void) {
+lcd_underline_cursor_off (void)
+{
   _displaycontrol &= ~LCD_CURSORON;
   command (LCD_DISPLAYCONTROL | _displaycontrol);
 }
 void
-lcd_cursor(void) {
+lcd_underline_cursor_on (void)
+{
   _displaycontrol |= LCD_CURSORON;
   command (LCD_DISPLAYCONTROL | _displaycontrol);
 }
 
 // Turn on and off the blinking cursor
 void
-lcd_noBlink (void) {
+lcd_blinking_cursor_off (void)
+{
   _displaycontrol &= ~LCD_BLINKON;
   command (LCD_DISPLAYCONTROL | _displaycontrol);
 }
 void
-lcd_blink (void) {
+lcd_blinking_cursor_on (void)
+{
   _displaycontrol |= LCD_BLINKON;
   command (LCD_DISPLAYCONTROL | _displaycontrol);
 }
