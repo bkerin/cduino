@@ -134,7 +134,6 @@ void
 lcd_init(void)
 {
   LCD_RS_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-
   LCD_ENABLE_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   
   _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
@@ -155,11 +154,11 @@ lcd_begin (uint8_t cols, uint8_t lines) {
   // datasheet, we need at least 40ms after power rises above 2.7V before
   // sending commands. And arduino can turn on way befer 4.5V so we'll wait 50
   // ms.
-  _delay_ms (50); //delayMicroseconds(50000); 
+  _delay_ms (50);
   
-  // Now we pull both RS and R/W low to begin commands
-  LCD_RS_SET_LOW ();//dio_pin_set ('B', 0, 0);
-  LCD_ENABLE_SET_LOW ();//dio_pin_set ('B', 1, 0);
+  // We pull both RS and R/W low to begin commands.
+  LCD_RS_SET_LOW ();
+  LCD_ENABLE_SET_LOW ();
   
   //put the LCD into 4 bit mode
   assert (! (_displayfunction & LCD_8BITMODE));
