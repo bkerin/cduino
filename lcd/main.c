@@ -53,7 +53,7 @@ main (void)
   // Print a message to the LCD.
   lcd_write_string ("hello, world!");
 
-  double magic_number = 42.51;   // Something to output.
+  double magic_number = 42.54;   // Something to output.
 
   double time_per_test_ms = 1000.0;   // Time we spend on most tests, in ms.
 
@@ -91,40 +91,20 @@ main (void)
   lcd_write (test_char);
   _delay_ms (time_per_test_ms);
 
-  // Test writing text backwards.  NOTE: I think this is pretty useless
-  // without wide character support, but who knows.
-  test_start_col = 15, test_start_row = 1;  
-  const char test_text[] = "god";
-  lcd_setCursor (test_start_col, test_start_row);
-  lcd_right_to_left_mode ();
-  lcd_printf (test_text);
-  lcd_left_to_right_mode ();
-  _delay_ms (time_per_test_ms);
- 
-  // Test manual display scrolling. 
+  lcd_clear ();
+
+  // Test display scrolling. 
   test_start_col = 0, test_start_row = 0;
   lcd_setCursor(test_start_col, test_start_row);
-  lcd_printf ("hello, big world!\n"); 
+  lcd_printf ("hello, big world!"); 
   const int chars_to_scroll = 3;
   const float ms_per_scroll_step = 500.0;
   for ( int ii = 0 ; ii < chars_to_scroll ; ii++ ) {
-    lcd_scrollDisplayLeft ();
+    lcd_scroll_left ();
     _delay_ms (ms_per_scroll_step);
   } 
   for ( int ii = 0 ; ii < chars_to_scroll ; ii++ ) {
-    lcd_scrollDisplayRight ();
+    lcd_scroll_right ();
     _delay_ms (ms_per_scroll_step);
   } 
-
-  // Test automatic display "scrolling".
-  test_start_col = 12, test_start_row = 1;
-  lcd_setCursor (test_start_col, test_start_row);
-  lcd_autoscroll_mode ();
-  const char scroll_test_text[] = "Autoscroll!";
-  for ( unsigned int ii = 0 ; ii < strlen (scroll_test_text) ; ii++ ) {
-    lcd_write (scroll_test_text[ii]);
-    const float ms_per_autoscroll_step = 500.0;
-    _delay_ms (ms_per_autoscroll_step);
-  }
-  lcd_no_autoscroll_mode ();
 }

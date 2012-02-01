@@ -257,46 +257,12 @@ lcd_blink (void) {
 
 // These commands scroll the display without changing the RAM
 void
-lcd_scrollDisplayLeft (void) {
+lcd_scroll_left (void) {
   lcd_command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT);
 }
 void
-lcd_scrollDisplayRight (void) {
+lcd_scroll_right (void) {
   lcd_command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT);
-}
-
-// Set display to expect text that flows from left to right (i.e. the cursor
-// moves right after a character is output).  This is the default mode.
-void
-lcd_left_to_right_mode (void) {
-  _displaymode |= LCD_ENTRYLEFT;
-  lcd_command(LCD_ENTRYMODESET | _displaymode);
-}
-
-// Set display to expect text that flows from right to left (i.e. the cursor
-// moves left after a character is output).  This is probably pretty useless
-// without wide character support, but who knows.
-void
-lcd_right_to_left_mode (void) {
-  _displaymode &= ~LCD_ENTRYLEFT;
-  lcd_command(LCD_ENTRYMODESET | _displaymode);
-}
-
-// This will 'right justify' text from the cursor
-
-// Set display to scroll one step for each character output.
-void
-lcd_autoscroll_mode (void) {
-  _displaymode |= LCD_ENTRYSHIFTINCREMENT;
-  lcd_command(LCD_ENTRYMODESET | _displaymode);
-}
-
-// Set display to not scroll one step for each character output.  This is
-// the default mode.
-void
-lcd_no_autoscroll_mode (void) {
-  _displaymode &= ~LCD_ENTRYSHIFTINCREMENT;
-  lcd_command (LCD_ENTRYMODESET | _displaymode);
 }
 
 // Allows us to fill the first 8 CGRAM locations
