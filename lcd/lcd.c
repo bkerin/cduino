@@ -102,6 +102,22 @@ lcd_printf (const char *format, ...)
   return chars_written;
 }
 
+int
+lcd_printf_P (const char *format, ...)
+{
+  char message_buffer[LCD_PRINTF_MAX_MESSAGE_LENGTH + 1];
+
+  va_list ap;
+  va_start (ap, format);
+  int chars_written
+    = vsnprintf_P (message_buffer, LCD_PRINTF_MAX_MESSAGE_LENGTH, format, ap);
+  va_end (ap);
+
+  lcd_write_string (message_buffer);
+
+  return chars_written;
+}
+
 size_t
 lcd_write_string (const char *buffer)
 {
@@ -249,30 +265,36 @@ lcd_scrollDisplayRight (void) {
   lcd_command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT);
 }
 
-// This is for text that flows Left to Right
+// Set display to expect text that flows from left to right (i.e. the cursor
+// moves right after a character is output).  This is the default mode.
 void
-lcd_leftToRight (void) {
+lcd_left_to_right_mode (void) {
   _displaymode |= LCD_ENTRYLEFT;
   lcd_command(LCD_ENTRYMODESET | _displaymode);
 }
 
-// This is for text that flows Right to Left
+// Set display to expect text that flows from right to left (i.e. the cursor
+// moves left after a character is output).  This is probably pretty useless
+// without wide character support, but who knows.
 void
-lcd_rightToLeft (void) {
+lcd_right_to_left_mode (void) {
   _displaymode &= ~LCD_ENTRYLEFT;
   lcd_command(LCD_ENTRYMODESET | _displaymode);
 }
 
 // This will 'right justify' text from the cursor
+
+// Set display to scroll one step for each character output.
 void
-lcd_autoscroll (void) {
+lcd_autoscroll_mode (void) {
   _displaymode |= LCD_ENTRYSHIFTINCREMENT;
   lcd_command(LCD_ENTRYMODESET | _displaymode);
 }
 
-// This will 'left justify' text from the cursor
+// Set display to not scroll one step for each character output.  This is
+// the default mode.
 void
-lcd_noAutoscroll (void) {
+lcd_no_autoscroll_mode (void) {
   _displaymode &= ~LCD_ENTRYSHIFTINCREMENT;
   lcd_command (LCD_ENTRYMODESET | _displaymode);
 }

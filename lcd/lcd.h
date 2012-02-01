@@ -78,17 +78,29 @@ lcd_scrollDisplayLeft(void);
 void
 lcd_scrollDisplayRight(void);
 
+// Set display to expect text that flows from left to right (i.e. the cursor
+// moves right after a character is output).  This is the default mode.
 void
-lcd_leftToRight(void);
+lcd_left_to_right_mode (void);
 
+// Set display to expect text that flows from right to left (i.e. the cursor
+// moves left after a character is output).  This is probably pretty useless
+// without wide character support, but who knows.
 void
-lcd_rightToLeft(void);
+lcd_right_to_left_mode (void);
 
+// Set display to scroll one step for each character output.  Note that
+// for routines like lcd_printf() which output a full string all at once,
+// the scolling will be pretty instantaneous, so there won't be time to read
+// anything that ends up off the screen.  For this to be useful, lcd_write()
+// must be used with an existing string in a timed loop.
 void
-lcd_autoscroll(void);
+lcd_autoscroll_mode (void);
 
+// Set display to not scroll one step for each character output.  This is
+// the default mode.
 void
-lcd_noAutoscroll(void);
+lcd_no_autoscroll_mode (void);
 
 void
 lcd_createChar(uint8_t, uint8_t[]);
@@ -103,8 +115,16 @@ lcd_write(uint8_t);
 // lengh will be truncated.
 #define LCD_PRINTF_MAX_MESSAGE_LENGTH 100
 
+// Print some characters at the current cursor position.
 int
 lcd_printf (const char *format, ...)
+  __attribute__ ((format (printf, 1, 2)));
+
+// Like lcd_printf, but expects a format string that resides in program
+// memory space (probably declared using the AVR libc PSTR macro, for example
+// 'lcd_printf_P (PSTR ("foo: %d"), some_int)').
+int
+lcd_printf_P (const char *format, ...)
   __attribute__ ((format (printf, 1, 2)));
 
 // FIXME: sort out char vs. uint8_t nonsense

@@ -35,6 +35,10 @@
  http://www.arduino.cc/en/Tutorial/LiquidCrystal
  */
 
+#include <avr/pgmspace.h>
+#include <string.h>
+#include <util/delay.h>
+
 // include the library code:
 #include "lcd.h"
 
@@ -49,11 +53,78 @@ main (void)
   // Print a message to the LCD.
   lcd_write_string ("hello, world!");
 
-  for ( ; ; ) {
-    // Set the cursor to column 0, line 1.  Note: line 1 is the second row,
-    // since counting begins with 0.
-    lcd_setCursor (0, 1);
+  double magic_number = 42.51;   // Something to output.
+
+  double time_per_test_ms = 1000.0;   // Time we spend on most tests, in ms.
+
+  // Set the cursor to column 0, line 1.  Note: line 1 is the second row,
+  // since counting begins with 0.
+  lcd_setCursor (0, 1);
+
+  // Test lcd_printf().
+  lcd_printf ("%.2f ", magic_number);
+  _delay_ms (time_per_test_ms);
+
+  // Test lcd_printf_P().
+  lcd_printf_P (PSTR ("%.2f "), magic_number);
+  _delay_ms (time_per_test_ms);
+
+  // Test cursor on/off routines. 
+  lcd_cursor ();   
+  _delay_ms (time_per_test_ms);
+  lcd_noCursor ();
+
+  // Test blinking cursor on/off routines.
+  lcd_blink ();
+  _delay_ms (time_per_test_ms);
+  lcd_noBlink ();
+
+  // Test turning display on/off.
+  lcd_noDisplay ();
+  _delay_ms (time_per_test_ms);
+  lcd_display ();
+
+  // Test setting the cursor somewhere exotic.
+  uint8_t test_start_col = 12, test_start_row = 1;
+  const char test_char = 'X';
+  lcd_setCursor (test_start_col, test_start_row);
+  lcd_write (test_char);
+  _delay_ms (time_per_test_ms);
+
+  // Test writing text backwards.  NOTE: I think this is pretty useless
+  // without wide character support, but who knows.
+  test_start_col = 15, test_start_row = 1;  
+  const char test_text[] = "god";
+  lcd_setCursor (test_start_col, test_start_row);
+  lcd_right_to_left_mode ();
+  lcd_printf (test_text);
+  lcd_left_to_right_mode ();
+  _delay_ms (time_per_test_ms);
  
-    lcd_printf ("%.2f", 42.43);
+  // Test manual display scrolling. 
+  test_start_col = 0, test_start_row = 0;
+  lcd_setCursor(test_start_col, test_start_row);
+  lcd_printf ("hello, big world!\n"); 
+  const int chars_to_scroll = 3;
+  const float ms_per_scroll_step = 500.0;
+  for ( int ii = 0 ; ii < chars_to_scroll ; ii++ ) {
+    lcd_scrollDisplayLeft ();
+    _delay_ms (ms_per_scroll_step);
+  } 
+  for ( int ii = 0 ; ii < chars_to_scroll ; ii++ ) {
+    lcd_scrollDisplayRight ();
+    _delay_ms (ms_per_scroll_step);
+  } 
+
+  // Test automatic display "scrolling".
+  test_start_col = 12, test_start_row = 1;
+  lcd_setCursor (test_start_col, test_start_row);
+  lcd_autoscroll_mode ();
+  const char scroll_test_text[] = "Autoscroll!";
+  for ( unsigned int ii = 0 ; ii < strlen (scroll_test_text) ; ii++ ) {
+    lcd_write (scroll_test_text[ii]);
+    const float ms_per_autoscroll_step = 500.0;
+    _delay_ms (ms_per_autoscroll_step);
   }
+  lcd_no_autoscroll_mode ();
 }
