@@ -69,10 +69,6 @@ my $chip_model = shift(@ARGV);
 # bits in the lock and fuse bytes, and their default values.
 my %bit_descriptions;
 
-# FIXME: the next step would be to have some code words that would set
-# associated groups of bits so you would actually have a clue from the call of
-# this program what the fuse settings are specifying.
-
 if ( $chip_model eq 'm328p' ) {
     %bit_descriptions = ( 
         lock_bits_byte => {
