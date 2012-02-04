@@ -47,9 +47,6 @@ lcd_scroll_left (void);
 void
 lcd_scroll_right (void);
 
-void
-lcd_createChar(uint8_t, uint8_t[]);
-
 // There are at least a couple potentially useful characters that aren't
 // normal ASCII characters that we can output with lcd_write, assuming we
 // have an LCD with ROM code A00, which determines the mapping between some

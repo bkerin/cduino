@@ -307,14 +307,3 @@ void
 lcd_scroll_right (void) {
   command (LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT);
 }
-
-// Allows us to fill the first 8 CGRAM locations
-// with custom characters
-void
-lcd_createChar (uint8_t location, uint8_t charmap[]) {
-  location &= 0x7;   // we only have 8 locations 0-7
-  command (LCD_SETCGRAMADDR | (location << 3));
-  for ( int ii = 0 ; ii < 8 ; ii++ ) {
-    lcd_write (charmap[ii]);
-  }
-}
