@@ -123,10 +123,10 @@ AVRLIBC_PRINTF_LDFLAGS ?=
 
 ##### Debugging Macro CPP Flag (Overridable) {{{1
 
-# Its often convenient to have a way to compile code when debugging will
-# be done, this variable gets put in CPPFLAGS st you can say things like
-# '#ifdef DEBUG' in the code to do logging and such.  For example one might
-# assign it a value of '-DDEBUG'.
+# Its often convenient to compile code slightly differently when debugging
+# will be done, this variable gets put in CPPFLAGS so you can set it to
+# something like '-DDEBUG' then say '#ifdef DEBUG' in the code to do logging
+# and such.
 CPP_DEBUG_DEFINE_FLAGS ?=
 
 
@@ -150,16 +150,15 @@ HEXFORMAT := ihex
 
 OPTLEVEL := s
 
-CPPFLAGS += $(CPP_DEBUG_DEFINE_FLAGS)
-INC :=
-# FIXME: -I and $(INC) should be in CPPFLAGS, do and test.
-CFLAGS += -I. $(INC) -std=gnu99 -gstabs $(CPU_FREQ_DEFINE) \
-          -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) $(CTUNING) -Wall -Wextra \
-          -Wimplicit-int -Wold-style-declaration -Wredundant-decls \
+CPPFLAGS += $(CPP_DEBUG_DEFINE_FLAGS) $(CPU_FREQ_DEFINE) -I.
+
+CFLAGS += -std=gnu99 -gstabs -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) -Wall \
+          -Wextra -Wimplicit-int -Wold-style-declaration -Wredundant-decls \
           -Wstrict-prototypes -Wmissing-prototypes
 
-# FIXME: -I and $(INC) should be in CPPFLAGS? do and test.
-ASMFLAGS := -I. $(INC) -mmcu=$(COMPILER_MCU)-x assembler-with-cpp \
+# WARNING: I don't think I've actually exercised the assembly parts of this
+# build system myself at all.
+ASMFLAGS := -I. -mmcu=$(COMPILER_MCU)-x assembler-with-cpp \
             -Wa,-gstabs,-ahlms=$(firstword $(<:.S=.lst) $(<.s=.lst))
 
 LDFLAGS := -mmcu=$(COMPILER_MCU) $(AVRLIBC_PRINTF_LDFLAGS) -Wl,-Map,$(TRG).map
