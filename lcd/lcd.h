@@ -39,12 +39,13 @@
 void
 lcd_init (void);
 
-// Clear the display (its contents are removed).
+// Clear the display (the underlying content of the LCD is removed).
 void
 lcd_clear (void);
 
-// Move the cursor to the column 0, line 0 of the display.  Note that by
-// default no visual indication of the cursor position is given.
+// Move the cursor to the column 0, line 0 of the display, and remove any
+// scrolling that is in effect.  Note that by default no visual indication
+// of the cursor position is given.
 void
 lcd_home (void);
 
@@ -111,7 +112,9 @@ lcd_printf (const char *format, ...)
 
 // Like lcd_printf, but expects a format string that resides in program
 // memory space (probably declared using the AVR libc PSTR macro, for example
-// 'lcd_printf_P (PSTR ("foo: %d"), some_int)').
+// 'lcd_printf_P (PSTR ("foo: %d"), some_int)').  This saves some RAM,
+// but note that the expanded version of format still gets stored in RAM
+// before being sent to the LCD.
 int
 lcd_printf_P (const char *format, ...)
   __attribute__ ((format (printf, 1, 2)));

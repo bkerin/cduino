@@ -117,6 +117,160 @@ command (uint8_t value)
   send (value, LOW);
 }
 
+void
+lcd_init (void)
+{
+  LCD_RS_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+  LCD_ENABLE_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+  
+  functionset_flags = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS;
+
+  // SEE PAGE 45/46 FOR INITIALIZATION SPECIFICATION!  According to the
+  // datasheet, we need at least 40ms after power rises above 2.7V before
+  // sending commands. And arduino can turn on way befer 4.5V so we'll wait
+  // 50 ms.
+  _delay_ms (50);
+  
+  // We pull both RS and R/W low to begin commands.
+  LCD_RS_SET_LOW ();
+  LCD_ENABLE_SET_LOW ();
+ 
+  // FIXME: WORK POINT: symbolic names for the bits used to set 4-bit mode
+  // and perhaps for the various timing constants would be good I think.
+  // Other than that I think this interface is about done.
+
+  // This is done according to the Hitachi HD44780 datasheet figure 24, pg 46.
+  // NOTE: Except it seems to me that what was used in LiquidCrystal.cpp
+  // in the arduino-1.0 source didn't match what the datasheet required:
+  // its first delays are too short, and the datasheet showed one less try.
+  // So what we have hers is an attempt at a safe combination of the two,
+  // with longer delays, and still three tries.
+  write_4_bits (0x03);
+  _delay_ms (5);
+  // Second try
+  write_4_bits (0x03);
+  _delay_ms (5);
+  // Third go!
+  write_4_bits (0x03); 
+  _delay_us (150);
+  // Finally, set to 4-bit interface.
+  write_4_bits (0x02); 
+
+  // NOTE: By my reading of the above datasheet, the initialization timing
+  // should look like the below code.  But the Arduino library way has
+  // presumably been widely tested and works and has some reason behind it.
+  //
+  //write_4_bits (0x03);
+  //_delay_ms (5);
+  //
+  //write_4_bits (0x03);
+  //_delay_us (150);
+  //
+  //write_4_bits (0x03); 
+  //write_4_bits (0x02);
+
+  // NOTE: The order of these next commands may be important at first
+  // initialization.  It would be neater to perform them using our wrapper
+  // functions, but for all I know there is some reason they need to be
+  // performed in single commands.
+
+  // Finally, set # lines, font size, etc.
+  command (LCD_FUNCTIONSET | functionset_flags);  
+
+  // Turn the display on with no cursor or blinking cursor.
+  displaycontrol_flags = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;  
+  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
+
+  // Clear display. 
+  lcd_clear ();
+
+  // Initialize to supported text direction (for romance languages).
+  entrymodeset_flags = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
+  command (LCD_ENTRYMODESET | entrymodeset_flags);
+}
+
+void
+lcd_clear (void)
+{
+  command (LCD_CLEARDISPLAY);  // Clear display, set cursor position to zero.
+  _delay_us (2000);   // This command takes a long time.
+}
+
+void
+lcd_home (void)
+{
+  // Set cursor position to zero and undo any scrolling that is in effect.
+  command (LCD_RETURNHOME);  
+  _delay_us (2000);  // This command takes a long time.
+}
+
+void
+lcd_set_cursor_position (uint8_t col, uint8_t row)
+{
+  // If given an invalid row number, display on last line.
+  if ( row >= LCD_DISPLAY_LINES ) {
+    row = LCD_DISPLAY_LINES - 1;    // We count rows starting from 0.
+  }
+
+  // Positions of the beginnings of rows in LCD DRAM.
+  const int const row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
+  
+  command (LCD_SETDDRAMADDR | (col + row_offsets[row]));
+}
+
+void
+lcd_display_off (void)
+{
+  displaycontrol_flags &= ~LCD_DISPLAYON;
+  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
+}
+
+void
+lcd_display_on (void)
+{
+  displaycontrol_flags |= LCD_DISPLAYON;
+  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
+}
+
+void
+lcd_blinking_cursor_off (void)
+{
+  displaycontrol_flags &= ~LCD_BLINKON;
+  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
+}
+
+void
+lcd_blinking_cursor_on (void)
+{
+  displaycontrol_flags |= LCD_BLINKON;
+  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
+}
+
+
+void
+lcd_underline_cursor_off (void)
+{
+  displaycontrol_flags &= ~LCD_CURSORON;
+  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
+}
+
+void
+lcd_underline_cursor_on (void)
+{
+  displaycontrol_flags |= LCD_CURSORON;
+  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
+}
+
+void
+lcd_scroll_left (void) {
+  command (LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT);
+}
+
+void
+lcd_scroll_right (void) {
+  command (LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT);
+}
+
 size_t
 lcd_write (char value)
 {
@@ -167,154 +321,3 @@ lcd_write_string (const char *buffer)
   return n;
 }
 
-void
-lcd_init (void)
-{
-  LCD_RS_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  LCD_ENABLE_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  
-  functionset_flags = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS;
-
-  // SEE PAGE 45/46 FOR INITIALIZATION SPECIFICATION!  According to the
-  // datasheet, we need at least 40ms after power rises above 2.7V before
-  // sending commands. And arduino can turn on way befer 4.5V so we'll wait
-  // 50 ms.
-  _delay_ms (50);
-  
-  // We pull both RS and R/W low to begin commands.
-  LCD_RS_SET_LOW ();
-  LCD_ENABLE_SET_LOW ();
- 
-  // FIXME: WORK POINT: symbolic names for the bits used to set 4-bit mode
-  // and perhaps for the various timing constants would be good I think.
-  // Other than that I think this interface is about done.
-
-  // This is done according to the Hitachi HD44780 datasheet figure 24, pg 46.
-  // NOTE: Except it seems to me that what was used in LiquidCrystal.cpp
-  // in the arduino-1.0 source didn't match what the datasheet required:
-  // its first delays are too short, and the datasheet showed one less try.
-  // So what we have hers is an attempt at a safe combination of the two,
-  // with longer delays, and still three tries.
-  write_4_bits (0x03);
-  _delay_ms (5);
-  // Second try
-  write_4_bits (0x03);
-  _delay_ms (5);
-  // Third go!
-  write_4_bits (0x03); 
-  _delay_us (150);
-  // Finally, set to 4-bit interface
-  write_4_bits (0x02); 
-
-  // NOTE: By my reading of the above datasheet, the initialization timing
-  // should look like the below code.  But the Arduino library way has
-  // presumably been widely tested and works and has some reason behind it.
-  //
-  //write_4_bits (0x03);
-  //_delay_ms (5);
-  //
-  //write_4_bits (0x03);
-  //_delay_us (150);
-  //
-  //write_4_bits (0x03); 
-  //write_4_bits (0x02);
-
-  // NOTE: The order of these next commands may be important at first
-  // initialization.  It would be neater to perform them using our wrapper
-  // functions, but for all I know there is some reason they need to be
-  // performed in single commands.
-
-  // Finally, set # lines, font size, etc.
-  command (LCD_FUNCTIONSET | functionset_flags);  
-
-  // Turn the display on with no cursor or blinking cursor.
-  displaycontrol_flags = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;  
-  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
-
-  // Clear display. 
-  lcd_clear ();
-
-  // Initialize to supported text direction (for romance languages).
-  entrymodeset_flags = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
-  command (LCD_ENTRYMODESET | entrymodeset_flags);
-}
-
-void
-lcd_clear (void)
-{
-  command (LCD_CLEARDISPLAY);  // Clear display, set cursor position to zero.
-  _delay_us (2000);   // This command takes a long time.
-}
-
-void
-lcd_home (void)
-{
-  command (LCD_RETURNHOME);  // set cursor position to zero
-  _delay_us (2000);  // This command takes a long time.
-}
-
-void
-lcd_set_cursor_position (uint8_t col, uint8_t row)
-{
-  // If given an invalid row number, display on last line.
-  if ( row >= LCD_DISPLAY_LINES ) {
-    row = LCD_DISPLAY_LINES - 1;    // We count rows starting from 0.
-  }
-
-  // Positions of the beginnings of rows in LCD DRAM.
-  const int const row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
-  
-  command (LCD_SETDDRAMADDR | (col + row_offsets[row]));
-}
-
-void
-lcd_display_off (void)
-{
-  displaycontrol_flags &= ~LCD_DISPLAYON;
-  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
-}
-
-void
-lcd_display_on (void)
-{
-  displaycontrol_flags |= LCD_DISPLAYON;
-  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
-}
-
-void
-lcd_underline_cursor_off (void)
-{
-  displaycontrol_flags &= ~LCD_CURSORON;
-  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
-}
-
-void
-lcd_underline_cursor_on (void)
-{
-  displaycontrol_flags |= LCD_CURSORON;
-  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
-}
-
-void
-lcd_blinking_cursor_off (void)
-{
-  displaycontrol_flags &= ~LCD_BLINKON;
-  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
-}
-
-void
-lcd_blinking_cursor_on (void)
-{
-  displaycontrol_flags |= LCD_BLINKON;
-  command (LCD_DISPLAYCONTROL | displaycontrol_flags);
-}
-
-void
-lcd_scroll_left (void) {
-  command (LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT);
-}
-
-void
-lcd_scroll_right (void) {
-  command (LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT);
-}
