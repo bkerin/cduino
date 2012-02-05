@@ -1,39 +1,26 @@
-/*
-  LiquidCrystal Library - Hello World
- 
- Demonstrates the use a 16x2 LCD display.  The LiquidCrystal
- library works with all LCD displays that are compatible with the 
- Hitachi HD44780 driver. There are many of them out there, and you
- can usually tell them by the 16-pin interface.
- 
- This sketch prints "Hello World!" to the LCD
- and shows the time.
- 
-  The circuit:
- * LCD RS pin to digital pin 12
- * LCD Enable pin to digital pin 11
- * LCD D4 pin to digital pin 5
- * LCD D5 pin to digital pin 4
- * LCD D6 pin to digital pin 3
- * LCD D7 pin to digital pin 2
- * LCD R/W pin to ground
- * 10K resistor:
- * ends to +5V and ground
- * wiper to LCD VO pin (pin 3)
- 
- Library originally added 18 Apr 2008
- by David A. Mellis
- library modified 5 Jul 2009
- by Limor Fried (http://www.ladyada.net)
- example added 9 Jul 2009
- by Tom Igoe
- modified 22 Nov 2010
- by Tom Igoe
- 
- This example code is in the public domain.
-
- http://www.arduino.cc/en/Tutorial/LiquidCrystal
- */
+// Exercise the interface described in lcd.h.  
+//
+// This test program requires an Hitachi HD44780 LCD display to be connected
+// using the pin connections defined in the Makefile, and a couple of other
+// LCD pins to be connected in particular ways to make the LCD usable.
+//
+// Unless something has changed in the Makefile, the LCD pin connections
+// should be:
+//
+//   * LCD RS pin to digital pin 8
+//   * LCD Enable pin to digital pin 9
+//   * LCD D4 pin to digital pin 11
+//   * LCD D5 pin to digital pin 12
+//   * LCD D6 pin to digital pin 13
+//   * LCD D7 pin to digital pin 14
+//   * LCD R/W pin to ground
+//   * 10K potentiometer:
+//     * Ends to +5V and ground
+//     * Wiper to LCD VO pin (pin 3).
+//
+// This example code is in the public domain.  It was created by
+// David A. Mellis.  It was subsequently modified by Limor Fried
+// (http://www.ladyada.net), then by Tom Igoe, and finally by Britton Kerin.
 
 #include <avr/pgmspace.h>
 #include <string.h>
@@ -47,13 +34,10 @@ main (void)
 {
   lcd_init ();
 
-  // Set up the LCD's number of columns and rows: 
-  lcd_begin (16, 2);
-
   // Print a message to the LCD.
   lcd_write_string ("hello, world!");
 
-  double magic_number = 42.54;   // Something to output.
+  double magic_number = 42.64;   // Something to output.
 
   double time_per_test_ms = 1000.0;   // Time we spend on most tests, in ms.
 
