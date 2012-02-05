@@ -37,7 +37,7 @@ main (void)
   // Print a message to the LCD.
   lcd_write_string ("hello, world!");
 
-  double magic_number = 42.64;   // Something to output.
+  double magic_number = 42.65;   // Something to output.
 
   double time_per_test_ms = 1000.0;   // Time we spend on most tests, in ms.
 
@@ -91,6 +91,18 @@ main (void)
     lcd_scroll_right ();
     _delay_ms (ms_per_scroll_step);
   } 
+
+  // Test setting cursor position and writing while scrolled.  This test
+  // illustrated the fact that the cursor position refers to a location in
+  // the underlying text area, not a current physical screen coordinate.
+  // When the screen is scrolled, the lcd_set_cursor_position() function
+  // behavior changes accordingly.
+  lcd_scroll_left ();
+  lcd_scroll_left ();
+  test_start_col = 4, test_start_row = 0;
+  lcd_set_cursor_position(test_start_col, test_start_row);
+  lcd_printf ("Foo!");
+  _delay_ms (time_per_test_ms);
 
   // Test output of a couple of useful non-ASCII characters.  These may fail
   // depending on LCD model; see notes in the header file.
