@@ -1,5 +1,9 @@
 // Exercise the interface described in lcd.h.  
 //
+// NOTE: all the testing I've done has been done with the DFRobot DFR0009
+// LCD Shield for Arduino.  This is a very convenient LCD to connect and
+// also features some pushbuttons (not used in this module).
+//
 // This test program requires an Hitachi HD44780 LCD display to be connected
 // using the pin connections defined in the Makefile, and a couple of other
 // LCD pins to be connected in particular ways to make the LCD usable.
@@ -17,6 +21,11 @@
 //   * 10K potentiometer:
 //     * Ends to +5V and ground
 //     * Wiper to LCD VO pin (pin 3).
+//
+// Note that the results just sort of print things on top of each other.
+// The final screen after the tests are done doesn't look particularly
+// organized.  You have to match what you see going on with this test code
+// to verify correct LCD operation.
 //
 // This example code is in the public domain.  It was created by
 // David A. Mellis.  It was subsequently modified by Limor Fried
