@@ -39,7 +39,8 @@ CPU_FREQ_DEFINE ?= -DF_CPU=16000000
 
 # This is the paragraph that determines which files are being built into what.
 PROGNAME ?= program_to_upload
-OBJS ?= $(patsubst %.c,%.o,$(wildcard *.c))
+OBJS ?= $(patsubst %.c,%.o,$(wildcard *.c)) \
+        $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 HEADERS ?= $(wildcard *.h)
 
 echo_pn:
@@ -79,9 +80,10 @@ AVRDUDE_ARDUINO_BAUD ?= 57600
 # Probaly the only reason to override these is if you have your own builds
 # somewhere special, or need to use something other than /dev/ttyUSB0.
 
-# Compiler.  Note that some of these depend for overridability on the -R make
-# option that this Makefile requires be used.
+# Compilers.  Note that some of these depend for overridability on the -R
+# make option that this Makefile requires be used.
 CC ?= avr-gcc
+CXX ?= avr-g++
 OBJCOPY ?= avr-objcopy
 OBJDUMP ?= avr-objdump
 SIZE ?= avr-size
@@ -155,6 +157,19 @@ CPPFLAGS += $(CPP_DEBUG_DEFINE_FLAGS) $(CPU_FREQ_DEFINE) -I.
 CFLAGS += -std=gnu99 -gstabs -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) -Wall \
           -Wextra -Wimplicit-int -Wold-style-declaration -Wredundant-decls \
           -Wstrict-prototypes -Wmissing-prototypes
+
+# There are a number of C compiler flags that the C++ compiler doesn't like.
+NONCXXFLAGS = -std=gnu99 \
+              -Wimplicit-int \
+              -Wmissing-prototypes \
+              -Wold-style-declaration \
+              -Wstrict-prototypes \
+
+# Support building C++ files.  Currently this has mainly been used to ease
+# the translation of Arduino modules away from C++, but maybe some people
+# would like to use our interfaces from C++ for some reason.
+CXXFLAGS += $(filter-out $(NONCXXFLAGS), $(CFLAGS))
+
 
 # WARNING: I don't think I've actually exercised the assembly parts of this
 # build system myself at all.
@@ -237,10 +252,15 @@ replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
                       $(PROGRAMMER_MCU) \
                       BLB12=0 BLB11=0 BLB02=1 BLB01=1 LB2=1 LB1=1`
 
-COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+COMPILE_C = $(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
-	$(COMPILE)
+	$(COMPILE_C)
+
+COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+%.o: %.cpp
+	$(COMPILE_CXX)
 
 # Clean everything imaginable.
 .PHONY: clean

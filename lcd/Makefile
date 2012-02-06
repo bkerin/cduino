@@ -29,23 +29,6 @@ CPPFLAGS += -DLCD_RS_INIT=DIO_INIT_DIGITAL_8 \
              \
             -DLCD_DB7_INIT=DIO_INIT_DIGITAL_7
 
-CXX := avr-g++
-
-NONCXXFLAGS = -std=gnu99 \
-              -Wimplicit-int \
-              -Wmissing-prototypes \
-              -Wold-style-declaration \
-              -Wstrict-prototypes \
-
-CXXFLAGS = $(filter-out $(NONCXXFLAGS), $(CFLAGS))
-
-OBJS += $(patsubst %.cpp,%.o,$(wildcard *.cpp))
-
-$(TRG): $(OBJS)
-
-%.o: %.cpp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
-
 # WARNING: THIS NEXT TARGET PLUS VERSION CONTROL AND ROUNDING IS A BIG FAT
 # CONFUSING FALSE FAIL WAITING TO HAPPEN.
 #
