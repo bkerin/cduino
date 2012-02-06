@@ -135,16 +135,12 @@ lcd_init (void)
   LCD_RS_SET_LOW ();
   LCD_ENABLE_SET_LOW ();
  
-  // FIXME: WORK POINT: symbolic names for the bits used to set 4-bit mode
-  // and perhaps for the various timing constants would be good I think.
-  // Other than that I think this interface is about done.
-
   // This is done according to the Hitachi HD44780 datasheet figure 24, pg 46.
-  // NOTE: Except it seems to me that what was used in LiquidCrystal.cpp
-  // in the arduino-1.0 source didn't match what the datasheet required:
-  // its first delays are too short, and the datasheet showed one less try.
-  // So what we have hers is an attempt at a safe combination of the two,
-  // with longer delays, and still three tries.
+  // NOTE: Except it seems to me that what was used in LiquidCrystal.cpp in
+  // the arduino-1.0 source didn't match what the datasheet required: the
+  // datasheet shows only on ~5 ms wait, and doesn't show any wait after the
+  // last try.  But this is presumably tried and tested code and seems likely
+  // to be a safe deviation from the datasheet anyway, so we'll keep it.
   write_4_bits (0x03);
   _delay_ms (5);
   // Second try
@@ -318,6 +314,7 @@ lcd_write_string (const char *buffer)
   while ( size-- ) {
     n += lcd_write ((uint8_t) (*buffer++));
   }
+
   return n;
 }
 
