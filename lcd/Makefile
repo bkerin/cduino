@@ -54,9 +54,10 @@ $(TRG): $(OBJS)
 # the new version (since the LCD doesn't necessarilly get reset with the
 # rest of the arduino).
 wfovn:
-	perl -p -i.bak -e 'm/42.(\d\d)/;' \
+	test -w lcd_test.c && \
+        perl -p -i.bak -e 'm/42.(\d\d)/;' \
                        -e '$$mvn = $$1;' \
                        -e '$$nmvn = $$mvn + 1;' \
                        -e 's/42\.$$mvn/42.$$nmvn/;' \
-                       main.c ; \
+                       lcd_test.c && \
                        $(MAKE) writeflash
