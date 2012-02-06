@@ -99,7 +99,7 @@ escc:
 samesys:
 	$(SAMESY_CHECK_CODE)
 
-# Make sure our samsys desire are satisfied before doing anything important.
+# Make sure our samsys desires are satisfied before doing anything important.
 upload_html targzball: samesys
 
 # }}}
