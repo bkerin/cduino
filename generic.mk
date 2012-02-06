@@ -134,10 +134,7 @@ CPP_DEBUG_DEFINE_FLAGS ?=
 
 ##### Computed File Names {{{1
 
-CFILES := $(patsubst %.o,%.c,$(OBJS))
-LDLIBS :=
-
-# Magical files that one doesn't see in non-microcontroller gcc development.
+# Magical files that one doesn't see in non-microcontroller GCC development.
 TRG = $(PROGNAME).out
 DUMPTRG = $(PROGNAME).s
 HEXROMTRG = $(PROGNAME).hex
@@ -146,14 +143,18 @@ LSTFILES := $(patsubst %.o,%.c,$(OBJS))
 GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
 
 
-##### Build Settings and Flags {{{1
+##### Build Settings and Flags (Augmentable) {{{1
 
 HEXFORMAT := ihex
 
 OPTLEVEL := s
 
+# Clients can add their own CPPFLAGS.  Note that order sometimes matters
+# for compiler flags, so it could matter whether they do so before or after
+# the include statement that includes this file.
 CPPFLAGS += $(CPP_DEBUG_DEFINE_FLAGS) $(CPU_FREQ_DEFINE) -I.
 
+# See comments near CPPFLAGS, above.
 CFLAGS += -std=gnu99 -gstabs -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) -Wall \
           -Wextra -Wimplicit-int -Wold-style-declaration -Wredundant-decls \
           -Wstrict-prototypes -Wmissing-prototypes
@@ -167,7 +168,8 @@ NONCXXFLAGS = -std=gnu99 \
 
 # Support building C++ files.  Currently this has mainly been used to ease
 # the translation of Arduino modules away from C++, but maybe some people
-# would like to use our interfaces from C++ for some reason.
+# would like to use our interfaces from C++ for some reason.  See also the
+# comments near CPPFLAGS, above.
 CXXFLAGS += $(filter-out $(NONCXXFLAGS), $(CFLAGS))
 
 
@@ -176,7 +178,8 @@ CXXFLAGS += $(filter-out $(NONCXXFLAGS), $(CFLAGS))
 ASMFLAGS := -I. -mmcu=$(COMPILER_MCU)-x assembler-with-cpp \
             -Wa,-gstabs,-ahlms=$(firstword $(<:.S=.lst) $(<.s=.lst))
 
-LDFLAGS := -mmcu=$(COMPILER_MCU) $(AVRLIBC_PRINTF_LDFLAGS) -Wl,-Map,$(TRG).map
+LDFLAGS := -mmcu=$(COMPILER_MCU) $(AVRLIBC_PRINTF_LDFLAGS) -lm \
+           -Wl,-Map,$(TRG).map
 
 ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   # This flag shows up somewhere in the arduino build files.  But it seems to
@@ -254,11 +257,17 @@ replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
 
 COMPILE_C = $(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
+# FIXME: would we rather use a static pattern rule here?  They are generally
+# cleaner and result in much better error messages in some circumstances,
+# but are also less well understood.  This would take some thought as to
+# which sorts of errors are more likely and how confusing the results are
+# likely to be.
 %.o: %.c
 	$(COMPILE_C)
 
 COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
+# FIXME: see above fixme about static pattern rules.
 %.o: %.cpp
 	$(COMPILE_CXX)
 
@@ -368,7 +377,7 @@ PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
   echo "programming with the AVRISPmkII for example)?" ; \
   echo ""
 
-$(TRG): $(OBJS) $(LDLIBS)
+$(TRG): $(OBJS)
 	$(CC) $(LDFLAGS) -o $(TRG) $^
 
 %.hex: %.out
