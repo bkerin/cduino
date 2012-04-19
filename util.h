@@ -3,7 +3,6 @@
 #ifndef MYLIB_H
 #define MYLIB_H
 
-// WARNING: of course some contexts might understand things differently...
 #define HIGH 0x1
 #define LOW  0x0
 
