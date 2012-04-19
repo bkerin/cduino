@@ -11,10 +11,6 @@
 #include "dio.h"
 #include "lcd.h"
 
-// Note, however, that resetting the Arduino doesn't reset the LCD, so
-// we can't assume that its in that state when a sketch starts (and the
-// LiquidCrystal constructor is called).
-
 // NOTE: many of these command and flags aren't currently used.  They serve
 // to illustrate somewhat all the HD44780 functionality that we *don't*
 // support :)
