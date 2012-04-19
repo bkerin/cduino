@@ -126,8 +126,9 @@ communication, which precludes its use as an output).  The unconnected IO pins
 are presumably ok to use, or you can just nuke the bootloader with an
 AVRISPmkII or similar device.  </p>
 
-<p align="justify"><code><a href="lessons/lesson1.c">lesson1.c</a></code> is
-one possible solution.</p>
+<p align="justify">
+<code><a href="xlinked_source_html/lesson1.c.html">lesson1.c</a></code> is one
+possible solution.</p>
 
 <hr>
 
@@ -150,8 +151,8 @@ doing this, your program should blink just the onboard LED.</p>
 
 <p align="justify">Now that you have control over a given port, extend your
 program to alternate or cycle the LEDs.
-<code><a href="lessons/lesson2.c">lesson2.c</a></code> is one possible
-solution.</p>
+<code><a href="xlinked_source_html/lesson2.c.html">lesson2.c</a></code> is one
+possible solution.</p>
 
 <hr> 
 
@@ -195,7 +196,7 @@ value = PIND &amp; 0x04; /* and that's what's on the pin... */
 
 <p align="justify">Try a program to read a switch connected between digital pin
 2 and ground, and use this to control an LED. One possible solution is
-<code><a href="lessons/lesson3.c">lesson3.c</a></code></p>
+<code><a href="xlinked_source_html/lesson3.c.html">lesson3.c</a></code></p>
 
 <hr>
 
@@ -231,7 +232,7 @@ USART Data Register is Empty - <tt>(UCSR0A &amp; (1 &lt;&lt; UDRE0))</tt>.</p>
 
 <p align="justify">Try write a program that prints a fixed string to the serial
 port. One way to do this is
-<code><a href="lessons/lesson4.c">lesson4.c</a></code></p>
+<code><a href="xlinked_source_html/lesson4.c.html">lesson4.c</a></code></p>
 
 <hr>
 
@@ -245,7 +246,7 @@ now it's good enough.</p>
 <p align="justify">Reusing your code from lesson 4, write a
   program to read a character from the serial port and echo the next one back.
   If you type 'A' it should echo 'B'. One way to do this is
-  <code><a href="lessons/lesson5.c">lesson5.c</a></code>.</p>
+  <code><a href="xlinked_source_html/lesson5.c.html">lesson5.c</a></code>.</p>
 
 <hr>
 
@@ -255,7 +256,7 @@ align="justify">I haven't written a sample solution to this yet, but at this
 point you should know everything you need to read a switch or the serial port
 and use this to control an LED (and print its status to the serial port). When
 I do finish this example, you can see
-<code><a href="lessons/lesson6.c">lesson6.c</a></code></p>
+<code><a href="xlinked_source_html/lesson6.c.html">lesson6.c</a></code></p>
 
 <hr>
 
@@ -275,9 +276,10 @@ let's set up the the AVR to do PWM output.</p>
 
 <p align="justify">Try writing a program to slowly ramp the brightness of the
 LED. Or maybe have it fade in and out.
-<code><a href="lessons/lesson7a.c">lesson7a.c</a></code> is one way to do this.
-Alas, this solution sucks - it's basically a big nasty busy wait that prevents
-you from getting any real work done while generating the PWM waveform.</p>
+<code><a href="xlinked_source_html/lesson7a.c.html">lesson7a.c</a></code> is
+one way to do this.  Alas, this solution sucks - it's basically a big nasty
+busy wait that prevents you from getting any real work done while generating
+the PWM waveform.</p>
 
 <p align="justify">As we learn about hardware PWM, application Note 130 will
 be your friend. Though it's written for the AT90S8535 and doesn't use gcc,
@@ -292,9 +294,9 @@ First, the control register TCCR0A should be set for Fast PWM mode. Then the
 compare mode (inverting/non-inverting) is also set in the control register. At
 this point, it would be good to initialize the timer and comparator values
 because the timer isn't ticking until the clock source is set (control register
-TCCR0B). It is now safe to set the output bits on the output port.  One way to
-do hardware PWM is <code><a href="lessons/lesson7b.c">lesson7b.c</a></code>.
-</p>
+TCCR0B). It is now safe to set the output bits on the output port.  One way
+to do hardware PWM is <code><a href="xlinked_source_html/lesson7b.c.html">
+lesson7b.c</a></code>.  </p>
 
 <hr>
 
@@ -336,12 +338,12 @@ spoiled by big machines with multiple multi-GHz cpus, a few GB of memory and a
 few TB of storage. Programming an embedded device makes me realize how
 wonderful <tt>printf("sensor %d value %f\n", n, values[n])</tt> is.  Avr-libc
 has some glue to simulate stdio. Here's an example of how to use this:
-<code><a href="lessons/lesson8.c">lesson8.c</a></code>. The manual warns
-that printf and scanf are quite resource-intensive. This is not even a little
-bit of an exaggeration.  Have a look at the annotated assembly files and be
-afraid. Be very afraid.  In my example implementation, I also use the program
-space macros to avoid keeping constant strings in RAM when they could simply be
-used straight from flash.</p>
+<code><a href="xlinked_source_html/lesson8.c.html">lesson8.c</a></code>. The
+manual warns that printf and scanf are quite resource-intensive. This is not
+even a little bit of an exaggeration.  Have a look at the annotated assembly
+files and be afraid. Be very afraid.  In my example implementation, I also use
+the program space macros to avoid keeping constant strings in RAM when they
+could simply be used straight from flash.  </p>
 
 <hr>
 
@@ -362,7 +364,7 @@ correctly. This determines the upper limit for measurement; using Vcc is
 probably the best bet. USB power will probably be very stable. Finally, set the
 ADC enable bit and force one conversion - the first conversion takes extra time
 due to some internal setup that is required. Here is
-<code><a href="lessons/lesson9.c">lesson9.c</a></code>.</p>
+<code><a href="xlinked_source_html/lesson9.c.html">lesson9.c</a></code>.</p>
 
 <hr>
 
@@ -410,9 +412,9 @@ this case <tt>TCNT0 = 0</tt>. Finally, the <tt>sei()</tt> function enables
 interrupt processing.</p>
 
 <p align="justify">One way to do this is
-<code><a href="lessons/lesson10.c">lesson10.c</a></code>.  My version can blink
-either the onboard LED on PORTB.5 or a set of LEDs on PORTB.1 - PORTB.3 (with a
-change to the <code>#if</code> statement in the code).</p>
+<code><a href="xlinked_source_html/lesson10.c.html">lesson10.c</a></code>.  My
+version can blink either the onboard LED on PORTB.5 or a set of LEDs on PORTB.1
+- PORTB.3 (with a change to the <code>#if</code> statement in the code).</p>
 
 <h3><a name="eeprom">Lesson 11: Persistent Storage Using EEPROM</a></h3> <p
 align="justify">EEPROM provides developers with the ability to persistently
@@ -427,7 +429,8 @@ a function - <code>eeprom_is_ready()</code> - to do this, and this is the core
 of the <code>eeprom_busy_wait()</code> function. Once the EEPROM is ready, it
 can be written with <code>eeprom_write_{byte,word,dword,block}</code> and read
 back with <code>eeprom_read_{byte,word,dword,block}</code>. See
-<code><a href="lessons/lesson11.c">lesson11.c</a></code> for an example.</p>
+<code><a href="xlinked_source_html/lesson11.c.html">lesson11.c</a></code> for
+an example.</p>
 
 <p align="justify">To safely use EEPROM storage in applications where power
 loss is a significant risk, consider storing a version counter and a validity
@@ -436,7 +439,7 @@ changes are made, and should only be marked valid once all other changes are
 made. Keep two (or more) copies of the structure and rotate through them;
 The version counter can be used to determine which is the most current copy.
 In the event power is lost during a write, older versions remain intact. You
-may want to have a look at "AVR101: High Endurance EEPROM Storage".</p>
+may want to have a look at "AVR101: High Endurance EEPROM Storage".  </p>
 
 <h3><a name="watchdog">Lesson 12: Watchdog Timer Resets</a></h3>
 
@@ -457,8 +460,8 @@ the program unexpectedly hangs.  The timer is first enabled, and after being
 enabled must be reset more frequently than the interrupt interval to avoid
 triggering a reset.  If your code hangs somewhere, the timer reset won't
 happen, and so the whole processor will be reset.  The program in
-<code><a href="lessons/lesson12.c">lesson12.c</a></code> shows how this works.
-</p>
+<code><a href="xlinked_source_html/lesson12.c.html">lesson12.c</a></code> shows
+how this works.  </p>
 
 <p align="justify">The newer AVR chips (including the ones on the arduino) also
 allow an interrupt to be generated instead of or in addition to (before) the
@@ -470,11 +473,12 @@ reset, careful programs will want to clear this flag early in the boot process.
 Even if your code never explicitly enables the watchdog timer at all, it is
 possible that it could get turned on by erroneous code or electrical noise.
 The <code>fetch_and_clear_mcusr()</code> declaration in
-<code><a href="lessons/lesson12.c">lesson12.c</a></code> shows how to ensure
-that the watchdog timer bit is always cleared early in the boot process.  </p>
+<code><a href="xlinked_source_html/lesson12.c.html">lesson12.c</a></code> shows
+how to ensure that the watchdog timer bit is always cleared early in the boot
+process.  </p>
 
 <!-- This is the old description of the interrupt-generation WDT usage, whic
-     we don't do yet.
+     we don't do yet.  FIXME: probably should just remove this
 
 From
 time to time, it may be useful to have an interrupt or reset delivered
@@ -493,7 +497,7 @@ is as simple as a call to <tt>watchdog_reset()</tt>.  Note that if the
 requiring explicit activation.</p>
 
 <p align="justify">A short example of using the watchdog timer to wake from a
-deep sleep mode is found in </a> <a href="lessons/lesson13.c">lesson13.c</p>
+deep sleep mode is found in </a> <a href="lessons/lesson13.c.html">lesson13.c</p>
 
 <a name="i2c-spi"></a><h3><a name="i2c-spi">Lesson 14: I2C/SPI peripherals</a></h3>
 
@@ -550,8 +554,10 @@ differences when running on this hardware.</p>
 
 <h3>References</h3>
         <li>[1] <a href="pin_map.html">pin_map.html</a></li>
-	<li>[2] http://www.atmel.com/dyn/resources/prod_documents/avr_3_04.pdf</li>
-	<li>[3] http://www.atmel.com/dyn/resources/prod_documents/doc2545.pdf</li>
+        <li>[2] http://www.atmel.com/dyn/resources/prod_documents/avr_3_04.pdf
+        </li>
+        <li>[3] http://www.atmel.com/dyn/resources/prod_documents/doc2545.pdf
+        </li>
 	<li>http://avrbasiccode.wikispaces.com/Atmega168</li>
 	<li>http://javiervalcarce.es/wiki/Program_Arduino_with_AVR-GCC</li>
 	<li>http://www.ladyada.net/learn/Arduino/</li>

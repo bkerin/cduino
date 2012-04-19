@@ -28,7 +28,8 @@ new_module:
 # Clean up all the modules.
 .PHONY: clean_all_modules
 clean_all_modules:
-	-find . -type d -maxdepth 1 -exec $(MAKE) -C \{\} -R clean \;
+	find . -mindepth 1 -maxdepth 1 -type d \
+               -exec $(MAKE) -C \{\} -R clean \;
 	# This is needed because this lesson requires a non-bootloader upload
 	# method at the moment (FIXME: remove this when fixed upstream)
 	$(MAKE) -C lesson12 -R 'UPLOAD_METHOD = AVRISPmkII' clean
@@ -41,12 +42,39 @@ git_push:
 	! (git status | grep 'Changes to be committed:')
 	git push origin master
 
-# Note this doesn't nuke old pages with different names
+# FIXME: would be nice to uniqueify function names between lessons and API so
+# we didn't end up with messy multiple way links in the HTML-ized headers.
+# Generate cross linked header and source files as a simple form of API
+# documentation (and for browsable source).
+.PHONY: xlinked_source_html
+xlinked_source_html:
+	rm -rf $@
+	mkdir $@
+	find . -name "*.[ch]" -exec cp \{\} $@ \;
+	cd $@ ; source-highlight --gen-references=inline *.[ch]
+	# This gets a bit wild.  We use ||= to take advantage of non-lexical
+	# vars which aren't reinitialized every time through implicit -p loop,
+	# to save prohibitively expensive per-line recomputation of known file
+	# name regular expression.  The link-for-filename substitution has some
+	# negative look-behind and look-ahead assertions which prevent partial
+	# file names from matching and trim off some file name text that
+	# source-highlight itself produces.
+	cd $@ ; \
+          perl -p -i \
+            -e '$$frgx ||= join("|", split("\n", `ls -1 *.[ch]`));' \
+            -e '$$fre_dot_escape_done ||= ($$frgx =~ s/\./\\./g);' \
+            -e 's/((?<!\w)(?:$$frgx)(?!\.html|\:\d+))' \
+            -e ' /<a href="$$1.html">$$1<\/a>/gx;' \
+            *.html
+	rm $@/*.[ch]
+	rm $@/tags
+
+# Note this doesn't nuke old pages with different names.
 .PHONY: upload_html
-upload_html: git_push
+upload_html: git_push xlinked_source_html
 	scp *.html $(WEB_SSH):$(WEB_ROOT)
-	ssh $(WEB_SSH) rm -rf '$(WEB_ROOT)/lessons/'
-	scp -r lessons $(WEB_SSH):$(WEB_ROOT)
+	ssh $(WEB_SSH) rm -rf '$(WEB_ROOT)/xlinked_source_html/'
+	scp -r xlinked_source_html $(WEB_SSH):$(WEB_ROOT)
 	ssh $(WEB_SSH) ln -s --force home_page.html $(WEB_ROOT)/index.html
 
 # Make a release targzball.  The make variable VERSION must be set (probably
@@ -132,3 +160,6 @@ ifndef WEB_BROWSER
 endif
 view_web_page:
 	$(WEB_BROWSER) home_page.html
+
+clean: clean_all_modules
+	rm -rf xlinked_source_html
