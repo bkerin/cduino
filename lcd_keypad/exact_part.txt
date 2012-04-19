@@ -1,0 +1,3 @@
+Merchant SKU: SHL-0108
+Hacktronics
+Called: "LCD Shield for Arduino"
