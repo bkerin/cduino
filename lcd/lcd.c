@@ -67,7 +67,8 @@ static uint8_t entrymodeset_flags;
 
 // This is used to signal the LCD that data is ready on the data pins.
 static void
-pulse_enable (void) {
+pulse_enable (void)
+{
   LCD_ENABLE_SET_LOW ();
   _delay_us (1);
 
