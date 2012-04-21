@@ -34,7 +34,7 @@
 #include "term_io.h"
 
 static void
-adc_init (void)
+initialize_adc (void)
 {
   // Internal pull-ups interfere with the ADC. disable the pull-up on the
   // pin ifit's being used for ADC. either writing 0 to the port register
@@ -83,7 +83,7 @@ main (void)
 
   term_io_init ();   // Set up terminal communications.
 
-  adc_init ();
+  initialize_adc ();
 
   while ( 1 )
   {
