@@ -9,6 +9,7 @@
 #include <avr/io.h>
 #include <inttypes.h>
 
+#include "util.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // 
@@ -27,8 +28,8 @@
 //
 // Example of use:
 //
-//   DIO_INIT_PB0 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-//   DIO_INIT_PB1 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+//   DIO_INIT_PB0 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+//   DIO_INIT_PB1 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
 //
 //   uint8_t pb0_value = some_function_returing_boolean ();
 //   DIO_SET_PB0 (pb0_value);
@@ -40,13 +41,13 @@
 //   DIO_SET_PB0_HIGH ();
 //
 // I finds these macros easier to read and remember than the individual
-// bit fiddling instructions and wait-till set code.
+// bit fiddling instructions and wait-till-set code.
 //
 // This interface doesn't support configuring/reading/writing multiple pins
 // that use the same port in a single instruction, which is possible with
 // the raw memory map read/write interface provided by AVR Libc.  
 //
-// For those who like the alternate numbering system that Aruidno's use
+// For those who like the alternate numbering system that Aruidnos use
 // for their preferred digital IO pins, macros that work like this are
 // also provided:
 //
@@ -129,30 +130,25 @@
 // single *hardware* no-ops.  Recent versions of AVR libc have added a _NOP
 // macro in avr/cpufunc.h that would probably work.
 
-// I can't bring myself to drag in another utility header just for this junk.
-#ifndef HIGH
-#  define HIGH 0x1
-#else
-#  if HIGH != 1
-#    error uh oh, HIGH != 1
-#  endif
+// Ensure that HIGH and LOW are defined as expected.  We could probably make
+// due with the normal C definition of truth, but I like to be paranoid
+// and keep it the same everywhere in case someone likes to write 
+// 'if ( some_boolean == TRUE )'.
+#if HIGH != 0x1
+#  error uh oh, HIGH != 0x1
 #endif
-#ifndef LOW
-#  define LOW 0x0
-#else
-#  if LOW != 0
-#    error uh oh, LOW != 0
-#  endif
+#if LOW != 0x0
+#  error uh oh, LOW != 0x0
 #endif
 
 // Pin Initialization {{{1
 
 // These macros can be used to make DIO_INIT_* calls more readable.
-#define DIO_INPUT  1
-#define DIO_OUTPUT 0
-#define DIO_ENABLE_PULLUP 1
-#define DIO_DISABLE_PULLUP 1
-#define DIO_DONT_CARE 0
+#define DIO_INPUT TRUE 
+#define DIO_OUTPUT FALSE
+#define DIO_ENABLE_PULLUP TRUE
+#define DIO_DISABLE_PULLUP FALSE
+#define DIO_DONT_CARE FALSE
 
 // Pin PB* Initialization {{{2 
 
