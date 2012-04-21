@@ -50,7 +50,8 @@ void
 lcd_home (void);
 
 // Move the cursor to the given (zero-based) column and row.  Note that by
-// default no visual indication of the cursor position is given.
+// default no visual indication of the cursor position is given.  FIXME:
+// this is subject to current scolling I think, verify and document.
 void
 lcd_set_cursor_position (uint8_t column, uint8_t row); 
 
