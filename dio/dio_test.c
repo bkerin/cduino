@@ -217,7 +217,7 @@ main (void)
 
 #endif // TEST_CONDITION_ALL_PINS_NC
 
-  // Macros for pin INIT/SET/READ dependinf on which TEST_CONDITION_* is
+  // Macros for pin INIT/SET/READ depending on which TEST_CONDITION_* is
   // in effect.
 // {{{1
 
@@ -347,7 +347,7 @@ main (void)
 
 // }}}1
 
-  // Macros describing particular condition of pind being tested, depending
+  // Macros describing particular condition of pin being tested, depending
   // on which TEST_CONDITION_* is in effect.
   // {{{1
 #if defined(TEST_CONDITION_PB0_HIGH_OTHERS_NC) || \
