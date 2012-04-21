@@ -34,6 +34,7 @@ endif
 # The user must uncomment this line to acknowledge that the PB6, PB7, and PC6
 # macros have never been tested by the test program (because they are used by
 # the Arduino for the external oscillator crystal connections and reset pin).
+# FIXME: LEAVE THIS COMMENTED OUT
 CPPFLAGS += -DUNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
 
 # Each condition here represents a different hardware setup capable of
@@ -63,6 +64,12 @@ CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD5_HIGH_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD6_HIGH_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD7_HIGH_OTHERS_NC
+
+# FIXME: I think to test whether the pullup gets correctly disable
+# (DIO_DISABLE_PULLUP was wrong and all these tests still passed as they
+# were), all thest *_LOW_* test conditions should be changed to _WEAK_LOW_
+# with the implication that the tie to low is so weak that with the pull-up
+# on, the pins would still read high, but without it they should read low.
 
 #CPPFLAGS += -DTEST_CONDITION_PB0_LOW_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB1_LOW_OTHERS_NC
