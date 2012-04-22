@@ -31,16 +31,19 @@ ifneq (,$(findstring -DTEST_SERIAL_PINS, $(CPPFLAGS)))
   endif
 endif
 
-# The user must uncomment this line to acknowledge that the PB6, PB7, and PC6
-# macros have never been tested by the test program (because they are used by
-# the Arduino for the external oscillator crystal connections and reset pin).
-# FIXME: LEAVE THIS COMMENTED OUT
-CPPFLAGS += -DUNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
+# See comments near UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED in dio_test.c.
+#CPPFLAGS += -DUNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
+
+# See comments near UNDERSTAND_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITION_UNTESTED
+# in dio_test.c.
+#CPPFLAGS += -DUNDERSTAND_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED
 
 # Each condition here represents a different hardware setup capable of
 # exercising different uses of the interface (e.g. input, output, pullups).
 
+
 CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
+
 
 #CPPFLAGS += -DTEST_CONDITION_PB0_HIGH_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB1_HIGH_OTHERS_NC
@@ -65,11 +68,6 @@ CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD6_HIGH_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD7_HIGH_OTHERS_NC
 
-# FIXME: I think to test whether the pullup gets correctly disable
-# (DIO_DISABLE_PULLUP was wrong and all these tests still passed as they
-# were), all thest *_LOW_* test conditions should be changed to _WEAK_LOW_
-# with the implication that the tie to low is so weak that with the pull-up
-# on, the pins would still read high, but without it they should read low.
 
 #CPPFLAGS += -DTEST_CONDITION_PB0_LOW_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB1_LOW_OTHERS_NC
@@ -94,6 +92,42 @@ CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD6_LOW_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD7_LOW_OTHERS_NC
 
+
+# These *_WEAK_LOW_470_KOHM_* test conditions mean that the pin in question is
+# tied to ground via a 470 kohm resistor.  The point of this is to test that
+# the pin ends up high when the internal pullup is enabled, but low otherwise.
+# The 470 kohm value seems large, but the ATMega328p datasheet claims a
+# maximum input leakage current of 1 uA at 5V when an input pin is high,
+# which according to V=IR suggests an input impediance of 5 Mohm or more.
+# Using a large value guarantees that when the pull-up is enabled, the pin
+# voltage will be high enough to be read as high.
+
+#CPPFLAGS += -DTEST_CONDITION_PB0_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PB1_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PB2_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PB3_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PB4_WEAK_LOW_470_KOHM_OTHERS_NC
+# NOTE: it isn't possible to test PB5_WEAK_LOW with arduino hardware, see
+# comments near UNDERSTAND_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED.
+
+#CPPFLAGS += -DTEST_CONDITION_PC0_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PC1_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PC2_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PC3_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PC4_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PC5_WEAK_LOW_470_KOHM_OTHERS_NC
+
+# NOTE: it isn't possible to test PD0_WEAK_LOW or
+# PD1_WEAK_LOW with arduino hardware, see comments near
+# UNDERSTAND_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED.
+#CPPFLAGS += -DTEST_CONDITION_PD2_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PD3_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PD4_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PD5_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PD6_WEAK_LOW_470_KOHM_OTHERS_NC
+#CPPFLAGS += -DTEST_CONDITION_PD7_WEAK_LOW_470_KOHM_OTHERS_NC
+
+
 #CPPFLAGS += -DTEST_CONDITION_PB0_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB1_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PB2_LED_OTHERS_NC
@@ -116,6 +150,7 @@ CPPFLAGS += -DTEST_CONDITION_ALL_PINS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD5_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD6_LED_OTHERS_NC
 #CPPFLAGS += -DTEST_CONDITION_PD7_LED_OTHERS_NC
+
 
 # Ensure that the macros declaring in-system programming (ISP) pins to be
 # ok to test are defined if the TEST_CONDITION_* that will be using those
