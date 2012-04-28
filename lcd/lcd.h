@@ -35,7 +35,8 @@
 // that the input voltage has risen sufficiently for corret display operation,
 // in case we are called near power-on).  Note also that some macros must
 // be defined at compile-time to control which IO pins the LCD will use
-// (see comments above).
+// (see comments above).  The display is cleared and the cursor set to home
+// (row 0 column 0).
 void
 lcd_init (void);
 
