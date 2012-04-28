@@ -180,6 +180,9 @@ lcd_init (void)
   // Initialize to supported text direction (for romance languages).
   entrymodeset_flags = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
   command (LCD_ENTRYMODESET | entrymodeset_flags);
+
+  // A little harmless paranoia in case some devices initialize weirdly.
+  lcd_home ();
 }
 
 void
