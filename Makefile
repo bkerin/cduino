@@ -42,6 +42,15 @@ git_push:
 	! (git status | grep 'Changes to be committed:')
 	git push origin master
 
+# Verify that all the source html files in the crosslinked sources directory
+# appear to be linked to from somewhere in the top level API document.
+# FIXME: souble check this once the last few are added.
+check_api_doc_completeness: apis_and_sources.html xlinked_source_html
+	for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do \
+          grep -q -P "\Q\"$$SF\"\E" $< || ERROR="no link to $$SF in $<"; \
+        done; \
+        if [ -n "$$ERROR" ]; then echo $$ERROR 1>&2 && false; else true; fi
+
 # FIXME: would be nice to uniqueify function names between lessons and API so
 # we didn't end up with messy multiple way links in the HTML-ized headers.
 # Generate cross linked header and source files as a simple form of API
@@ -71,7 +80,7 @@ xlinked_source_html:
 
 # Note this doesn't nuke old pages with different names.
 .PHONY: upload_html
-upload_html: git_push xlinked_source_html
+upload_html: git_push xlinked_source_html check_api_doc_completeness
 	scp *.html $(WEB_SSH):$(WEB_ROOT)
 	ssh $(WEB_SSH) rm -rf '$(WEB_ROOT)/xlinked_source_html/'
 	scp -r xlinked_source_html $(WEB_SSH):$(WEB_ROOT)
