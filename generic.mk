@@ -235,6 +235,8 @@ endif
 # arduino-0021/hardware/arduino/bootloaders/atmega/Makefile to replace the
 # bootloader and program the fuses as required for bootloading to work.  This
 # is useful if we've managed to nuke the bootloader some way or other.
+#
+# FIXME: ge tthe new hex image from the latest arduino version, track version here?
 replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
 	# This serial port reset may be uneeded these days.
 	$(PROBABLY_PULSE_DTR)
