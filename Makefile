@@ -42,11 +42,20 @@ git_push:
 	! (git status | grep 'Changes to be committed:')
 	git push origin master
 
-# Verify that all the source html files in the crosslinked sources directory
-# appear to be linked to from somewhere in the top level API document.
-# FIXME: souble check this once the last few are added.
+# Verify that all the source html files except the lessons and the somewhat
+# anomolous but useful blink.c in the crosslinked sources directory appear
+# to be linked to from somewhere in the top level API document.
 check_api_doc_completeness: apis_and_sources.html xlinked_source_html
 	for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do \
+          echo $$SF | perl -n -e 'not m/\/lesson.*/ or exit 1' || continue; \
+          echo $$SF | perl -n -e 'not m/blink\.c/ or exit 1' || continue; \
+          grep -q -P "\Q\"$$SF\"\E" $< || ERROR="no link to $$SF in $<"; \
+        done; \
+        if [ -n "$$ERROR" ]; then echo $$ERROR 1>&2 && false; else true; fi
+
+check_lesson_doc_completeness: lessons.html xlinked_source_html
+	for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do \
+          echo $$SF | perl -n -e 'm/\/lesson.*/ or exit 1' || continue; \
           grep -q -P "\Q\"$$SF\"\E" $< || ERROR="no link to $$SF in $<"; \
         done; \
         if [ -n "$$ERROR" ]; then echo $$ERROR 1>&2 && false; else true; fi
