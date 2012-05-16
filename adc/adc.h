@@ -28,6 +28,10 @@ typedef enum {
 void
 adc_init (adc_reference_source_t reference_source);
 
+// The adc_read_raw() function returns values between 0 and
+// ADC_RAW_READING_STEPS - 1.
+#define ADC_RAW_READING_STEPS ((uint16_t) 1024)
+
 // Read a raw sample value from pin (which must be on of 0 through 5).
 uint16_t
 adc_read_raw (uint8_t pin);
