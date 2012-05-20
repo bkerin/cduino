@@ -4,7 +4,7 @@
 // it always:
 //
 //   * monopolizes port C pins (sets DDRC to 0x00)
-//   * uses a 125 kHz clock
+//   * uses a 125 kHz ADC clock
 //
 // See the ATMega328P datasheet for details of other options.
 
