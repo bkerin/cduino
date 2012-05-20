@@ -1,10 +1,8 @@
-// FIXME: not finished.
-//
 // Interface to the DFRobot DFR0009 LCD and keypad shield.  This shield
 // features a Hitachi HD44780 compatible LCD, and five pushbuttons (labeled
 // select, left, right, up, and down).  The highest level routine in this
-// module is lcd_keypad_set_parameter(), take a look at that routine's
-// comments to get an idea of the overall interface features.
+// module is lcd_keypad_set_value(), take a look at that routine's comments
+// to get an idea of the overall interface features.
 
 #ifndef LCD_KEYPAD_H
 #define LCD_KEYPAD_H
@@ -15,7 +13,7 @@
 // initialized to ADC_REFERENCE_AVCC.  Note that all ADC channels use the
 // same reference source.  FIXME: is it possible to temporarily reset ADC
 // to use another reference source without damaging things (see warnings
-// in ADC header).  After this routine is called, routines from lcd.h can
+// in ADC header)?  After this routine is called, routines from lcd.h can
 // be called freely (without calling lcd_init), though of course many of
 // the routines in this interface manipulate the LCD contents themselves.
 // The interactions are simple and hopefully obvious.
@@ -36,11 +34,11 @@ typedef enum {
   LCD_KEYPAD_BUTTON_INDETERMINATE
 } lcd_keypad_button_t;
 
-// See description of lcd_eypad_button_name().
+// See description of lcd_keypad_button_name().
 #define LCD_KEYPAD_MAX_BUTTON_NAME_LENGTH 13
 
 // Set name to the (null-byte terminated) string name of button
-// ("RIGHT", "UP", etc.).  The name array must be able hosd at least
+// ("RIGHT", "UP", etc.).  The name array must be able hold at least
 // LCD_KEYPAD_MAX_BUTTON_NAME_LENGTH + 1 bytes.
 void
 lcd_keypad_button_name (lcd_keypad_button_t button, char *name);
@@ -62,10 +60,11 @@ lcd_keypad_check_buttons (void);
 // since clients will likely want to wait for buttons in a loop, we would
 // like this routine to return a single button press event for one actual
 // press in this case without the clients having to worry about timing.
-// This routing therefore returns when the button is released, not when it
+// This routine therefore returns when the button is released, not when it
 // is first pressed.  This is still a pretty natural-feeling approach given
 // the tiny momentary push-buttons involved.  Also note that this routine
-// will catch button presses that have started before it is called.
+// will catch button releases even when the corresponding depression occurs
+// it is called.
 lcd_keypad_button_t
 lcd_keypad_wait_for_button (void);
 
@@ -73,6 +72,11 @@ lcd_keypad_wait_for_button (void);
 // button pushed (leaving the display unchanged).
 lcd_keypad_button_t
 lcd_keypad_show_value (const char *name, double *value);
+
+// The name of a value to be set using lcd_keypad_set_value() should not be
+// longer than this (not including the trailing null byte).  Longer value
+// names will be truncated.
+#define LCD_KEYPAD_VALUE_NAME_MAX_LENGTH 15
 
 // Clear display and prompt user to set the named value.  The value is
 // changed with the up and down buttons, and the routine returns when one
@@ -83,8 +87,7 @@ lcd_keypad_show_value (const char *name, double *value);
 lcd_keypad_button_t
 lcd_keypad_set_value (const char *name, double *value, double step);
 
-// FIXME: idea is good, signature needs thought, maybe should be variadic.
-void
-lcd_keypad_set_values (const char **names, double *values);
+// FIXME: should have method to get strings and maybe some specialized
+// methods to get things like email addresses, IP addresses, etc.
 
 #endif // LCD_KEYPAD_H

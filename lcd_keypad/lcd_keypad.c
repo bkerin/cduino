@@ -201,7 +201,9 @@ lcd_keypad_set_value (const char *name, double *value, double step)
   // Draw the field name in top line of LCD, and current value in next line.
   lcd_clear ();
   lcd_home ();
-  lcd_printf_P (PSTR ("%s:"), name);
+  // Note that we truncate really long variable names as per the
+  // LCD_KEYPAD_VALUE_NAME_MAX_LENGTH interface macro.
+  lcd_printf_P (PSTR ("%.15s:"), name);
   update_value_on_lcd (*value);
 
   // Timing parameters for button hold-down repeating: Time till repeat
@@ -277,10 +279,4 @@ lcd_keypad_set_value (const char *name, double *value, double step)
   update_value_on_lcd (*value);
 
   return button;
-}
-
-void
-lcd_keypad_set_values (const char **name, double *value)
-{
-  name = name ; value = value; assert (0);
 }

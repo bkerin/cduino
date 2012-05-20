@@ -55,7 +55,7 @@ main (void)
 
   lcd_clear ();
   lcd_home (); 
-  lcd_write_string ("Will test");
+  lcd_write_string ("Will now test");
   lcd_set_cursor_position (0, 1);
   lcd_write_string ("set_value method");
   _delay_ms (transition_message_time_ms);
