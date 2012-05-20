@@ -151,7 +151,7 @@ static void
 update_value_on_lcd (double value)
 {
   lcd_set_cursor_position (0, 1);
-  lcd_printf_P (PSTR("  %-14g"), value);
+  lcd_printf_P (PSTR(LCD_KEYPAD_VALUE_DISPLAY_FORMAT), value);
 }
 
 // Update the part of the display showing a value (see callers).

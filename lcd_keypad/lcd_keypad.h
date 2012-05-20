@@ -73,6 +73,10 @@ lcd_keypad_wait_for_button (void);
 // the trailing null byte).  Longer value names will be truncated.
 #define LCD_KEYPAD_VALUE_NAME_MAX_LENGTH 15
 
+// The printf format string used by lcd_keypad_show_value() and
+// lcd_keypad_set_value().  Clients hopefully shouldn't have to care.
+#define LCD_KEYPAD_VALUE_DISPLAY_FORMAT "  %-14.6g"
+
 // Display the given named value until a button is released, then return
 // the button pushed (leaving the display unchanged).
 lcd_keypad_button_t

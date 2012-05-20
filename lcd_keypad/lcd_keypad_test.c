@@ -5,9 +5,10 @@
 // vim: foldmethod=marker
 
 #include <assert.h>
+#include <avr/pgmspace.h>
+#include <inttypes.h>
 // FIXME: here only cause assert.h wrongly needs, remove when that bug is
 // fixed (which it is in most recent upstream AVR libc
-#include <inttypes.h>
 #include <stdlib.h>   
 #include <string.h>
 #include <util/delay.h>
@@ -91,7 +92,7 @@ main (void)
   lcd_home ();
   lcd_write_string ("Final answer:");
   lcd_set_cursor_position (0, 1);
-  lcd_printf ("%10g", the_answer);
+  lcd_printf_P (PSTR (LCD_KEYPAD_VALUE_DISPLAY_FORMAT), the_answer);
   _delay_ms (transition_message_time_ms);
 
   lcd_clear ();
