@@ -74,16 +74,14 @@ lcd_keypad_wait_for_button (void);
 lcd_keypad_button_t
 lcd_keypad_show_value (const char *name, double *value);
 
-// FIXME: not finished.
-// FIXME: this routine get referrred to in the header comment, it needs
-// to continue existing or that comment changed.
-//
-// Prompt user to set the named value.  The value is changed with the up
-// and down buttons, and the routine returns when one of the other three
-// buttons is pushed, with that other button as the return value (and the
-// display left unchanged).
+// Clear display and prompt user to set the named value.  The value is
+// changed with the up and down buttons, and the routine returns when one
+// of the other three buttons is pushed, with that other button as the
+// return value (and the display left unchanged).  The value is changed by
+// step per button push, unless the button is held down, in which case the
+// value starts changing rapidly while the button remains down.
 lcd_keypad_button_t
-lcd_keypad_set_value (const char *name, double *value);
+lcd_keypad_set_value (const char *name, double *value, double step);
 
 // FIXME: idea is good, signature needs thought, maybe should be variadic.
 void

@@ -1,6 +1,7 @@
 // Implementation of the interface described in lcd_keypad.h.
 
 #include <assert.h>
+#include <avr/pgmspace.h>
 // FIXME: here only cause assert.h wrongly needs, remove when that bug is
 // fixed (which it is in most recent upstream AVR libc
 #include <stdlib.h>   
@@ -10,6 +11,7 @@
 #include "adc.h"
 #include "lcd.h"
 #include "lcd_keypad.h"
+#include "util.h"
 
 void
 lcd_keypad_init ()
@@ -61,9 +63,6 @@ static const double poll_interval_us = 100;
  
 #define BUTTON_COUNT 5
   
-// FIXME: maybe this should be an exported constant or macro of the ADC module?
-static const uint16_t a2d_steps = 1024;
-
 static lcd_keypad_button_t
 button_band (uint16_t raw_adc_reading)
 {
@@ -75,6 +74,7 @@ button_band (uint16_t raw_adc_reading)
   // 0-1023 range of raw values returned by the ADC.  Of course, the actual
   // values may be different due to resistor tolerances or ADC error, so
   // we're really just curious which is closest.
+  assert (ADC_RAW_READING_STEPS == 1024);
   const uint16_t button_adc_center_values[BUTTON_COUNT + 1]
     = { 0, 144, 329, 505, 741, 1023 };
 
@@ -146,10 +146,136 @@ lcd_keypad_wait_for_button (void)
   return result_button; 
 }
 
-lcd_keypad_button_t
-lcd_keypad_set_value (const char *name, double *value)
+// Update a value display displayed on the second line of the LCD.
+static void
+update_value_on_lcd (double value)
 {
-  name = name; value = value; assert (0);   // Not implemented
+  lcd_set_cursor_position (0, 1);
+  lcd_printf_P (PSTR("%10g      "), value);
+}
+
+// Repeatedly poll the buttons (every poll_interval_us microseconds)
+// for about stw (seconds to wait) seconds, returning true only when an
+// LCD_KEYPAD_BUTTON_NONE value is read, or false if that value is never read.
+// If stw is negative, wait forever.
+static int
+timed_wait_for_button_none (double stw)
+{
+  double sw = 0.0;   // Seconds waited so far.
+
+  lcd_keypad_button_t button = lcd_keypad_check_buttons ();
+
+  while ( button != LCD_KEYPAD_BUTTON_NONE && (stw < 0 || sw < stw)) {
+    const double seconds_per_us = 1000000.0; 
+    // These constants are due to the way the ADC works (13 ADC clock cycles
+    // per sample), the way the adc_read_raw() function is implemented
+    // (assumes 125 kHz ADC clock) and the way the check_buttons method is
+    // implemented (2 ADC reads per call).  The fudge factor would ideally
+    // be zero since its probably somewhat wrong for non-default processor
+    // speeds, small changes to the adc_read_raw implementation, etc.  But we
+    // don't promise anything about the exact delays in the lcd_keypad
+    // interface anyway.  FIXME: should some of these values be exported
+    // constants of the adc interface?
+    const double 
+      adc_cycles_per_sample            = 13.0,
+      adc_frequency                    = 125000.0,
+      adc_reads_per_check_buttons_call = 2.0,
+      fudge_factor                     = 1.5;
+    // Time per lcd_keypad_check_button() call.
+    const double tpcbc
+      = fudge_factor * (
+          adc_reads_per_check_buttons_call * adc_cycles_per_sample
+          * (1.0 / adc_frequency) + (poll_interval_us / seconds_per_us));
+    sw += tpcbc;
+    button = lcd_keypad_check_buttons ();
+  }
+
+  return button == LCD_KEYPAD_BUTTON_NONE;
+}
+
+lcd_keypad_button_t
+lcd_keypad_set_value (const char *name, double *value, double step)
+{
+  lcd_keypad_button_t button = LCD_KEYPAD_BUTTON_NONE;
+
+  // Draw the field name in top line of LCD, and current value in next line.
+  lcd_clear ();
+  lcd_home ();
+  lcd_printf_P (PSTR ("%s:"), name);
+  update_value_on_lcd (*value);
+
+  // Timing parameters for button hold-down repeating: Time till repeat
+  // starts, repeat frequency, and screen update frequency during repeat.
+  // The suf value is intended to help us cope with the fact that the LCD
+  // doesn't refresh very quickly and would be unreadable much if updated
+  // continually.  The better way would be to update just the changing digits,
+  // but this is quite a pain in the neck and would waste code space.  FIXME:
+  // would continually updating everything give the same effect?
+  const double ttr = 1.5, rf = 10.0, suf = 2.0;
+
+  // True iff no button has been held down long enough for repeating to start.
+  int not_repeating = TRUE;
+  int rssu = 0;   // Repeats since screen update (for held down buttons).
+
+  while ( button != LCD_KEYPAD_BUTTON_RIGHT &&
+          button != LCD_KEYPAD_BUTTON_LEFT &&
+          button != LCD_KEYPAD_BUTTON_SELECT ) {
+    while ( button == LCD_KEYPAD_BUTTON_NONE ||
+            button == LCD_KEYPAD_BUTTON_INDETERMINATE ) {
+      button = lcd_keypad_check_buttons ();
+      _delay_us (poll_interval_us);
+    }
+
+    // Incrememt or decrement value, or wait forever until the button is
+    // released if it's one of the ones that ends the selection.
+    if ( button == LCD_KEYPAD_BUTTON_UP ) {
+      *value += step;
+    }
+    else if ( button == LCD_KEYPAD_BUTTON_DOWN ) {
+      *value -= step;
+    }
+    else if ( button == LCD_KEYPAD_BUTTON_RIGHT ||
+              button == LCD_KEYPAD_BUTTON_LEFT ||
+              button == LCD_KEYPAD_BUTTON_SELECT ) {
+      timed_wait_for_button_none (-1.0);
+      break;
+    }
+    else {
+      assert (0);   // Shouldn't be here.
+    }
+    
+    if ( not_repeating ) {
+      update_value_on_lcd (*value);
+      int released = timed_wait_for_button_none (ttr);
+      if ( ! released ) {
+        not_repeating = FALSE;
+        update_value_on_lcd (*value);
+      }
+      else {
+        button = LCD_KEYPAD_BUTTON_NONE;
+      }
+    }
+    else {
+      int released = timed_wait_for_button_none (1.0 / rf);
+      rssu++;
+      if ( rssu * 1.0 / rf >= 1.0 / suf ) {
+        update_value_on_lcd (*value);
+        rssu = 0;
+      }
+      if ( released ) {
+        not_repeating = TRUE;
+        button = LCD_KEYPAD_BUTTON_NONE;
+        update_value_on_lcd (*value);
+        rssu = 0;
+      }
+    }
+  }
+       
+  // If we were a ! not_repeating state we might need one last update here.
+  // A bit of paranoia to make sure we end up displaying the true *value.
+  update_value_on_lcd (*value);
+
+  return button;
 }
 
 void
