@@ -151,7 +151,24 @@ static void
 update_value_on_lcd (double value)
 {
   lcd_set_cursor_position (0, 1);
-  lcd_printf_P (PSTR("%10g      "), value);
+  lcd_printf_P (PSTR("  %-14g"), value);
+}
+
+// Update the part of the display showing a value (see callers).
+lcd_keypad_button_t
+lcd_keypad_show_value (const char *name, double *value)
+{
+  // Draw the field name in top line of LCD, and current value in next line.
+  lcd_clear ();
+  lcd_home ();
+  // Note that we truncate really long variable names as per the
+  // LCD_KEYPAD_VALUE_NAME_MAX_LENGTH interface macro.
+  lcd_printf_P (PSTR ("%.15s:"), name);
+  update_value_on_lcd (*value);
+
+  lcd_keypad_button_t button = lcd_keypad_wait_for_button ();
+
+  return button;
 }
 
 // Repeatedly poll the buttons (every poll_interval_us microseconds)

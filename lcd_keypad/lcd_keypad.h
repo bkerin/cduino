@@ -68,15 +68,15 @@ lcd_keypad_check_buttons (void);
 lcd_keypad_button_t
 lcd_keypad_wait_for_button (void);
 
-// Display the given named value until a button is pushed, then return the
-// button pushed (leaving the display unchanged).
+// The name of a value to be shown using lcd_keypad_show_value or set using
+// lcd_keypad_set_value() should not be longer than this (not including
+// the trailing null byte).  Longer value names will be truncated.
+#define LCD_KEYPAD_VALUE_NAME_MAX_LENGTH 15
+
+// Display the given named value until a button is released, then return
+// the button pushed (leaving the display unchanged).
 lcd_keypad_button_t
 lcd_keypad_show_value (const char *name, double *value);
-
-// The name of a value to be set using lcd_keypad_set_value() should not be
-// longer than this (not including the trailing null byte).  Longer value
-// names will be truncated.
-#define LCD_KEYPAD_VALUE_NAME_MAX_LENGTH 15
 
 // Clear display and prompt user to set the named value.  The value is
 // changed with the up and down buttons, and the routine returns when one
