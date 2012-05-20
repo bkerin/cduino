@@ -209,7 +209,9 @@ lcd_keypad_set_value (const char *name, double *value, double step)
   // The suf value is intended to help us cope with the fact that the LCD
   // doesn't refresh very quickly and would be unreadable much if updated
   // continually.  The better way would be to update just the changing digits,
-  // but this is quite a pain in the neck and would waste code space.
+  // but this is quite a pain in the neck and would waste code space.  FIXME:
+  // should we expose rf in this function's interface to allow clients to
+  // get control of fast-scale vs. slow scale ratio?
   const double ttr = 1.5, rf = 10.0, suf = 2.0;
 
   // True iff no button has been held down long enough for repeating to start.
