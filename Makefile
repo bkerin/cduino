@@ -23,6 +23,8 @@ new_module:
           ln -s ../ATmegaBOOT_168_atmega328.hex && \
           ln -s ../generic.mk && \
           ln -s ../lock_and_fuse_bits_to_avrdude_options.perl && \
+          ln -s ../guess_programmer_baud.perl && \
+          ln -s ../guess_programmer_port.perl && \
           echo 'include generic.mk' >Makefile
 
 # Clean up all the modules.
