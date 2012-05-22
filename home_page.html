@@ -105,14 +105,38 @@
 
         <ul>
 
-          <li>New browsable
+          <li>
+            Works with Aruino Uno now, hopefully.  We try to magically guesses
+            avrdude port and baud rate requirements for Uno vs. Duemilanove
+            Arduinos now (so should work with both).
+          </li>
+
+          <li>
+            New module for the DFRobot DFR0009 LCD and Keypad shield:
+            <code>
+              <a href="xlinked_source_html/lcd_keypad.h.html">lcd_keypad.h</a>
+            </code>.  
+          </li>
+
+          <li>Browsable
             <a href="apis_and_sources.html">API and source documentation</a>.
           </li>
 
-          <li>New module providing a simple interface to an HD44780 LCD</li>
+          <li>
+            New module for HD44780 compatible LCDs:
+            <code>
+              <a href="xlinked_source_html/lcd.h.html">lcd.h</a>
+            </code>.  
+          </li>
 
-          <li>New module providing macros which simplifify digital IO pin
-          initialization and control</li>
+          <li>
+            New module for simplified digital IO pin initialization and
+            control:
+            <code>
+              <a href="xlinked_source_html/dio.h.html">dio.h</a>
+            </code>.  
+
+          </li>
 
           <li>Support for building C++ sources.  This project is still all in
           C, but if anyone wants to use it with C++ it should be easier.  This
