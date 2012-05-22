@@ -20,12 +20,6 @@
 #include <Arduino.h>
 #include "Sd2Card.h"
 
-#ifdef __cplusplus
-  extern "C" {
-#   include <term_io.h>
-  }
-#endif
-
 //------------------------------------------------------------------------------
 #ifndef SOFTWARE_SPI
 // functions for hardware SPI
@@ -134,23 +128,30 @@ uint32_t Sd2Card::cardSize(void) {
   printf ("cp2\n");
   
   csd_t csd;
-  if (!readCSD(&csd)) return 0;
+  printf ("cp3\n");
+  if (!readCSD(&csd)) {
+    printf ("cp4a\n");
+    return 0;
+  }
+  else {
+    printf ("cp44442\n");
+  }
   if (csd.v1.csd_ver == 0) {
     uint8_t read_bl_len = csd.v1.read_bl_len;
     uint16_t c_size = (csd.v1.c_size_high << 10)
                       | (csd.v1.c_size_mid << 2) | csd.v1.c_size_low;
     uint8_t c_size_mult = (csd.v1.c_size_mult_high << 1)
                           | csd.v1.c_size_mult_low;
-    printf ("cp3a\n");
+    printf ("cp4b\n");
     return (uint32_t)(c_size + 1) << (c_size_mult + read_bl_len - 7);
   } else if (csd.v2.csd_ver == 1) {
     uint32_t c_size = ((uint32_t)csd.v2.c_size_high << 16)
                       | (csd.v2.c_size_mid << 8) | csd.v2.c_size_low;
-    printf ("cp3b\n");
+    printf ("cp4c\n");
     return (c_size + 1) << 10;
   } else {
     error(SD_CARD_ERROR_BAD_CSD);
-    printf ("cp3c\n");
+    printf ("cp4d\n");
     return 0;
   }
 }

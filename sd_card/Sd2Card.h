@@ -19,6 +19,13 @@
  */
 #ifndef Sd2Card_h
 #define Sd2Card_h
+
+#ifdef __cplusplus
+  extern "C" {
+#   include <term_io.h>
+  }
+#endif
+
 /**
  * \file
  * Sd2Card class
@@ -195,6 +202,8 @@ class Sd2Card {
    * Read a cards CSD register. The CSD contains Card-Specific Data that
    * provides information regarding access to the card's contents. */
   uint8_t readCSD(csd_t* csd) {
+    printf ("cp 101\n");
+    // WORK POINT: well, we make it this far anyway.  readRegister problem?
     return readRegister(CMD9, csd);
   }
   void readEnd(void);
