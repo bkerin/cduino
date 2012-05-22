@@ -409,6 +409,10 @@ test_probably_pulse_dtr:
 	$(PROBABLY_PULSE_DTR) || \
           ($(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) && false) 1>&2
 
+# FIXME: might it be possible to force the serial port to close any
+# existing connection before we start programming?  This would really
+# help edit-compile-debug since we wouldn't have to kill screen manually
+# every time.
 PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
   echo "" ; \
   echo "Couldn't pulse DTR or upload failed.  Some possible reasons:" ; \
