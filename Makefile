@@ -194,7 +194,8 @@ view_web_page:
 # it must be invoked like this: 'make -f ../Makefile grab_arduino_libs'.
 # Note that compiling all this junk together will result in a program too
 # big to upload (FIXME: WHY? cpp constructors are always in scope or just
-# too much static data or what) See arduino_lib_code/README for more details.
+# too much static data or what? Is there a way to stip more junk out?) See
+# arduino_lib_code/README for more details.
 .PHONY:
 grab_arduino_libs:
 	cp --backup=numbered \
