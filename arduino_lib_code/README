@@ -1,0 +1,17 @@
+I've dumped a bunch of the headers and source files from the official Arduino
+C++ libraries in here, in order to have them easily available to make it
+easy to adapt arduino library code away from their libraries to pure C ones.
+
+There is a target in the toplevel makefile to copy all this code into a
+module subdirectory as well.
+
+FIXME: this scheme hasn't been implemented yet but should be:
+Note that the normal strategy for tracking changes in the official arduino libs
+(in order to make sure they don't reflect bug fixes or other important features
+that we want to mirror) is to create in the actual module directories a file
+like "whatever.(cpp|h).model" so we can automatically see if whatever.(cpp|h)
+has changed when a new arduino library release comes out.  This works well
+for tracking changes once code has been written.  But when writing new code,
+its a good idea to start with the latest modules.  That means that the code
+that is dumped in this directory should be updated when a new arduino release
+comes out(FIXME: we should add code to track if this has been done).

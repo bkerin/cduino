@@ -146,6 +146,7 @@ SAMESY_CHECK_CODE := \
 escc:
 	@echo '$(SAMESY_CHECK_CODE)'
 
+# Pronounced "samsees" or "samsies" or however you write that pronounciation :)
 .PHONY: samesys
 samesys:
 	$(SAMESY_CHECK_CODE)
@@ -183,6 +184,14 @@ ifndef WEB_BROWSER
 endif
 view_web_page:
 	$(WEB_BROWSER) home_page.html
+
+# This target is intended to be used to dump a large part of the official
+# arduino libraries into a module subdirectory, to make it easier to
+# clone-and-adapt code designed for those libraries (including parts of
+# the libraries themselves).  See arduino_lib_code/README for more details.
+.PHONY:
+grab_arduino_libs:
+	cp ../arduino_lib_code/*.h ../arduino_lib_code/*.cpp .
 
 clean: clean_all_modules
 	rm -rf xlinked_source_html
