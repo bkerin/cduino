@@ -1,3 +1,4 @@
+# FIXME: we need to be able to guess port here now since Uno uses /dev/ttyACM0
 # Make rules to run the screen program with the default 8N1 settings on
 # /dev/ttyUSB0, and kick it a  at startup as is often useful to get terminal
 # programs started showing something.
@@ -16,13 +17,13 @@ run_screen: have_screen
 	@echo configuration selected for the microcontroller matches the screen
 	@echo defaults in our case.
 	@echo
-	@echo "Use C-a \ (no control on backslash) to exit screen";
+	@echo "Use CNTRL-a \ (no control on backslash) to exit screen";
 	@echo
 	@echo "Press Enter to continue"
 	@read
 	@# NOTE: this next command needs a literal Cntrl-M, not a two character
 	@# string "^M".  In bash and vi this can be generated using C-v C-m.
-	(sleep 0.5 && screen -X stuff  &) ; screen -S arduino /dev/ttyUSB0
+	(sleep 0.5 && screen -X stuff  &) ; screen -S arduino /dev/ttyACM0
 
 .PHONY: have_screen
 have_screen:
