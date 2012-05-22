@@ -153,7 +153,7 @@ LSTFILES := $(patsubst %.o,%.c,$(OBJS))
 GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
 
 ifeq ($(AVRDUDE_ARDUINO_PORT),autoguess)
-  ACTUAL_PORT := $(shell ../guess_programmer_port.perl)
+  ACTUAL_PORT := $(shell ./guess_programmer_port.perl)
   ifeq ($(ACTUAL_PORT),)
     $(error could not guess AVRDUDE_ARDUINO_PORT, please set manually)
   endif
@@ -162,7 +162,7 @@ else
 endif
 
 ifeq ($(AVRDUDE_ARDUINO_BAUD),autoguess)
-  ACTUAL_BAUD := $(shell ../guess_programmer_baud.perl)
+  ACTUAL_BAUD := $(shell ./guess_programmer_baud.perl)
   ifeq ($(ACTUAL_BAUD),)
     $(error could not guess AVRDUDE_ARDUINO_BAUD, please set manually)
   endif
