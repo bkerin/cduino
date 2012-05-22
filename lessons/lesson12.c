@@ -1,1 +1,0 @@
-../lesson12/lesson12.c

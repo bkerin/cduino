@@ -1,1 +1,0 @@
-../lesson10/lesson10.c

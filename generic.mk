@@ -69,16 +69,26 @@ DTR_PULSE_NOT_REQUIRED ?= false
 # Uploader program.
 AVRDUDE ?= avrdude
 
-# Upload program parameters for when the arduino_bl UPLOAD_METHOD is used.
+# The programmer type being used as understood by avrdude.
 AVRDUDE_ARDUINO_PROGRAMMERID ?= arduino
-AVRDUDE_ARDUINO_PORT ?= /dev/ttyUSB0
-AVRDUDE_ARDUINO_BAUD ?= 57600
+
+# Upload programmer parameters for when the arduino_bl UPLOAD_METHOD is used.
+# The values that should be used here differ for different recent arduinos:
+# for me at least, the Duemilanove needs /dev/ttyUSB0 and 57600 baud,
+# the Uno /dev/ttyUSB0 and 115200 baud.  For other setups or setups with
+# multiple Arduinos hooked up, different device names might be required.
+# The special value of 'autoguess' can be used to indicate that the build
+# system should try to guess which values to use based on the device it
+# finds connected.
+AVRDUDE_ARDUINO_PORT ?= autoguess
+#AVRDUDE_ARDUINO_PORT ?= /dev/ttyACM0
+#AVRDUDE_ARDUINO_PORT ?= /dev/ttyUSB0
+AVRDUDE_ARDUINO_BAUD ?= autoguess
+#AVRDUDE_ARDUINO_BAUD ?= 115200
+#AVRDUDE_ARDUINO_BAUD ?= 57600
 
 
 ##### Compilers, Assemblers, etc. (Overridable) {{{1
-
-# Probaly the only reason to override these is if you have your own builds
-# somewhere special, or need to use something other than /dev/ttyUSB0.
 
 # Compilers.  Note that some of these depend for overridability on the -R
 # make option that this Makefile requires be used.
@@ -132,7 +142,7 @@ AVRLIBC_PRINTF_LDFLAGS ?=
 CPP_DEBUG_DEFINE_FLAGS ?=
 
 
-##### Computed File Names {{{1
+##### Computed File Names and Settings {{{1
 
 # Magical files that one doesn't see in non-microcontroller GCC development.
 TRG = $(PROGNAME).out
@@ -141,6 +151,30 @@ HEXROMTRG = $(PROGNAME).hex
 HEXTRG = $(HEXROMTRG) $(PROGNAME).ee.hex
 LSTFILES := $(patsubst %.o,%.c,$(OBJS))
 GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
+
+ifeq ($(AVRDUDE_ARDUINO_PORT),autoguess)
+  ACTUAL_PORT := $(shell ../guess_programmer_port.perl)
+  ifeq ($(ACTUAL_PORT),)
+    $(error could not guess AVRDUDE_ARDUINO_PORT, please set manually)
+  endif
+else
+  ACTUAL_PORT := $(AVRDUDE_ARDUINO_PORT)
+endif
+
+ifeq ($(AVRDUDE_ARDUINO_BAUD),autoguess)
+  ACTUAL_BAUD := $(shell ../guess_programmer_baud.perl)
+  ifeq ($(ACTUAL_BAUD),)
+    $(error could not guess AVRDUDE_ARDUINO_BAUD, please set manually)
+  endif
+else
+  ACTUAL_BAUD := $(AVRDUDE_ARDUINO_BAUD)
+endif
+
+# FIXME: verify that the lsusb device number thingies are dependable for
+# arduinos
+
+# FIXME: hope to god we don't really need to toggle DTR or whatever before
+# replacing the bootloader with an ISP
 
 
 ##### Build Settings and Flags (Augmentable) {{{1
@@ -171,7 +205,6 @@ NONCXXFLAGS = -std=gnu99 \
 # would like to use our interfaces from C++ for some reason.  See also the
 # comments near CPPFLAGS, above.
 CXXFLAGS += $(filter-out $(NONCXXFLAGS), $(CFLAGS))
-
 
 # WARNING: I don't think I've actually exercised the assembly parts of this
 # build system myself at all.
@@ -210,15 +243,13 @@ ifeq ($(UPLOAD_METHOD), arduino_bl)
 	$(PROBABLY_PULSE_DTR)
 	$(AVRDUDE) -c $(AVRDUDE_ARDUINO_PROGRAMMERID)   \
                    -p $(PROGRAMMER_MCU) \
-                   -P $(AVRDUDE_ARDUINO_PORT) \
-                   -b $(AVRDUDE_ARDUINO_BAUD) \
+                   -P $(ACTUAL_PORT) \
+                   -b $(ACTUAL_BAUD) \
                    -U flash:w:$(HEXROMTRG) \
                    $(LOCK_AND_FUSE_AVRDUDE_OPTIONS) || \
         ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
-        # FIXME: sometimes the chip doesn't seem to reset after programming.
-        # And sometimes the pulse to program doesn't work for unknown reasons
-        # as noted elsewhere.  WHY?!?!  For now we pulse DTR again here which
-        # seems to wake it up after programming which it sometimes needs.
+        # Sometimes the chip doesn't seem to reset after programming.
+        # Pulsing the DTR again here often seems to help wake it up.
 	$(PROBABLY_PULSE_DTR)
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   writeflash: binaries_suid_root_stamp
@@ -236,9 +267,10 @@ endif
 # bootloader and program the fuses as required for bootloading to work.  This
 # is useful if we've managed to nuke the bootloader some way or other.
 #
-# FIXME: ge tthe new hex image from the latest arduino version, track version here?
+# FIXME: ATmegaBOOT_168_atmega328.hex seems unchanged in latest distribution,
+# but we should autotrack
 replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
-	# This serial port reset may be uneeded these days.
+        # FIXME: This serial port reset may be uneeded these days?
 	$(PROBABLY_PULSE_DTR)
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -e -u \
@@ -360,8 +392,8 @@ PROBABLY_PULSE_DTR := perl -e ' \
         "\navrdude programming command goes off to successfully program the". \
         "\nchip.\n\n" \
       and exit(1) ) ); \
-  my $$port = Device::SerialPort->new("/dev/ttyUSB0") \
-      or die "Cannot open /dev/ttyUSB0: $$!\n"; \
+  my $$port = Device::SerialPort->new("$(ACTUAL_PORT)") \
+      or die "Cannot open $(ACTUAL_PORT): $$!\n"; \
   $$port->pulse_dtr_on(100);' || \
   [ '$(DTR_PULSE_NOT_REQUIRED)' = true ]
 

@@ -1,1 +1,0 @@
-../lesson7a/lesson7a.c
