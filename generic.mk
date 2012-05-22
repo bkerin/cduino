@@ -240,7 +240,8 @@ writeflash: LOCK_AND_FUSE_AVRDUDE_OPTIONS := \
 writeflash: $(HEXTRG) avrdude_version_check
 ifeq ($(UPLOAD_METHOD), arduino_bl)
   writeflash:
-	$(PROBABLY_PULSE_DTR)
+	$(PROBABLY_PULSE_DTR) || \
+          ($(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) && false) 1>&2
 	$(AVRDUDE) -c $(AVRDUDE_ARDUINO_PROGRAMMERID)   \
                    -p $(PROGRAMMER_MCU) \
                    -P $(ACTUAL_PORT) \
@@ -249,8 +250,11 @@ ifeq ($(UPLOAD_METHOD), arduino_bl)
                    $(LOCK_AND_FUSE_AVRDUDE_OPTIONS) || \
         ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
         # Sometimes the chip doesn't seem to reset after programming.
-        # Pulsing the DTR again here often seems to help wake it up.
-	$(PROBABLY_PULSE_DTR)
+        # Pulsing the DTR again here often seems to help wake it up.  NOTE:
+        # this probably sort of races serial line use on the arduino itself,
+        # but it should pretty much always win :)
+	$(PROBABLY_PULSE_DTR) || \
+          ($(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) && false) 1>&2
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   writeflash: binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII \
@@ -271,7 +275,8 @@ endif
 # but we should autotrack
 replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
         # FIXME: This serial port reset may be uneeded these days?
-	$(PROBABLY_PULSE_DTR)
+	$(PROBABLY_PULSE_DTR) || \
+          ($(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) && false) 1>&2
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -e -u \
                    `./lock_and_fuse_bits_to_avrdude_options.perl -- \
@@ -401,7 +406,8 @@ PROBABLY_PULSE_DTR := perl -e ' \
 
 # This target is just for testing out the PROBABLY_PULSE_DTR code.
 test_probably_pulse_dtr:
-	$(PROBABLY_PULSE_DTR) || $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING)
+	$(PROBABLY_PULSE_DTR) || \
+          ($(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) && false) 1>&2
 
 PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
   echo "" ; \
@@ -424,7 +430,8 @@ PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
   echo "" ; \
   echo "  * The bootloader has been nuked (by programming with the" ; \
   echo "    AVRISPmkII for example).  See the replace_bootloader" ; \
-  echo "    target."
+  echo "    target." ; \
+  echo ""
 
 $(TRG): $(OBJS)
 	$(CC) $(LDFLAGS) -o $(TRG) $^
