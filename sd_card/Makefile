@@ -1,3 +1,5 @@
+include run_screen.mk
+
 include generic.mk
 
 # These defines specify which pins are used for SPI communication.
