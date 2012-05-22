@@ -101,7 +101,7 @@ upload_html: git_push xlinked_source_html check_api_doc_completeness
 # Make a release targzball.  The make variable VERSION must be set (probably
 # from the command line, e.g. make targzball VERSION=0.42.42').
 .PHONY: targzball
-targzball: clean_all_modules
+targzball: clean_all_modules xlinked_source_html
 	[ -n "$(VERSION)" ] || (echo VERSION not set 1>&2 && false)
 	cd /tmp ; cp -r $(shell pwd) .
 	cd /tmp/cduino && rm -rf .git .gitignore ; cd .. ; \
