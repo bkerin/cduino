@@ -192,7 +192,9 @@ view_web_page:
 # clone-and-adapt code designed for those libraries (including parts of the
 # libraries themselves).  Since this should be done from a module subdirectory
 # it must be invoked like this: 'make -f ../Makefile grab_arduino_libs'.
-# See arduino_lib_code/README for more details.
+# Note that compiling all this junk together will result in a program too
+# big to upload (FIXME: WHY? cpp constructors are always in scope or just
+# too much static data or what) See arduino_lib_code/README for more details.
 .PHONY:
 grab_arduino_libs:
 	cp --backup=numbered \
@@ -200,6 +202,12 @@ grab_arduino_libs:
           ../arduino_lib_code/*.cpp \
           ../arduino_lib_code/*.c \
           .
+	@echo NOTE: backup files or any existing files have been made, they
+	@echo all end in \"~\".
+	@echo
+	@echo NOTE: Compiling all that junk together seems to result in a
+	@echo program too big for the chip.  So you will have to go through
+	@echo and weed out whatever junk your module test program does not need.
 
 clean: clean_all_modules
 	rm -rf xlinked_source_html
