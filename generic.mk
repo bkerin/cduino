@@ -373,13 +373,15 @@ ifeq ($(DTR_PULSE_NOT_REQUIRED),'true')
   $(error "value of DTR_PULSE_NOT_REQUIRED shouldn't have quotes around it.")
 endif
 
-# Arduino Duemilanove and newer allow you to pulse the DTR line to trigger a
-# reset, after which the bootloaded takes over so a new sketch can be uploaded
-# without having to putsh the reset button on the board.  In theory.  In
-# practice it doesn't always work for me with this code at least.  And I dont'
-# know how it interacts with serial line use exactly.  In case the user doesn't
-# have the perl module we use for this and/or doesn't want to deal with it,
-# they can set the DTR_PULSE_NOT_REQUIRED make variable to true.
+# Arduino Duemilanove and newer allow you to pulse the DTR line to
+# trigger a reset, after which the bootloaded takes over so a new sketch
+# can be uploaded without having to putsh the reset button on the board.
+# In theory.  In practice it doesn't always work for me with this code at
+# least.  And I don't know how it interacts with serial line use exactly.
+# One the duemilanove it seems to sort of work, with Uno rev. 3 avrdude
+# seems to always fail.  In case the user doesn't have the perl module
+# we use for this and/or doesn't want to deal with it, they can set the
+# DTR_PULSE_NOT_REQUIRED make variable to true.
 PROBABLY_PULSE_DTR := perl -e ' \
   eval "require Device::SerialPort;" or ( \
     ($$@ =~ m/^Can.t locate Device\/SerialPort/ or die $$@) and \
@@ -399,17 +401,30 @@ PROBABLY_PULSE_DTR := perl -e ' \
 
 # This target is just for testing out the PROBABLY_PULSE_DTR code.
 test_probably_pulse_dtr:
-	$(PROBABLY_PULSE_DTR)
+	$(PROBABLY_PULSE_DTR) || $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING)
 
 PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
-  echo "Upload failed.  You might need to press reset immediately after" ; \
-  echo "avrdude starts as required (with my Duemilanove anyway) if the" ; \
-  echo "above serial DTR pulse isn't doing it (the DTR pulse doesn't seem" ; \
-  echo "to work if the arduino has been running for a while without being" ; \
-  echo "programmed, or if the program running on the arduino is using the" ; \
-  echo "serial line itself).  Or maybe the bootloader has been nuked (by" ; \
-  echo "programming with the AVRISPmkII for example)?" ; \
-  echo ""
+  echo "" ; \
+  echo "Couldn't pulse DTR or upload failed.  Some possible reasons:" ; \
+  echo "" ; \
+  echo "  * Your Arduino program is itself using the serial port," ; \
+  echo "    which prevents the programmer from working on my Arduino" ; \
+  echo "    Uno rev. 3 at leats.  Make sure that you do not have a" ; \
+  echo "    screen session connected to the arduino, for example." ; \
+  echo "    If you get a message like \"Couldn't open /dev/ttyACM0: " ; \
+  echo "    Device or resource busy\" this is a particularly likely " ; \
+  echo "    explanation." ; \
+  echo "" ; \
+  echo "  * You might need to press reset immediately after" ; \
+  echo "    avrdude starts as required (with my Duemilanove anyway) if" ; \
+  echo "    the above serial DTR pulse is not doing it (the DTR pulse" ; \
+  echo "    does not seem to work if the arduino has been running for a" ; \
+  echo "    while without being programmed, or if the program running on" ; \
+  echo "    the arduino is using the serial line itself)." ; \
+  echo "" ; \
+  echo "  * The bootloader has been nuked (by programming with the" ; \
+  echo "    AVRISPmkII for example).  See the replace_bootloader" ; \
+  echo "    target."
 
 $(TRG): $(OBJS)
 	$(CC) $(LDFLAGS) -o $(TRG) $^
