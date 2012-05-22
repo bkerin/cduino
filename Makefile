@@ -190,12 +190,16 @@ view_web_page:
 # This target is intended to be used to dump a large part of the official
 # arduino libraries into a module subdirectory, to make it easier to
 # clone-and-adapt code designed for those libraries (including parts of the
-# libraries themselves).  See arduino_lib_code/README for more details.
-# FIXME: this is just what we used for LCD module, though I think thats
-# most of it.  But we should change it so it just grabs everything (we hope).
+# libraries themselves).  Since this should be done from a module subdirectory
+# it must be invoked like this: 'make -f ../Makefile grab_arduino_libs'.
+# See arduino_lib_code/README for more details.
 .PHONY:
 grab_arduino_libs:
-	cp ../arduino_lib_code/*.h ../arduino_lib_code/*.cpp .
+	cp --backup=numbered \
+          ../arduino_lib_code/*.h \
+          ../arduino_lib_code/*.cpp \
+          ../arduino_lib_code/*.c \
+          .
 
 clean: clean_all_modules
 	rm -rf xlinked_source_html
