@@ -129,8 +129,7 @@ if ( @uno_rev3_devs == 1 and @duemilanove_devs == 0 ) {
         die "shouldn't be here";
     }
 }
-
-if ( @uno_rev3_devs == 0 and @duemilanove_devs == 1 ) {
+elsif ( @uno_rev3_devs == 0 and @duemilanove_devs == 1 ) {
     if ( $device ) {
         print $duemilanove_devs[0]."\n";
     }
@@ -141,17 +140,15 @@ if ( @uno_rev3_devs == 0 and @duemilanove_devs == 1 ) {
         die "shouldn't be here";
     }
 }
-
-# FIXME: Here we should put some useful error messages for when nothing
-# is detected, multiple things are detected, info about commonness of FTDI
-# chips to handle the Duemilanove case, etc.
+elsif ( @uno_rev3_devs == 0 and @duemilanove_devs == 0 ) {
+    # FIXME: Here we should put some informative messages for when nothing
+    # is detected,
+    die "didn't detect any Arduinos :(";
+}
+else {
+    # FIXME: here we should discriminate more duemilanove case and give
+    # useful messages
+    die "mutiple things that look like Arduinos were detected";
+}
 
 exit 0;
-
-my $fr = not system("file /dev/ttyACM0 >/dev/null");
-my $lr = not system("lsusb -d :0043 >/dev/null");
-if ( $fr and $lr ) { print "/dev/ttyACM0\n"; exit 0; }
-$fr = not system("file /dev/ttyUSB0 >/dev/null");
-$lr = not system("lsusb -d :6001 >/dev/null");
-if ( $fr and $lr ) { print "/dev/ttyUSB0\n"; exit 0; }
-die "failed to guess value for avrdude programmer port";
