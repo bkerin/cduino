@@ -116,6 +116,11 @@ sub find_duemilanove_devices # {{{1
 my @uno_rev3_devs = find_uno_rev3_devices();
 my @duemilanove_devs = find_duemilanove_devices();
 
+# For some message we have strings with one discovered device per line.
+my $uno_rev3_devs_multiline = join("\n", @uno_rev3_devs);
+my $duemilanove_devs_multiline = join("\n", @duemilanove_devs);
+
+# The speeds that we believe are used by some different Arduino versions.
 my ($uno_rev3_baud, $duemilanove_baud) = (115200, 57600);
 
 if ( @uno_rev3_devs == 1 and @duemilanove_devs == 0 ) {
@@ -148,7 +153,17 @@ elsif ( @uno_rev3_devs == 0 and @duemilanove_devs == 0 ) {
 else {
     # FIXME: here we should discriminate more duemilanove case and give
     # useful messages
-    die "mutiple things that look like Arduinos were detected";
+    print STDERR <<END_MULTIPLE_ARDUINO_MESSAGE;
+
+ERROR: Mutiple things that look like Arduinos were detected, including:
+
+$uno_rev3_devs_multiline
+$duemilanove_devs_multiline
+
+This script doesn't know how to decide which one you want.
+
+END_MULTIPLE_ARDUINO_MESSAGE
+    exit 1;
 }
 
 exit 0;
