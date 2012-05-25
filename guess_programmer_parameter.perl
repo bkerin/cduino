@@ -7,7 +7,7 @@
 # an Arduino, or we think we find more than one, print an informative error
 # message and exit with a non-zero exit code.
 
-# vim: set foldmethod=marker
+# vim: foldmethod=marker
 
 use warnings;
 use strict;
@@ -58,8 +58,8 @@ sub find_usb_tty_devices # {{{1
         # Discovered vendor ID for this device
         my $dvid = `cat $dpd/idVendor`;
         $? == 0 or die "cat command failed";
-        $dvid == $vid
-            or (print "discovered vendor ID is not that of an Uno" and next);
+        $dvid eq $vid
+            or (print "discovered vendor ID is not that of an Uno\n" and next);
         
         # The tty finder command.
         my $ttyfc = 'basename $(find '.$dpd.' -name "tty:*" -print) | '.
@@ -83,7 +83,7 @@ sub find_usb_tty_devices # {{{1
     my $le = `lsusb -d $vid:$pid`;   # lsusb entries
     my @lel = split("\n", $le);   # lsusb entry lines
     scalar(@lel) == scalar(@results)
-        or die "unexpectedly many Uno entries in lsusb output";
+        or die "unexpected number of Uno entries in lsusb output";
 
     return @results;
 } # }}}1
