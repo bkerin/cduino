@@ -5,7 +5,8 @@
 # or baud rate we should use for the connected device, if we can find
 # exactly one candidate device.  If we can't find anything that looks like
 # an Arduino, or we think we find more than one, print an informative error
-# message and exit with a non-zero exit code.
+# message with suggestions for which Make variables in the cduino build
+# system should be set, and exit with a non-zero exit code.
 
 # vim: foldmethod=marker
 
@@ -58,8 +59,10 @@ sub find_usb_tty_devices # {{{1
         # Discovered vendor ID for this device
         my $dvid = `cat $dpd/idVendor`;
         $? == 0 or die "cat command failed";
+        chomp($dvid);
         $dvid eq $vid
-            or (print "discovered vendor ID is not that of an Uno\n" and next);
+            or (print "unexpected vendor ID '$dvid' (expected '$vid')\n" 
+                and next);
         
         # The tty finder command.
         my $ttyfc = 'basename $(find '.$dpd.' -name "tty:*" -print) | '.
@@ -120,6 +123,8 @@ my @duemilanove_devs = find_duemilanove_devices();
 my $uno_rev3_devs_multiline = join("\n", @uno_rev3_devs);
 my $duemilanove_devs_multiline = join("\n", @duemilanove_devs);
 
+# Print results to stdout and/or diagnostics to stderr {{{1
+
 # The speeds that we believe are used by some different Arduino versions.
 my ($uno_rev3_baud, $duemilanove_baud) = (115200, 57600);
 
@@ -146,24 +151,60 @@ elsif ( @uno_rev3_devs == 0 and @duemilanove_devs == 1 ) {
     }
 }
 elsif ( @uno_rev3_devs == 0 and @duemilanove_devs == 0 ) {
-    # FIXME: Here we should put some informative messages for when nothing
-    # is detected,
-    die "didn't detect any Arduinos :(";
+    die <<END_DID_NOT_DETECT_ARDUINOS_MESSAGE;
+
+Didn't detect any Arduinos on USB :(.  Is the Arduino plugged in?  Its quite
+possible that automatic detection has failed somehow even though the Arduino
+is there.  Another thing to try is to unplug the Arduino and do 'ls /dev/tty*',
+then plug it back in and try 'ls /dev/tty*' again and see if a file like 
+/dev/ttyUSB0 or /dev/ttyACM0 has appeared.  If so, the Make variable
+ARDUINO_PORT can be set to the file in question.  The ARDUINO_BAUD Make
+variable will also need to be set: for an Arduino Uno rev.3 (and probably
+other Unos) it should be set to $uno_rev3_baud, for an Arduino Duemilanove it
+should be set to $duemilanove_baud.
+
+END_DID_NOT_DETECT_ARDUINOS_MESSAGE
 }
 else {
-    # FIXME: here we should discriminate more duemilanove case and give
-    # useful messages
-    print STDERR <<END_MULTIPLE_ARDUINO_MESSAGE;
+    die <<END_DETECTED_MULTIPLE_ARDUINOS_MESSAGE;
 
 ERROR: Mutiple things that look like Arduinos were detected, including:
 
 $uno_rev3_devs_multiline
 $duemilanove_devs_multiline
 
-This script doesn't know how to decide which one you want.
+Its possible that other devices that use the FTDI FT232R chip are on the
+USB bus, and are indistinguishable from older Arduinos which also use
+this chip (e.g. the Duemilanove).
 
-END_MULTIPLE_ARDUINO_MESSAGE
-    exit 1;
+Its also possible that you're a gadget-happy nut who connects and programs
+multiple Arduinos at the same time :)
+
+Either way, the thing to do is to set the Make variables ARDUINO_PORT
+and ARDUINO_BAUD to the correct values.  You can do this by adding lines
+something like this to the Makefile for the module you are working on:
+
+   ARDUINO_PORT = /dev/ttyACM0
+   ARDUINO_BAUD = $uno_rev3_baud
+
+The ARDUINO_PORT should be the one from the above list that corresponds
+to the Arduino device you want to program.  If you aren't sure which you
+want, try unplugging the device and re-running the command that produced
+this message to see which one dissapears from the list :).
+
+The ARDUINO_BAUD should probably be $uno_rev3_baud for an Uno rev.3,
+or $duemilanove_baud for a Duemilanove.
+
+These Make variables can be set from the command line as well, e.g.:
+
+   make -R writeflash ARDUINO_PORT=/dev/ttyACM0 ARDUINO_BAUD=$uno_rev3_baud
+
+In case you want to use custom shell commands to quickly flip back and
+forth between programming two different Arduinos.
+
+END_DETECTED_MULTIPLE_ARDUINOS_MESSAGE
 }
+
+# }}}1
 
 exit 0;

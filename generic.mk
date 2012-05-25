@@ -80,12 +80,12 @@ AVRDUDE_ARDUINO_PROGRAMMERID ?= arduino
 # The special value of 'autoguess' can be used to indicate that the build
 # system should try to guess which values to use based on the device it
 # finds connected.
-AVRDUDE_ARDUINO_PORT ?= autoguess
-#AVRDUDE_ARDUINO_PORT ?= /dev/ttyACM0
-#AVRDUDE_ARDUINO_PORT ?= /dev/ttyUSB0
-AVRDUDE_ARDUINO_BAUD ?= autoguess
-#AVRDUDE_ARDUINO_BAUD ?= 115200
-#AVRDUDE_ARDUINO_BAUD ?= 57600
+ARDUINO_PORT ?= autoguess
+#ARDUINO_PORT ?= /dev/ttyACM0
+#ARDUINO_PORT ?= /dev/ttyUSB0
+ARDUINO_BAUD ?= autoguess
+#ARDUINO_BAUD ?= 115200
+#ARDUINO_BAUD ?= 57600
 
 
 ##### Compilers, Assemblers, etc. (Overridable) {{{1
@@ -152,22 +152,22 @@ HEXTRG = $(HEXROMTRG) $(PROGNAME).ee.hex
 LSTFILES := $(patsubst %.o,%.c,$(OBJS))
 GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
 
-ifeq ($(AVRDUDE_ARDUINO_PORT),autoguess)
-  ACTUAL_PORT := $(shell ./guess_programmer_parameter.perl --device)
-  ifeq ($(ACTUAL_PORT),)
-    $(error could not guess AVRDUDE_ARDUINO_PORT, please set manually)
+ifeq ($(ARDUINO_PORT),autoguess)
+  ACTUAL_ARDUINO_PORT := $(shell ./guess_programmer_parameter.perl --device)
+  ifeq ($(ACTUAL_ARDUINO_PORT),)
+    $(error could not guess ARDUINO_PORT, see messages above)
   endif
 else
-  ACTUAL_PORT := $(AVRDUDE_ARDUINO_PORT)
+  ACTUAL_ARDUINO_PORT := $(ARDUINO_PORT)
 endif
 
-ifeq ($(AVRDUDE_ARDUINO_BAUD),autoguess)
-  ACTUAL_BAUD := $(shell ./guess_programmer_parameter.perl --baud)
-  ifeq ($(ACTUAL_BAUD),)
-    $(error could not guess AVRDUDE_ARDUINO_BAUD, please set manually)
+ifeq ($(ARDUINO_BAUD),autoguess)
+  ACTUAL_ARDUINO_BAUD := $(shell ./guess_programmer_parameter.perl --baud)
+  ifeq ($(ACTUAL_ARDUINO_BAUD),)
+    $(error could not guess ARDUINO_BAUD, see messages above)
   endif
 else
-  ACTUAL_BAUD := $(AVRDUDE_ARDUINO_BAUD)
+  ACTUAL_ARDUINO_BAUD := $(ARDUINO_BAUD)
 endif
 
 # FIXME: verify that the lsusb device number thingies are dependable for
@@ -244,8 +244,8 @@ ifeq ($(UPLOAD_METHOD), arduino_bl)
           ($(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) && false) 1>&2
 	$(AVRDUDE) -c $(AVRDUDE_ARDUINO_PROGRAMMERID)   \
                    -p $(PROGRAMMER_MCU) \
-                   -P $(ACTUAL_PORT) \
-                   -b $(ACTUAL_BAUD) \
+                   -P $(ACTUAL_ARDUINO_PORT) \
+                   -b $(ACTUAL_ARDUINO_BAUD) \
                    -U flash:w:$(HEXROMTRG) \
                    $(LOCK_AND_FUSE_AVRDUDE_OPTIONS) || \
         ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
@@ -399,8 +399,8 @@ PROBABLY_PULSE_DTR := perl -e ' \
         "\navrdude programming command goes off to successfully program the". \
         "\nchip.\n\n" \
       and exit(1) ) ); \
-  my $$port = Device::SerialPort->new("$(ACTUAL_PORT)") \
-      or die "Cannot open $(ACTUAL_PORT): $$!\n"; \
+  my $$port = Device::SerialPort->new("$(ACTUAL_ARDUINO_PORT)") \
+      or die "Cannot open $(ACTUAL_ARDUINO_PORT): $$!\n"; \
   $$port->pulse_dtr_on(100);' || \
   [ '$(DTR_PULSE_NOT_REQUIRED)' = true ]
 
