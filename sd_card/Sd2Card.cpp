@@ -24,13 +24,18 @@
 #ifndef SOFTWARE_SPI
 // functions for hardware SPI
 /** Send a byte to the card */
+
+
 static void spiSend(uint8_t b) {
   SPDR = b;
   while (!(SPSR & (1 << SPIF)));
 }
 /** Receive a byte from the card */
 static  uint8_t spiRec(void) {
+  PHP;
+  ptp;
   spiSend(0XFF);
+  ptp;
   return SPDR;
 }
 #else  // SOFTWARE_SPI
@@ -40,11 +45,14 @@ static  uint8_t spiRec(void) {
 //------------------------------------------------------------------------------
 /** Soft SPI receive */
 uint8_t spiRec(void) {
+  ptp;
   uint8_t data = 0;
   // no interrupts during byte receive - about 8 us
   cli();
+  ptp;
   // output pin high - like sending 0XFF
   fastDigitalWrite(SPI_MOSI_PIN, HIGH);
+  ptp;
 
   for (uint8_t i = 0; i < 8; i++) {
     fastDigitalWrite(SPI_SCK_PIN, HIGH);
@@ -91,20 +99,33 @@ void spiSend(uint8_t data) {
 //------------------------------------------------------------------------------
 // send command and return error code.  Return zero for OK
 uint8_t Sd2Card::cardCommand(uint8_t cmd, uint32_t arg) {
+
+  ptp;
+
   // end read if in partialBlockRead mode
   readEnd();
+
+  ptp;
 
   // select card
   chipSelectLow();
 
+  ptp;
+
   // wait up to 300 ms if busy
   waitNotBusy(300);
+
+  ptp;
 
   // send command
   spiSend(cmd | 0x40);
 
+  ptp;
+
   // send argument
   for (int8_t s = 24; s >= 0; s -= 8) spiSend(arg >> s);
+
+  ptp;
 
   // send CRC
   uint8_t crc = 0XFF;
@@ -112,8 +133,13 @@ uint8_t Sd2Card::cardCommand(uint8_t cmd, uint32_t arg) {
   if (cmd == CMD8) crc = 0X87;  // correct crc for CMD8 with arg 0X1AA
   spiSend(crc);
 
+  ptp;
+
   // wait for response
   for (uint8_t i = 0; ((status_ = spiRec()) & 0X80) && i != 0XFF; i++);
+
+  ptp;
+
   return status_;
 }
 //------------------------------------------------------------------------------
@@ -435,11 +461,16 @@ void Sd2Card::readEnd(void) {
 //------------------------------------------------------------------------------
 /** read CID or CSR register */
 uint8_t Sd2Card::readRegister(uint8_t cmd, void* buf) {
+  printf ("hit %s, %d\n", __FILE__, __LINE__);
   uint8_t* dst = reinterpret_cast<uint8_t*>(buf);
+  printf ("cp102\n");
   if (cardCommand(cmd, 0)) {
+    ptp;
     error(SD_CARD_ERROR_READ_REG);
+    ptp;
     goto fail;
   }
+  ptp;
   if (!waitStartBlock()) goto fail;
   // transfer data
   for (uint16_t i = 0; i < 16; i++) dst[i] = spiRec();
@@ -484,11 +515,19 @@ uint8_t Sd2Card::setSckRate(uint8_t sckRateID) {
 //------------------------------------------------------------------------------
 // wait for card to go not busy
 uint8_t Sd2Card::waitNotBusy(uint16_t timeoutMillis) {
+  ptp;
   uint16_t t0 = millis();
+  ptp;
   do {
-    if (spiRec() == 0XFF) return true;
+    if (spiRec() == 0XFF) {
+      return true;
+    }
+    else {
+      ptp;
+    }
   }
   while (((uint16_t)millis() - t0) < timeoutMillis);
+  ptp;
   return false;
 }
 //------------------------------------------------------------------------------
