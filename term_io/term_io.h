@@ -41,4 +41,30 @@ term_io_init (void);
 int
 term_io_getline (char *linebuf);
 
+// Print trace point message.  Useful for debugging.
+#define TERM_IO_PTP \
+  printf ("hit file %s, line %d, function %s()\n", \
+          __FILE__, __LINE__, __func__)
+
+// Print halt point message and halt.  Usefule for debugging.
+// FIXME: is exit(1) really what we want here?  which header it come from?
+#define TERM_IO_PHP \
+  do { \
+    printf ("hit halt point: file %s, line %d, function %s()\n", \
+            __FILE__, __LINE__, __func__); \
+    exit (1); \
+  } while ( 0 );
+
+// The whole point of the above macros is that they take some typing out of
+// the edit-compile-debug cycle, so you may like to stick something like
+// 'CPPFLAGS += -DTERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP' at the
+// bottom of the Makefile for your module to make things even easier :)
+#ifdef TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+#  define PTP TERM_IO_PTP
+#  define PHP TERM_IO_PHP
+// Perhaps you even like to use lower case :)
+#  define ptp TERM_IO_PTP
+#  define php TERM_IO_PHP
+#endif
+
 #endif // TERM_IO_H
