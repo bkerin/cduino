@@ -10,7 +10,6 @@ int
 main (void)
 {
   term_io_init ();
-  printf ("LCD Initialized\n");
 
   Sd2Card card;
 
