@@ -240,6 +240,8 @@ writeflash: LOCK_AND_FUSE_AVRDUDE_OPTIONS := \
 writeflash: $(HEXTRG) avrdude_version_check
 ifeq ($(UPLOAD_METHOD), arduino_bl)
   writeflash:
+	# First kill any screen session started from run_screen.mk.
+	screen -S $(SCREEN_SESSION_NAME) -X kill || true
 	$(PROBABLY_PULSE_DTR) || \
           ($(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) && false) 1>&2
 	$(AVRDUDE) -c $(AVRDUDE_ARDUINO_PROGRAMMERID)   \
