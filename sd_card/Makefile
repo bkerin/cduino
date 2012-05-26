@@ -47,3 +47,6 @@ CPPFLAGS += -DSPI_SS_INIT=DIO_INIT_DIGITAL_10 \
             -DLCD_DB6_INIT=DIO_INIT_DIGITAL_6 \
             \
             -DLCD_DB7_INIT=DIO_INIT_DIGITAL_7
+
+# Pull in some macros that make debugging tracepoints easier to make.
+CPPFLAGS += -DTERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
