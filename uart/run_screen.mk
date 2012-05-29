@@ -14,15 +14,13 @@ SCREEN_SESSION_NAME = cduino_run_screen_mk
 .PHONY: run_screen
 run_screen: have_screen
 	@echo
-	@echo About to run screen.
-	@echo
-	@echo This command does two things:
+	@echo About to run screen.  This command does two things:
 	@echo
 	@echo  '  '\* Starts a screen session with session name
-	@echo  '   '  $(SCREEN_SESSION_NAME).  We use a session name so we can
-	@echo  '   '  automatically kill the screen session from the writeflash
-	@echo  '   '  target of generic.mk, to free the serial line for
-	@echo  '   '  bootloader programming.
+	@echo  '   '  $(SCREEN_SESSION_NAME).  The writeflash target of
+	@echo  '   '  generic.mk will automatically kill this screen session,
+	@echo  '   '  so that programming will work \(easing the
+	@echo  '   '  edit-compile-debug cycle\).
 	@echo
 	@echo  '  '\* Feeds the session a return character which often seems to
 	@echo  '   '  help the terminal get going :\)
@@ -31,12 +29,12 @@ run_screen: have_screen
 	@echo selected for the microcontroll matches the screen defaults in
 	@echo our case.
 	@echo
-	@echo This command looks a bit fragile, if it breaks somehow it is
-	@echo possible to use just \'screen $(ACTUAL_ARDUINO_PORT)\'.
+	@echo You can just do \'screen $(ACTUAL_ARDUINO_PORT)\' instead of
+	@echo using this target if it doesn\'t work for you.
 	@echo
 	@echo Use CNTRL-a \\ \(no control on backslash\) to exit screen.
 	@echo
-	@echo "Press Enter to continue"
+	@echo Press Enter to continue
 	@read
 	@# NOTE: this next command needs a literal Cntrl-M, not a two character
 	@# string "^M".  In bash and vi this can be generated using C-v C-m.
