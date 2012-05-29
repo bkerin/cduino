@@ -267,11 +267,11 @@ else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
 endif
 
-# This target is special: it uses an AVR ISPmkII and  the bootloaded image that
-# comes in the arduino download package and some magic goop copied here from
-# arduino-0021/hardware/arduino/bootloaders/atmega/Makefile to replace the
-# bootloader and program the fuses as required for bootloading to work.  This
-# is useful if we've managed to nuke the bootloader some way or other.
+# This target is special: it uses an AVR ISPmkII and the bootloaded image
+# that comes in the arduino download package and some magic goop copied here
+# from arduino-1.0/hardware/arduino/bootloaders/atmega/Makefile to replace
+# the bootloader and program the fuses as required for bootloading to work.
+# This is useful if we've managed to nuke the bootloader some way or other.
 #
 # FIXME: ATmegaBOOT_168_atmega328.hex seems unchanged in latest distribution,
 # but we should autotrack
