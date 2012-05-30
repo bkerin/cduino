@@ -34,6 +34,16 @@ PROGRAMMER_MCU ?= m328p
 # AVR libc uses this.  Some people might prefer to put it in a header though.
 CPU_FREQ_DEFINE ?= -DF_CPU=16000000
 
+# This is used by the replace_bootloader target to determine which
+# bootloader .hex file to use.  Different Arduinos need different values:
+# my Duemilanove uses ATmegaBOOT_168_atmega328.hex, which my Uno rev.3
+# ships with optiboot_atmega328.hex for example.  The default value of
+# autoguess tried to make the determination automagically, but this can fail
+# (in which case the guessing script will output some diagnostics).
+ARDUINO_BOOTLOADER ?= autoguess
+#ARDUINO_BOOTLOADER ?= optiboot_atmega328.hex
+#ARDUINO_BOOTLOADER ?= ATmegaBOOT_168_atmega328.hex
+
 
 ##### Program Name, Constituent Object Files (Overridable) {{{1
 
@@ -79,7 +89,7 @@ AVRDUDE_ARDUINO_PROGRAMMERID ?= arduino
 # multiple Arduinos hooked up, different device names might be required.
 # The special value of 'autoguess' can be used to indicate that the build
 # system should try to guess which values to use based on the device it
-# finds connected.
+# finds connected (and output diagnostic messages if it can't guess).
 ARDUINO_PORT ?= autoguess
 #ARDUINO_PORT ?= /dev/ttyACM0
 #ARDUINO_PORT ?= /dev/ttyUSB0
@@ -152,6 +162,16 @@ HEXTRG = $(HEXROMTRG) $(PROGNAME).ee.hex
 LSTFILES := $(patsubst %.o,%.c,$(OBJS))
 GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
 
+ifeq ($(ARDUINO_BOOTLOADER),autoguess)
+  ACTUAL_ARDUINO_BOOTLOADER := \
+    $(shell ./guess_programmer_parameter.perl --bootloader)
+  ifeq ($(ACTUAL_ARDUINO_BOOTLOADER),)
+    $(error could not guess ARDUINO_BOOTLOADER, see messages above)
+  endif
+else
+  ACTUAL_ARDUINO_BOOTLOADER := $(ARDUINO_BOOTLOADER)
+endif
+
 ifeq ($(ARDUINO_PORT),autoguess)
   ACTUAL_ARDUINO_PORT := $(shell ./guess_programmer_parameter.perl --device)
   ifeq ($(ACTUAL_ARDUINO_PORT),)
@@ -169,12 +189,6 @@ ifeq ($(ARDUINO_BAUD),autoguess)
 else
   ACTUAL_ARDUINO_BAUD := $(ARDUINO_BAUD)
 endif
-
-# FIXME: verify that the lsusb device number thingies are dependable for
-# arduinos
-
-# FIXME: hope to god we don't really need to toggle DTR or whatever before
-# replacing the bootloader with an ISP
 
 
 ##### Build Settings and Flags (Augmentable) {{{1
@@ -233,6 +247,38 @@ endif
 # These are targets that users are likely to want to invoke directly (as
 # arguments to make).
 
+PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
+  echo "" ; \
+  echo "Couldn't pulse DTR or upload failed.  Some possible reasons:" ; \
+  echo "" ; \
+  echo "  * Your Arduino program is itself using the serial port," ; \
+  echo "    which prevents the programmer from working on my Arduino" ; \
+  echo "    Uno rev. 3 at leats.  Make sure that you do not have a" ; \
+  echo "    screen session connected to the arduino, for example." ; \
+  echo "    If you get a message like \"Couldn't open /dev/ttyACM0: " ; \
+  echo "    Device or resource busy\" this is a particularly likely " ; \
+  echo "    explanation." ; \
+  echo "" ; \
+  echo "  * You might need to press reset immediately after" ; \
+  echo "    avrdude starts as required (with my Duemilanove anyway) if" ; \
+  echo "    the above serial DTR pulse is not doing it (the DTR pulse" ; \
+  echo "    does not seem to work if the arduino has been running for a" ; \
+  echo "    while without being programmed, or if the program running on" ; \
+  echo "    the arduino is using the serial line itself)." ; \
+  echo "" ; \
+  echo "  * The bootloader has been nuked (by programming with the" ; \
+  echo "    AVRISPmkII for example).  See the replace_bootloader" ; \
+  echo "    target in generic.mk." ; \
+  echo ""
+
+PRINT_AVRISPMKII_PROGRAMMING_FAILED_MESSAGE := \
+  echo ; \
+  echo Programming failed.  Is the AVRISPmkII hooked up?  Does the ; \
+  echo Arduino have power?  The AVRISPmkII does not power the ; \
+  echo Arduino, but you can just plug in the USB cable to power it ; \
+  echo and still use the AVRISPmkII for programming. ; \
+  echo
+
 .PHONY: writeflash
 writeflash: LOCK_AND_FUSE_AVRDUDE_OPTIONS := \
   $(shell ./lock_and_fuse_bits_to_avrdude_options.perl \
@@ -262,7 +308,9 @@ else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
 	$(AVRDUDE) -c avrispmkII \
                    -p $(PROGRAMMER_MCU) -P usb \
                    -U flash:w:$(HEXROMTRG) \
-                   $(LOCK_AND_FUSE_AVRDUDE_OPTIONS)
+                   $(LOCK_AND_FUSE_AVRDUDE_OPTIONS) || \
+          ( $(PRINT_AVRISPMKII_PROGRAMMING_FAILED_MESSAGE) && \
+            false ) 1>&2
 else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
 endif
@@ -275,10 +323,7 @@ endif
 #
 # FIXME: ATmegaBOOT_168_atmega328.hex seems unchanged in latest distribution,
 # but we should autotrack
-replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
-        # FIXME: This serial port reset may be uneeded these days?
-	$(PROBABLY_PULSE_DTR) || \
-          ($(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) && false) 1>&2
+replace_bootloader: $(ACTUAL_ARDUINO_BOOTLOADER)  binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -e -u \
                    `./lock_and_fuse_bits_to_avrdude_options.perl -- \
@@ -289,7 +334,8 @@ replace_bootloader: ATmegaBOOT_168_atmega328.hex binaries_suid_root_stamp
                       EESAVE=1 BOOTSZ1=0 BOOTSZ0=1 BOOTRST=0 \
                       CKDIV8=1 CKOUT=1 SUT1=1 SUT0=1 \
                       CKSEL3=1 CKSEL2=1 CKSEL1=1 CKSEL0=1` || \
-        ( $(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) ; false ) 1>&2
+          ( $(PRINT_AVRISPMKII_PROGRAMMING_FAILED_MESSAGE) && \
+            false ) 1>&2
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -U flash:w:$< \
                    `./lock_and_fuse_bits_to_avrdude_options.perl -- \
@@ -410,34 +456,6 @@ PROBABLY_PULSE_DTR := perl -e ' \
 test_probably_pulse_dtr:
 	$(PROBABLY_PULSE_DTR) || \
           ($(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) && false) 1>&2
-
-# FIXME: might it be possible to force the serial port to close any
-# existing connection before we start programming?  This would really
-# help edit-compile-debug since we wouldn't have to kill screen manually
-# every time.
-PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
-  echo "" ; \
-  echo "Couldn't pulse DTR or upload failed.  Some possible reasons:" ; \
-  echo "" ; \
-  echo "  * Your Arduino program is itself using the serial port," ; \
-  echo "    which prevents the programmer from working on my Arduino" ; \
-  echo "    Uno rev. 3 at leats.  Make sure that you do not have a" ; \
-  echo "    screen session connected to the arduino, for example." ; \
-  echo "    If you get a message like \"Couldn't open /dev/ttyACM0: " ; \
-  echo "    Device or resource busy\" this is a particularly likely " ; \
-  echo "    explanation." ; \
-  echo "" ; \
-  echo "  * You might need to press reset immediately after" ; \
-  echo "    avrdude starts as required (with my Duemilanove anyway) if" ; \
-  echo "    the above serial DTR pulse is not doing it (the DTR pulse" ; \
-  echo "    does not seem to work if the arduino has been running for a" ; \
-  echo "    while without being programmed, or if the program running on" ; \
-  echo "    the arduino is using the serial line itself)." ; \
-  echo "" ; \
-  echo "  * The bootloader has been nuked (by programming with the" ; \
-  echo "    AVRISPmkII for example).  See the replace_bootloader" ; \
-  echo "    target." ; \
-  echo ""
 
 $(TRG): $(OBJS)
 	$(CC) $(LDFLAGS) -o $(TRG) $^

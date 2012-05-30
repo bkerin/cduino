@@ -1,12 +1,22 @@
 #!/usr/bin/perl -w
 
 # Use some black art knowledge of the /dev files and lsusb entries that the
-# Arduinos create to guess what device file (of the form /dev/ttyWHATEVER)
-# or baud rate we should use for the connected device, if we can find
-# exactly one candidate device.  If we can't find anything that looks like
-# an Arduino, or we think we find more than one, print an informative error
-# message with suggestions for which Make variables in the cduino build
-# system should be set, and exit with a non-zero exit code.
+# Arduinos create to guess some attribute of the connected arduino that we
+# need # to know.  We can guess the following things:
+#
+#   * What device file (of the form /dev/ttyWHATEVER) we should use (--device 
+#     option).
+#
+#   * What baud rate we should use to program the device (--baud option)
+#
+#   * What bootloader .hex file we should use in case we need to replace the
+#     bootloader (--bootloader option).
+#
+# Note that this works only if we can find exactly one candidate device.
+# If we can't find anything that looks like an Arduino, or we think we find
+# more than one, print an informative error message with suggestions for
+# which Make variables in the cduino build system should be set, and exit
+# with a non-zero exit code.
 
 # vim: foldmethod=marker
 
@@ -15,13 +25,14 @@ use strict;
 
 use Getopt::Long;
 
-my ($device, $baud) = (0, 0);  # We require an option saying what we want.
+# We require an option saying what attribute we're guessing.
+my ($device, $baud, $bootloader) = (0, 0, 0);  
 
-GetOptions("device" => \$device, "baud" => \$baud)
+GetOptions("device" => \$device, "baud" => \$baud, "bootloader" => \$bootloader)
     or die "option parsing error";
 
-($device xor $baud)
-    or die "didn't get exactly one of --device or --baud options";
+($device xor $baud xor $bootloader)
+    or die "didn't get exactly one of --device, --baud or --bootloader options";
 
 sub find_usb_tty_devices # {{{1
 {
@@ -119,7 +130,7 @@ sub find_duemilanove_devices # {{{1
 my @uno_rev3_devs = find_uno_rev3_devices();
 my @duemilanove_devs = find_duemilanove_devices();
 
-# For some message we have strings with one discovered device per line.
+# For some messages we have strings with one discovered device per line.
 my $uno_rev3_devs_multiline = join("\n", @uno_rev3_devs);
 my $duemilanove_devs_multiline = join("\n", @duemilanove_devs);
 
@@ -128,12 +139,19 @@ my $duemilanove_devs_multiline = join("\n", @duemilanove_devs);
 # The speeds that we believe are used by some different Arduino versions.
 my ($uno_rev3_baud, $duemilanove_baud) = (115200, 57600);
 
+# The bootloaders that we believe are used by some different Arduino versions.
+my ($uno_rev3_bootloader, $duemilanove_bootloader) = (
+    'optiboot_atmega328.hex', 'ATmegaBOOT_168_atmega328.hex' );
+
 if ( @uno_rev3_devs == 1 and @duemilanove_devs == 0 ) {
     if ( $device ) {
         print $uno_rev3_devs[0]."\n";
     }
     elsif ( $baud ) {
         print $uno_rev3_baud."\n";
+    }
+    elsif ( $bootloader ) {
+        print $uno_rev3_bootloader."\n";
     }
     else {
         die "shouldn't be here";
@@ -145,6 +163,9 @@ elsif ( @uno_rev3_devs == 0 and @duemilanove_devs == 1 ) {
     }
     elsif ( $baud ) {
         print $duemilanove_baud."\n";
+    }
+    elsif ( $bootloader ) {
+        print $duemilanove_bootloader."\n";
     }
     else {
         die "shouldn't be here";
