@@ -2,9 +2,9 @@
 
 # Use some black art knowledge of the /dev files and lsusb entries that the
 # Arduinos create to guess some attribute of the connected arduino that we
-# need # to know.  We can guess the following things:
+# need to know.  We can guess the following things:
 #
-#   * What device file (of the form /dev/ttyWHATEVER) we should use (--device 
+#   * What device file (of the form /dev/ttyWHATEVER) we should use (--device
 #     option).
 #
 #   * What baud rate we should use to program the device (--baud option)

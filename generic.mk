@@ -164,7 +164,7 @@ GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
 
 ifeq ($(ARDUINO_BOOTLOADER),autoguess)
   ACTUAL_ARDUINO_BOOTLOADER := \
-    $(shell ./guess_programmer_parameter.perl --bootloader)
+    $(shell ./guess_arduino_attribute.perl --bootloader)
   ifeq ($(ACTUAL_ARDUINO_BOOTLOADER),)
     $(error could not guess ARDUINO_BOOTLOADER, see messages above)
   endif
@@ -173,7 +173,7 @@ else
 endif
 
 ifeq ($(ARDUINO_PORT),autoguess)
-  ACTUAL_ARDUINO_PORT := $(shell ./guess_programmer_parameter.perl --device)
+  ACTUAL_ARDUINO_PORT := $(shell ./guess_arduino_attribute.perl --device)
   ifeq ($(ACTUAL_ARDUINO_PORT),)
     $(error could not guess ARDUINO_PORT, see messages above)
   endif
@@ -182,7 +182,7 @@ else
 endif
 
 ifeq ($(ARDUINO_BAUD),autoguess)
-  ACTUAL_ARDUINO_BAUD := $(shell ./guess_programmer_parameter.perl --baud)
+  ACTUAL_ARDUINO_BAUD := $(shell ./guess_arduino_attribute.perl --baud)
   ifeq ($(ACTUAL_ARDUINO_BAUD),)
     $(error could not guess ARDUINO_BAUD, see messages above)
   endif
