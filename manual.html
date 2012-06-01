@@ -74,10 +74,12 @@ To add a new module to Cduino (a nice thing to do for others):
 
 <ol>
 
-  <li>Make a new subdirectory for it.</li>
+  <li> Starting from the distribution top level directory, do this:
+  <blockquote>
+    <code>make new_module NEW_MODULE_NAME=my_module_name</code>
+  </blockquote>
 
-  <li> Give it its own minimal Makefile that includes generic.mk (see for
-  example the simple_blink module Makefile).</li>
+  <li><code>cd my_module_name</code></li>
 
   <li> Link (<code>ln -s</code>) to existing headers and sources in other
   modules as needed.</li>
