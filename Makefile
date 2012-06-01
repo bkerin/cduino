@@ -14,8 +14,6 @@ WEB_ROOT := public_html/cduino
 # Set up a new module (create directory and install minimum requires sym links
 # and minimal Makefile).  The make variable NEW_MODULE_NAME must be set
 # (probably from the command line, e.g. 'make new_module NEW_MODULE_NAME=foo').
-# FIXME: should we go ahead and link to util.h?  Everything outside lessons 
-# uses it, just about.  But if anything doesn't its ugly in those cases :(
 .PHONY: new_module
 new_module:
 	[ -n "$(NEW_MODULE_NAME)" ] || \
@@ -23,10 +21,11 @@ new_module:
 	mkdir $(NEW_MODULE_NAME)
 	cd $(NEW_MODULE_NAME) && \
           ln -s ../ATmegaBOOT_168_atmega328.hex && \
+          ln -s ../optiboot_atmega328.hex && \
           ln -s ../generic.mk && \
           ln -s ../lock_and_fuse_bits_to_avrdude_options.perl && \
-          ln -s ../guess_programmer_baud.perl && \
-          ln -s ../guess_programmer_port.perl && \
+          ln -s ../guess_arduino_attribute.perl && \
+          ln -s ../util.h && \
           echo 'include generic.mk' >Makefile
 
 # Clean up all the modules.
