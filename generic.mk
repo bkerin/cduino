@@ -1,4 +1,4 @@
-# Make code common to all the different modules.  Some things defined here are
+# Make code  to all the different modules.  Some things defined here are
 # easy to override in modules, those section titles contain "(Overridable)".
 
 # vim: foldmethod=marker
@@ -23,6 +23,19 @@ ifndef HAVE_NO_BUILTIN_VARIABLES_OPTION
    $(error This makefile requires use of the -R/--no-builtin-variables make \
            option)
 endif
+
+# Avoid default goal confusion by essentially disabling default goals.
+PRINT_DEFAULT_GOAL_TRAP_ERROR_MESSAGE := \
+  echo ; \
+  echo This build system doesn\'t support default goals by default, ; \
+  echo because they tend to cause confusion.  Please explicitly specify ; \
+  echo a target. ; \
+  echo
+
+.DEFAULT_GOAL = default_goal_trap
+.PHONY: default_goal_trap
+default_goal_trap:
+	@($(PRINT_DEFAULT_GOAL_TRAP_ERROR_MESSAGE) && false) 1>&2
 
 
 ##### Specs for Default Target Part (Overridable) {{{1
@@ -162,33 +175,60 @@ HEXTRG = $(HEXROMTRG) $(PROGNAME).ee.hex
 LSTFILES := $(patsubst %.o,%.c,$(OBJS))
 GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
 
-ifeq ($(ARDUINO_BOOTLOADER),autoguess)
-  ACTUAL_ARDUINO_BOOTLOADER := \
-    $(shell ./guess_arduino_attribute.perl --bootloader)
-  ifeq ($(ACTUAL_ARDUINO_BOOTLOADER),)
-    $(error could not guess ARDUINO_BOOTLOADER, see messages above)
+# Automatic Determination of Arduino Parameters (Augmentable) {{{2
+
+# In order to support building and linking of files when an Arduino is not
+# connected, we avoid doing any of the autodetection work if we our goals
+# clearly do not require communication with the Arduino.  Note that this
+# is conservative in the sense that if the user tries to build something
+# that isn't explicitly included in our list of things that don't really
+# need a connection, the autodetection code will go off and they will get
+# the detection failure messages.
+
+VALID_ARDUINOLESS_TARGET_PATTERNS += %.o %.ee.hex %.hex %.out %.out.map
+
+ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
+
+  ifeq ($(ARDUINO_BOOTLOADER),autoguess)
+    ACTUAL_ARDUINO_BOOTLOADER := \
+      $(shell ./guess_arduino_attribute.perl --bootloader)
+    ifeq ($(ACTUAL_ARDUINO_BOOTLOADER),)
+      $(warning If you should not need to be connected for the taget you \
+                are building, consider adding a pattern to the \
+                VALID_ARDUINOLESS_TARGET_PATTERNS Make variable)
+      $(error could not guess ARDUINO_BOOTLOADER, see messages above)
+    endif
+  else
+    ACTUAL_ARDUINO_BOOTLOADER := $(ARDUINO_BOOTLOADER)
   endif
-else
-  ACTUAL_ARDUINO_BOOTLOADER := $(ARDUINO_BOOTLOADER)
+
+  ifeq ($(ARDUINO_PORT),autoguess)
+    ACTUAL_ARDUINO_PORT := $(shell ./guess_arduino_attribute.perl --device)
+    ifeq ($(ACTUAL_ARDUINO_PORT),)
+      $(warning If you should not need to be connected for the taget you \
+                are building, consider adding a pattern to the \
+                VALID_ARDUINOLESS_TARGET_PATTERNS Make variable)
+      $(error could not guess ARDUINO_PORT, see messages above)
+    endif
+  else
+    ACTUAL_ARDUINO_PORT := $(ARDUINO_PORT)
+  endif
+
+  ifeq ($(ARDUINO_BAUD),autoguess)
+    ACTUAL_ARDUINO_BAUD := $(shell ./guess_arduino_attribute.perl --baud)
+    ifeq ($(ACTUAL_ARDUINO_BAUD),)
+      $(warning If you should not need to be connected for the taget you \
+                are building, consider adding a pattern to the \
+                VALID_ARDUINOLESS_TARGET_PATTERNS Make variable)
+      $(error could not guess ARDUINO_BAUD, see messages above)
+    endif
+  else
+    ACTUAL_ARDUINO_BAUD := $(ARDUINO_BAUD)
+  endif
+
 endif
 
-ifeq ($(ARDUINO_PORT),autoguess)
-  ACTUAL_ARDUINO_PORT := $(shell ./guess_arduino_attribute.perl --device)
-  ifeq ($(ACTUAL_ARDUINO_PORT),)
-    $(error could not guess ARDUINO_PORT, see messages above)
-  endif
-else
-  ACTUAL_ARDUINO_PORT := $(ARDUINO_PORT)
-endif
-
-ifeq ($(ARDUINO_BAUD),autoguess)
-  ACTUAL_ARDUINO_BAUD := $(shell ./guess_arduino_attribute.perl --baud)
-  ifeq ($(ACTUAL_ARDUINO_BAUD),)
-    $(error could not guess ARDUINO_BAUD, see messages above)
-  endif
-else
-  ACTUAL_ARDUINO_BAUD := $(ARDUINO_BAUD)
-endif
+# }}}2
 
 
 ##### Build Settings and Flags (Augmentable) {{{1

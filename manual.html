@@ -63,8 +63,9 @@ Cduino:
 
   <li>Grab code from other modules as needed and mix it in.  Note that you are
   responsible for keeping track of the dependencies of this additional code.
-  Generally this means checking for included headers, which should appear as
-  symbolic links in the other module's subdirectories.</li>
+  Generally this means checking for included headers and their corresponding
+  source files, which should appear as symbolic links in the other module's
+  subdirectories.</li>
 
 </ol>
 
@@ -106,16 +107,13 @@ passed to all make invocations that use <code>generic.mk</code>.
 The <code>generic.mk</code> file provides the following targets intended for
 public use:
 
-By default, the targets in <code>generic.mk</code> intended for public use
-behave like this:
-
 <ul>
 
   <li><code>writeflash</code> -- Compile all .c files into object files using
-  settings appropriate for Arduino Duemilanove hardware, link them, and upload
-  them using the arduino bootloader method.  All <code>.c</code> files are
-  assumed to depend on all headers and on the Makefile (so everything is
-  recompiled if anything has changed).</li>
+  settings appropriate for Arduino ardware, link them, and upload them using
+  the arduino bootloader method.  All <code>.c</code> files are assumed to
+  depend on all headers and on the Makefile (so everything is recompiled if
+  anything has changed).</li>
 
   <li><code>replace_bootloader</code> -- replace the bootloader on the ATMega
   on the arduino.  This is useful if an upload method that nukes the bootloader
@@ -132,6 +130,11 @@ If more control is needed, there are a number of Make variables that affect how
 generic.mk behaves.  These occur in sections marked "Overridable" in that file.
 
 <h3>Variable Overview</h3>
+
+There are a number of variables that have default values which can be
+completely overridden by assigned your own values before
+<code>generic.mk</code> is included or as variable assignment arguments to
+make:
 
 <ul>
 
@@ -205,6 +208,30 @@ generic.mk behaves.  These occur in sections marked "Overridable" in that file.
   like.</li>
 
 </ul>
+
+There are also variables that can usefully be augmented by adding your own
+values to them somewhere: 
+
+<ul>
+
+  <li><code>CPPFLAGS</code> -- Add your own C preprocessor flags (include
+  directories, defines, etc.).</li>
+
+  <li><code>CFLAGS</code> -- Add you own C compiler flags (more waring options,
+  etc.).</li>
+
+  <li><code>CXXFLAGS</code> -- Add your own C++ compiler flags.</li>
+
+  <li><code>VALID_ARDUINOLESS_TARGET_PATTERNS</code> -- Add new files or file
+  patterns which should be buildable even when no Arduino is connected (so you
+  can for example get syntax fixes finnished without an Arduino).  Note that
+  many normal patterns are already included (%.o, %.out, etc.), but this can
+  be useful if you are adding your own rules for different file types.  This
+  variable must be assigned to before <code>generic.mk</code> is included (or
+  given as a variable assignment argument to make at the command line). </li>
+
+</ul>
+
 
 </body>
 
