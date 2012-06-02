@@ -20,7 +20,7 @@ main (void)
 
   term_io_init ();   // Set up terminal communications.
 
-  adc_init ();
+  adc_init (ADC_REFERENCE_AVCC);
 
   while ( 1 )
   {
