@@ -80,7 +80,8 @@ main (void)
    other macros in this interface, but have not been tested because the \
    arduino hardware uses them for other purposes (see comments in dio.h for \
    details).  The Makefile for this module includes a line which may be \
-   uncommented to override this error trap.
+   uncommented to override this error trap: search for UNDERSTAND_ in the \
+   Makefile.
 #endif
 
 // Its a sin in my book to distribute untested code without clearly
@@ -91,7 +92,8 @@ main (void)
    to ground by other paths. So the pullup control on these pins is somewhat \
    untested.  I think this is ok since all the other pins are tested in \
    highly similar code.  The Makefile for this module includes a line which \
-   may be uncommented to override this error trap.
+   may be uncommented to override this error trap: search for UNDERSTAND_ in \
+   the Makefile.
 #endif
 
 // We're going to be a bit careless with out lack of namespace prefixes
