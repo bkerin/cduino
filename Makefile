@@ -28,6 +28,31 @@ new_module:
           ln -s ../util.h && \
           echo 'include generic.mk' >Makefile
 
+# Do a clean, then a full program build, then another clean in each module
+# directory.  The idea is to try to catch interface changes.  This isn't a
+# complete test of course, but it helps catch obvious stuff at least.  FIXME:
+# At the moment we don't test dio because it comes with some fatal warning
+# thingies, or lesson12 because it requires the AVRISPmkII programming method
+# (though with the Uno it supposedly doesn't anymore :).  We should require a
+# manually placed stamp to represent that these modules have been checked out.
+.PHONY: build_all_programs
+build_all_test_programs: MODULE_DIRS = \
+  $(shell echo $$(for gmk in $$(find . -name "generic.mk" -print | \
+                                  grep --invert-match '^\./generic.mk'); do \
+                    dirname $$gmk; \
+                  done))
+build_all_test_programs:
+	(for md in $(MODULE_DIRS); do \
+           echo "$$md" | grep --silent 'dio$$' || \
+           echo "$$md" | grep --silent 'lesson12$$' || \
+           ( \
+             $(MAKE) -C $$md -R clean && \
+             $(MAKE) -R -C $$md program_to_upload.out && \
+             $(MAKE) -C $$md -R clean \
+           ) || \
+           exit 1; \
+         done)
+
 # Clean up all the modules.
 .PHONY: clean_all_modules
 clean_all_modules:
@@ -40,7 +65,7 @@ clean_all_modules:
 # Push all the latest changes to gitorious (tolerate untracked files but
 # not changed files or uncommited changes).
 .PHONY: git_push
-git_push:
+git_push: build_all_test_programs clean_all_modules
 	! (git status | grep 'Changed but not updated:')
 	! (git status | grep 'Changes to be committed:')
 	git push origin master
@@ -48,7 +73,9 @@ git_push:
 # Verify that all the source html files except the lessons and the somewhat
 # anomolous but useful blink.c in the crosslinked sources directory appear
 # to be linked to from somewhere in the top level API document.
-check_api_doc_completeness: apis_and_sources.html xlinked_source_html
+check_api_doc_completeness: apis_and_sources.html \
+                            xlinked_source_html \
+                            build_all_test_programs
 	for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do \
           echo $$SF | perl -n -e 'not m/\/lesson.*/ or exit 1' || continue; \
           echo $$SF | perl -n -e 'not m/blink\.c/ or exit 1' || continue; \
@@ -56,7 +83,9 @@ check_api_doc_completeness: apis_and_sources.html xlinked_source_html
         done; \
         if [ -n "$$ERROR" ]; then echo $$ERROR 1>&2 && false; else true; fi
 
-check_lesson_doc_completeness: lessons.html xlinked_source_html
+check_lesson_doc_completeness: lessons.html \
+                               xlinked_source_html \
+                               build_all_test_programs
 	for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do \
           echo $$SF | perl -n -e 'm/\/lesson.*/ or exit 1' || continue; \
           grep -q -P "\Q\"$$SF\"\E" $< || ERROR="no link to $$SF in $<"; \
@@ -104,7 +133,7 @@ upload_html: git_push xlinked_source_html check_api_doc_completeness
 # Make a release targzball.  The make variable VERSION must be set (probably
 # from the command line, e.g. make targzball VERSION=0.42.42').
 .PHONY: targzball
-targzball: clean_all_modules xlinked_source_html
+targzball: build_all_test_programs clean_all_modules xlinked_source_html
 	[ -n "$(VERSION)" ] || (echo VERSION not set 1>&2 && false)
 	cd /tmp ; cp -r $(shell pwd) .
 	cd /tmp/cduino && rm -rf .git .gitignore ; cd .. ; \
@@ -170,7 +199,7 @@ upload: targzball upload_html update_unstable git_push
 
 # Update the unstable snapshot by building and uploading an unstable targzball.
 .PHONY: update_unstable
-update_unstable:
+update_unstable: build_all_test_programs clean_all_modules
 	ssh $(WEB_SSH) mkdir -p $(WEB_ROOT)/unstable/
 	ssh $(WEB_SSH) rm -f '$(WEB_ROOT)/unstable/cduino_unstable*'
 	cd /tmp ; cp -r $(shell pwd) . && \
