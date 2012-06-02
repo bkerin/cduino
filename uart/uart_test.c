@@ -15,8 +15,6 @@
 // the microcontroller over the serial line.  The program accepts commands of
 // the form 'u some_string' and simply returns the string.
 
-#include "defines.h"
-
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
