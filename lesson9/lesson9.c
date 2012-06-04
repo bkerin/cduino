@@ -36,15 +36,30 @@
 static void
 initialize_adc (void)
 {
-  // Internal pull-ups interfere with the ADC. disable the pull-up on the
-  // pin ifit's being used for ADC. either writing 0 to the port register
-  // or setting it to output should be enough to disable pull-ups.
+  // Internal pull-ups interfere with the ADC. We need to disable the pull-up
+  // on the pin if it's being used for ADC. either writing 0 to the port
+  // register or setting it to output should be enough to disable pull-ups.
   DDRC = 0x00;
+  
+  // Restore the default settings for ADMUX.
+  ADMUX = 0x00;
 
-  // Unless otherwise configured, arduinos use the internal Vcc reference. MUX
-  // 0x0f samples the ground (0.0V) (we'll change this before each actual
-  // ADC read).
-  ADMUX = _BV (REFS0) | 0x0f;
+  // Unless otherwise configured, arduinos use the internal Vcc reference.
+  // Thats what we're going to do as well, so we set bit REFS0 to specify
+  // this (in combination with the already set default value of 0 for bit
+  // REFS1). The MUX[3:0] bit setting used here indicate that we should
+  // sample the ground (0.0V) (we'll change this before each actual ADC read).
+  ADMUX |= _BV (REFS0) | _BV (MUX3) | _BV (MUX2) | _BV (MUX1) | _BV (MUX0);
+  
+  // Restore the default settings for ADC status register A.
+  ADCSRA = 0x00;
+  
+  // Restore the default settings for ADC status register B.
+  ADCSRB = 0x00;
+  
+  // FIXME: we should really disable the digital input buffers by setting
+  // bits in DIDR0.  St least once we have the per-pin interface that we
+  // want we should do this.
   
   // Enable the ADC system, use 128 as the clock divider on a 16MHz arduino
   // (ADC needs a 50 - 200kHz clock) and start a sample.  The AVR needs to

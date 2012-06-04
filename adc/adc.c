@@ -12,13 +12,14 @@ adc_init (adc_reference_source_t reference_source)
   // register or setting it to output should be enough to disable pull-ups.
   DDRC = 0x00;
 
-  // NOTE: ADMUX is full of zeros by default.
+  // Restore the default settings for ADMUX.
+  ADMUX = 0x00;
 
   switch ( reference_source ) {
     case ADC_REFERENCE_AREF:
       // Nothing to set since ADMUX bits default to 0.
       // FIXME: this path hasn't been tested.
-      // FIXME: shouldn't we explicitly clear the bits then??
+      ADMUX &= ~(_BV (REFS0) | _BV (REFS1));
       break;
     case ADC_REFERENCE_AVCC:
       ADMUX |= _BV (REFS0);
@@ -34,12 +35,22 @@ adc_init (adc_reference_source_t reference_source)
   // Sample the ground for now (we'll change this before taking real samples). 
   ADMUX |= _BV (MUX3) | _BV (MUX2) | _BV (MUX1) | _BV (MUX0);
 
+  // Restore the default settings for ADC status register A.
+  ADCSRA = 0x00;
+
+  // Restore the default settings for ADC status register B.
+  ADCSRB = 0x00;
+
+  // FIXME: we should really disable the digital input buffers by setting
+  // bits in DIDR0.  St least once we have the per-pin interface that we
+  // want we should do this.
+
   // Enable the ADC system, use 128 as the clock divider on a 16MHz arduino
   // (ADC needs a 50 - 200kHz clock) and start a sample.  The AVR needs to
   // do some set-up the first time the ADC is used; this first, discarded,
   // sample primes the system for later use.
   ADCSRA |= _BV (ADEN) | _BV (ADPS2) | _BV (ADPS1) | _BV (ADPS0) | _BV (ADSC);
-  
+
   // Wait for the ADC to return a sample.
   loop_until_bit_is_clear (ADCSRA, ADSC);
 }
