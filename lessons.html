@@ -350,21 +350,19 @@ could simply be used straight from flash.  </p>
 <h3><a name="adc-in">Lesson 9: Analog Input</a></h3>
 
 <p align="justify">In this example, we'll use a 10 kohm potentiometer to
-provide an analog voltage to sample. 
-</p>
+provide an analog voltage to sample.  </p>
 
-<p align="justify">There are a few little things to do for a
-
-simple, polled analog sample. Ensure that the pin you're reading has pull-ups
-disabled, since these interfere with the sampling. Writing 0 to the pin
-register (PORTC = 0) or setting it to output mode (DDRC = 0) Set the ADC clock
-correctly - it needs to be clocked at 50 kHz - 200 kHz. The Arduino's 16MHz
-clock divided by 128 is a very comfortable 125 kHz. Set the reference voltage
-correctly. This determines the upper limit for measurement; using Vcc is
-probably the best bet. USB power will probably be very stable. Finally, set the
-ADC enable bit and force one conversion - the first conversion takes extra time
-due to some internal setup that is required. Here is <code>
-<a href="xlinked_source_html/lesson9.c.html">lesson9.c</a></code>.  </p>
+<p align="justify">There are a few little things to do for a simple, polled
+analog sample. Ensure that the pin you're reading has pull-ups disabled, since
+these interfere with the sampling. Writing 0 to the pin register (PORTC = 0) or
+setting it to output mode (DDRC = 0) Set the ADC clock correctly - it needs to
+be clocked at 50 kHz - 200 kHz. The Arduino's 16MHz clock divided by 128 is a
+very comfortable 125 kHz. Set the reference voltage correctly. This determines
+the upper limit for measurement; using Vcc is probably the best bet. USB power
+will probably be very stable. Finally, set the ADC enable bit and force one
+conversion - the first conversion takes extra time due to some internal setup
+that is required. Here is
+<code><a href="xlinked_source_html/lesson9.c.html">lesson9.c</a></code>.</p>
 
 <hr>
 
