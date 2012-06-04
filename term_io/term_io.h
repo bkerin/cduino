@@ -4,6 +4,8 @@
 #ifndef TERM_IO_H
 #define TERM_IO_H
 
+#include <stdlib.h>
+
 #include "uart.h"
 
 // FIXME: should this module or the uart module use the util/setbaud.h
@@ -46,8 +48,8 @@ term_io_getline (char *linebuf);
   printf ("hit file %s, line %d, function %s()\n", \
           __FILE__, __LINE__, __func__)
 
-// Print halt point message and halt.  Usefule for debugging.
-// FIXME: is exit(1) really what we want here?  which header it come from?
+// Print halt point message and call exit(1).  Note that exit will disable
+// all interrupts before entering an infinite loop.
 #define TERM_IO_PHP \
   do { \
     printf ("hit halt point: file %s, line %d, function %s()\n", \
