@@ -18,8 +18,6 @@
 #include <avr/wdt.h>
 #include <util/delay.h>
 
-// FIXME: and verify that link referred to in the Makefile works.
-
 // WARNING WARNING WARNING: you really shouldn't be depending on the
 // watchdog timer for anything without a really careful reading of Atmel
 // document AVR132 "Using the Enhanced Watchdog Timer".  And while you're

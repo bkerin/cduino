@@ -5,8 +5,11 @@
 # to restore it, this line must be uncommented by the user.
 #UPLOAD_METHOD = AVRISPmkII
 
-# FIXME: if/when an updated "official" arduino bootloader image gets released
-# that fixes this we should supply it instead of the current 0022 version one
+# FIXME: if/when an updated "official" arduino bootloader image gets
+# released that fixes this we should supply it instead of the current 0022
+# version one UPDATE TO FIXME: the optiboot stuff (that ships on the Uno)
+# supposedly works correctly with the watchdog, so this stuff could go away
+# or be relegated to those situations where we detect a duemilanove.
 define UPLOAD_METHOD_ERROR_TEXT =
 
   This module requires the arduino to be programmed using an AVRISPmkII or
