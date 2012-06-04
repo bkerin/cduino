@@ -27,9 +27,12 @@ endif
 # Avoid default goal confusion by essentially disabling default goals.
 PRINT_DEFAULT_GOAL_TRAP_ERROR_MESSAGE := \
   echo ; \
-  echo This build system doesn\'t support default goals by default, ; \
-  echo because they tend to cause confusion.  Please explicitly specify ; \
-  echo a target. ; \
+  echo This build system doesn\'t support default goals, because they tend ; \
+  echo to cause confusion.  Please explicitly specify echo a target. ; \
+  echo Useful targets:; \
+  echo ; \
+  echo '  *' some_file.o  --  Compile some_file.c ; \
+  echo '  *' writeflash   --  Compile and link current module, and upload it ; \
   echo
 
 .DEFAULT_GOAL = default_goal_trap
