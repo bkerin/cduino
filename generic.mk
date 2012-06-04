@@ -60,6 +60,13 @@ ARDUINO_BOOTLOADER ?= autoguess
 #ARDUINO_BOOTLOADER ?= optiboot_atmega328.hex
 #ARDUINO_BOOTLOADER ?= ATmegaBOOT_168_atmega328.hex
 
+# Target patters for which we don't actually need a connected Arduino.
+# Clients can augment this variable, but they have to do so before this
+# file is processed (i.e. before the include statement that includes it, or
+# with a variable assignment command line argument to the make invocation).
+# See comments near where the variable is referenced.
+VALID_ARDUINOLESS_TARGET_PATTERNS += %.o %.ee.hex %.hex %.out %.out.map
+
 
 ##### Program Name, Constituent Object Files (Overridable) {{{1
 
@@ -188,16 +195,18 @@ GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
 # need a connection, the autodetection code will go off and they will get
 # the detection failure messages.
 
-VALID_ARDUINOLESS_TARGET_PATTERNS += %.o %.ee.hex %.hex %.out %.out.map
+ARDUINOLESS_TARGET_WARNING_TEXT := \
+  If you should not need to be connected to an Arduino for the taget you are \
+  are building, consider adding a pattern to the \
+  VALID_ARDUINOLESS_TARGET_PATTERNS Make variable.
 
 ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
 
   ifeq ($(ARDUINO_PORT),autoguess)
     ACTUAL_ARDUINO_PORT := $(shell ./guess_arduino_attribute.perl --device)
     ifeq ($(ACTUAL_ARDUINO_PORT),)
-      $(warning If you should not need to be connected for the taget you \
-                are building, consider adding a pattern to the \
-                VALID_ARDUINOLESS_TARGET_PATTERNS Make variable)
+      $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
+      $(info )
       $(error could not guess ARDUINO_PORT, see messages above)
     endif
   else
@@ -207,9 +216,8 @@ ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
   ifeq ($(ARDUINO_BAUD),autoguess)
     ACTUAL_ARDUINO_BAUD := $(shell ./guess_arduino_attribute.perl --baud)
     ifeq ($(ACTUAL_ARDUINO_BAUD),)
-      $(warning If you should not need to be connected for the taget you \
-                are building, consider adding a pattern to the \
-                VALID_ARDUINOLESS_TARGET_PATTERNS Make variable)
+      $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
+      $(info )
       $(error could not guess ARDUINO_BAUD, see messages above)
     endif
   else
@@ -220,9 +228,8 @@ ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
     ACTUAL_ARDUINO_BOOTLOADER := \
       $(shell ./guess_arduino_attribute.perl --bootloader)
     ifeq ($(ACTUAL_ARDUINO_BOOTLOADER),)
-      $(warning If you should not need to be connected for the taget you \
-                are building, consider adding a pattern to the \
-                VALID_ARDUINOLESS_TARGET_PATTERNS Make variable)
+      $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
+      $(info )
       $(error could not guess ARDUINO_BOOTLOADER, see messages above)
     endif
   else
