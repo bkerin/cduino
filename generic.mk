@@ -198,7 +198,16 @@ GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
 ARDUINOLESS_TARGET_WARNING_TEXT := \
   If you should not need to be connected to an Arduino for the taget you are \
   are building, consider adding a pattern to the \
-  VALID_ARDUINOLESS_TARGET_PATTERNS Make variable.
+  VALID_ARDUINOLESS_TARGET_PATTERNS Make variable. \
+  \
+  If you are using an AVRISPmkII (UPLOAD_METHOD = AVRISPmkII), note that the \
+  autodetection code still requires the Arduino to be connected to the \
+  computer by USB.  The autodetection should work even if the bootloader on \
+  the chip needs to be replaced (using the replace_bootloader target). \
+  If you need to use the AVRISPmkII while powering the Arduino some other \
+  way, you will need to explicitly set the ARDUINO_PORT, ARDUINO_BAUD, and \
+  ARDUINO_BOOTLOADER variables; see the comments need those variables in \
+  generic.mk for some common values.
 
 ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
 
