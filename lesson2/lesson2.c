@@ -24,8 +24,8 @@
  * 	- LEDs connected to PORTB bins B1, B2, and B3 (to ground).  They
  * 	  should in theory have current-limiting resistors but the 
  * 	  microcontroller output current it limited so you can get away without
- * 	  them.  The B5 output pin blink the onboard LED L on the arduino.
- * 	  If nothing else is hooked up all that you'll get is a the L LED :)
+ * 	  them.  The B5 output pin blinks the onboard LED L on the arduino.
+ * 	  If nothing else is hooked up all that you'll get is the L LED :)
  *
  * 	- F_CPU is defined to be your cpu speed (preprocessor define)
  */
