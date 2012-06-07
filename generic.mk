@@ -60,12 +60,12 @@ ARDUINO_BOOTLOADER ?= autoguess
 #ARDUINO_BOOTLOADER ?= optiboot_atmega328.hex
 #ARDUINO_BOOTLOADER ?= ATmegaBOOT_168_atmega328.hex
 
-# Target patters for which we don't actually need a connected Arduino.
+# Target patters for which we presumably don't need a connected Arduino.
 # Clients can augment this variable, but they have to do so before this
 # file is processed (i.e. before the include statement that includes it, or
 # with a variable assignment command line argument to the make invocation).
 # See comments near where the variable is referenced.
-VALID_ARDUINOLESS_TARGET_PATTERNS += %.o %.ee.hex %.hex %.out %.out.map
+VALID_ARDUINOLESS_TARGET_PATTERNS += %.c %.o %.ee.hex %.hex %.out %.out.map
 
 
 ##### Program Name, Constituent Object Files (Overridable) {{{1
