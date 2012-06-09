@@ -40,7 +40,9 @@ set_type (uint8_t value)
 /** Send a byte to the card */
 static void spiSend(uint8_t b) {
   SPDR = b;
-  while (!(SPSR & (1 << SPIF)));
+  while ( ! (SPSR & (1 << SPIF)) ) {
+    ;
+  }
 }
 /** Receive a byte from the card */
 static  uint8_t spiRec(void) {
@@ -114,10 +116,10 @@ cardCommand(uint8_t cmd, uint32_t arg) {
   if (cmd == CMD8) crc = 0X87;  // correct crc for CMD8 with arg 0X1AA
   spiSend(crc);
 
-
   // wait for response
-  for (uint8_t i = 0; ((status_ = spiRec()) & 0X80) && i != 0XFF; i++);
-
+  for ( uint8_t i = 0 ; ((status_ = spiRec()) & 0X80) && i != 0XFF ; i++ ) {
+    ;
+  }
 
   return status_;
 }
@@ -134,14 +136,20 @@ writeData_private (uint8_t token, const uint8_t* src)
 
   // send two byte per iteration
   for (uint16_t i = 0; i < 512; i += 2) {
-    while (!(SPSR & (1 << SPIF)));
+    while ( ! (SPSR & (1 << SPIF)) ) {
+      ;
+    }
     SPDR = src[i];
-    while (!(SPSR & (1 << SPIF)));
+    while ( ! (SPSR & (1 << SPIF)) ) {
+      ;
+    }
     SPDR = src[i+1];
   }
 
   // wait for last data byte
-  while (!(SPSR & (1 << SPIF)));
+  while ( ! (SPSR & (1 << SPIF))){
+    ;
+  }
 
 #else  // OPTIMIZE_HARDWARE_SPI
   spiSend(token);
@@ -489,18 +497,25 @@ uint8_t readData(uint32_t block,
 
   // skip data before offset
   for (;offset_ < offset; offset_++) {
-    while (!(SPSR & (1 << SPIF)));
+    while ( ! (SPSR & (1 << SPIF)) ) {
+      ;
+    }
     SPDR = 0XFF;
   }
   // transfer data
   n = count - 1;
   for (uint16_t i = 0; i < n; i++) {
-    while (!(SPSR & (1 << SPIF)));
+    // FIXME: can these all be replaced with loop_until_bit_set() calls?
+    while ( ! (SPSR & (1 << SPIF)) ) {
+      ;
+    }
     dst[i] = SPDR;
     SPDR = 0XFF;
   }
   // wait for last byte
-  while (!(SPSR & (1 << SPIF)));
+  while ( ! (SPSR & (1 << SPIF)) ) {
+    ;
+  }
   dst[n] = SPDR;
 
 #else  // OPTIMIZE_HARDWARE_SPI
@@ -535,13 +550,19 @@ void readEnd(void) {
     // optimize skip for hardware
     SPDR = 0XFF;
     while (offset_++ < 513) {
-      while (!(SPSR & (1 << SPIF)));
+      while ( ! (SPSR & (1 << SPIF)) ) {
+        ;
+      }
       SPDR = 0XFF;
     }
     // wait for last crc byte
-    while (!(SPSR & (1 << SPIF)));
+    while ( ! (SPSR & (1 << SPIF)) ) {
+      ;
+    }
 #else  // OPTIMIZE_HARDWARE_SPI
-    while (offset_++ < 514) spiRec();
+    while ( offset_++ < 514 ) {
+      spiRec();
+    }
 #endif  // OPTIMIZE_HARDWARE_SPI
     chipSelectHigh();
     inBlock_ = 0;
@@ -629,15 +650,22 @@ uint8_t writeData(uint8_t token, const uint8_t* src) {
   SPDR = token;
 
   // send two byte per iteration
+  // FIXME: symboloic value for block size (512) would be good
   for (uint16_t i = 0; i < 512; i += 2) {
-    while (!(SPSR & (1 << SPIF)));
+    while ( ! (SPSR & (1 << SPIF))) {
+      ;
+    }
     SPDR = src[i];
-    while (!(SPSR & (1 << SPIF)));
+    while ( ! (SPSR & (1 << SPIF))) {
+      ;
+    }
     SPDR = src[i+1];
   }
 
   // wait for last data byte
-  while (!(SPSR & (1 << SPIF)));
+  while ( ! (SPSR & (1 << SPIF))) {
+    ;
+  }
 
 #else  // OPTIMIZE_HARDWARE_SPI
   spiSend(token);
