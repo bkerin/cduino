@@ -162,6 +162,40 @@ extern uint16_t offset_;
 extern uint8_t partialBlockRead_;
 extern uint8_t status_;
 extern uint8_t type_;
+  
+uint32_t cardSize(void);
+uint8_t erase(uint32_t firstBlock, uint32_t lastBlock);
+uint8_t eraseSingleBlockEnable(void);
+/**
+ * \return error code for last error. See Sd2Card.h for a list of error codes.
+ */
+uint8_t errorCode(void);
+/** \return error data for last error. */
+uint8_t errorData(void);
+uint8_t init(uint8_t sckRateID, uint8_t chipSelectPin);
+void partialBlockRead(uint8_t value);
+/** Returns the current value, true or false, for partial block read. */
+uint8_t partialBlockRead(void);
+uint8_t readBlock(uint32_t block, uint8_t* dst);
+uint8_t readData(uint32_t block,
+        uint16_t offset, uint16_t count, uint8_t* dst);
+/**
+ * Read a cards CID register. The CID contains card identification
+ * information such as Manufacturer ID, Product name, Product serial
+ * number and Manufacturing date. */
+uint8_t readCID (cid_t *cid);
+/**
+ * Read a cards CSD register. The CSD contains Card-Specific Data that
+ * provides information regarding access to the card's contents. */
+uint8_t readCSD(csd_t* csd);
+void readEnd(void);
+uint8_t setSckRate(uint8_t sckRateID);
+/** Return the card type: SD V1, SD V2 or SDHC */
+uint8_t type(void);
+uint8_t writeBlock(uint32_t blockNumber, const uint8_t* src);
+uint8_t writeData(const uint8_t* src);
+uint8_t writeStart(uint32_t blockNumber, uint32_t eraseCount);
+uint8_t writeStop(void);
 
 //------------------------------------------------------------------------------
 /**
@@ -172,81 +206,7 @@ class Sd2Card {
  public:
   /** Construct an instance of Sd2Card. */
   Sd2Card(void) {}
-  uint32_t cardSize(void);
-  uint8_t erase(uint32_t firstBlock, uint32_t lastBlock);
-  uint8_t eraseSingleBlockEnable(void);
-  /**
-   * \return error code for last error. See Sd2Card.h for a list of error codes.
-   */
-  uint8_t errorCode(void) const {return errorCode_;}
-  /** \return error data for last error. */
-  uint8_t errorData(void) const {return status_;}
-  /**
-   * Initialize an SD flash memory card with default clock rate and chip
-   * select pin.  See sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin).
-   */
-  uint8_t init(void) {
-    return init(SPI_FULL_SPEED, SD_CHIP_SELECT_PIN);
-  }
-  /**
-   * Initialize an SD flash memory card with the selected SPI clock rate
-   * and the default SD chip select pin.
-   * See sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin).
-   */
-  uint8_t init(uint8_t sckRateID) {
-    return init(sckRateID, SD_CHIP_SELECT_PIN);
-  }
-  uint8_t init(uint8_t sckRateID, uint8_t chipSelectPin);
-  void partialBlockRead(uint8_t value);
-  /** Returns the current value, true or false, for partial block read. */
-  uint8_t partialBlockRead(void) const {return partialBlockRead_;}
-  uint8_t readBlock(uint32_t block, uint8_t* dst);
-  uint8_t readData(uint32_t block,
-          uint16_t offset, uint16_t count, uint8_t* dst);
-  /**
-   * Read a cards CID register. The CID contains card identification
-   * information such as Manufacturer ID, Product name, Product serial
-   * number and Manufacturing date. */
-  uint8_t readCID(cid_t* cid) {
-    return readRegister(CMD10, cid);
-  }
-  /**
-   * Read a cards CSD register. The CSD contains Card-Specific Data that
-   * provides information regarding access to the card's contents. */
-  uint8_t readCSD(csd_t* csd) {
-    return readRegister(CMD9, csd);
-  }
-  void readEnd(void);
-  uint8_t setSckRate(uint8_t sckRateID);
-  /** Return the card type: SD V1, SD V2 or SDHC */
-  uint8_t type(void) const {return type_;}
-  uint8_t writeBlock(uint32_t blockNumber, const uint8_t* src);
-  uint8_t writeData(const uint8_t* src);
-  uint8_t writeStart(uint32_t blockNumber, uint32_t eraseCount);
-  uint8_t writeStop(void);
  private:
-  uint32_t block_;
-  uint8_t chipSelectPin_;
-  uint8_t errorCode_;
-  uint8_t inBlock_;
-  uint16_t offset_;
-  uint8_t partialBlockRead_;
-  uint8_t status_;
-  uint8_t type_;
-  // private functions
-  uint8_t cardAcmd(uint8_t cmd, uint32_t arg) {
-    cardCommand(CMD55, 0);
-    return cardCommand(cmd, arg);
-  }
-  uint8_t cardCommand(uint8_t cmd, uint32_t arg);
-  void error(uint8_t code) {errorCode_ = code;}
-  uint8_t readRegister(uint8_t cmd, void* buf);
   uint8_t sendWriteCommand(uint32_t blockNumber, uint32_t eraseCount);
-  void chipSelectHigh(void);
-  void chipSelectLow(void);
-  void type(uint8_t value) {type_ = value;}
-  uint8_t waitNotBusy(uint16_t timeoutMillis);
-  uint8_t writeData(uint8_t token, const uint8_t* src);
-  uint8_t waitStartBlock(void);
 };
 #endif  // Sd2Card_h

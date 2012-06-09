@@ -20,11 +20,11 @@ main (void)
 
   Sd2Card card;
 
-  card.init(SPI_HALF_SPEED, chipSelect);
+  init(SPI_HALF_SPEED, chipSelect);
 
   printf ("cp1\n");
 
-  uint32_t card_size = card.cardSize ();
+  uint32_t card_size = cardSize ();
 
   printf ("card_size: %lu\n", card_size);
 
@@ -35,10 +35,10 @@ main (void)
   for ( ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
     data_block[ii] = 42;
   }
-  card.writeBlock (bn, data_block);
+  writeBlock (bn, data_block);
 
   uint8_t reread_data[SD_CARD_BLOCK_SIZE];
-  card.readBlock (bn, reread_data);
+  readBlock (bn, reread_data);
 
   for ( ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
     assert (reread_data[ii] == 42);
