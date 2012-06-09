@@ -137,16 +137,11 @@ uint8_t Sd2Card::cardCommand(uint8_t cmd, uint32_t arg) {
  */
 uint32_t Sd2Card::cardSize(void) {
 
-  printf ("cp2\n");
-  
   csd_t csd;
-  printf ("cp3\n");
   if (!readCSD(&csd)) {
-    printf ("cp4a\n");
     return 0;
   }
   else {
-    printf ("cp44442\n");
   }
   if (csd.v1.csd_ver == 0) {
     uint8_t read_bl_len = csd.v1.read_bl_len;
@@ -154,16 +149,13 @@ uint32_t Sd2Card::cardSize(void) {
                       | (csd.v1.c_size_mid << 2) | csd.v1.c_size_low;
     uint8_t c_size_mult = (csd.v1.c_size_mult_high << 1)
                           | csd.v1.c_size_mult_low;
-    printf ("cp4b\n");
     return (uint32_t)(c_size + 1) << (c_size_mult + read_bl_len - 7);
   } else if (csd.v2.csd_ver == 1) {
     uint32_t c_size = ((uint32_t)csd.v2.c_size_high << 16)
                       | (csd.v2.c_size_mid << 8) | csd.v2.c_size_low;
-    printf ("cp4c\n");
     return (c_size + 1) << 10;
   } else {
     error(SD_CARD_ERROR_BAD_CSD);
-    printf ("cp4d\n");
     return 0;
   }
 }
@@ -448,9 +440,7 @@ void Sd2Card::readEnd(void) {
 //------------------------------------------------------------------------------
 /** read CID or CSR register */
 uint8_t Sd2Card::readRegister(uint8_t cmd, void* buf) {
-  printf ("hit %s, %d\n", __FILE__, __LINE__);
   uint8_t* dst = reinterpret_cast<uint8_t*>(buf);
-  printf ("cp102\n");
   if (cardCommand(cmd, 0)) {
     error(SD_CARD_ERROR_READ_REG);
     goto fail;

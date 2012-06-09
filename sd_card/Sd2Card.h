@@ -202,8 +202,6 @@ class Sd2Card {
    * Read a cards CSD register. The CSD contains Card-Specific Data that
    * provides information regarding access to the card's contents. */
   uint8_t readCSD(csd_t* csd) {
-    printf ("cp 101\n");
-    // WORK POINT: well, we make it this far anyway.  readRegister problem?
     return readRegister(CMD9, csd);
   }
   void readEnd(void);
