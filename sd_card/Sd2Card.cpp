@@ -20,6 +20,8 @@
 #include <Arduino.h>
 #include "Sd2Card.h"
 
+#include "dio.h"
+
 static uint32_t block_;
 static uint8_t chipSelectPin_;
 static uint8_t errorCode_;
@@ -82,6 +84,35 @@ waitNotBusy(uint16_t timeoutMillis) {
   }
   while (((uint16_t)millis() - t0) < timeoutMillis);
   return false;
+}
+
+//------------------------------------------------------------------------------
+/** Skip remaining data in a block when in partial block read mode. */
+static void
+readEnd(void) {
+  if (inBlock_) {
+      // skip data and crc
+#ifdef OPTIMIZE_HARDWARE_SPI
+    // optimize skip for hardware
+    SPDR = 0XFF;
+    while (offset_++ < 513) {
+      while ( ! (SPSR & (1 << SPIF)) ) {
+        ;
+      }
+      SPDR = 0XFF;
+    }
+    // wait for last crc byte
+    while ( ! (SPSR & (1 << SPIF)) ) {
+      ;
+    }
+#else  // OPTIMIZE_HARDWARE_SPI
+    while ( offset_++ < 514 ) {
+      spiRec();
+    }
+#endif  // OPTIMIZE_HARDWARE_SPI
+    chipSelectHigh();
+    inBlock_ = 0;
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -228,13 +259,7 @@ sd_card_error_data (void)
 }
 
 uint8_t
-partialBlockRead (void)
-{
-  return partialBlockRead_;
-}
-
-uint8_t
-type (void)
+sd_card_type (void)
 {
   return type_;
 }
@@ -250,7 +275,7 @@ uint32_t
 sd_card_size (void)
 {
   csd_t csd;
-  if (!readCSD(&csd)) {
+  if (!sd_card_read_csd (&csd)) {
     return 0;
   }
   else {
@@ -319,7 +344,7 @@ uint8_t erase(uint32_t firstBlock, uint32_t lastBlock) {
  */
 uint8_t eraseSingleBlockEnable(void) {
   csd_t csd;
-  return readCSD(&csd) ? csd.v1.erase_blk_en : 0;
+  return sd_card_read_csd(&csd) ? csd.v1.erase_blk_en : 0;
 }
 
 static uint8_t
@@ -327,6 +352,37 @@ cardAcmd (uint8_t cmd, uint32_t arg)
 {
   cardCommand (CMD55, 0);
   return cardCommand (cmd, arg);
+}
+
+//------------------------------------------------------------------------------
+/**
+ * Set the SPI clock rate.
+ *
+ * \param[in] sckRateID A value in the range [0, 6].
+ *
+ * The SPI clock will be set to F_CPU/pow(2, 1 + sckRateID). The maximum
+ * SPI rate is F_CPU/2 for \a sckRateID = 0 and the minimum rate is F_CPU/128
+ * for \a scsRateID = 6.
+ *
+ * \return The value one, true, is returned for success and the value zero,
+ * false, is returned for an invalid value of \a sckRateID.
+ */
+static uint8_t
+setSckRate(uint8_t sckRateID) {
+  if (sckRateID > 6) {
+    error(SD_CARD_ERROR_SCK_RATE);
+    return false;
+  }
+  // see avr processor datasheet for SPI register bit definitions
+  if ((sckRateID & 1) || sckRateID == 6) {
+    SPSR &= ~(1 << SPI2X);
+  } else {
+    SPSR |= (1 << SPI2X);
+  }
+  SPCR &= ~((1 <<SPR1) | (1 << SPR0));
+  SPCR |= (sckRateID & 4 ? (1 << SPR1) : 0)
+    | (sckRateID & 2 ? (1 << SPR0) : 0);
+  return true;
 }
 
 //------------------------------------------------------------------------------
@@ -351,12 +407,15 @@ uint8_t sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin) {
   pinMode(chipSelectPin_, OUTPUT);
   chipSelectHigh();
   pinMode(SPI_MISO_PIN, INPUT);
-  pinMode(SPI_MOSI_PIN, OUTPUT);
-  pinMode(SPI_SCK_PIN, OUTPUT);
+
+  SPI_MOSI_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+  SPI_SCK_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+  //pinMode(SPI_MOSI_PIN, OUTPUT);
+  //pinMode(SPI_SCK_PIN, OUTPUT);
 
   // SS must be in output mode even it is not chip select
-  pinMode(SS_PIN, OUTPUT);
-  digitalWrite(SS_PIN, HIGH); // disable any SPI device using hardware SS pin
+  SPI_SS_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
+
   // Enable SPI, Master, clock rate f_osc/128
   SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0);
   // clear double speed
@@ -387,7 +446,7 @@ uint8_t sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin) {
     set_type(SD_CARD_TYPE_SD2);
   }
   // initialize card and send host supports SDHC if SD2
-  arg = type() == SD_CARD_TYPE_SD2 ? 0X40000000 : 0;
+  arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0X40000000 : 0;
 
   while ((status_ = cardAcmd(ACMD41, arg)) != R1_READY_STATE) {
     // check for timeout
@@ -397,7 +456,7 @@ uint8_t sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin) {
     }
   }
   // if SD2 read OCR register to check for SDHC card
-  if (type() == SD_CARD_TYPE_SD2) {
+  if (sd_card_type () == SD_CARD_TYPE_SD2) {
     if (cardCommand(CMD58, 0)) {
       error(SD_CARD_ERROR_CMD58);
       goto fail;
@@ -414,39 +473,6 @@ uint8_t sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin) {
   chipSelectHigh();
   return false;
 }
-//------------------------------------------------------------------------------
-/**
- * Enable or disable partial block reads.
- *
- * Enabling partial block reads improves performance by allowing a block
- * to be read over the SPI bus as several sub-blocks.  Errors may occur
- * if the time between reads is too long since the SD card may timeout.
- * The SPI SS line will be held low until the entire block is read or
- * readEnd() is called.
- *
- * Use this for applications like the Adafruit Wave Shield.
- *
- * \param[in] value The value TRUE (non-zero) or FALSE (zero).)
- */
-void partialBlockRead(uint8_t value) {
-  readEnd();
-  partialBlockRead_ = value;
-}
-//------------------------------------------------------------------------------
-/**
- * Read a 512 byte block from an SD card device.
- *
- * \param[in] block Logical block to be read.
- * \param[out] dst Pointer to the location that will receive the data.
-
- * \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.
- */
-uint8_t
-sd_card_read_block (uint32_t block, uint8_t* dst)
-{
-  return readData(block, 0, 512, dst);
-}
 
 //------------------------------------------------------------------------------
 /**
@@ -459,8 +485,9 @@ sd_card_read_block (uint32_t block, uint8_t* dst)
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.
  */
-uint8_t readData(uint32_t block,
-        uint16_t offset, uint16_t count, uint8_t* dst) {
+static uint8_t
+readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
+{
   uint16_t n;
   if (count == 0) return true;
   if ((count + offset) > 512) {
@@ -469,7 +496,9 @@ uint8_t readData(uint32_t block,
   if (!inBlock_ || block != block_ || offset < offset_) {
     block_ = block;
     // use address if not SDHC card
-    if (type()!= SD_CARD_TYPE_SDHC) block <<= 9;
+    if ( sd_card_type () != SD_CARD_TYPE_SDHC ) {
+      block <<= 9;
+    }
     if (cardCommand(CMD17, block)) {
       error(SD_CARD_ERROR_CMD17);
       goto fail;
@@ -531,63 +560,23 @@ uint8_t readData(uint32_t block,
   chipSelectHigh();
   return false;
 }
-//------------------------------------------------------------------------------
-/** Skip remaining data in a block when in partial block read mode. */
-void readEnd(void) {
-  if (inBlock_) {
-      // skip data and crc
-#ifdef OPTIMIZE_HARDWARE_SPI
-    // optimize skip for hardware
-    SPDR = 0XFF;
-    while (offset_++ < 513) {
-      while ( ! (SPSR & (1 << SPIF)) ) {
-        ;
-      }
-      SPDR = 0XFF;
-    }
-    // wait for last crc byte
-    while ( ! (SPSR & (1 << SPIF)) ) {
-      ;
-    }
-#else  // OPTIMIZE_HARDWARE_SPI
-    while ( offset_++ < 514 ) {
-      spiRec();
-    }
-#endif  // OPTIMIZE_HARDWARE_SPI
-    chipSelectHigh();
-    inBlock_ = 0;
-  }
-}
 
 //------------------------------------------------------------------------------
 /**
- * Set the SPI clock rate.
+ * Read a 512 byte block from an SD card device.
  *
- * \param[in] sckRateID A value in the range [0, 6].
- *
- * The SPI clock will be set to F_CPU/pow(2, 1 + sckRateID). The maximum
- * SPI rate is F_CPU/2 for \a sckRateID = 0 and the minimum rate is F_CPU/128
- * for \a scsRateID = 6.
- *
- * \return The value one, true, is returned for success and the value zero,
- * false, is returned for an invalid value of \a sckRateID.
+ * \param[in] block Logical block to be read.
+ * \param[out] dst Pointer to the location that will receive the data.
+
+ * \return The value one, true, is returned for success and
+ * the value zero, false, is returned for failure.
  */
-uint8_t setSckRate(uint8_t sckRateID) {
-  if (sckRateID > 6) {
-    error(SD_CARD_ERROR_SCK_RATE);
-    return false;
-  }
-  // see avr processor datasheet for SPI register bit definitions
-  if ((sckRateID & 1) || sckRateID == 6) {
-    SPSR &= ~(1 << SPI2X);
-  } else {
-    SPSR |= (1 << SPI2X);
-  }
-  SPCR &= ~((1 <<SPR1) | (1 << SPR0));
-  SPCR |= (sckRateID & 4 ? (1 << SPR1) : 0)
-    | (sckRateID & 2 ? (1 << SPR0) : 0);
-  return true;
+uint8_t
+sd_card_read_block (uint32_t block, uint8_t* dst)
+{
+  return readData(block, 0, 512, dst);
 }
+
 //------------------------------------------------------------------------------
 /**
  * Writes a 512 byte block to an SD card.
@@ -609,7 +598,7 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
 #endif  // SD_PROTECT_BLOCK_ZERO
 
   // use address if not SDHC card
-  if (type() != SD_CARD_TYPE_SDHC) blockNumber <<= 9;
+  if (sd_card_type () != SD_CARD_TYPE_SDHC) blockNumber <<= 9;
   if (cardCommand(CMD24, blockNumber)) {
     error(SD_CARD_ERROR_CMD24);
     goto fail;
@@ -634,12 +623,12 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
   return false;
 }
 
-uint8_t readCID (cid_t *cid)
+uint8_t sd_card_read_cid (cid_t *cid)
 {
   return readRegister(CMD10, cid);
 }
 
-uint8_t readCSD (csd_t *csd)
+uint8_t sd_card_read_csd (csd_t *csd)
 {
   return readRegister(CMD9, csd);
 }

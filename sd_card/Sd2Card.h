@@ -126,19 +126,21 @@ uint8_t const SD_CARD_ERROR_WRITE_PROGRAMMING = 0X14;
 uint8_t const SD_CARD_ERROR_WRITE_TIMEOUT = 0X15;
 /** incorrect rate selected */
 uint8_t const SD_CARD_ERROR_SCK_RATE = 0X16;
-//------------------------------------------------------------------------------
-// card types
-/** Standard capacity V1 SD card */
-uint8_t const SD_CARD_TYPE_SD1 = 1;
-/** Standard capacity V2 SD card */
-uint8_t const SD_CARD_TYPE_SD2 = 2;
-/** High Capacity SD card */
-uint8_t const SD_CARD_TYPE_SDHC = 3;
+
+// Card types.  FIXME: maybe using enums are int according to C, which
+// would explain why Arduino libs like to use big lists of uint8_t const
+// values instead.
+typedef enum {
+  SD_CARD_TYPE_SD1 = 1,
+  SD_CARD_TYPE_SD2 = 2,
+  SD_CARD_TYPE_SDHC = 3,
+} sd_card_type_t;
 
 uint32_t
 sd_card_size (void);
 
 uint8_t erase(uint32_t firstBlock, uint32_t lastBlock);
+
 uint8_t eraseSingleBlockEnable(void);
 
 /**
@@ -152,27 +154,29 @@ uint8_t
 sd_card_error_data (void);
 
 uint8_t
-sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin);
+sd_card_init (uint8_t sckRateID, uint8_t chipSelectPin);
 
-void partialBlockRead(uint8_t value);
-/** Returns the current value, true or false, for partial block read. */
-uint8_t partialBlockRead(void);
-uint8_t sd_card_read_block(uint32_t block, uint8_t* dst);
-uint8_t readData(uint32_t block,
-        uint16_t offset, uint16_t count, uint8_t* dst);
+uint8_t
+sd_card_read_block(uint32_t block, uint8_t* dst);
+
 /**
  * Read a cards CID register. The CID contains card identification
  * information such as Manufacturer ID, Product name, Product serial
  * number and Manufacturing date. */
-uint8_t readCID (cid_t *cid);
+uint8_t
+sd_card_read_cid (cid_t *cid);
+
 /**
  * Read a cards CSD register. The CSD contains Card-Specific Data that
  * provides information regarding access to the card's contents. */
-uint8_t readCSD(csd_t* csd);
-void readEnd(void);
-uint8_t setSckRate(uint8_t sckRateID);
+uint8_t
+sd_card_read_csd (csd_t* csd);
+
 /** Return the card type: SD V1, SD V2 or SDHC */
-uint8_t type(void);
-uint8_t sd_card_write_block(uint32_t blockNumber, const uint8_t* src);
+uint8_t
+sd_card_type (void);
+
+uint8_t
+sd_card_write_block (uint32_t blockNumber, const uint8_t* src);
 
 #endif  // SD_CARD_H
