@@ -28,25 +28,7 @@ CPPFLAGS += -DSPI_SS_INIT=DIO_INIT_DIGITAL_10 \
             -DSPI_SCK_INIT=DIO_INIT_DIGITAL_13 \
             -DSPI_SCK_SET=DIO_SET_DIGITAL_13 \
             -DSPI_SCK_SET_HIGH=DIO_SET_DIGITAL_13_HIGH \
-            -DSPI_SCK_SET_LOW=DIO_SET_DIGITAL_13_LOW \
-            \
-            \
-            -DLCD_RS_INIT=DIO_INIT_DIGITAL_8 \
-            -DLCD_RS_SET=DIO_SET_DIGITAL_8 \
-            -DLCD_RS_SET_HIGH=DIO_SET_DIGITAL_8_HIGH \
-            -DLCD_RS_SET_LOW=DIO_SET_DIGITAL_8_LOW \
-            \
-            -DLCD_ENABLE_INIT=DIO_INIT_DIGITAL_9 \
-            -DLCD_ENABLE_SET_HIGH=DIO_SET_DIGITAL_9_HIGH \
-            -DLCD_ENABLE_SET_LOW=DIO_SET_DIGITAL_9_LOW \
-            \
-            -DLCD_DB4_INIT=DIO_INIT_DIGITAL_4 \
-            \
-            -DLCD_DB5_INIT=DIO_INIT_DIGITAL_5 \
-            \
-            -DLCD_DB6_INIT=DIO_INIT_DIGITAL_6 \
-            \
-            -DLCD_DB7_INIT=DIO_INIT_DIGITAL_7
+            -DSPI_SCK_SET_LOW=DIO_SET_DIGITAL_13_LOW
 
 # Pull in some macros that make debugging tracepoints easier to make.
 CPPFLAGS += -DTERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP

@@ -32,41 +32,16 @@
  */
 #include "Sd2PinMap.h"
 #include "SdInfo.h"
-/** Set SCK to max rate of F_CPU/2. See Sd2Card::setSckRate(). */
-uint8_t const SPI_FULL_SPEED = 0;
-/** Set SCK rate to F_CPU/4. See Sd2Card::setSckRate(). */
-uint8_t const SPI_HALF_SPEED = 1;
-/** Set SCK rate to F_CPU/8. Sd2Card::setSckRate(). */
-uint8_t const SPI_QUARTER_SPEED = 2;
-/**
- * Define MEGA_SOFT_SPI non-zero to use software SPI on Mega Arduinos.
- * Pins used are SS 10, MOSI 11, MISO 12, and SCK 13.
- *
- * MEGA_SOFT_SPI allows an unmodified Adafruit GPS Shield to be used
- * on Mega Arduinos.  Software SPI works well with GPS Shield V1.1
- * but many SD cards will fail with GPS Shield V1.0.
- */
-//------------------------------------------------------------------------------
-// SPI pin definitions
-//
-// hardware pin defs
-/**
- * SD Chip Select pin
- *
- * Warning if this pin is redefined the hardware SS will pin will be enabled
- * as an output by init().  An avr processor will not function as an SPI
- * master unless SS is set to output mode.
- */
-/** The default chip select pin for the SD card is SS. */
-uint8_t const  SD_CHIP_SELECT_PIN = SS_PIN;
-// The following three pins must not be redefined for hardware SPI.
-/** SPI Master Out Slave In pin */
-uint8_t const  SPI_MOSI_PIN = MOSI_PIN;
-/** SPI Master In Slave Out pin */
-uint8_t const  SPI_MISO_PIN = MISO_PIN;
-/** SPI Clock pin */
-uint8_t const  SPI_SCK_PIN = SCK_PIN;
-/** optimize loops for hardware SPI */
+
+// FIXME: clients using/returning the enum types should use this rather
+// than uint8_t.
+
+typedef enum {
+  SPI_FULL_SPEED = 0,   // Maximum speed of F_CPU / 2.
+  SPI_HALF_SPEED = 1,   // F_CPU / 4.
+  SPI_QUARTER_SPEED = 2   // F_CPU / 8.
+} sd_card_spi_speed_t;
+
 #define OPTIMIZE_HARDWARE_SPI
 
 //------------------------------------------------------------------------------
@@ -127,9 +102,10 @@ uint8_t const SD_CARD_ERROR_WRITE_TIMEOUT = 0X15;
 /** incorrect rate selected */
 uint8_t const SD_CARD_ERROR_SCK_RATE = 0X16;
 
-// Card types.  FIXME: maybe using enums are int according to C, which
-// would explain why Arduino libs like to use big lists of uint8_t const
-// values instead.
+// Card types.  FIXME: maybe using enums are int according to C, which would
+// explain why Arduino libs like to use big lists of uint8_t const values
+// instead.  But it could at least map a type to uint8_t for readability
+// in the function that return this stuff.
 typedef enum {
   SD_CARD_TYPE_SD1 = 1,
   SD_CARD_TYPE_SD2 = 2,

@@ -403,15 +403,17 @@ uint8_t sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin) {
   uint16_t t0 = (uint16_t)millis();
   uint32_t arg;
 
+  // Apparently SS doesn't have to be the same as the chip select pin.  Is
+  // there any reason for us to support this, given that we won't support
+  // software SPI?
   // set pin modes
   pinMode(chipSelectPin_, OUTPUT);
   chipSelectHigh();
-  pinMode(SPI_MISO_PIN, INPUT);
+
+  SPI_MISO_INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
 
   SPI_MOSI_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   SPI_SCK_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  //pinMode(SPI_MOSI_PIN, OUTPUT);
-  //pinMode(SPI_SCK_PIN, OUTPUT);
 
   // SS must be in output mode even it is not chip select
   SPI_SS_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
