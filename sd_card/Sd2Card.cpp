@@ -20,14 +20,14 @@
 #include <Arduino.h>
 #include "Sd2Card.h"
 
-uint32_t block_;
-uint8_t chipSelectPin_;
-uint8_t errorCode_;
-uint8_t inBlock_;
-uint16_t offset_;
-uint8_t partialBlockRead_;
-uint8_t status_;
-uint8_t type_;
+static uint32_t block_;
+static uint8_t chipSelectPin_;
+static uint8_t errorCode_;
+static uint8_t inBlock_;
+static uint16_t offset_;
+static uint8_t partialBlockRead_;
+static uint8_t status_;
+static uint8_t type_;
 
 static void
 set_type (uint8_t value)
@@ -170,20 +170,6 @@ writeData_private (uint8_t token, const uint8_t* src)
 }
 
 //------------------------------------------------------------------------------
-/** Write one data block in a multiple block write sequence */
-uint8_t
-writeData (const uint8_t* src)
-{
-  // wait for previous write to finish
-  if (!waitNotBusy(SD_WRITE_TIMEOUT)) {
-    error(SD_CARD_ERROR_WRITE_MULTIPLE);
-    chipSelectHigh();
-    return false;
-  }
-  return writeData_private(WRITE_MULTIPLE_TOKEN, src);
-}
-
-//------------------------------------------------------------------------------
 /** Wait for start block token */
 static uint8_t
 waitStartBlock (void)
@@ -230,13 +216,13 @@ readRegister (uint8_t cmd, void* buf)
 }
 
 uint8_t
-errorCode (void)
+sd_card_error_code (void)
 {
   return errorCode_;
 }
 
 uint8_t
-errorData (void)
+sd_card_error_data (void)
 {
   return status_;
 }
@@ -260,8 +246,9 @@ type (void)
  * \return The number of 512 byte data blocks in the card
  *         or zero if an error occurs.
  */
-uint32_t cardSize(void) {
-
+uint32_t
+sd_card_size (void)
+{
   csd_t csd;
   if (!readCSD(&csd)) {
     return 0;
@@ -353,7 +340,7 @@ cardAcmd (uint8_t cmd, uint32_t arg)
  * the value zero, false, is returned for failure.  The reason for failure
  * can be determined by calling errorCode() and errorData().
  */
-uint8_t init(uint8_t sckRateID, uint8_t chipSelectPin) {
+uint8_t sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin) {
   errorCode_ = inBlock_ = partialBlockRead_ = type_ = 0;
   chipSelectPin_ = chipSelectPin;
   // 16-bit init start time allows over a minute
@@ -455,9 +442,12 @@ void partialBlockRead(uint8_t value) {
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.
  */
-uint8_t readBlock(uint32_t block, uint8_t* dst) {
+uint8_t
+sd_card_read_block (uint32_t block, uint8_t* dst)
+{
   return readData(block, 0, 512, dst);
 }
+
 //------------------------------------------------------------------------------
 /**
  * Read part of a 512 byte block from an SD card.
@@ -607,7 +597,9 @@ uint8_t setSckRate(uint8_t sckRateID) {
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.
  */
-uint8_t writeBlock(uint32_t blockNumber, const uint8_t* src) {
+uint8_t
+sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
+{
 #if SD_PROTECT_BLOCK_ZERO
   // don't allow write to first block
   if (blockNumber == 0) {
@@ -638,104 +630,6 @@ uint8_t writeBlock(uint32_t blockNumber, const uint8_t* src) {
   return true;
 
  fail:
-  chipSelectHigh();
-  return false;
-}
-//------------------------------------------------------------------------------
-// send one block of data for write block or write multiple blocks
-uint8_t writeData(uint8_t token, const uint8_t* src) {
-#ifdef OPTIMIZE_HARDWARE_SPI
-
-  // send data - optimized loop
-  SPDR = token;
-
-  // send two byte per iteration
-  // FIXME: symboloic value for block size (512) would be good
-  for (uint16_t i = 0; i < 512; i += 2) {
-    while ( ! (SPSR & (1 << SPIF))) {
-      ;
-    }
-    SPDR = src[i];
-    while ( ! (SPSR & (1 << SPIF))) {
-      ;
-    }
-    SPDR = src[i+1];
-  }
-
-  // wait for last data byte
-  while ( ! (SPSR & (1 << SPIF))) {
-    ;
-  }
-
-#else  // OPTIMIZE_HARDWARE_SPI
-  spiSend(token);
-  for (uint16_t i = 0; i < 512; i++) {
-    spiSend(src[i]);
-  }
-#endif  // OPTIMIZE_HARDWARE_SPI
-  spiSend(0xff);  // dummy crc
-  spiSend(0xff);  // dummy crc
-
-  status_ = spiRec();
-  if ((status_ & DATA_RES_MASK) != DATA_RES_ACCEPTED) {
-    error(SD_CARD_ERROR_WRITE);
-    chipSelectHigh();
-    return false;
-  }
-  return true;
-}
-//------------------------------------------------------------------------------
-/** Start a write multiple blocks sequence.
- *
- * \param[in] blockNumber Address of first block in sequence.
- * \param[in] eraseCount The number of blocks to be pre-erased.
- *
- * \note This function is used with writeData() and writeStop()
- * for optimized multiple block writes.
- *
- * \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.
- */
-uint8_t writeStart(uint32_t blockNumber, uint32_t eraseCount) {
-#if SD_PROTECT_BLOCK_ZERO
-  // don't allow write to first block
-  if (blockNumber == 0) {
-    error(SD_CARD_ERROR_WRITE_BLOCK_ZERO);
-    goto fail;
-  }
-#endif  // SD_PROTECT_BLOCK_ZERO
-  // send pre-erase count
-  if (cardAcmd(ACMD23, eraseCount)) {
-    error(SD_CARD_ERROR_ACMD23);
-    goto fail;
-  }
-  // use address if not SDHC card
-  if (type() != SD_CARD_TYPE_SDHC) blockNumber <<= 9;
-  if (cardCommand(CMD25, blockNumber)) {
-    error(SD_CARD_ERROR_CMD25);
-    goto fail;
-  }
-  return true;
-
- fail:
-  chipSelectHigh();
-  return false;
-}
-//------------------------------------------------------------------------------
-/** End a write multiple blocks sequence.
- *
-* \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.
- */
-uint8_t writeStop(void) {
-  if (!waitNotBusy(SD_WRITE_TIMEOUT)) goto fail;
-  spiSend(STOP_TRAN_TOKEN);
-  if (!waitNotBusy(SD_WRITE_TIMEOUT)) goto fail;
-  chipSelectHigh();
-  return true;
-
- fail:
-  error(SD_CARD_ERROR_STOP_TRAN);
   chipSelectHigh();
   return false;
 }

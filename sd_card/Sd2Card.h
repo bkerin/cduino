@@ -17,8 +17,8 @@
  * along with the Arduino Sd2Card Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-#ifndef Sd2Card_h
-#define Sd2Card_h
+#ifndef SD_CARD_H
+#define SD_CARD_H
 
 #ifdef __cplusplus
   extern "C" {
@@ -46,15 +46,9 @@ uint8_t const SPI_QUARTER_SPEED = 2;
  * on Mega Arduinos.  Software SPI works well with GPS Shield V1.1
  * but many SD cards will fail with GPS Shield V1.0.
  */
-#define MEGA_SOFT_SPI 0
-//------------------------------------------------------------------------------
-#if MEGA_SOFT_SPI && (defined(__AVR_ATmega1280__)||defined(__AVR_ATmega2560__))
-#define SOFTWARE_SPI
-#endif  // MEGA_SOFT_SPI
 //------------------------------------------------------------------------------
 // SPI pin definitions
 //
-#ifndef SOFTWARE_SPI
 // hardware pin defs
 /**
  * SD Chip Select pin
@@ -75,17 +69,6 @@ uint8_t const  SPI_SCK_PIN = SCK_PIN;
 /** optimize loops for hardware SPI */
 #define OPTIMIZE_HARDWARE_SPI
 
-#else  // SOFTWARE_SPI
-// define software SPI pins so Mega can use unmodified GPS Shield
-/** SPI chip select pin */
-uint8_t const SD_CHIP_SELECT_PIN = 10;
-/** SPI Master Out Slave In pin */
-uint8_t const SPI_MOSI_PIN = 11;
-/** SPI Master In Slave Out pin */
-uint8_t const SPI_MISO_PIN = 12;
-/** SPI Clock pin */
-uint8_t const SPI_SCK_PIN = 13;
-#endif  // SOFTWARE_SPI
 //------------------------------------------------------------------------------
 /** Protect block zero from write if nonzero */
 #define SD_PROTECT_BLOCK_ZERO 1
@@ -152,31 +135,29 @@ uint8_t const SD_CARD_TYPE_SD2 = 2;
 /** High Capacity SD card */
 uint8_t const SD_CARD_TYPE_SDHC = 3;
 
-// FIXME: do all of these need to be extern?  Should probably all be
-// hidden somehow.
-extern uint32_t block_;
-extern uint8_t chipSelectPin_;
-extern uint8_t errorCode_;
-extern uint8_t inBlock_;
-extern uint16_t offset_;
-extern uint8_t partialBlockRead_;
-extern uint8_t status_;
-extern uint8_t type_;
-  
-uint32_t cardSize(void);
+uint32_t
+sd_card_size (void);
+
 uint8_t erase(uint32_t firstBlock, uint32_t lastBlock);
 uint8_t eraseSingleBlockEnable(void);
+
 /**
  * \return error code for last error. See Sd2Card.h for a list of error codes.
  */
-uint8_t errorCode(void);
+uint8_t
+sd_card_error_code (void);
+
 /** \return error data for last error. */
-uint8_t errorData(void);
-uint8_t init(uint8_t sckRateID, uint8_t chipSelectPin);
+uint8_t
+sd_card_error_data (void);
+
+uint8_t
+sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin);
+
 void partialBlockRead(uint8_t value);
 /** Returns the current value, true or false, for partial block read. */
 uint8_t partialBlockRead(void);
-uint8_t readBlock(uint32_t block, uint8_t* dst);
+uint8_t sd_card_read_block(uint32_t block, uint8_t* dst);
 uint8_t readData(uint32_t block,
         uint16_t offset, uint16_t count, uint8_t* dst);
 /**
@@ -192,21 +173,6 @@ void readEnd(void);
 uint8_t setSckRate(uint8_t sckRateID);
 /** Return the card type: SD V1, SD V2 or SDHC */
 uint8_t type(void);
-uint8_t writeBlock(uint32_t blockNumber, const uint8_t* src);
-uint8_t writeData(const uint8_t* src);
-uint8_t writeStart(uint32_t blockNumber, uint32_t eraseCount);
-uint8_t writeStop(void);
+uint8_t sd_card_write_block(uint32_t blockNumber, const uint8_t* src);
 
-//------------------------------------------------------------------------------
-/**
- * \class Sd2Card
- * \brief Raw access to SD and SDHC flash memory cards.
- */
-class Sd2Card {
- public:
-  /** Construct an instance of Sd2Card. */
-  Sd2Card(void) {}
- private:
-  uint8_t sendWriteCommand(uint32_t blockNumber, uint32_t eraseCount);
-};
-#endif  // Sd2Card_h
+#endif  // SD_CARD_H
