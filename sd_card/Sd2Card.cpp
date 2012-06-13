@@ -23,7 +23,6 @@
 #include "dio.h"
 
 static uint32_t block_;
-static uint8_t chipSelectPin_;
 static sd_card_error_t errorCode_;
 static uint8_t inBlock_;
 static uint16_t offset_;
@@ -54,18 +53,6 @@ uint8_t spiRec (void)
 {
   spiSend(0XFF);
   return SPDR;
-}
-
-//------------------------------------------------------------------------------
-static void
-chipSelectHigh(void) {
-  digitalWrite(chipSelectPin_, HIGH);
-}
-
-//------------------------------------------------------------------------------
-static void
-chipSelectLow(void) {
-  digitalWrite(chipSelectPin_, LOW);
 }
 
 static void
@@ -114,7 +101,7 @@ readEnd(void) {
       spiRec();
     }
 #endif  // OPTIMIZE_HARDWARE_SPI
-    chipSelectHigh();
+    CHIP_SELECT_SET_HIGH ();
     inBlock_ = 0;
   }
 }
@@ -124,26 +111,22 @@ readEnd(void) {
 static uint8_t
 cardCommand(uint8_t cmd, uint32_t arg) {
 
-
   // end read if in partialBlockRead mode
   readEnd();
 
-
   // select card
-  chipSelectLow();
-
+  CHIP_SELECT_SET_LOW ();
 
   // wait up to 300 ms if busy
   waitNotBusy(300);
 
-
   // send command
   spiSend(cmd | 0x40);
 
-
   // send argument
-  for (int8_t s = 24; s >= 0; s -= 8) spiSend(arg >> s);
-
+  for ( int8_t s = 24 ; s >= 0 ; s -= 8 ) {
+    spiSend (arg >> s);
+  }
 
   // send CRC
   uint8_t crc = 0XFF;
@@ -198,7 +181,7 @@ writeData_private (uint8_t token, const uint8_t* src)
   status_ = spiRec();
   if ((status_ & DATA_RES_MASK) != DATA_RES_ACCEPTED) {
     error(SD_CARD_ERROR_WRITE);
-    chipSelectHigh();
+    CHIP_SELECT_SET_HIGH ();
     return false;
   }
   return true;
@@ -223,7 +206,7 @@ waitStartBlock (void)
   return true;
 
  fail:
-  chipSelectHigh();
+  CHIP_SELECT_SET_HIGH ();
   return false;
 }
 
@@ -242,11 +225,11 @@ readRegister (uint8_t cmd, void* buf)
   for (uint16_t i = 0; i < 16; i++) dst[i] = spiRec();
   spiRec();  // get first crc byte
   spiRec();  // get second crc byte
-  chipSelectHigh();
+  CHIP_SELECT_SET_HIGH ();
   return true;
 
  fail:
-  chipSelectHigh();
+  CHIP_SELECT_SET_HIGH ();
   return false;
 }
 
@@ -321,11 +304,11 @@ sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock) {
     error(SD_CARD_ERROR_ERASE_TIMEOUT);
     goto fail;
   }
-  chipSelectHigh();
+  CHIP_SELECT_SET_HIGH ();
   return true;
 
  fail:
-  chipSelectHigh();
+  CHIP_SELECT_SET_HIGH ();
   return false;
 }
 
@@ -372,36 +355,27 @@ setSckRate(uint8_t sckRateID) {
  * Initialize an SD flash memory card.
  *
  * \param[in] sckRateID SPI clock rate selector. See setSckRate().
- * \param[in] chipSelectPin SD chip select pin number.
  *
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.  The reason for failure
  * can be determined by calling errorCode() and errorData().
  */
 uint8_t
-sd_card_init (sd_card_spi_speed_t speed, uint8_t chipSelectPin) 
+sd_card_init (sd_card_spi_speed_t speed) 
 {
   errorCode_ = SD_CARD_ERROR_NONE;
   type_ = SD_CARD_TYPE_INDETERMINATE;
   inBlock_ = partialBlockRead_ = 0;
-  chipSelectPin_ = chipSelectPin;
   // 16-bit init start time allows over a minute
   uint16_t t0 = (uint16_t)millis();
   uint32_t arg;
 
-  // Apparently SS doesn't have to be the same as the chip select pin.  Is
-  // there any reason for us to support this, given that we won't support
-  // software SPI?
-  // set pin modes
-  pinMode(chipSelectPin_, OUTPUT);
-  chipSelectHigh();
-
+  // Set pin modes
+  CHIP_SELECT_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
   SPI_MISO_INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-
   SPI_MOSI_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   SPI_SCK_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-
-  // SS must be in output mode even it is not chip select
+  // SS must be in output mode even if it is not chip select.
   SPI_SS_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
 
   // Enable SPI, Master, clock rate f_osc/128
@@ -412,7 +386,7 @@ sd_card_init (sd_card_spi_speed_t speed, uint8_t chipSelectPin)
   // must supply min of 74 clock cycles with CS high.
   for (uint8_t i = 0; i < 10; i++) spiSend(0XFF);
 
-  chipSelectLow();
+  CHIP_SELECT_SET_LOW ();
 
   // command to go idle in SPI mode
   while ((status_ = cardCommand(CMD0, 0)) != R1_IDLE_STATE) {
@@ -453,12 +427,12 @@ sd_card_init (sd_card_spi_speed_t speed, uint8_t chipSelectPin)
     // discard rest of ocr - contains allowed voltage range
     for (uint8_t i = 0; i < 3; i++) spiRec();
   }
-  chipSelectHigh();
+  CHIP_SELECT_SET_HIGH ();
 
   return setSckRate (speed);
 
  fail:
-  chipSelectHigh();
+  CHIP_SELECT_SET_HIGH ();
   return false;
 }
 
@@ -545,7 +519,7 @@ readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
   return true;
 
  fail:
-  chipSelectHigh();
+  CHIP_SELECT_SET_HIGH ();
   return false;
 }
 
@@ -603,11 +577,11 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
     error(SD_CARD_ERROR_WRITE_PROGRAMMING);
     goto fail;
   }
-  chipSelectHigh();
+  CHIP_SELECT_SET_HIGH ();
   return true;
 
  fail:
-  chipSelectHigh();
+  CHIP_SELECT_SET_HIGH ();
   return false;
 }
 

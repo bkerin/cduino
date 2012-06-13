@@ -18,7 +18,7 @@ main (void)
 {
   term_io_init ();
 
-  sd_card_init (SPI_HALF_SPEED, chipSelect);
+  sd_card_init (SPI_HALF_SPEED);
 
   uint32_t card_size = sd_card_size ();
 

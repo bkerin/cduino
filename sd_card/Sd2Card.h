@@ -123,7 +123,7 @@ typedef enum {
 // on success and zero on error (in which case sd_card_last_error() can
 // be called).
 uint8_t
-sd_card_init (sd_card_spi_speed_t speed, uint8_t chipSelectPin);
+sd_card_init (sd_card_spi_speed_t speed);
 
 // Return the size of the card in SD_CARD_BLOCK_SIZE byte blocks, or zero
 // if an error occurs.
