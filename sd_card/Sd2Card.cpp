@@ -40,14 +40,18 @@ set_type (sd_card_type_t type)
 //------------------------------------------------------------------------------
 // functions for hardware SPI
 /** Send a byte to the card */
-static void spiSend(uint8_t b) {
+static
+void spiSend (uint8_t b)
+{
   SPDR = b;
   while ( ! (SPSR & (1 << SPIF)) ) {
     ;
   }
 }
 /** Receive a byte from the card */
-static  uint8_t spiRec(void) {
+static
+uint8_t spiRec (void)
+{
   spiSend(0XFF);
   return SPDR;
 }
@@ -246,14 +250,14 @@ readRegister (uint8_t cmd, void* buf)
   return false;
 }
 
-uint8_t
-sd_card_error_code (void)
+sd_card_error_t
+sd_card_last_error (void)
 {
   return errorCode_;
 }
 
 uint8_t
-sd_card_error_data (void)
+sd_card_last_error_data (void)
 {
   return status_;
 }
@@ -264,13 +268,6 @@ sd_card_type (void)
   return type_;
 }
 
-//------------------------------------------------------------------------------
-/**
- * Determine the size of an SD flash memory card.
- *
- * \return The number of 512 byte data blocks in the card
- *         or zero if an error occurs.
- */
 uint32_t
 sd_card_size (void)
 {
@@ -296,23 +293,18 @@ sd_card_size (void)
     return 0;
   }
 }
-//------------------------------------------------------------------------------
-/** Erase a range of blocks.
- *
- * \param[in] firstBlock The address of the first block in the range.
- * \param[in] lastBlock The address of the last block in the range.
- *
- * \note This function requests the SD card to do a flash erase for a
- * range of blocks.  The data on the card after an erase operation is
- * either 0 or 1, depends on the card vendor.  The card must support
- * single block erase.
- *
- * \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.
- */
-uint8_t erase(uint32_t firstBlock, uint32_t lastBlock) {
-  if (!eraseSingleBlockEnable()) {
-    error(SD_CARD_ERROR_ERASE_SINGLE_BLOCK);
+
+uint8_t
+sd_card_single_block_erase_supported (void)
+{
+  csd_t csd;
+  return sd_card_read_csd (&csd) ? csd.v1.erase_blk_en : 0;
+}
+
+uint8_t
+sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock) {
+  if ( ! sd_card_single_block_erase_supported () ) {
+    error (SD_CARD_ERROR_ERASE_SINGLE_BLOCK);
     goto fail;
   }
   if (type_ != SD_CARD_TYPE_SDHC) {
@@ -335,16 +327,6 @@ uint8_t erase(uint32_t firstBlock, uint32_t lastBlock) {
  fail:
   chipSelectHigh();
   return false;
-}
-//------------------------------------------------------------------------------
-/** Determine if card supports single block erase.
- *
- * \return The value one, true, is returned if single block erase is supported.
- * The value zero, false, is returned if single block erase is not supported.
- */
-uint8_t eraseSingleBlockEnable(void) {
-  csd_t csd;
-  return sd_card_read_csd(&csd) ? csd.v1.erase_blk_en : 0;
 }
 
 static uint8_t
@@ -396,7 +378,9 @@ setSckRate(uint8_t sckRateID) {
  * the value zero, false, is returned for failure.  The reason for failure
  * can be determined by calling errorCode() and errorData().
  */
-uint8_t sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin) {
+uint8_t
+sd_card_init (sd_card_spi_speed_t speed, uint8_t chipSelectPin) 
+{
   errorCode_ = SD_CARD_ERROR_NONE;
   type_ = SD_CARD_TYPE_INDETERMINATE;
   inBlock_ = partialBlockRead_ = 0;
@@ -471,7 +455,7 @@ uint8_t sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin) {
   }
   chipSelectHigh();
 
-  return setSckRate(sckRateID);
+  return setSckRate (speed);
 
  fail:
   chipSelectHigh();
@@ -627,12 +611,14 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
   return false;
 }
 
-uint8_t sd_card_read_cid (cid_t *cid)
+uint8_t
+sd_card_read_cid (cid_t *cid)
 {
   return readRegister(CMD10, cid);
 }
 
-uint8_t sd_card_read_csd (csd_t *csd)
+uint8_t
+sd_card_read_csd (csd_t *csd)
 {
   return readRegister(CMD9, csd);
 }

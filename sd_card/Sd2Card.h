@@ -33,15 +33,6 @@
 #include "Sd2PinMap.h"
 #include "SdInfo.h"
 
-// FIXME: clients using/returning the enum types should use this rather
-// than uint8_t.
-
-typedef enum {
-  SPI_FULL_SPEED = 0,   // Maximum speed of F_CPU / 2.
-  SPI_HALF_SPEED = 1,   // F_CPU / 4.
-  SPI_QUARTER_SPEED = 2   // F_CPU / 8.
-} sd_card_spi_speed_t;
-
 #define OPTIMIZE_HARDWARE_SPI
 
 //------------------------------------------------------------------------------
@@ -107,10 +98,39 @@ typedef enum {
   SD_CARD_ERROR_SCK_RATE = 0X16
 } sd_card_error_t;
 
-// Card types.  FIXME: maybe using enums are int according to C, which would
-// explain why Arduino libs like to use big lists of uint8_t const values
-// instead.  But it could at least map a type to uint8_t for readability
-// in the function that return this stuff.
+// Return error code for last error.  Many other functions in this interface
+// set an internal error code but only return a generic "failure" sentinel
+// value on error.  This method will return a code that describes the most
+// recent error more precisely.
+sd_card_error_t
+sd_card_last_error (void);
+
+// Return any error data associated with the last error (which isn't
+// necessarilly anything relevant, depending on the error, and will probably
+// require inspection of the source code to interpret usefully.
+uint8_t
+sd_card_last_error_data (void);
+
+// Communication speed between microcontroller and SD card.
+typedef enum {
+  SPI_FULL_SPEED = 0,   // Maximum speed of F_CPU / 2.
+  SPI_HALF_SPEED = 1,   // F_CPU / 4.
+  SPI_QUARTER_SPEED = 2   // F_CPU / 8.
+} sd_card_spi_speed_t;
+
+// Initialize an SD flash card and this interface.  The speed argument sets
+// the communcation rate between card and microcontroller.  Returns true
+// on success and zero on error (in which case sd_card_last_error() can
+// be called).
+uint8_t
+sd_card_init (sd_card_spi_speed_t speed, uint8_t chipSelectPin);
+
+// Return the size of the card in SD_CARD_BLOCK_SIZE byte blocks, or zero
+// if an error occurs.
+uint32_t
+sd_card_size (void);
+
+// Card types. 
 typedef enum {
   SD_CARD_TYPE_INDETERMINATE = 0,   // Car type not known (yet).
   SD_CARD_TYPE_SD1 = 1,    // SD V1
@@ -118,49 +138,40 @@ typedef enum {
   SD_CARD_TYPE_SDHC = 3,   // SDHC
 } sd_card_type_t;
 
-uint32_t
-sd_card_size (void);
-
-uint8_t
-erase (uint32_t firstBlock, uint32_t lastBlock);
-
-uint8_t
-eraseSingleBlockEnable (void);
-
-/**
- * \return error code for last error. See Sd2Card.h for a list of error codes.
- */
-uint8_t
-sd_card_error_code (void);
-
-/** \return error data for last error. */
-uint8_t
-sd_card_error_data (void);
-
-uint8_t
-sd_card_init (uint8_t sckRateID, uint8_t chipSelectPin);
-
-uint8_t
-sd_card_read_block(uint32_t block, uint8_t* dst);
-
-/**
- * Read a cards CID register. The CID contains card identification
- * information such as Manufacturer ID, Product name, Product serial
- * number and Manufacturing date. */
-uint8_t
-sd_card_read_cid (cid_t *cid);
-
-/**
- * Read a cards CSD register. The CSD contains Card-Specific Data that
- * provides information regarding access to the card's contents. */
-uint8_t
-sd_card_read_csd (csd_t* csd);
-
 // Return the card type.
 sd_card_type_t
 sd_card_type (void);
 
+// Read a cards CID register. The CID contains card identification
+// information such as manufacturer ID, product name, product serial number
+// and manufacturing date.  Returns true on success, and false on failure
+// (in which case sd_card_error_code() can be called).
 uint8_t
-sd_card_write_block (uint32_t blockNumber, const uint8_t* src);
+sd_card_read_cid (cid_t *cid);
+
+// Read a cards CSD register. The CSD contains card-specific data that
+// provides information regarding access to the card's contents.  Returne
+// true on success, and false on failure (in which case sd_card_error_code()
+// can be called).
+uint8_t
+sd_card_read_csd (csd_t *csd);
+
+uint8_t
+sd_card_read_block (uint32_t block, uint8_t *dst);
+
+uint8_t
+sd_card_write_block (uint32_t blockNumber, const uint8_t *src);
+
+// Returns true iff the SD card provides an erase operation for individual
+// blocks.  Note that its always possible to simply overwrite the data.
+uint8_t
+sd_card_single_block_erase_supported (void);
+
+// Erase a range of blocks.  This method requires that
+// sd_card_single_block_erase_supported() return true.  The data on the
+// card after this operation may be either zeros or ones, depending on the
+// card vendor.
+uint8_t
+sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock);
 
 #endif  // SD_CARD_H
