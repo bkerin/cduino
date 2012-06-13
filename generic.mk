@@ -347,6 +347,8 @@ ifeq ($(UPLOAD_METHOD), arduino_bl)
   writeflash:
 	# First kill any screen session started from run_screen.mk.
 	screen -S $(SCREEN_SESSION_NAME) -X kill || true
+	# Give screen time to die, once I still had programming fail w/o this.
+	sleep 0.42 || sleep 1
 	$(PROBABLY_PULSE_DTR) || \
           ($(PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING) && false) 1>&2
 	$(AVRDUDE) -c $(AVRDUDE_ARDUINO_PROGRAMMERID)   \
