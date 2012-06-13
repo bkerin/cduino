@@ -24,17 +24,17 @@
 
 static uint32_t block_;
 static uint8_t chipSelectPin_;
-static uint8_t errorCode_;
+static sd_card_error_t errorCode_;
 static uint8_t inBlock_;
 static uint16_t offset_;
 static uint8_t partialBlockRead_;
 static uint8_t status_;
-static uint8_t type_;
+static sd_card_type_t type_;
 
 static void
-set_type (uint8_t value)
+set_type (sd_card_type_t type)
 {
-  type_ = value;
+  type_ = type;
 }
 
 //------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ chipSelectLow(void) {
 }
 
 static void
-error (uint8_t code)
+error (sd_card_error_t code)
 {
   errorCode_ = code;
 }
@@ -258,7 +258,7 @@ sd_card_error_data (void)
   return status_;
 }
 
-uint8_t
+sd_card_type_t
 sd_card_type (void)
 {
   return type_;
@@ -397,7 +397,9 @@ setSckRate(uint8_t sckRateID) {
  * can be determined by calling errorCode() and errorData().
  */
 uint8_t sd_card_init(uint8_t sckRateID, uint8_t chipSelectPin) {
-  errorCode_ = inBlock_ = partialBlockRead_ = type_ = 0;
+  errorCode_ = SD_CARD_ERROR_NONE;
+  type_ = SD_CARD_TYPE_INDETERMINATE;
+  inBlock_ = partialBlockRead_ = 0;
   chipSelectPin_ = chipSelectPin;
   // 16-bit init start time allows over a minute
   uint16_t t0 = (uint16_t)millis();
