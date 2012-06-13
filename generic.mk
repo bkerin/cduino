@@ -262,7 +262,7 @@ OPTLEVEL := s
 CPPFLAGS += $(CPP_DEBUG_DEFINE_FLAGS) $(CPU_FREQ_DEFINE) -I.
 
 # See comments near CPPFLAGS, above.
-CFLAGS += -std=gnu99 -gstabs -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) -Wall \
+CFLAGS += -std=gnu99 -fshort-enums -gstabs -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) -Wall \
           -Wextra -Wimplicit-int -Wold-style-declaration -Wredundant-decls \
           -Wstrict-prototypes -Wmissing-prototypes
 
