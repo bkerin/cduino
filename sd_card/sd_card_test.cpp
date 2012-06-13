@@ -9,8 +9,6 @@
   }
 #endif
 
-const int chipSelect = 4;
-
 #define SD_CARD_BLOCK_SIZE 512
 
 int

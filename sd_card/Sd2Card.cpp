@@ -375,7 +375,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   SPI_MISO_INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
   SPI_MOSI_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   SPI_SCK_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  // SS must be in output mode even if it is not chip select.
+  // SS must be in output mode even if it is not chip select
   SPI_SS_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
 
   // Enable SPI, Master, clock rate f_osc/128
