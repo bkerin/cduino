@@ -26,11 +26,6 @@
   }
 #endif
 
-/**
- * \file
- * Sd2Card class
- */
-#include "Sd2PinMap.h"
 #include "SdInfo.h"
 
 #define OPTIMIZE_HARDWARE_SPI
@@ -107,7 +102,7 @@ sd_card_last_error (void);
 
 // Return any error data associated with the last error (which isn't
 // necessarilly anything relevant, depending on the error, and will probably
-// require inspection of the source code to interpret usefully.
+// require inspection of the source code to interpret usefully).
 uint8_t
 sd_card_last_error_data (void);
 
