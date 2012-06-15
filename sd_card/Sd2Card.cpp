@@ -193,14 +193,14 @@ static uint8_t
 waitStartBlock (void)
 {
   uint16_t t0 = millis();
-  while ((status_ = spiRec()) == 0XFF) {
-    if (((uint16_t)millis() - t0) > SD_READ_TIMEOUT) {
-      error(SD_CARD_ERROR_READ_TIMEOUT);
+  while ( (status_ = spiRec()) == 0XFF ) {
+    if ( ((uint16_t) millis () - t0) > SD_READ_TIMEOUT ) {
+      error (SD_CARD_ERROR_READ_TIMEOUT);
       goto fail;
     }
   }
-  if (status_ != DATA_START_BLOCK) {
-    error(SD_CARD_ERROR_READ);
+  if ( status_ != DATA_START_BLOCK ) {
+    error (SD_CARD_ERROR_READ);
     goto fail;
   }
   return true;
@@ -396,8 +396,8 @@ sd_card_init (sd_card_spi_speed_t speed)
     }
   }
   // check SD version
-  if ((cardCommand(CMD8, 0x1AA) & R1_ILLEGAL_COMMAND)) {
-    set_type(SD_CARD_TYPE_SD1);
+  if ( (cardCommand (CMD8, 0x1AA) & R1_ILLEGAL_COMMAND) ) {
+    set_type (SD_CARD_TYPE_SD1);
   } else {
     // only need last byte of r7 response
     for (uint8_t i = 0; i < 4; i++) status_ = spiRec();
@@ -410,10 +410,10 @@ sd_card_init (sd_card_spi_speed_t speed)
   // initialize card and send host supports SDHC if SD2
   arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0X40000000 : 0;
 
-  while ((status_ = cardAcmd(ACMD41, arg)) != R1_READY_STATE) {
+  while ( (status_ = cardAcmd(ACMD41, arg)) != R1_READY_STATE ) {
     // check for timeout
-    if (((uint16_t)millis() - t0) > SD_INIT_TIMEOUT) {
-      error(SD_CARD_ERROR_ACMD41);
+    if ( ((uint16_t) millis () - t0) > SD_INIT_TIMEOUT ) {
+      error (SD_CARD_ERROR_ACMD41);
       goto fail;
     }
   }

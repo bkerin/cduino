@@ -17,9 +17,12 @@
  * along with the Arduino Sd2Card Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-#ifndef SdInfo_h
-#define SdInfo_h
+
+#ifndef SD_CARD_INFO_H
+#define SD_CARD_INFO_H
+
 #include <stdint.h>
+
 // Based on the document:
 //
 // SD Specifications
@@ -30,41 +33,44 @@
 // September 25, 2006
 //
 // www.sdcard.org/developers/tech/sdcard/pls/Simplified_Physical_Layer_Spec.pdf
+
+
 //------------------------------------------------------------------------------
 // SD card commands
-/** GO_IDLE_STATE - init card in spi mode if CS low */
+// GO_IDLE_STATE - init card in spi mode if CS low
 uint8_t const CMD0 = 0X00;
-/** SEND_IF_COND - verify SD Memory Card interface operating condition.*/
+// SEND_IF_COND - verify SD Memory Card interface operating condition
 uint8_t const CMD8 = 0X08;
-/** SEND_CSD - read the Card Specific Data (CSD register) */
+// SEND_CSD - read the Card Specific Data (CSD register)
 uint8_t const CMD9 = 0X09;
-/** SEND_CID - read the card identification information (CID register) */
+// SEND_CID - read the card identification information (CID register)
 uint8_t const CMD10 = 0X0A;
-/** SEND_STATUS - read the card status register */
+// SEND_STATUS - read the card status register
 uint8_t const CMD13 = 0X0D;
-/** READ_BLOCK - read a single data block from the card */
+// READ_BLOCK - read a single data block from the card
 uint8_t const CMD17 = 0X11;
-/** WRITE_BLOCK - write a single data block to the card */
+// WRITE_BLOCK - write a single data block to the card
 uint8_t const CMD24 = 0X18;
-/** WRITE_MULTIPLE_BLOCK - write blocks of data until a STOP_TRANSMISSION */
+// WRITE_MULTIPLE_BLOCK - write blocks of data until a STOP_TRANSMISSION
 uint8_t const CMD25 = 0X19;
-/** ERASE_WR_BLK_START - sets the address of the first block to be erased */
+// ERASE_WR_BLK_START - sets the address of the first block to be erased
 uint8_t const CMD32 = 0X20;
-/** ERASE_WR_BLK_END - sets the address of the last block of the continuous
-    range to be erased*/
+// ERASE_WR_BLK_END - sets the address of the last block of the continuous
+// range to be erased
 uint8_t const CMD33 = 0X21;
-/** ERASE - erase all previously selected blocks */
+// ERASE - erase all previously selected blocks
 uint8_t const CMD38 = 0X26;
-/** APP_CMD - escape for application specific command */
+// APP_CMD - escape for application specific command
 uint8_t const CMD55 = 0X37;
-/** READ_OCR - read the OCR register of a card */
+// READ_OCR - read the OCR register of a card
 uint8_t const CMD58 = 0X3A;
-/** SET_WR_BLK_ERASE_COUNT - Set the number of write blocks to be
-     pre-erased before writing */
+// SET_WR_BLK_ERASE_COUNT - Set the number of write blocks to be pre-erased
+// before writing
 uint8_t const ACMD23 = 0X17;
-/** SD_SEND_OP_COMD - Sends host capacity support information and
-    activates the card's initialization process */
+// SD_SEND_OP_COMD - Sends host capacity support information and activates the
+// card's initialization process
 uint8_t const ACMD41 = 0X29;
+
 //------------------------------------------------------------------------------
 /** status for card in the ready state */
 uint8_t const R1_READY_STATE = 0X00;
@@ -82,6 +88,7 @@ uint8_t const WRITE_MULTIPLE_TOKEN = 0XFC;
 uint8_t const DATA_RES_MASK = 0X1F;
 /** write data accepted token */
 uint8_t const DATA_RES_ACCEPTED = 0X05;
+
 //------------------------------------------------------------------------------
 typedef struct CID {
   // byte 0
@@ -105,6 +112,7 @@ typedef struct CID {
   unsigned always1 : 1;
   unsigned crc : 7;
 }cid_t;
+
 //------------------------------------------------------------------------------
 // CSD for version 1.00 cards
 typedef struct CSDV1 {
@@ -165,7 +173,8 @@ typedef struct CSDV1 {
   // byte 15
   unsigned always1 : 1;
   unsigned crc : 7;
-}csd1_t;
+} csd1_t;
+
 //------------------------------------------------------------------------------
 // CSD for version 2.00 cards
 typedef struct CSDV2 {
@@ -222,11 +231,13 @@ typedef struct CSDV2 {
   // byte 15
   unsigned always1 : 1;
   unsigned crc : 7;
-}csd2_t;
+} csd2_t;
+
 //------------------------------------------------------------------------------
 // union of old and new style CSD register
 union csd_t {
   csd1_t v1;
   csd2_t v2;
 };
-#endif  // SdInfo_h
+
+#endif  // SD_CARD_INFO_H

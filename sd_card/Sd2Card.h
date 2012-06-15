@@ -26,7 +26,7 @@
   }
 #endif
 
-#include "SdInfo.h"
+#include "sd_card_info.h"
 
 #define OPTIMIZE_HARDWARE_SPI
 
