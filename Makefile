@@ -171,6 +171,25 @@ SAMESY_CHECK_CODE := \
         ) &&))) \
   true
 
+# This is useful if we need to ensure that arbitrary sets of files are
+# identical.  NOTE: SAMESY_CHECK_CODE could in theory be implemented in terms
+# of this, if it was worth doing.  This make function which expands to shell
+# code that fails if all of the files listed in the space- (NOT comma-)
+# seperated list of files given as an argument aren't identical.  NOTE:
+# somewhat weirdly we need to use '||' after the subshell '(echo... exit
+# 1) to prevent the shell from somehow eating our diff output and error
+# message... I suppose because '||' guarantees via short-circuit execution
+# that the command before it is fully executed, and '&&' doesn't.  Then we
+# need another 'exit 1' to exit the shell executing the loop, rather than
+# just the subshell (because for doesn't care if commands return non-zero).
+DIFFN = for fa in $(1); do \
+          for fb in $(1); \
+            do diff -u $$fa $$fb || \
+               (echo "Files $(1) are not all identical" 1>&2 && exit 1) || \
+               exit 1; \
+          done; \
+        done
+
 # For debugging:
 .PHONY: escc
 escc:
