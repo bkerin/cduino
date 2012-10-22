@@ -1,5 +1,9 @@
 // Human-readable names for the various cryptic avr libc macros, AVR
-// registers, etc.
+// registers, etc.  FIXME: this module hasn't een kep up-to-date and I think
+// it ends up being a bad way to do it, since the spec sheets and everything
+// insist on the cryptic register names, and if this is used they don't show
+// up directly in the source.  Maybe a vim module to support looking up the
+// current word as a register in the datasheets or something would be better.
 
 #ifndef HUMAN_READABLE_NAMES_H
 #define HUMAN_READABLE_NAMES_H
