@@ -22,9 +22,9 @@ typedef enum {
   ADC_REFERENCE_INTERNAL
 } adc_reference_source_t;
 
-// WARNING: using ADC_REFERENCE_INTERNAL when the AREF pin is connected to
-// an extern DC voltage can destroy the ADC.  Prepare port C pins for use
-// by the ADC, and ready the ADC.  See the warning above for more details.
+// WARNING: using ADC_REFERENCE_INTERNAL when the AREF pin is connected
+// to an external DC voltage can destroy the ADC.  Prepare port C pins for
+// use by the ADC, and ready the ADC.  See the warning above for more details.
 void
 adc_init (adc_reference_source_t reference_source);
 
@@ -36,7 +36,7 @@ adc_init (adc_reference_source_t reference_source);
 uint16_t
 adc_read_raw (uint8_t pin);
 
-// Read a voltage value from pin (which must be on of 0 through 5),
+// Read a voltage value from pin (which must be one of 0 through 5),
 // assuming reference_voltage.  Note that if ADC_REFERENCE_INTERNAL was
 // used with adc_init(), reference_voltage should be 1.1 for most (all?) AVR
 // microcontrollers.
