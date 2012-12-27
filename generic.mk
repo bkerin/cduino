@@ -3,15 +3,18 @@
 
 # vim: foldmethod=marker
 
-##### Make Settings {{{1
+##### Make Settings and Sanity Measures {{{1
 
-# This is sensible stuff for use but could confuse an experience Make
+# This is sensible stuff for use but could confuse an experienced Make
 # programmer so its out front here.
 
 # Delete files produced by rules the commands of which return non-zero.
 .DELETE_ON_ERROR:
 # Disable all suffix rules.
 .SUFFIXES:
+
+# Ensure that we can use bashisms.
+SHELL = /bin/bash
 
 # This Makefile requires that the -R/--no-builtin-variables option be used.
 # Implicit rules and default variables cause much more trouble thatn they are
@@ -23,6 +26,12 @@ ifndef HAVE_NO_BUILTIN_VARIABLES_OPTION
    $(error This makefile requires use of the -R/--no-builtin-variables make \
            option)
 endif
+
+# FIXME: it would be nice to also require -r/--no-builtin-rules.
+#
+# FIXME: also, both these options could be forced by e.g. MAKEFLAGS += -R,
+# but do we really want to do this (since it silently changes the way make
+# works, rather than forcing user to know what has been done)?
 
 # Avoid default goal confusion by essentially disabling default goals.
 PRINT_DEFAULT_GOAL_TRAP_ERROR_MESSAGE := \
@@ -39,6 +48,20 @@ PRINT_DEFAULT_GOAL_TRAP_ERROR_MESSAGE := \
 .PHONY: default_goal_trap
 default_goal_trap:
 	@($(PRINT_DEFAULT_GOAL_TRAP_ERROR_MESSAGE) && false) 1>&2
+
+# This function works almost exactly like the builtin shell command, except it
+# stops everything with an error if the shell command given as its argument
+# returns non-zero when executed.  The other difference is that the output
+# is passed through the strip make function (the shell functions strips only
+# the last trailing newline).  In practice this doesn't matter much since the
+# output is usually collapsed by the surroundeing make context to the same
+# state produced by strip.  WARNING: don't try to nest calls to this function.
+SHELL_CHECKED = \
+  $(strip \
+    $(if $(shell (($1) 1>/tmp/SC_so) || echo 'non-empty'), \
+      $(error shell command '$1' failed.  Its stderr should be above \
+              somewhere.  Its stdout is available for review in '/tmp/SC_so'), \
+      $(shell cat /tmp/SC_so)))
 
 
 ##### Specs for Default Target Part (Overridable) {{{1
@@ -206,13 +229,14 @@ ARDUINOLESS_TARGET_WARNING_TEXT := \
   the chip needs to be replaced (using the replace_bootloader target). \
   If you need to use the AVRISPmkII while powering the Arduino some other \
   way, you will need to explicitly set the ARDUINO_PORT, ARDUINO_BAUD, and \
-  ARDUINO_BOOTLOADER variables; see the comments need those variables in \
+  ARDUINO_BOOTLOADER variables; see the comments near those variables in \
   generic.mk for some common values.
 
 ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
 
   ifeq ($(ARDUINO_PORT),autoguess)
-    ACTUAL_ARDUINO_PORT := $(shell ./guess_arduino_attribute.perl --device)
+    ACTUAL_ARDUINO_PORT := \
+      $(call SHELL_CHECKED,./guess_arduino_attribute.perl --device)
     ifeq ($(ACTUAL_ARDUINO_PORT),)
       $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
       $(info )
@@ -223,7 +247,8 @@ ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
   endif
 
   ifeq ($(ARDUINO_BAUD),autoguess)
-    ACTUAL_ARDUINO_BAUD := $(shell ./guess_arduino_attribute.perl --baud)
+    ACTUAL_ARDUINO_BAUD := \
+      $(call SHELL_CHECKED,./guess_arduino_attribute.perl --baud)
     ifeq ($(ACTUAL_ARDUINO_BAUD),)
       $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
       $(info )
@@ -235,7 +260,7 @@ ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
 
   ifeq ($(ARDUINO_BOOTLOADER),autoguess)
     ACTUAL_ARDUINO_BOOTLOADER := \
-      $(shell ./guess_arduino_attribute.perl --bootloader)
+      $(call SHELL_CHECKED,./guess_arduino_attribute.perl --bootloader)
     ifeq ($(ACTUAL_ARDUINO_BOOTLOADER),)
       $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
       $(info )
@@ -310,24 +335,38 @@ PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
   echo "" ; \
   echo "Couldn't pulse DTR or upload failed.  Some possible reasons:" ; \
   echo "" ; \
-  echo "  * Your Arduino program is itself using the serial port," ; \
-  echo "    which prevents the programmer from working on my Arduino" ; \
-  echo "    Uno rev. 3 at leats.  Make sure that you do not have a" ; \
-  echo "    screen session connected to the arduino, for example." ; \
-  echo "    If you get a message like \"Couldn't open /dev/ttyACM0: " ; \
-  echo "    Device or resource busy\" this is a particularly likely " ; \
-  echo "    explanation." ; \
+  echo "  * The Device::SerialPort perl module isn't installed, see the " ; \
+  echo "    diagnostic output above for more details." ; \
   echo "" ; \
-  echo "  * You might need to press reset immediately after" ; \
-  echo "    avrdude starts as required (with my Duemilanove anyway) if" ; \
-  echo "    the above serial DTR pulse is not doing it (the DTR pulse" ; \
-  echo "    does not seem to work if the arduino has been running for a" ; \
-  echo "    while without being programmed, or if the program running on" ; \
-  echo "    the arduino is using the serial line itself)." ; \
+  echo "  * You don't have write permission for the Arduino device file." ; \
+  echo "    If you have a 'Permission denied' message above that refers to" ; \
+  echo "    a file in /dev (perhaps /dev/ACM0 or /dev/USB0) this is likely" ; \
+  echo "    the problem.  Make sure the Arduino is plugged in, and then" ; \
+  echo "    take a look at the mentioned file with 'ls -l' and see if" ; \
+  echo "    there is a group you can add yourself to to get write" ; \
+  echo "    permission (on debian I had to add myself to the 'dialout'" ; \
+  echo "    group).  Note that for group membership to take effect for you" ; \
+  echo "    you may need to restart your system (or restart the Gnome" ; \
+  echo "    Display Manager or somethimg) and login again.  You can see" ; \
+  echo "    what groups you're in with the 'groups' command." ; \
+  echo "" ; \
+  echo "  * Your Arduino program is itself using the serial port, which" ; \
+  echo "    prevents the programmer from working on my Arduino Uno rev. 3" ; \
+  echo "    at leats.  Make sure that you do not have a screen session" ; \
+  echo "    connected to the arduino, for example.  If you get a message" ; \
+  echo "    like \"Couldn't open /dev/ttyACM0: Device or resource busy\"" ; \
+  echo "    this is a particularly likely explanation." ; \
+  echo "" ; \
+  echo "  * You might need to press reset immediately after avrdude starts" ; \
+  echo "    as required (with my Duemilanove anyway) if the above serial" ; \
+  echo "    DTR pulse is not doing it (the DTR pulse does not seem to work" ; \
+  echo "    if the arduino has been running for a while without being" ; \
+  echo "    programmed, or if the program running on the arduino is using" ; \
+  echo "    the serial line itself)." ; \
   echo "" ; \
   echo "  * The bootloader has been nuked (by programming with the" ; \
-  echo "    AVRISPmkII for example).  See the replace_bootloader" ; \
-  echo "    target in generic.mk." ; \
+  echo "    AVRISPmkII for example).  See the replace_bootloader target in" ; \
+  echo "    generic.mk." ; \
   echo ""
 
 PRINT_AVRISPMKII_PROGRAMMING_FAILED_MESSAGE := \
@@ -340,11 +379,13 @@ PRINT_AVRISPMKII_PROGRAMMING_FAILED_MESSAGE := \
 
 .PHONY: writeflash
 writeflash: LOCK_AND_FUSE_AVRDUDE_OPTIONS := \
-  $(shell ./lock_and_fuse_bits_to_avrdude_options.perl \
-            $(PROGRAMMER_MCU) $(LOCK_AND_FUSE_SETTINGS))
+  $(call SHELL_CHECKED,./lock_and_fuse_bits_to_avrdude_options.perl \
+                       $(PROGRAMMER_MCU) $(LOCK_AND_FUSE_SETTINGS))
 writeflash: $(HEXTRG) avrdude_version_check
 ifeq ($(UPLOAD_METHOD), arduino_bl)
   writeflash:
+	echo $(LOCK_AND_FUSE_AVRDUDE_OPTIONS)
+	false
 	# First kill any screen session started from run_screen.mk.
 	screen -S $(SCREEN_SESSION_NAME) -X kill || true
 	# Give screen time to die, once I still had programming fail w/o this.
