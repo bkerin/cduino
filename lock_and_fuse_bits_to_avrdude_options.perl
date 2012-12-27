@@ -2,11 +2,11 @@
 
 # Allow specification of fuse and lock bit setting using slightly more human
 # readable (or at least search-forable) names (as opposed to the raw byte
-# values the avrdude accepts).
+# values that avrdude accepts).
 #
-# The first argument must be the name of processor being targeted in the form
-# understood by avrdude (for a recent Arduino Duemilanove this will be 'm328p'
-# unless the chip has been changed out).
+# The first argument must be the name of processor being targeted in the
+# form understood by avrdude (for a recent Arduino Duemilanove, Uno, or
+# Uno Rev. 3 this will be 'm328p' unless the chip has been changed out).
 #
 # Any additional arguments should be a strings containing comma-seperated
 # substrings of the form bit_name=value (where bit_name is one of the bit names
@@ -51,8 +51,11 @@
 #   BODLEVEL1=1
 #   BODLEVEL2=1
 
-
 use strict;
+# FIXME: test that fatal warnings work ok when we next program fuses and
+# enable it
+#use warnings FATAL => 'all';
+use warnings;
 
 use Data::Dumper;
 use Getopt::Long;
