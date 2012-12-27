@@ -122,6 +122,14 @@ xlinked_source_html:
 	rm $@/*.[ch]
 	rm $@/tags
 
+# FIXME: could add Make compile timish checks that the proper vars are
+# defined on the command line when one of the convenience targets like
+# upload_html are used as was done in beaglebone_symbols project (currently
+# VERSION must be given on command line in this project, other symbols like
+# WEB_SSH and WEB_ROOT are defined in this Makefile but not in the one for
+# the beaglebone_symbol project).
+
+# FIXME: this should run checklink script after install
 # Note this doesn't nuke old pages with different names.
 .PHONY: upload_html
 upload_html: git_push xlinked_source_html check_api_doc_completeness
@@ -132,6 +140,9 @@ upload_html: git_push xlinked_source_html check_api_doc_completeness
 
 # Make a release targzball.  The make variable VERSION must be set (probably
 # from the command line, e.g. make targzball VERSION=0.42.42').
+# FIXME: get rid of these hard coded cduino distribution names and replace
+# with refs to the dir as we do the first time below (make shell var for long
+# command).
 .PHONY: targzball
 targzball: build_all_test_programs clean_all_modules xlinked_source_html
 	[ -n "$(VERSION)" ] || (echo VERSION not set 1>&2 && false)
@@ -172,10 +183,11 @@ SAMESY_CHECK_CODE := \
   true
 
 # This is useful if we need to ensure that arbitrary sets of files are
-# identical.  NOTE: SAMESY_CHECK_CODE could in theory be implemented in terms
-# of this, if it was worth doing.  This make function which expands to shell
-# code that fails if all of the files listed in the space- (NOT comma-)
-# seperated list of files given as an argument aren't identical.  NOTE:
+# identical.  NOTE: SAMESY_CHECK_CODE could in theory be implemented in
+# terms of this, if it was worth doing.  This make function which expands to
+# shell code that fails if all of the files listed in the space- (NOT comma-)
+# seperated list of files given as an argument aren't identical.  This check
+# will fail if any of the mentioned files are missing as well. NOTE:
 # somewhat weirdly we need to use '||' after the subshell '(echo... exit
 # 1) to prevent the shell from somehow eating our diff output and error
 # message... I suppose because '||' guarantees via short-circuit execution
@@ -205,10 +217,11 @@ upload_html targzball: samesys
 
 # }}}
 
-
 # Upload the targzball and documentation to the web site.  The unstable
 # snapshot that we provide is uploaded first, since it should never be
 # behind the stable version.
+# FIXME: might want to generalize away from hardcoded cduino name as was
+# done in beaglebone_symbols project.
 .PHONY: upload
 upload: targzball upload_html update_unstable git_push
 	scp /tmp/cduino-$(VERSION).tgz $(WEB_SSH):$(WEB_ROOT)/releases/
