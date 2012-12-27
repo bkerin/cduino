@@ -20,9 +20,10 @@
 
 # vim: foldmethod=marker
 
-use warnings;
 use strict;
+use warnings FATAL => 'all';
 
+use Data::Dumper;
 use Getopt::Long;
 
 # We require an option saying what attribute we're guessing.
@@ -74,19 +75,31 @@ sub find_usb_tty_devices # {{{1
         $dvid eq $vid
             or (print "unexpected vendor ID '$dvid' (expected '$vid')\n" 
                 and next);
-        
-        # The tty finder command.
-        my $ttyfc = 'basename $(find '.$dpd.' -name "tty:*" -print) | '.
-                        'perl -p -e \'s/tty:(.*)/$1/\'';
-        
-        my $df = '/dev/'.`$ttyfc`;
-        $? == 0 or die "command '$ttyfc' failed";
-        chomp($df);
+     
+        # We expect to find exactly one directory called 'tty' under $dpd
+        # (FIXME: does this work when we have both an UNO and a duemilanove
+        # or other USB devices plugged in? it should as we've already looked
+        # for idVendor higher up the call stack).
+        my $ttydfc = "find $dpd -name tty -type d";   # TTY dir finder command
+        my $ttyd = `$ttydfc`;
+        $? == 0 or die "command '$ttydfc' failed";
+        my @fol = split("\n", $ttyd);
+        @fol == 1 or die "didn't find exactly one 'tty' dir under '$dpd'";
+        chomp($ttyd);
 
-        -e $df
-            or die "though we found device '$df', but that file doesn't exist";
+        # TTY device name finder command.  The device name is something like
+        # 'ttyACM0' or 'ttyUSB0' under $ttyd.
+        my $ttydnfc = 'basename $(find '.$ttyd.' -name "tty?*" -type d -print)';
+        my $ttydn = `$ttydnfc`;   # TTY device name (without full path)
+        $? == 0 or die "command '$ttydnfc' failed";
+        chomp($ttydn);
 
-        push(@results, $df);
+        my $ttydp = "/dev/$ttydn";   # TTY device path
+
+        -e $ttydp
+            or die "we though device file  '$ttydp', but it doesn't exist";
+
+        push(@results, "/dev/$ttydn");
     }
     
     # Cross-check the number of Unos we found with what lsusb shows.  It would
@@ -174,22 +187,23 @@ elsif ( @uno_rev3_devs == 0 and @duemilanove_devs == 1 ) {
 elsif ( @uno_rev3_devs == 0 and @duemilanove_devs == 0 ) {
     die <<END_DID_NOT_DETECT_ARDUINOS_MESSAGE;
 
-Didn't detect any Arduinos on USB :(.  Is the Arduino plugged in?  Its quite
-possible that automatic detection has failed somehow even though the Arduino
-is there.  Another thing to try is to unplug the Arduino and do 'ls /dev/tty*',
-then plug it back in and try 'ls /dev/tty*' again and see if a file like 
-/dev/ttyUSB0 or /dev/ttyACM0 has appeared.  If so, the Make variable
-ARDUINO_PORT can be set to the file in question.  The ARDUINO_BAUD Make
-variable will also need to be set: for an Arduino Uno rev.3 (and probably
-other Unos) it should be set to $uno_rev3_baud, for an Arduino Duemilanove it
-should be set to $duemilanove_baud.
+$0 failed: Didn't detect any Arduinos on USB :(.
+Is the Arduino plugged in?  Its quite possible that automatic detection has
+failed somehow even though the Arduino is there.  Another thing to try is to
+unplug the Arduino and do 'ls /dev/tty*', then plug it back in and try
+'ls /dev/tty*' again and see if a file like /dev/ttyUSB0 or /dev/ttyACM0 has
+appeared.  If so, the Make variable ARDUINO_PORT can be set to the file in
+question.  The ARDUINO_BAUD Make variable will also need to be set: for an
+Arduino Uno rev.3 (and probably other Unos) it should be set to $uno_rev3_baud,
+for an Arduino Duemilanove it should be set to $duemilanove_baud.
 
 END_DID_NOT_DETECT_ARDUINOS_MESSAGE
 }
 else {
     die <<END_DETECTED_MULTIPLE_ARDUINOS_MESSAGE;
 
-ERROR: Mutiple things that look like Arduinos were detected, including:
+$0 failed: Mutiple things that look like Arduinos
+were detected, including:
 
 $uno_rev3_devs_multiline
 $duemilanove_devs_multiline
