@@ -384,8 +384,6 @@ writeflash: LOCK_AND_FUSE_AVRDUDE_OPTIONS := \
 writeflash: $(HEXTRG) avrdude_version_check
 ifeq ($(UPLOAD_METHOD), arduino_bl)
   writeflash:
-	echo $(LOCK_AND_FUSE_AVRDUDE_OPTIONS)
-	false
 	# First kill any screen session started from run_screen.mk.
 	screen -S $(SCREEN_SESSION_NAME) -X kill || true
 	# Give screen time to die, once I still had programming fail w/o this.
