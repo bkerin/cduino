@@ -17,31 +17,9 @@
          chips.
 #endif
 
-// FIXME: unexpose when done debug
-volatile uint64_t timer0_overflow_count;
-//static volatile uint64_t timer0_overflow_count;
-
-// FIXME: debug schlop for tracking when we get into interrupt
-volatile uint8_t hit_interrupt = 0;
-
-// FIXME: debug schlop for tracking when we get into certain code
-volatile uint8_t hit_ofc = 0;
-
-// FIXME: remove debug schlop
-static void
-rpdb (void)
-{
-  double const bt = 50.0;
-
-  int ii;
-  for ( ii = 0 ; ii < 10 ; ii++ ) {
-    PORTB |= _BV (PORTB5);
-    _delay_ms (bt);
-    PORTB &= ~(_BV (PORTB5));
-    _delay_ms (bt);
-  }
-}
-
+// FIXME: make this type definable at compile time, so we can see if we
+// get fewer ticks of overhead between calls with a smaller type.
+static volatile uint64_t timer0_overflow_count;
 
 // Explicit support for ATTiny chip interrupt name thingies from AVR libc,
 // to make migration to smaller/cheaper chips easier.
@@ -56,7 +34,6 @@ ISR (TIMER0_OVF_vect)
   // Note that we don't need to use an atomic block here, as we're inside
   // an ordinary ISR block, so interrupts are globally deferred anyway.
   timer0_overflow_count++;
-  hit_interrupt++;
 }
 
 // Default values of the timer/counter0 control registers (for the ATMega328p
@@ -139,6 +116,11 @@ timer0_interrupt_driven_stopwatch_microseconds (void)
     TIMER0_INTERRUPT_DRIVEN_STOPWATCH_MICROSECONDS_PER_TIMER_TICK 
     *  timer0_interrupt_driven_stopwatch_ticks ();
 }
+
+// FIXME: need to add a note about the possible delay you get at the start of
+// timing from prescaler not being reset.  Or else reset the prescaler, or add
+// an option to do that.  But then we might interact with other timers using
+// the same prescaler, which would be annoying, so it should be an option.
 
 void
 timer0_interrupt_driven_stopwatch_shutdown (void)

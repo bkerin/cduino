@@ -30,10 +30,6 @@
   CLOCK_CYCLES_TO_MICROSECONDS \
     (TIMER0_INTERRUPT_DRIVEN_STOPWATCH_PRESCALER_DIVIDER)
 
-extern volatile uint8_t hit_interrupt;
-extern volatile uint8_t hit_ofc;
-extern volatile uint64_t timer0_overflow_count;
-
 // Initialize the time/counter0 hardware, install
 // the interrupt handler, enable the prescaler as per
 // TIMER0_INTERRUPT_DRIVEN_STOPWATCH_PRESCALER_DIVIDER, set the elapsed
