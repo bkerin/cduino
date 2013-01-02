@@ -3,8 +3,6 @@
 
 #include <avr/interrupt.h>
 #include <util/atomic.h>
-// FIXME: remove when done debugging
-#include <util/delay.h>
 
 #include "timer0_interrupt_driven_stopwatch.h"
 #include "util.h"
@@ -19,7 +17,7 @@
 
 // FIXME: make this type definable at compile time, so we can see if we
 // get fewer ticks of overhead between calls with a smaller type.
-static volatile uint64_t timer0_overflow_count;
+volatile uint64_t timer0_overflow_count;
 
 // Explicit support for ATTiny chip interrupt name thingies from AVR libc,
 // to make migration to smaller/cheaper chips easier.
@@ -61,9 +59,8 @@ timer0_interrupt_driven_stopwatch_init (void)
   TIMSK0 |= _BV (TOIE0);   // Enable overflow interrupts for timer/counter0.
 
   timer0_overflow_count = 0;
+  TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
   TCNT0 = 0;
-  // FIXME: must ensure the TOV0 is cleared here. It is cleared by writing
-  // a logic one to the flag
 
   sei ();   // Enable interrupts.
 }
@@ -74,9 +71,8 @@ timer0_interrupt_driven_stopwatch_reset (void)
   ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
   {
     timer0_overflow_count = 0;
+    TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
     TCNT0 = 0;
-    // FIXME: must ensure the TOV0 is cleared here. It is cleared by writing
-    // a logic one to the flag
   }
 }
 
@@ -112,9 +108,9 @@ timer0_interrupt_driven_stopwatch_ticks (void)
 uint64_t
 timer0_interrupt_driven_stopwatch_microseconds (void)
 {
-  return 
-    TIMER0_INTERRUPT_DRIVEN_STOPWATCH_MICROSECONDS_PER_TIMER_TICK 
-    *  timer0_interrupt_driven_stopwatch_ticks ();
+  uint64_t tmp;
+  TIMER0_STOPWATCH_TICKS (tmp);
+  return TIMER0_INTERRUPT_DRIVEN_STOPWATCH_MICROSECONDS_PER_TIMER_TICK * tmp;
 }
 
 // FIXME: need to add a note about the possible delay you get at the start of
@@ -134,8 +130,7 @@ timer0_interrupt_driven_stopwatch_shutdown (void)
   // Leave timer reading 0 as per interface promise.
   timer0_overflow_count = 0;
   TCNT0 = 0;
-  // FIXME: must ensure the TOV0 is cleared here. It is cleared by writing
-  // a logic one to the flag
+  TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
 
   TCCR0A = TCCR0A_DEFAULT_VALUE;
 

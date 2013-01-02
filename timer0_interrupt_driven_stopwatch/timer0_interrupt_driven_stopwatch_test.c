@@ -6,13 +6,14 @@
 // then double-blink one final time, then do nothing.
 
 #include <assert.h>
+#include <util/atomic.h>   // FIXME: for debugging/profiling
 #include <avr/io.h>
 #include <avr/sfr_defs.h>
 #include <util/delay.h>
 // FIXME: we shouldn't need to include this once avrlibc has a correct
 // assert.h (we only use it for assert as of this writing).
 #include <stdlib.h>
-//#include "term_io.h"   // For debugging
+#include "term_io.h"   // For debugging
 #include "timer0_interrupt_driven_stopwatch.h"
 
 static void
@@ -34,7 +35,7 @@ doubleblink_pb5 (void)
 int
 main (void)
 {
-  // term_io_init ();   // For debugging
+  term_io_init ();   // For debugging
 
   // Set up pin PB5 for output so we can blink the LED onboard the Arduino.
   // We don't use the dio interface here to avoid an unnecessary dependency.
@@ -44,7 +45,7 @@ main (void)
 
   timer0_interrupt_driven_stopwatch_init ();
 
-  const uint64_t tbbus = 3 * 1000000;   // Time between blinks, in us.
+  const uint64_t tbdbus = 3 * 1000000;   // Time between double blinks, in us.
 
   uint8_t doubleblinks = 0;
   
@@ -57,16 +58,46 @@ main (void)
     assert (new_ticks >= old_ticks);
     old_ticks = new_ticks;
   }
+  
+  // See other calls where we make some effort to verify that this function
+  // actually resets the stopwatch to zero (though there isn't much too go
+  // wrong here).
+  timer0_interrupt_driven_stopwatch_reset ();
 
-  // Test timer monotonicity with some small out-of-phase delays thrown in.
+  // Test that the timer is monotonic and always counts at least as fast as
+  // _delay_us() using some small out-of-phase delays thrown in.
   mtc = 1042;   // These are more expensive, so we do fewer of them.
   old_ticks = 0;
+  double delay_us = 0.0;
   for ( ii = 0 ; ii < mtc / 1000 ; ii++ ) {
     uint64_t new_ticks = timer0_interrupt_driven_stopwatch_ticks ();
-    assert (new_ticks >= old_ticks);
+    const uint64_t uspt
+      = TIMER0_INTERRUPT_DRIVEN_STOPWATCH_MICROSECONDS_PER_TIMER_TICK ;
+    assert (new_ticks >= old_ticks + delay_us / uspt);
     old_ticks = new_ticks;
-    _delay_us (ii % 242);  // Because its not 256, and ends in 42 :)
+    delay_us = ii % 242;   // Because its not 256, and ends in 42 :)
+    _delay_us (delay_us);
   }
+
+  // Now that we think we have a working counter, lets measure our read
+  // overhead.
+  const uint16_t omrc = 20042;  // Overhead Measurement Read Count
+  // The overhead_ticks is the number of ticks used in a loop that does
+  // nothing but read.  Not declaring this volatile sometimes result in
+  // slightly faster code, but it doesn't necessarily, since what the
+  // optimizer does depends on how the value is referenced elsewhere.  Since
+  // we want consistent worst-case behavior, we declare this value volatile.
+  volatile uint64_t overhead_ticks;   
+  timer0_interrupt_driven_stopwatch_reset ();
+  for ( ii = 0 ; ii < omrc ; ii++ ) {
+    TIMER0_STOPWATCH_TICKS (overhead_ticks);
+  }
+#define TIMER0_STOPWATCH_READ_OVERHEAD_TICKS 100
+  //assert (overhead_ticks / omrc
+  //        < TIMER0_STOPWATCH_TICKS_MACRO_MAX_READ_OVERHEAD_TICKS);
+  printf (
+      "Measured average overhead ticks per read: %f\n",
+      (double) overhead_ticks / omrc );
 
   // The first in our series of doubleblinks :)
   doubleblink_pb5 ();
@@ -98,7 +129,7 @@ main (void)
     const uint64_t tick_slop = 60;
     assert (eticks - eus / uspt < tick_slop);
 
-    if ( eus >= tbbus ) {
+    if ( eus >= tbdbus ) {
                 
       if ( doubleblinks == 1 ) {
         doubleblink_pb5 ();
@@ -106,7 +137,7 @@ main (void)
       }
 
       // Test that the reset() method takes us back to zero: it should now
-      // be tbbus microseconds before we blink again.  See not above previous
+      // be tbdbus microseconds before we blink again.  See not above previous
       // reset() method call.
       else if ( doubleblinks == 2 && no_reset_yet ) {
         timer0_interrupt_driven_stopwatch_reset ();
