@@ -10,13 +10,13 @@
 // all in one large, confusing interface.  Pick the software module that
 // uses the hardware in the way you want (assuming its been written yet :).
 //
-// For very precise timing of very short intervals of time, it will be
-// more accurate to use busy waits, or to clear and read the value of
-// TCNT0 directly (the code for timer0_interrupt_driven_stopwatch()
-// may be useful as an example of how to initialize the hardware).
+// For very precise timing of very short intervals of time, it will be more
+// accurate to use busy waits, or to clear and read the value of TCNT0
+// directly (the code for timer0_stopwatch() may be useful as an example
+// of how to initialize the hardware).
 
-#ifndef TIMER0_INTERRUPT_DRIVEN_STOPWATCH_H
-#define TIMER0_INTERRUPT_DRIVEN_STOPWATCH_H
+#ifndef TIMER0_STOPWATCH_H
+#define TIMER0_STOPWATCH_H
 
 #include <stdint.h>
 #include <util/atomic.h>
@@ -55,12 +55,12 @@
 //
 //   * Ensure that interrupts are enabled globally.
 void
-timer0_interrupt_driven_stopwatch_init (void);
+timer0_stopwatch_init (void);
 
 // Reset the timer/counter0 to 0.  All interrupts are deferred during
 // execution of this routine.
 void
-timer0_interrupt_driven_stopwatch_reset (void);
+timer0_stopwatch_reset (void);
 
 // Not intended for direct access: use an interface macro or function.
 extern volatile uint64_t timer0_overflow_count;
@@ -92,7 +92,7 @@ extern volatile uint64_t timer0_overflow_count;
 // method call.  This routine is effectively atomic (All interrupts are
 // deferred during most of its execution).
 uint64_t
-timer0_interrupt_driven_stopwatch_ticks (void);
+timer0_stopwatch_ticks (void);
 
 // The approximate number of elapsed microseconds since the last init() or
 // reset() method call.  This should be about as precise as the underlying
@@ -100,18 +100,18 @@ timer0_interrupt_driven_stopwatch_ticks (void);
 // computations involved.  This is mainly just a wrapper around the
 // TIMER0_STOPWATCH_TICKS() macro.
 uint64_t
-timer0_interrupt_driven_stopwatch_microseconds (void);
+timer0_stopwatch_microseconds (void);
 
 // Stop timer/counter0 (saving power), restore the defaults for the
 // timer/counter control registers, and disable the associated interrupt.
 // The timer doesn't run after this method returns, and calls to the ticks()
-// or microseconds() methods should always return 0.  Note that method
-// leaves the timer/counter0 shutdown (PRTIM0 bit of the PRR register
-// set to 1) to minimize power consumption.  It may not have been in this
-// state before timer0_interrupt_driven_stopwatch_init() was first called.
-// Note also that the global interrupt enable flag is not cleared by this
-// function (even though the init() method does ensure that it is set).
+// or microseconds() methods should always return 0.  Note that method leaves
+// the timer/counter0 shutdown (PRTIM0 bit of the PRR register set to 1) to
+// minimize power consumption.  It may not have been in this state before
+// timer0_stopwatch_init() was first called.  Note also that the global
+// interrupt enable flag is not cleared by this function (even though the
+// init() method does ensure that it is set).
 void
-timer0_interrupt_driven_stopwatch_shutdown (void);
+timer0_stopwatch_shutdown (void);
 
-#endif // TIMER0_INTERRUPT_DRIVEN_STOPWATCH_H
+#endif // TIMER0_STOPWATCH_H
