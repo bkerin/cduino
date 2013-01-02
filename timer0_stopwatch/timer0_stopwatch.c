@@ -1,10 +1,9 @@
-// Implementation of the interface described in
-// timer0_interrupt_driven_stopwatch.c.
+// Implementation of the interface described in timer0_stopwatch.c.
 
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 
-#include "timer0_interrupt_driven_stopwatch.h"
+#include "timer0_stopwatch.h"
 #include "util.h"
 
 #define TIMER0_VALUE_COUNT 256   // Values representable with eight bits
@@ -40,7 +39,7 @@ ISR (TIMER0_OVF_vect)
 #define TCCR0B_DEFAULT_VALUE 0x00
 
 void
-timer0_interrupt_driven_stopwatch_init (void)
+timer0_stopwatch_init (void)
 {
   PRR &= ~(_BV (PRTIM0));   // Ensure timer0 not shut down to save power.
 
@@ -66,7 +65,7 @@ timer0_interrupt_driven_stopwatch_init (void)
 }
 
 void
-timer0_interrupt_driven_stopwatch_reset (void)
+timer0_stopwatch_reset (void)
 {
   ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
   {
@@ -77,7 +76,7 @@ timer0_interrupt_driven_stopwatch_reset (void)
 }
 
 uint64_t
-timer0_interrupt_driven_stopwatch_ticks (void)
+timer0_stopwatch_ticks (void)
 {
   uint64_t result;
 
@@ -106,7 +105,7 @@ timer0_interrupt_driven_stopwatch_ticks (void)
 }
 
 uint64_t
-timer0_interrupt_driven_stopwatch_microseconds (void)
+timer0_stopwatch_microseconds (void)
 {
   uint64_t tmp;
   TIMER0_STOPWATCH_TICKS (tmp);
@@ -119,7 +118,7 @@ timer0_interrupt_driven_stopwatch_microseconds (void)
 // the same prescaler, which would be annoying, so it should be an option.
 
 void
-timer0_interrupt_driven_stopwatch_shutdown (void)
+timer0_stopwatch_shutdown (void)
 {
   TIMSK0 &= ~(_BV (TOIE0));   // Disable overflow interrups for timer/counter0.
 
