@@ -287,9 +287,9 @@ OPTLEVEL := s
 CPPFLAGS += $(CPP_DEBUG_DEFINE_FLAGS) $(CPU_FREQ_DEFINE) -I.
 
 # See comments near CPPFLAGS, above.
-CFLAGS += -std=gnu99 -fshort-enums -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) -Wall \
-          -Wextra -Wimplicit-int -Wold-style-declaration -Wredundant-decls \
-          -Wstrict-prototypes -Wmissing-prototypes
+CFLAGS += -std=gnu99 -fshort-enums -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) \
+          -Werror -Wall -Wextra -Wimplicit-int -Wold-style-declaration \
+          -Wredundant-decls -Wstrict-prototypes -Wmissing-prototypes
 
 # There are a number of C compiler flags that the C++ compiler doesn't like.
 NONCXXFLAGS = -std=gnu99 \
