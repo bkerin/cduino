@@ -79,9 +79,10 @@ main (void)
     _delay_us (delay_us);
   }
 
-  // Now that we think we have a working counter, lets measure our read
-  // overhead.
-  const uint16_t omrc = 20042;  // Overhead Measurement Read Count
+  // Now that we think we have a working counter, lets measure
+  // our read overhead.  First we'll measure the overhead for the
+  // TIMER0_STOPWATCH_TICKS() macro.
+  const uint16_t omrc = 542;  // Overhead Measurement Read Count
   // The overhead_ticks is the number of ticks used in a loop that does
   // nothing but read.  Not declaring this volatile sometimes result in
   // slightly faster code, but it doesn't necessarily, since what the
@@ -92,11 +93,23 @@ main (void)
   for ( ii = 0 ; ii < omrc ; ii++ ) {
     TIMER0_STOPWATCH_TICKS (overhead_ticks);
   }
-#define TIMER0_STOPWATCH_READ_OVERHEAD_TICKS 100
-  //assert (overhead_ticks / omrc
-  //        < TIMER0_STOPWATCH_TICKS_MACRO_MAX_READ_OVERHEAD_TICKS);
+  assert (overhead_ticks / omrc
+          < TIMER0_STOPWATCH_TICKS_MACRO_MAX_READ_OVERHEAD_TICKS);
   printf (
-      "Measured average overhead ticks per read: %f\n",
+      "TIMER0_STOPWATCH_TICKS() macro approx. overhead ticks per read: "
+      "%f\n",
+      (double) overhead_ticks / omrc );
+ 
+  // Now we'll measure the overhead of the timer0_stopwatch_ticks() function. 
+  timer0_stopwatch_reset ();
+  for ( ii = 0 ; ii < omrc ; ii++ ) {
+    overhead_ticks = timer0_stopwatch_ticks ();
+  }
+  assert (overhead_ticks / omrc
+          < TIMER0_STOPWATCH_TICKS_FUNCTION_MAX_READ_OVERHEAD_TICKS);
+  printf (
+      "timer0_stopwatch_ticks() function approx. overhead ticks per read: "
+      "%f\n",
       (double) overhead_ticks / omrc );
 
   // The first in our series of doubleblinks :)

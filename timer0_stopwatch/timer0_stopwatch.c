@@ -16,7 +16,7 @@
 
 // FIXME: make this type definable at compile time, so we can see if we
 // get fewer ticks of overhead between calls with a smaller type.
-volatile uint64_t timer0_overflow_count;
+volatile timer0_stopwatch_oct timer0_stopwatch_oc;
 
 // Explicit support for ATTiny chip interrupt name thingies from AVR libc,
 // to make migration to smaller/cheaper chips easier.
@@ -30,7 +30,7 @@ ISR (TIMER0_OVF_vect)
 {
   // Note that we don't need to use an atomic block here, as we're inside
   // an ordinary ISR block, so interrupts are globally deferred anyway.
-  timer0_overflow_count++;
+  timer0_stopwatch_oc++;
 }
 
 // Default values of the timer/counter0 control registers (for the ATMega328p
@@ -57,7 +57,7 @@ timer0_stopwatch_init (void)
 
   TIMSK0 |= _BV (TOIE0);   // Enable overflow interrupts for timer/counter0.
 
-  timer0_overflow_count = 0;
+  timer0_stopwatch_oc = 0;
   TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
   TCNT0 = 0;
 
@@ -69,7 +69,7 @@ timer0_stopwatch_reset (void)
 {
   ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
   {
-    timer0_overflow_count = 0;
+    timer0_stopwatch_oc = 0;
     TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
     TCNT0 = 0;
   }
@@ -93,11 +93,11 @@ timer0_stopwatch_ticks (void)
       // had a chance to count yet, and it might even have happend since we
       // saved hte value of TCNT0 a few instructions ago, so we don't add
       // tcv in.
-      result = (timer0_overflow_count + 1) * TIMER0_VALUE_COUNT;
+      result = (timer0_stopwatch_oc + 1) * TIMER0_VALUE_COUNT;
     }
     else {
       // Otherwise, the computation is as expected.
-      result = timer0_overflow_count * TIMER0_VALUE_COUNT + tcv; 
+      result = timer0_stopwatch_oc * TIMER0_VALUE_COUNT + tcv; 
     }
   }
 
@@ -127,7 +127,7 @@ timer0_stopwatch_shutdown (void)
   TCCR0B = TCCR0B_DEFAULT_VALUE;
 
   // Leave timer reading 0 as per interface promise.
-  timer0_overflow_count = 0;
+  timer0_stopwatch_oc = 0;
   TCNT0 = 0;
   TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
 

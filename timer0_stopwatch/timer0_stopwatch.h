@@ -31,6 +31,8 @@
 // This interface ensures that the prescaler divider is set as per this macro.
 #define TIMER0_INTERRUPT_DRIVEN_STOPWATCH_PRESCALER_DIVIDER 64
 
+// FIXME: faster way to do this math?  Might involved testing value of FCPU at
+// compile time or something.
 // The number of microseconds per tick of the timer/counter0.
 #define TIMER0_INTERRUPT_DRIVEN_STOPWATCH_MICROSECONDS_PER_TIMER_TICK \
   CLOCK_CYCLES_TO_MICROSECONDS \
@@ -62,8 +64,21 @@ timer0_stopwatch_init (void);
 void
 timer0_stopwatch_reset (void);
 
+#ifndef TIMER0_STOPWATCH_OCT
+#  error FIXME debug path check trap
+#  define TIMER0_STOPWATCH_OCT uint64_t
+#endif
+
+typedef TIMER0_STOPWATCH_OCT timer0_stopwatch_oct;
+
 // Not intended for direct access: use an interface macro or function.
-extern volatile uint64_t timer0_overflow_count;
+extern volatile timer0_stopwatch_oct timer0_stopwatch_oc;
+
+// This is a conservative estimate of the per-call overhead associated with
+// the TIMER0_STOPWATCH_TICKS() macro, in timer ticks (the actual measured
+// overhead is about 9 ticks for me, but could depend on the compiler version,
+// compilation options, etc.).
+#define TIMER0_STOPWATCH_TICKS_MACRO_MAX_READ_OVERHEAD_TICKS 14
 
 // Set OUTVAR (which must be a variable of type (FIXME: write in mutable
 // type here)) to the current elapsed timer ticks.  This macro is provided
@@ -79,14 +94,20 @@ extern volatile uint64_t timer0_overflow_count;
       \
       if ( TIFR0 & _BV (TOV0) ) { \
         OUTVAR \
-          = (timer0_overflow_count + 1) * TIMER0_STOPWATCH_COUNTER_VALUES; \
+          = (timer0_stopwatch_oc + 1) * TIMER0_STOPWATCH_COUNTER_VALUES; \
       } \
       else { \
         OUTVAR \
-          = timer0_overflow_count * TIMER0_STOPWATCH_COUNTER_VALUES + tcv; \
+          = timer0_stopwatch_oc * TIMER0_STOPWATCH_COUNTER_VALUES + tcv; \
       } \
     } \
   } while ( 0 )
+
+// This is a conservative estimate of the per-call overhead associated with
+// the timer0_stopwatch_ticks() macro, in timer ticks (the actual measured
+// overhead is about 9 ticks for me, but could depend on the compiler version,
+// compilation options, etc.).
+#define TIMER0_STOPWATCH_TICKS_FUNCTION_MAX_READ_OVERHEAD_TICKS 15
 
 // Total number of timer/counter0 ticks since the last init() or reset()
 // method call.  This routine is effectively atomic (All interrupts are
@@ -94,23 +115,28 @@ extern volatile uint64_t timer0_overflow_count;
 uint64_t
 timer0_stopwatch_ticks (void);
 
-// The approximate number of elapsed microseconds since the last init() or
-// reset() method call.  This should be about as precise as the underlying
-// clock source, but it will take a few extra microseconds to make the
-// computations involved.  This is mainly just a wrapper around the
-// TIMER0_STOPWATCH_TICKS() macro.
+// The approximate number of elapsed microseconds since the last
+// init() or reset() method call.  This is just a wrapper around the
+// TIMER0_STOPWATCH_TICKS() macro.  Note that the overhead associated with
+// this function hasn't been measured or tested and isn't specified.
 uint64_t
 timer0_stopwatch_microseconds (void);
 
-// Stop timer/counter0 (saving power), restore the defaults for the
-// timer/counter control registers, and disable the associated interrupt.
-// The timer doesn't run after this method returns, and calls to the ticks()
-// or microseconds() methods should always return 0.  Note that method leaves
-// the timer/counter0 shutdown (PRTIM0 bit of the PRR register set to 1) to
-// minimize power consumption.  It may not have been in this state before
-// timer0_stopwatch_init() was first called.  Note also that the global
-// interrupt enable flag is not cleared by this function (even though the
-// init() method does ensure that it is set).
+// This method entirely shuts down timer/counter0:
+//
+//   * The timer/counter0 overflow interrupt is disabled.
+//
+//   * The timer/counter0 control registers TCCR0A and TCCR0B are reset to
+//     their default values.
+//
+//   * The overflow flag is cleared.
+//
+//   * The timer reading is reset to 0.
+//
+//   * Th counter is entirely disabled to save power.
+//
+// NOTE that interrupts are NOT disabled globally (in that respect this
+// routine is asymmetric with timer0_stopwatch_init()).
 void
 timer0_stopwatch_shutdown (void);
 
