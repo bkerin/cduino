@@ -51,7 +51,7 @@ timer0_stopwatch_init (void)
   TCCR0B &= ~(_BV (WGM02) | _BV (WGM01) | _BV (WGM00));
 
   // Ensure that the clock source for timer/counter is set to the
-  // TIMER0_INTERRUPT_DRIVEN_STOPWATCH_PRESCALER_DIVIDER prescaler tap.
+  // TIMER0_STOPWATCH_PRESCALER_DIVIDER prescaler tap.
   TCCR0B &= ~(_BV (CS02));
   TCCR0B |= _BV (CS01) | _BV (CS00); 
 
@@ -75,10 +75,10 @@ timer0_stopwatch_reset (void)
   }
 }
 
-uint64_t
+timer0_stopwatch_rt
 timer0_stopwatch_ticks (void)
 {
-  uint64_t result;
+  timer0_stopwatch_rt result;
 
   ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
   {
@@ -104,12 +104,13 @@ timer0_stopwatch_ticks (void)
   return result;
 }
 
-uint64_t
+timer0_stopwatch_rt
 timer0_stopwatch_microseconds (void)
 {
-  uint64_t tmp;
+  timer0_stopwatch_rt tmp;
   TIMER0_STOPWATCH_TICKS (tmp);
-  return TIMER0_INTERRUPT_DRIVEN_STOPWATCH_MICROSECONDS_PER_TIMER_TICK * tmp;
+
+  return TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK * tmp;
 }
 
 // FIXME: need to add a note about the possible delay you get at the start of
