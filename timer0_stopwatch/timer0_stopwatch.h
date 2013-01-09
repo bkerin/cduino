@@ -1,7 +1,18 @@
+// WARNING: many functions in this interface manipulate the presclar shared
+// by timer/count0 and timer/counter1.  So they will affect the counting
+// of timer/counter1.  If this is a problem, the implementation code can
+// be edited to remove all statements that refer to bit PSRSYNC of GTCCR.
+// This will leave timer1 alone, but adds one additional timer tick of
+// uncertainty to measurements (since the current position of the rescaler
+// will not be reset when the counter is reset).
+//
 // Interface allowing timer/counter0 to be used as a stopwatch, by
-// incrementing a software counter when a timer/counter0 overflow interrupt
-// handler is triggered.  This interface essentially allows the eight bit
-// timer to be used to precisely measure much longer periods of time.
+// incrementing a software overflow counter when a timer/counter0 overflow
+// interrupt handler is triggered.  This interface essentially allows the
+// eight bit timer to be used to precisely measure much longer periods
+// of time.  There are also some macros to allow use of the raw counter
+// value, without the overhead imposed by keeping track of the software
+// overflow counter.
 //
 // Note that this is NOT the interface to use for timer-driven alarms, output
 // compare pin control, pulse width modulation, or other applications of
@@ -9,11 +20,6 @@
 // used for variety of different purposes, and we don't try to support them
 // all in one large, confusing interface.  Pick the software module that
 // uses the hardware in the way you want (assuming its been written yet :).
-//
-// For very precise timing of very short intervals of time, it will be more
-// accurate to use busy waits, or to clear and read the value of TCNT0
-// directly (the code for timer0_stopwatch() may be useful as an example
-// of how to initialize the hardware).
 
 #ifndef TIMER0_STOPWATCH_H
 #define TIMER0_STOPWATCH_H
@@ -38,8 +44,9 @@
 #define TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK \
   CLOCK_CYCLES_TO_MICROSECONDS (TIMER0_STOPWATCH_PRESCALER_DIVIDER)
 
-// Do everything required to prepare the timer for use as an interrupt-driven
-// stopwatch, in this order: 
+// WARNING: this function manipulates the prescaler and thereby affects timer1
+// (which used the same prescaler).  Do everything required to prepare the
+// timer for use as an interrupt-driven stopwatch, in this order:
 //
 //   * If the timer/counter0 hardware is shut down to save power,
 //     enable it.
@@ -52,85 +59,52 @@
 //
 //   * Clear the overflow timer/counter0 overflow flag.
 //
+//   * Set the counter to use a prescaler divider as per
+//     TIMER0_STOPWATCH_PRESCALER_DIVIDER, and reset the presacler.
+//
 //   * Set the elapsed time to 0, and start it running.
 //
 //   * Ensure that interrupts are enabled globally.
 void
 timer0_stopwatch_init (void);
 
-// Reset the timer/counter0 to 0.  All interrupts are deferred during
-// execution of this routine.
+// WARNING: this function resets the prescaler and thereby affects the
+// counting of the timer1 hardware (which shares the prescaler with timer0).
+// Reset prescaler and timer/counter0 to 0.  All interrupts are deferred
+// during execution of this routine.
 void
 timer0_stopwatch_reset (void);
 
-// The type to use for the overflow counter.  This default value allows the
-// stopwatch to run for abour 50 days (assuming a 16 MHz system clock), but
-// see also TIMER0_STOPWATCH_RT for the probably more limiting readout type.
-// There is little readout overhead using the default 32 bit type, which 64
-// bit types impose significant overhead.  Its possible to specifiy other
-// types at compile time; see the Makefile for this module.
-#ifndef TIMER0_STOPWATCH_OCT
-#  define TIMER0_STOPWATCH_OCT uint32_t
-#endif
-typedef TIMER0_STOPWATCH_OCT timer0_stopwatch_oct;
-
-// The type to use for the timer readings.  This default value allows the
-// stopwatch to run for about 4.7 hours (assuming a 16 MHz system clock).
-// Its possible to specifiy other types at compile time; see the Makefile
-// for this module.  This type should always be either exactly as wide as
-// TIMER0_STOPWATCH_OCT, or one "type" wider (e.g. uint64_t if uint32_t is
-// being used for the overflow counter).
-#ifndef TIMER0_STOPWATCH_RT
-#  define TIMER0_STOPWATCH_RT uint32_t
-#endif
-typedef TIMER0_STOPWATCH_RT timero_stopwatch_rt;
-
 // This is the number of ticks we can measure without overflow,
-// assuming the default 32 bit wide settings for TIMER0_STOPWATCH_OCT and
-// TIMER0_STOPWATCH_RT.  If these values are changed this macro will be wrong.
-// Note that either the overflow counter type or the readout type can be the
-// limiting factor on this calculation.  If the types are the same width
-// the readout type will be the limiting factor, otherwise the (narrower)
-// overflow counter type will be the limiting factor.
-#define TIMER0_STOPWATCH_OVERFLOW_TICKS_WITH UINT32_MAX
+#define TIMER0_STOPWATCH_OVERFLOW_TICKS UINT32_MAX
 
-// Time from reset to overflow.
-#define TIMER0_STOPWATCH_OVERFLOW_MICROSECONDS \
-  ( \
-    TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK * \
-    TIMER0_STOPWATCH_OVERFLOW_TICKS \
-  )
-
-// Not intended for direct access: use an interface macro or function.
-extern volatile timer0_stopwatch_oct timer0_stopwatch_oc;
-
-// This is a conservative estimate of the per-call overhead associated with
-// the TIMER0_STOPWATCH_TICKS() macro, in timer ticks (the actual measured
-// overhead is about 9 ticks for me, but could depend on the compiler version,
-// compilation options, etc.).
+// An interface macro or function should be used to access this variable.
+// This is the overflow counter that gets incremented in the interrupt handler
+// when TCNT0 overflows.  Note: its possible to use narrower or wider integer
+// types here (and in the appropriate places in the implementation file).
+// But there seems to be little advantage to doing so.  Using a 64 bit types
+// results in a lot more overhead per read, and using a narrower type gives
+// only a small reduction in overhead (see also TIMER0_STOPWATCH_TCNT0()
+// if extremely high time precision is required).
+extern volatile uint32_t timer0_stopwatch_oc;
 
 // This is the maximum per-use overhead associate with the
-// TIMER0_STOPWATCH_TICKS() macro, assuming the default types for
-// TIMER0_STOPWATCH_OCT and TIMER0_STOPWATCH_RT.  If other types are
-// used, this value will be wrong.  I've also tried using 64 bit counter
-// and readout types, and this seems to result in a *lot* more overhead
-// (about 10 ticks for me).  Using a 16 bit type, on the otherhand, doesn't
-// decrease overhead much.  This value has been determined experimentally
-// (see timer0_stopwatch_test.c) but includes a safety margin and should
-// be reliable unless the compiler does something really insane :)
+// TIMER0_STOPWATCH_TICKS() macro.  This value has been determined
+// experimentally (see timer0_stopwatch_test.c) but includes a safety margin
+// and should be reliable unless the compiler does something really insane :)
 #define TIMER0_STOPWATCH_TICKS_MACRO_MAX_OVERHEAD_TICKS 1
 
-// Set OUTVAR (which must be a variable of type timer0_stopwatch_rt) to
-// the current elapsed timer ticks.  This macro is provided because it can
-// operate with a little bit less overhead than the timer0_stopwatch_ticks()
-// function.  For explanations of how this macro works, see the implementation
-// of that function.  FIXME: use __tcv or something here in case user has
-// shadow warnings on?
+// Set OUTVAR (which must be a variable of type uint32_t) to the current
+// elapsed timer ticks.  This macro is provided because it can operate with a
+// little bit less time overhead than the timer0_stopwatch_ticks() function
+// (at least when the compiler is set to optimize for small code size).
+// For explanations of how this macro works, see the implementation of
+// that function.
 #define TIMER0_STOPWATCH_TICKS(OUTVAR) \
   do { \
     ATOMIC_BLOCK (ATOMIC_RESTORESTATE) \
     { \
-      uint8_t tcv = TCNT0; \
+      register uint8_t XxX_tcv = TCNT0; \
       \
       if ( TIFR0 & _BV (TOV0) ) { \
         OUTVAR \
@@ -138,31 +112,30 @@ extern volatile timer0_stopwatch_oct timer0_stopwatch_oc;
       } \
       else { \
         OUTVAR \
-          = timer0_stopwatch_oc * TIMER0_STOPWATCH_COUNTER_VALUES + tcv; \
+          = timer0_stopwatch_oc * TIMER0_STOPWATCH_COUNTER_VALUES + XxX_tcv; \
       } \
     } \
   } while ( 0 )
 
 // This is the maximum per-use overhead associate with the
-// timer0_stopwatch_ticks() function, assuming the default types for
-// TIMER0_STOPWATCH_OCT and TIMER0_STOPWATCH_RT.  If other types are used,
-// this value will be wrong.  I've also tried using 64 bit counter and
-// readout types, and this seems to result in a *lot* more overhead (about
-// 10 ticks for me).  Using a 16 bit type, on the otherhand, doesn't decrease
-// overhead much.
-#define TIMER0_STOPWATCH_TICKS_FUNCTION_MAX_OVERHEAD_TICKS 2
+// timer0_stopwatch_ticks() function.  This value has been determined
+// experimentally (see timer0_stopwatch_test.c) but includes a safety margin
+// and should be reliable unless the compiler does something really insane :)
+#define TIMER0_STOPWATCH_TICKS_FUNCTION_MAX_OVERHEAD_TICKS 1
 
 // Total number of timer/counter0 ticks since the last init() or reset()
 // method call.  This routine is effectively atomic (All interrupts are
 // deferred during most of its execution).
-timer0_stopwatch_rt
+uint32_t
 timer0_stopwatch_ticks (void);
 
 // The number of microseconds before results from
 // timer0_stopwatch_microseconds() will overflow.
 #define TIMER0_STOPWATCH_OVERFLOW_MICROSECONDS \
-  TIMER0_STOPWATCH_OVERFLOW_TICKS * \
-  TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK 
+  ( \
+    TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK * \
+    TIMER0_STOPWATCH_OVERFLOW_TICKS \
+  )
 
 // This macro is analagous to the
 // TIMER0_STOPWATCH_TICKS_FUNCTION_MAX_READ_OVERHEAD_TICKS macro.
@@ -171,8 +144,36 @@ timer0_stopwatch_ticks (void);
 // The approximate number of elapsed microseconds since the last
 // init() or reset() method call.  This is just a wrapper around the
 // TIMER0_STOPWATCH_TICKS() macro.
-timer0_stopwatch_rt
+uint32_t
 timer0_stopwatch_microseconds (void);
+
+// WARNING: this macro resets the prescaler and thereby affects the counting
+// of the timer1 hardware (which shares the prescaler with timer0).
+// This macro can be used together with TIMER0_STOPWATCH_TCNT0 to time
+// very short intervals of time with minimal overhead.  It doesn't reset
+// the overflow counter and isn't appropriate for timing intervals
+// of time long enough for overflow of the eight bit TCNT0 to occur.
+// See the timer0_stopwatch_reset implementation for explanation of the
+// individual instructions.  The time between the completion of this code
+// and the evaluation of TIMER0_STOPWATCH_TCNT0 in an immediately following
+// statement should not be more than a couple of machine instructions.
+// About the only thing you can do to get tighter timing performance is to
+// disable the timer overflow interrupts, so that you don't have to worry
+// about clearing TOV0.  This interface doesn't support doing that, however.
+#define TIMER0_STOPWATCH_RESET_TCNT0() \
+  do { \
+    ATOMIC_BLOCK (ATOMIC_RESTORESTATE) \
+    { \
+      GTCCR |= _BV (PSRSYNC); \
+      TIFR0 |= _BV (TOV0); \
+      TCNT0 = 0; \
+    } \
+  } while ( 0 )
+
+// This macro evaluate to the current value of the counter.  It should be
+// used together with TIMER0_STOPWATCH_RESET_TCNT0.  See the description
+// of that macro for more details.
+#define TIMER0_STOPWATCH_TCNT0() TCNT0
 
 // This method entirely shuts down timer/counter0:
 //

@@ -9,14 +9,22 @@
 #define TIMER0_VALUE_COUNT 256   // Values representable with eight bits
 
 #ifndef __AVR_ATmega328P__
-#  error This code has only been tested with the ATMega328p at 16 MHz on an \
-         Arduino Uno board, though it should work with other ATMega or ATTiny \
-         chips.
+#  error Processor macro __AVR_ATmega328P__ is not defined. This code has \
+         only been tested with the ATMega328p at 16 MHz on an Arduino Uno \
+         board, though it should work with other ATMega or ATTiny chips \
+         Use the source and relax this error trap :)
 #endif
 
-// FIXME: make this type definable at compile time, so we can see if we
-// get fewer ticks of overhead between calls with a smaller type.
-volatile timer0_stopwatch_oct timer0_stopwatch_oc;
+#if F_CPU != 16000000
+#  error F_CPU is not defined to be 16000000. This code has only been tested \
+         with the ATMega328p at 16 MHz on an Arduino Uno board, though it \
+         should work with other ATMega or ATTiny chips.  It should also work \
+         at other clock frequencies, though some of the performance macros \
+         (overhead guarantees and the like) and tests might need to be \
+         changed.  Use the source and relax this error trap :)
+#endif
+
+volatile uint32_t timer0_stopwatch_oc;
 
 // Explicit support for ATTiny chip interrupt name thingies from AVR libc,
 // to make migration to smaller/cheaper chips easier.
@@ -45,6 +53,11 @@ timer0_stopwatch_init (void)
 
   TCCR0A = TCCR0A_DEFAULT_VALUE;
   TCCR0B = TCCR0B_DEFAULT_VALUE;
+  
+  // Reset the timer, in case it currently has some strange value that might
+  // cause it to overflow (possibly triggering a deferred overflow interrupt)
+  // as soon as we start it running.
+  TCNT0 = 0;  
 
   // Ensure that timer/counter0 is in normal mode (timer counts upwards and
   // simply overruns when it passes its maximum 8-bit value).
@@ -59,6 +72,7 @@ timer0_stopwatch_init (void)
 
   timer0_stopwatch_oc = 0;
   TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
+  GTCCR |= _BV (PSRSYNC);   // Reset the prescaler (affects timer1 also)
   TCNT0 = 0;
 
   sei ();   // Enable interrupts.
@@ -70,22 +84,28 @@ timer0_stopwatch_reset (void)
   ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
   {
     timer0_stopwatch_oc = 0;
+    // Clear the overflow flag.  NOTE: it is my understanding that clearing
+    // this will prevent any deferred overflow interrupt that may have
+    // gone pending during this atomic block from executing: see document
+    // "AVR130: Setup and Use the AVR Timers", section "Example -- Timer0
+    // Overflow Interrupt".
     TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
+    GTCCR |= _BV (PSRSYNC);   // Reset the prescaler  (affects timer1 also)
     TCNT0 = 0;
   }
 }
 
-timer0_stopwatch_rt
+uint32_t
 timer0_stopwatch_ticks (void)
 {
-  timer0_stopwatch_rt result;
+  uint32_t result;
 
   ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
   {
     // Save timer/counter value in case it overflows while we're checking
     // for overflow (note that timers run parallel to everything, including
     // interrupt handlers).
-    uint8_t tcv = TCNT0;  
+    register uint8_t tcv = TCNT0;  
 
     // If we have an uncleared overflow flag...
     if ( TIFR0 & _BV (TOV0) ) {
@@ -104,19 +124,14 @@ timer0_stopwatch_ticks (void)
   return result;
 }
 
-timer0_stopwatch_rt
+uint32_t
 timer0_stopwatch_microseconds (void)
 {
-  timer0_stopwatch_rt tmp;
+  uint32_t tmp;
   TIMER0_STOPWATCH_TICKS (tmp);
 
   return TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK * tmp;
 }
-
-// FIXME: need to add a note about the possible delay you get at the start of
-// timing from prescaler not being reset.  Or else reset the prescaler, or add
-// an option to do that.  But then we might interact with other timers using
-// the same prescaler, which would be annoying, so it should be an option.
 
 void
 timer0_stopwatch_shutdown (void)

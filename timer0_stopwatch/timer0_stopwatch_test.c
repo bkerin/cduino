@@ -2,13 +2,11 @@
 //
 // This program first performs a number of internal tests with no visible
 // output.  If all these pass, it get around to tripple-blinking the onboard
-// LED on the Arduino PB5 pin three times (note that the normal Arduino boot
-// sequence might blink it a time or two itself), with approximately 3 seconds
-// FIXME: SOOO: three trippleblinks, or four?  between each tripple-blinks,
-// then tripple-blink one final time, then do nothing.
+// LED on the Arduino PB5 pin three times (note that the normal Arduino
+// boot sequence might blink it a time or two itself), with approximately
+// 3 seconds between each tripple-blink, then do nothing.
 
 #include <assert.h>
-#include <util/atomic.h>   // FIXME: for debugging/profiling
 #include <avr/io.h>
 #include <avr/sfr_defs.h>
 #include <limits.h>
@@ -16,85 +14,29 @@
 // FIXME: we shouldn't need to include this once avrlibc has a correct
 // assert.h (we only use it for assert as of this writing).
 #include <stdlib.h>
-#include "term_io.h"   // For debugging
+
 #include "timer0_stopwatch.h"
 
-// Given an overflow counter size in bytes, return a safe and
-// not-too-time-comsuming number of reads (plus test housekeeping )we can
-// perform without overflowing the timer (which would result in a monotonicy
-// test failure).
-static uint16_t
-monotonicity_test_count (uint8_t overflow_counter_size)
-{
-  uint16_t result;
-
-  switch ( overflow_counter_size ) {
-    case 1:
-      assert (0); // not determined yet
-      break;
-    case 2:
-      result = 4042;
-      break;
-    case 4:
-      result = UINT16_MAX - 1;
-      break;
-    case 8:
-      result = UINT16_MAX - 1;
-      break;
-    default:
-      assert (0);   // Shouldn't be here
-      break;
-  }
-
-  return result;
-}
-
-// Given an overflow counter size in bytes and a mean delay per test in
-// microseconds, return a safe and not-too-time-comsuming number of reads
-// (plus test housekeeping )we can perform without overflowing the timer
-// (which would result in a monotonicy test failure).
-static uint16_t
-monotonicity_with_delays_test_count (
-    uint8_t overflow_counter_size,
-    uint8_t mean_delay_per_read_us)
-{
-  uint16_t result;
-
-  // This is what we assume about the per-read delay from our calling context.
-  assert (mean_delay_per_read_us <= 130);
-  
-  switch ( overflow_counter_size ) {
-    case 1:
-      assert (0); // not determined yet
-      break;
-    case 2:
-      result = 1042;
-      break;
-    case 4:
-      result = 1042;
-      break;
-    case 8:
-      result = 1042; 
-      break;
-    default:
-      assert (0);   // Shouldn't be here
-      break;
-  }
-
-  return result;
-}
+// See the Makefile for this module for a convenient way to set all the
+// compiler and linker flags required for debug logging to work.
+#ifdef TIMER0_STOPWATCH_DEBUG
+#  include "term_io.h"
+#  define DEBUG_LOG(...) printf (__VA_ARGS__)
+#else
+#  define DEBUG_LOG(...)
+#endif
 
 int
 main (void)
 {
-  term_io_init ();   // For debugging
 
-  if ( sizeof (timer0_stopwatch_rt) < 4 ) {
-    printf (
-        "Sorry, this test driver isn't set up to test types smaller than"
-        "32 bits wide.\n");
-    assert (0);   // Shouldn't be here.
-  }
+#ifdef TIMER0_STOPWATCH_DEBUG
+  term_io_init ();   // For debugging
+#endif
+       
+  DEBUG_LOG ("\n");
+
+  DEBUG_LOG ("CPU Frequency: %lu\n", F_CPU);
 
   // Set up pin PB5 for output so we can blink the LED onboard the Arduino.
   // We don't use the dio interface here to avoid an unnecessary dependency.
@@ -105,16 +47,16 @@ main (void)
   timer0_stopwatch_init ();
 
   // Time between tripple-blinks, in us.
-  const timer0_stopwatch_rt tbtbus = 3 * 1000000;   
+  const uint32_t tbtbus = 3 * 1000000;   
 
   uint8_t trippleblinks = 0;
 
   // Test timer monotonicity: time should always increase.
-  uint16_t mtc = monotonicity_test_count (sizeof (timer0_stopwatch_oct));
+  uint16_t mtc = UINT16_MAX - 1;   // These tests are fast, we will do lots.
   uint16_t ii;
-  timer0_stopwatch_rt old_ticks = 0;
+  uint32_t old_ticks = 0;
   for ( ii = 0 ; ii < mtc ; ii++ ) {
-    timer0_stopwatch_rt new_ticks = timer0_stopwatch_ticks ();
+    uint32_t new_ticks = timer0_stopwatch_ticks ();
     assert (new_ticks >= old_ticks);
     old_ticks = new_ticks;
   }
@@ -127,13 +69,11 @@ main (void)
   // Test that the timer is monotonic and always counts at least as fast as
   // _delay_us() using some small out-of-phase delays thrown in.
   uint8_t max_delay_us = 242;   // Because its not 256, and ends in 42 :)
-  mtc = monotonicity_with_delays_test_count (
-      sizeof (timer0_stopwatch_oct),
-      max_delay_us / 2);
+  mtc = 1042;   // These tests are not so fast, we'll do fewer.
   old_ticks = 0;
   double delay_us = 0.0;
   for ( ii = 0 ; ii < mtc / 1000 ; ii++ ) {
-    timero_stopwatch_rt new_ticks = timer0_stopwatch_ticks ();
+    uint32_t new_ticks = timer0_stopwatch_ticks ();
     const int uspt = TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK ;
     assert (new_ticks >= old_ticks + delay_us / uspt);
     old_ticks = new_ticks;
@@ -150,14 +90,14 @@ main (void)
   // slightly faster code, but it doesn't necessarily, since what the
   // optimizer does depends on how the value is referenced elsewhere.  Since
   // we want consistent worst-case behavior, we declare this value volatile.
-  volatile timer0_stopwatch_rt overhead_ticks;   
+  volatile uint32_t overhead_ticks;   
   timer0_stopwatch_reset ();
   for ( ii = 0 ; ii < omrc ; ii++ ) {
     TIMER0_STOPWATCH_TICKS (overhead_ticks);
   }
   int mot = TIMER0_STOPWATCH_TICKS_MACRO_MAX_OVERHEAD_TICKS;
-  assert (overhead_ticks / omrc <= mot);
-  printf (
+  assert ((double) overhead_ticks / omrc <=  mot);
+  DEBUG_LOG (
       "TIMER0_STOPWATCH_TICKS() macro approx. overhead ticks per read: "
       "%f\n",
       (double) overhead_ticks / omrc );
@@ -168,40 +108,56 @@ main (void)
     overhead_ticks = timer0_stopwatch_ticks ();
   }
   mot = TIMER0_STOPWATCH_TICKS_FUNCTION_MAX_OVERHEAD_TICKS;
-  assert (overhead_ticks / omrc <= mot);
-  printf (
+  assert ((double) overhead_ticks / omrc <= mot);
+  DEBUG_LOG (
       "timer0_stopwatch_ticks() function approx. overhead ticks per read: "
       "%f\n",
       (double) overhead_ticks / omrc );
   
   // Now we'll measure the overhead of the timer0_stopwatch_microseconds()
   // function.
-  volatile timer0_stopwatch_rt overhead_microseconds;
+  volatile uint32_t overhead_microseconds;
   timer0_stopwatch_reset ();
   for ( ii = 0 ; ii < omrc ; ii++ ) {
     overhead_microseconds = timer0_stopwatch_microseconds ();
   }
   int mous = TIMER0_STOPWATCH_MICROSECONDS_FUNCTION_MAX_READ_OVERHEAD_US;
-  assert (overhead_microseconds / omrc <= mous);
-  printf (
+  assert ((double) overhead_microseconds / omrc <= mous);
+  DEBUG_LOG (
       "timer0_stopwatch_microseconds() function approx. overhead us per read: "
       "%f\n",
       (double) overhead_microseconds / omrc );
 
+  // Test the latency performance of the TIMER0_STOPWATCH_RESET_TCNT0()
+  // and TIMER0_STOPWATCH_TCNT0() macros.
+  TIMER0_STOPWATCH_RESET_TCNT0();
+  uint8_t tcnt0_reading1 = TIMER0_STOPWATCH_TCNT0();
+  uint8_t tcnt0_reading2 = TIMER0_STOPWATCH_TCNT0();
+  _delay_us (1);
+  uint8_t tcnt0_reading3 = TIMER0_STOPWATCH_TCNT0();
+  _delay_us (2 * TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK);
+  uint8_t tcnt0_reading4 = TIMER0_STOPWATCH_TCNT0();
+  DEBUG_LOG ("tcnt0_reading1: %u\n", tcnt0_reading1);
+  assert (tcnt0_reading1 == 0);
+  DEBUG_LOG ("tcnt0_reading2: %u\n", tcnt0_reading2);
+  assert (tcnt0_reading2 == 0);
+  DEBUG_LOG ("tcnt0_reading3: %u\n", tcnt0_reading3);
+  assert (tcnt0_reading3 == 0);
+  DEBUG_LOG ("tcnt0_reading4: %u\n", tcnt0_reading4);
+  assert (tcnt0_reading4 >= 2);
+  assert (tcnt0_reading4 < 3);
+
   // The first in our series of trippleblinks :)
-  CHKP;
+  CHKP ();
   trippleblinks++;
 
   // This should reset the timer to zero, we can sort of tell if it always
   // has this effect by noting if the three trippleblinks are evenly spaced.
-  // Not much to go wrong here hopefully (FIXME: except possible for not
-  // resetting the prescaler, ug).
+  // Not much to go wrong here hopefully.
   timer0_stopwatch_reset ();
 
   int no_reset_yet = 1;   // Flag true iff we haven't tested reset yet.
     
-  printf ("FIXME: cp-2\n");
-
   uint64_t ous = 0;  // Old elapsed microseconds reading (on last iteration)
 
   for ( ; ; ) {
@@ -212,9 +168,9 @@ main (void)
     // Check for timer overflow
     ous = eus;
     if ( ous > eus ) {
-      printf ("OVERFLOW DETECTED\n");
+      DEBUG_LOG ("OVERFLOW DETECTED\n");
       assert (ous <= ULONG_MAX);
-      printf (
+      DEBUG_LOG (
           "Overflow detected after %lu microseconds\n",
           (long unsigned) ous);
     }
@@ -232,13 +188,10 @@ main (void)
     const uint64_t tick_slop = 60;
     assert (eticks - eus / uspt < tick_slop);
 
-    //printf ("FIXME: cp0\n");
-
     if ( eus >= tbtbus ) {
                 
       if ( trippleblinks == 1 ) {
-        CHKP;
-        printf ("FIXME: cp1\n");
+        CHKP ();
         trippleblinks++;
       }
 
@@ -254,8 +207,13 @@ main (void)
       else if ( trippleblinks == 2 && (! no_reset_yet) ) {
         timer0_stopwatch_shutdown ();
         assert (timer0_stopwatch_ticks () == 0);
-        CHKP;
+        uint32_t macro_read_ticks;
+        TIMER0_STOPWATCH_TICKS (macro_read_ticks);
+        assert (macro_read_ticks == 0);
+        assert (timer0_stopwatch_microseconds () == 0);
+        CHKP ();
         trippleblinks++;
+        DEBUG_LOG ("All tests succeeded.\n");
       }
     }
   }
