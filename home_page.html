@@ -107,6 +107,19 @@
         <ul>
 
           <li>
+            New module for using Timer/Counter0 hardware as an interrupt-driven
+            stopwatch: <a href="xlinked_source_html/timer0_stopwatch.h.html">
+            timer0_stopwatch.h</a>.
+          </li>
+
+          <li>
+            Fixed port device and baud rate autodetction to work with linux
+            kernel 2.6 behavior.  Unfortunately this means that autodetection
+            doesn't work with earlier kernels anymore.  But its easy to set the
+            values directly if necessary.
+          </li>
+
+          <li>
             Works with Aruino Uno now, hopefully.  We try to magically guesses
             avrdude port and baud rate requirements for Uno vs. Duemilanove
             Arduinos now (so should work with both).
