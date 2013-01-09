@@ -21,7 +21,7 @@
 // we're hit a checkpoint.  WARNING: no effort has been made to anticipate
 // everything a client might have done to put PB5 in a mode where it can't
 // be properly initialized/blinked.  Test this test function first :)
-#define CHKP \
+#define CHKP() \
   do { \
     \
     DDRB |= _BV (DDB5); \
