@@ -15,7 +15,6 @@
 int
 main (void)
 {
-  uint16_t raw;
   PGM_P pot_fmtstr = "Potentiometer tap voltage: %f (%d raw)\r\n";
 
   term_io_init ();   // Set up terminal communications.
