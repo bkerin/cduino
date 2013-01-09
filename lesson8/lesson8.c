@@ -46,7 +46,8 @@ static int cget(FILE *f)
 int main (void)
 {
 	uint8_t c = 0;
-	char input_buffer[80], s[80];
+        // FIXME: this array should get a better name than 's'
+	char s[80];
 	int n;
 	/* use program space (flash) to store these. don't waste RAM */
 	PGM_P pn = "please enter (blind type) a number: ";
