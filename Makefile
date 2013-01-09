@@ -3,10 +3,15 @@
 
 # vim: foldmethod=marker
 
+# FIXME: I think there are some more things I normally do to make Make more
+# sane now, clone them in from other projects.
+
 # Delete files produced by rules the commands of which return non-zero.
 .DELETE_ON_ERROR:
 # Disable all suffix rules.
 .SUFFIXES:
+
+SHELL= /bin/bash
 
 WEB_SSH := brittonk@box201.bluehost.com
 WEB_ROOT := public_html/cduino
@@ -213,7 +218,8 @@ samesys:
 	$(SAMESY_CHECK_CODE)
 
 # Make sure our samsys desires are satisfied before doing anything important.
-upload_html targzball: samesys
+# FIXME: sync back up and reenble this!
+#upload_html targzball: samesys
 
 # }}}
 
