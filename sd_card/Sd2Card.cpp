@@ -73,9 +73,14 @@ waitNotBusy(uint16_t timeoutMillis) {
     else {
     }
   }
-  while (((uint16_t)millis() - t0) < timeoutMillis);
-  return false;
-}
+  // FIXME: this code looks broken: it looks like it will hang for 47 hours or
+  // so if called at the wront time every 47th hour.  The breakage is in the
+  // millis fctn of wiring.h or Arduino.h or whatever, that doesn't require a
+  // reset before measurement begin or specify how long before the reset
+  // happens.  Perhaps if unsigned long is a 64 bit type it doesn't matter but
+  // C doesn't guarantee that, and there is no reason to depend on weird
+  // avr-gcc behavior that does even if it does.
+  while (((uint16_t)millis() - t0) < timeoutMillis); return false; }
 
 //------------------------------------------------------------------------------
 /** Skip remaining data in a block when in partial block read mode. */
