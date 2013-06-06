@@ -10,34 +10,32 @@
 
 # Delete files produced by rules the commands of which return non-zero.
 .DELETE_ON_ERROR:
-# Disable all suffix rules.
+
+# Don't let make parallelize anything.
+.NOTPARALLEL:
+
+# Disable old-fashioned suffix rules.
 .SUFFIXES:
 
 # Ensure that we can use bashisms.
 SHELL = /bin/bash
 
-# This Makefile requires that the -R/--no-builtin-variables option be used.
-# Implicit rules and default variables cause much more trouble thatn they are
-# worth (yes variables do too, not just rules: for example, when using the
-# fill-in-undefined-variables-with-defaults design pattern that we're using
-# here, default values for variables can screw things up).
-HAVE_NO_BUILTIN_VARIABLES_OPTION := $(shell echo $(MAKEFLAGS) | grep -e R)
-ifndef HAVE_NO_BUILTIN_VARIABLES_OPTION
+# This Makefile requires that the -R/--no-builtin-variables and
+# -r/--no-builtin-variables options be used.  Implicit rules and default
+# variables cause much more trouble and unreadability than they are worth.
+ifeq ($(findstring r,$(MAKEFLAGS)),)
+  $(error This makefile requires use of the -r/--no-builtin-rules make option)
+endif
+ifeq ($(findstring R,$(MAKEFLAGS)),)
    $(error This makefile requires use of the -R/--no-builtin-variables make \
            option)
 endif
-
-# FIXME: it would be nice to also require -r/--no-builtin-rules.
-#
-# FIXME: also, both these options could be forced by e.g. MAKEFLAGS += -R,
-# but do we really want to do this (since it silently changes the way make
-# works, rather than forcing user to know what has been done)?
 
 # Avoid default goal confusion by essentially disabling default goals.
 PRINT_DEFAULT_GOAL_TRAP_ERROR_MESSAGE := \
   echo ; \
   echo This build system doesn\'t support default goals, because they tend ; \
-  echo to cause confusion.  Please explicitly specify echo a target. ; \
+  echo to cause confusion.  Please explicitly specify a target. ; \
   echo Useful targets:; \
   echo ; \
   echo '  *' some_file.o  --  Compile some_file.c ; \
@@ -52,10 +50,11 @@ default_goal_trap:
 # This function works almost exactly like the builtin shell command, except it
 # stops everything with an error if the shell command given as its argument
 # returns non-zero when executed.  The other difference is that the output
-# is passed through the strip make function (the shell functions strips only
-# the last trailing newline).  In practice this doesn't matter much since the
-# output is usually collapsed by the surroundeing make context to the same
-# state produced by strip.  WARNING: don't try to nest calls to this function.
+# is passed through the strip make function (the shell function strips
+# only the last trailing newline).  In practice this doesn't matter much
+# since the output is usually collapsed by the surroundeing make context
+# to the same result produced by strip.  WARNING: don't try to nest calls
+# to this function.
 SHELL_CHECKED = \
   $(strip \
     $(if $(shell (($1) 1>/tmp/SC_so) || echo 'non-empty'), \
