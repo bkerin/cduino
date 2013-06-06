@@ -1,4 +1,4 @@
-// Exercise the interface described in timer0_stopwatch.h.
+// Test/demo for the timer0_stopwatch.h interface.
 //
 // This program first performs a number of internal tests with no visible
 // output.  If all these pass, it get around to tripple-blinking the onboard

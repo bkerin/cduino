@@ -1,3 +1,5 @@
+// Implementation of the interface described in uart.h.
+
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):

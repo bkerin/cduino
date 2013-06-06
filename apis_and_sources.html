@@ -22,147 +22,242 @@
 
   </script>
 
+
 </head>
 
 <body>
 
   <h1>APIs and Sources</h1>
 
-  <h2>Examples/Test Drivers</h2>
+  NOTE: grabbing the sources from these pages is NOT the easy way to use it.
+  Some of the modules need settings to be defined in the Makefiles.  Download
+  the entire cduino package and build or borrow the modules from there.<p />
 
-  <ul>
+  <table border='1' cellpadding='5' cellspacing='1'>
 
-    <li>
-      <code>
-        <a href="xlinked_source_html/adc_test.c.html">adc_test.c</a>
-      </code>
-      -- Exercises for the analog to digital converter interface
-    </li>
-    
-    <li>
-      <code>
-        <a href="xlinked_source_html/dio_test.c.html">dio_test.c</a>
-      </code>
-      -- Exercises for the general digial IO pin interface
-    </li>
+    <thead>
+      <tr>
+        <th>Example/Test Driver</th>
+        <th>Interface</th>
+        <th>Implementation</th>
+        <th>Description</th>
+      </tr>
+    </thead>
 
-    <li>
-      <code>
-        <a href="xlinked_source_html/lcd_keypad_test.c.html">
-          lcd_keypad_test.c
-        </a>
-      </code>
-      -- Exercises for the DFRobot DFR0009 LCD-keypad shield interface
-    </li>
+    <tbody>
 
-    <li>
-      <code>
-        <a href="xlinked_source_html/lcd_test.c.html">lcd_test.c</a>
-      </code>
-      -- Exercises for the 16x2 character HD44780 compatible LCD interface
-    </li>
-    
-    <li>
-      <code>
-        <a href="xlinked_source_html/timer0_stopwatch_test.c.html">
-          timer0_stopwatch_test.c</a>
-      </code>
-      -- Exercises for the Timer0 interrupt-driven stopwatch interface
-    </li>
+      <tr>
+        <td>
+          <code>
+            <a href="xlinked_source_html/adc_test.c.html">
+              adc_test.c
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/adc.h.html">
+              adc.h
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/adc.c.html">
+              adc.c
+            </a>
+          </code>
+        </td>
+        <td>
+          Analog to digital converter
+        </td>
+      </tr>
+      
+      <tr>
+        <td>
+          <code>
+            <a href="xlinked_source_html/dio_test.c.html">
+              dio_test.c
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/dio.h.html">
+              dio.h
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/dio.h.html">dio.h</a> (in header)
+          </code>
+        </td>
+        <td>
+          General digital IO pins
+        </td>
+      </tr>
+      
+      <tr>
+        <td>
+          <code>
+            <a href="xlinked_source_html/lcd_keypad_test.c.html">
+              lcd_keypad_test.c
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/lcd_keypad.h.html">
+              lcd_keypad.h
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/lcd_keypad.c.html">
+              lcd_keypad.c
+            </a>
+          </code>
+        </td>
+        <td>
+          <a href="www.dfrobot.com">DFRobot</a> DFR0009 LCD-keypad shield
+        </td>
+      </tr>
+      
+      <tr>
+        <td>
+          <code>
+            <a href="xlinked_source_html/lcd_test.c.html">
+              lcd_test.c
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/lcd.h.html">
+              lcd.h
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/lcd.c.html">
+              lcd.c
+            </a>
+          </code>
+        </td>
+        <td>
+          16x2 character HD44780 compatible LCD
+        </td>
+      </tr>
+      
+      <tr>
+        <td>
+          <code>
+            <a href="xlinked_source_html/timer0_stopwatch_test.c.html">
+              timer0_stopwatch_test.c
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/timer0_stopwatch.h.html">
+              timer0_stopwatch.h
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/timer0_stopwatch.c.html">
+              timer0_stopwatch.c
+            </a>
+          </code>
+        </td>
+        <td>
+          Timer0 interrupt-driven stopwatch
+        </td>
+      </tr>
+      
+      <tr>
+        <td>
+          <code>
+            <a href="xlinked_source_html/term_io_test.c.html">
+              term_io_test.c
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/term_io.h.html">
+              term_io.h
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/term_io.c.html">
+              term_io.c
+            </a>
+          </code>
+        </td>
+        <td>
+          Terminal IO interface (talk to your laptop)
+        </td>
+      </tr>
+      
+      <tr>
+        <td>
+          <code>
+            <a href="xlinked_source_html/uart_test.c.html">
+              uart_test.c
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/uart.h.html">
+              uart.h
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/uart.c.html">
+              uart.c
+            </a>
+          </code>
+        </td>
+        <td>
+          Hardware serial port
+        </td>
+      </tr>
+      
+      <tr>
+        <td>
+          <code>
+            None
+          </code>
+        </td>
+        <td>
+          <code>
+            <a href="xlinked_source_html/util.h.html">
+              util.h
+            </a>
+          </code>
+        </td>
+        <td>
+          <code>
+            None
+          </code>
+        </td>
+        <td>
+          Miscellaneous utility macros and definitions
+        </td>
+      </tr>
 
-    <li>
-      <code>
-        <a href="xlinked_source_html/term_io_test.c.html">term_io_test.c</a>
-      </code>
-      -- Exercises for the terminal IO interface
-    </li>
-
-    <li>
-      <code>
-        <a href="xlinked_source_html/uart_test.c.html">uart_test.c</a>
-      </code>
-      -- Exercises for the hardware serial port interface
-    </li>
-
-  </ul>
-
-
-  <h2>Interfaces</h2>
-
-  <ul>
-
-    <li><code><a href="xlinked_source_html/adc.h.html">adc.h</a></code>
-      -- Analog to digital converter
-    </li>
-
-    <li><code><a href="xlinked_source_html/dio.h.html">dio.h</a></code>
-      -- General digital IO pins
-    </li>
-
-    <li><code><a href="xlinked_source_html/lcd.h.html">lcd.h</a></code>
-      -- 16x2 character HD44780 compatible LCD
-    </li>
-
-    <li>
-      <code>
-        <a href="xlinked_source_html/lcd_keypad.h.html">
-          lcd_keypad.h
-        </a>
-      </code>
-      -- LCD and keypad combination shield (e.g. DFRobot DFR0009)
-    </li>
-
-    <li><code><a href="xlinked_source_html/term_io.h.html">term_io.h</a></code>
-      -- Terminal IO with basic command line editing
-    </li>
-    
-    <li><code><a href="xlinked_source_html/timer0_stopwatch.h.html">
-      timer0_stopwatch.h</a></code> -- Timer0 interrupt-driven stopwatch
-    </li>
-
-    <li><code><a href="xlinked_source_html/uart.h.html">uart.h</a></code>
-      -- Hardware serial port
-    </li>
-
-    <li><code><a href="xlinked_source_html/util.h.html">util.h</a></a></code>
-      -- Miscellaneous utility macros and definitions
-    </li>
-
-  </ul>
-
-  
-  <h2>Implementations</h2>
-
-  <ul>
-
-    <li><code><a href="xlinked_source_html/adc.c.html">adc.c</a></code>
-      -- Miscellaneous utility macros, definitions, and variables 
-    </li>
- 
-    <li><code><a href="xlinked_source_html/lcd.c.html">lcd.c</a></code>
-      -- 16x2 character HD44780 compatible LCD
-    </li>
-
-    <li>
-      <code>
-        <a href="xlinked_source_html/lcd_keypad.c.html">lcd_keypad.c</a>
-      </code>
-      -- LCD and keypad combination shield (e.g. DFRobot DFR0009)
-    </li>
-
-    <li><code><a href="xlinked_source_html/term_io.c.html">term_io.c</a></code>
-      -- Terminal IO with basic command line editing
-    </li>
-    
-    <li><code><a href="xlinked_source_html/timer0_stopwatch.c.html">
-      timer0_stopwatch.c</a></code> -- Timer0 interrupt-driven stopwatch
-    </li>
-
-    <li><code><a href="xlinked_source_html/uart.c.html">uart.c</a></code>
-      -- Hardware serial port
-    </li>
-
-  </ul>
+    </tbody>
+  </table>
 
 </body>
 

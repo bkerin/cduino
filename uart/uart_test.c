@@ -1,3 +1,5 @@
+// Test/demo for the uart.h interface.
+
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):

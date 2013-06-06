@@ -51,14 +51,7 @@ lcd_keypad_button_name (lcd_keypad_button_t button, char *name)
     }
 }
 
-
-// FIXME: this poll interval is probably way too short for this purpose,
-// think about/test it and review.  Actually, it might be kind of decent,
-// because back when check buttons was returning multiple pushes for a single
-// physical push when called in a loop, a super quick jab of one button got
-// me 2 pushes returned.  Which doesn't say much besides being on the same
-// order of timing, sort of.  Doesn't say much about the relative speed of
-// transients accross the resistors.
+// NOTE: this poll interval is probably on the paranoid side.
 static const double poll_interval_us = 100; 
  
 #define BUTTON_COUNT 5
@@ -189,10 +182,9 @@ timed_wait_for_button_none (double stw)
     // (assumes 125 kHz ADC clock) and the way the check_buttons method is
     // implemented (2 ADC reads per call).  The fudge factor would ideally
     // be zero since its probably somewhat wrong for non-default processor
-    // speeds, small changes to the adc_read_raw implementation, etc.  But we
-    // don't promise anything about the exact delays in the lcd_keypad
-    // interface anyway.  FIXME: should some of these values be exported
-    // constants of the adc interface?
+    // speeds, small changes to the adc_read_raw implementation, etc.
+    // But we don't promise anything about the exact delays in the lcd_keypad
+    // interface anyway.
     const double 
       adc_cycles_per_sample            = 13.0,
       adc_frequency                    = 125000.0,

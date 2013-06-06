@@ -1,4 +1,4 @@
-// Test driver for the adc.h interface.
+// Test/demo for the adc.h interface.
 
 // Assumptions:
 //

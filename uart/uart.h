@@ -1,3 +1,6 @@
+// FIXME: WORK POINT: put fixme for weakness of this uart interface and
+// give it the standard form header bits
+
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):

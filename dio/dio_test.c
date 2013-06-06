@@ -1,4 +1,4 @@
-// Exercise the interface described in dio_pin.h.
+// Test/demo for the dio.h interface.
 
 // vim: foldmethod=marker
 
@@ -9,6 +9,8 @@
 #include <stdlib.h>  
 
 #include "dio.h"
+
+#define MILLISECONDS_PER_SECOND 1000
 
 // Signal a checkpoint by blinking the PB5 LED quickly.
 void
@@ -24,7 +26,6 @@ signal_checkpoint_with_pb5_blinks (void)
   const int post_blink_pause_ms = 500;
 
   for ( int ii = 0 ; ii < blink_count ; ii++ ) {
-#define MILLISECONDS_PER_SECOND 1000
     DIO_SET_PB5 (HIGH);
     _delay_ms (MILLISECONDS_PER_SECOND / (blinks_per_second * 2));
     DIO_SET_PB5 (LOW);
@@ -49,7 +50,6 @@ signal_checkpoint_with_pb0_blinks (void)
   const int post_blink_pause_ms = 500;
 
   for ( int ii = 0 ; ii < blink_count ; ii++ ) {
-#define MILLISECONDS_PER_SECOND 1000
     DIO_SET_PB0 (HIGH);
     _delay_ms (MILLISECONDS_PER_SECOND / (blinks_per_second * 2));
     DIO_SET_PB0 (LOW);

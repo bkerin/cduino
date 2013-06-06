@@ -1,18 +1,21 @@
+// Use timer/counter0 and an Interrupt to Measure Ellapsed Time
+//
+// Test driver: timer0_stopwatch_test.c    Implementation: timer0_stopwatch.c
+//
 // WARNING: many functions in this interface manipulate the presclar shared
 // by timer/count0 and timer/counter1.  So they will affect the counting
 // of timer/counter1.  If this is a problem, the implementation code can
 // be edited to remove all statements that refer to bit PSRSYNC of GTCCR.
 // This will leave timer1 alone, but adds one additional timer tick of
-// uncertainty to measurements (since the current position of the rescaler
+// uncertainty to measurements (since the current position of the prescaler
 // will not be reset when the counter is reset).
 //
 // Interface allowing timer/counter0 to be used as a stopwatch, by
 // incrementing a software overflow counter when a timer/counter0 overflow
-// interrupt handler is triggered.  This interface essentially allows the
-// eight bit timer to be used to precisely measure much longer periods
-// of time.  There are also some macros to allow use of the raw counter
-// value, without the overhead imposed by keeping track of the software
-// overflow counter.
+// interrupt handler is triggered.  This arrangement allows the eight
+// bit timer to be used to precisely measure much longer periods of time.
+// There are also some macros to allow use of the raw counter value, without
+// the overhead imposed by keeping track of the software overflow counter.
 //
 // Note that this is NOT the interface to use for timer-driven alarms, output
 // compare pin control, pulse width modulation, or other applications of
@@ -48,14 +51,15 @@
 // (which used the same prescaler).  Do everything required to prepare the
 // timer for use as an interrupt-driven stopwatch, in this order:
 //
-//   * If the timer/counter0 hardware is shut down to save power,
-//     enable it.
+//   * Ensure that the timer/counter0 hardware isn't shut down to save power.
 //
 //   * Initialize the time/counter0 hardware to normal mode.
 //
 //   * Enable the prescaler as per TIMER0_STOPWATCH_PRESCALER_DIVIDER.
 //
 //   * Enable the timer/counter0 overflow interrupt source.
+//
+//   * Set our count of interrupt events (timer0_stopwatch_oc) to 0.
 //
 //   * Clear the overflow timer/counter0 overflow flag.
 //

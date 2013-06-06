@@ -1,3 +1,5 @@
+// Test/demo for the term_io.h interface.
+
 #include "term_io.h"
 
 int

@@ -1,4 +1,4 @@
-// See the interface description in term_io.h.
+// Implementation of the interface described in term_io.h.
 
 #include <stdio.h>
 

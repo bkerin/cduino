@@ -1,8 +1,11 @@
-// Interface to the DFRobot DFR0009 LCD and keypad shield.  This shield
-// features a Hitachi HD44780 compatible LCD, and five pushbuttons (labeled
-// select, left, right, up, and down).  The highest level routine in this
-// module is lcd_keypad_set_value(), take a look at that routine's comments
-// to get an idea of the overall interface features.
+// Interface to the DFRobot DFR0009 LCD and keypad shield.
+//
+// Test driver: lcd_keypad_test.c    Implementation: lcd_keypad.c
+//
+// This shield features a Hitachi HD44780 compatible LCD, and five pushbuttons
+// (labeled select, left, right, up, and down).  The highest level routine
+// in this module is lcd_keypad_set_value(), take a look at that routine's
+// comments to get an idea of the overall interface features.
 
 #ifndef LCD_KEYPAD_H
 #define LCD_KEYPAD_H
@@ -51,6 +54,7 @@ lcd_keypad_button_name (lcd_keypad_button_t button, char *name);
 // or LCD_KEYPAD_BUTTON_INDETERMINATE if it seems that the buttons are
 // changing state.  Note that if multiple buttons are pressed simultaneously,
 // the one nearest the top of the lcd_keypad_button_t enumeration is returned.
+// FIXME: explain why not 'Note'
 lcd_keypad_button_t
 lcd_keypad_check_buttons (void);
 
@@ -64,7 +68,7 @@ lcd_keypad_check_buttons (void);
 // is first pressed.  This is still a pretty natural-feeling approach given
 // the tiny momentary push-buttons involved.  Also note that this routine
 // will catch button releases even when the corresponding depression occurs
-// it is called.
+// before it is called.
 lcd_keypad_button_t
 lcd_keypad_wait_for_button (void);
 

@@ -1,6 +1,8 @@
 // Simple digital IO macros to hide some of the ugliness of port bit value
 // manipulation.
 
+// Test driver: dio_test.c    Implementation: This file
+
 // vim: foldmethod=marker
 
 #ifndef DIO_H

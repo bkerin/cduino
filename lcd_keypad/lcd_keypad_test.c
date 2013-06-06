@@ -1,4 +1,4 @@
-// Exercise the interface described in lcd_keypad.h. 
+// Test/demo for the lcd_keypad.h interface.
 //
 // Of course, this requires an installed DFRobot DFR0009 shield or equivalent.
 

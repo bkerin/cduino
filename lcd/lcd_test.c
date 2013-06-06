@@ -1,4 +1,4 @@
-// Exercise the interface described in lcd.h.  
+// Test/demo for the lcd.h interface.
 //
 // NOTE: all the testing I've done has been done with the DFRobot DFR0009
 // LCD Shield for Arduino.  This is a very convenient LCD to connect and

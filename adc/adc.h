@@ -1,5 +1,7 @@
 // Simple Analog to Digital Converter Interface
 //
+// Test driver: adc_test.c    Implementation: adc.c
+//
 // WARNING: this interface is currently not very generic.  In particular,
 // it always:
 //

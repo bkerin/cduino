@@ -1,5 +1,7 @@
 // Terminal-style input and output (i.e. basic line editing and formatted
-// output functionality) for the ardiono serial port.
+// output functionality) for the Arduino serial port.
+
+// Test driver: term_io_test.c    Implementation: term_io.c
 
 #ifndef TERM_IO_H
 #define TERM_IO_H
@@ -9,7 +11,7 @@
 #include "uart.h"
 
 // FIXME: should this module or the uart module use the util/setbaud.h
-// interface from AVR libc.
+// interface from AVR libc?
 
 // Set up USART0 and AVR libc stdio interface such that printf() (and
 // friends) can be used for output, and term_io_getline() used for input

@@ -76,17 +76,35 @@ git_push: build_all_test_programs clean_all_modules
 	git push origin master
 
 # Verify that all the source html files except the lessons and the somewhat
-# anomolous but useful blink.c in the crosslinked sources directory appear
-# to be linked to from somewhere in the top level API document.
+# anomolous but useful blink.c and some other junk that creeps in from
+# Arduino lib in the crosslinked sources directory appear to be linked to
+# from somewhere in the top level API document.  NOTE: FNP below is the
+# "File No Path".  NOTE: the check for the text of the link depends on
+# finding that text on a line with nothing else but white space.
 check_api_doc_completeness: apis_and_sources.html \
                             xlinked_source_html \
                             build_all_test_programs
 	for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do \
+          FNP=`echo $$SF | perl -p -e 's/.*\/(.*)\.html/$$1/'`; \
           echo $$SF | perl -n -e 'not m/\/lesson.*/ or exit 1' || continue; \
-          echo $$SF | perl -n -e 'not m/blink\.c/ or exit 1' || continue; \
+          echo $$SF | perl -n -e 'not m/\/blink\.c/ or exit 1' || continue; \
           grep -q -P "\Q\"$$SF\"\E" $< || ERROR="no link to $$SF in $<"; \
+          grep -q -P "^\s*\Q$$FNP\E\s*$$" $< || \
+            ERROR="probably no link named $$FNP in $<"; \
         done; \
         if [ -n "$$ERROR" ]; then echo $$ERROR 1>&2 && false; else true; fi
+
+# Verify that the different related source files that go into a module
+# mention each other in the way that we like them to.
+#check_api_test_driver_interface_implementation_crossrefs: \
+#  xlinked_source_html build_all_test_programs
+check_api_test_driver_interface_implementation_crossrefs: \
+  xlinked_source_html
+	( \
+          for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do \
+            ./check_crossrefs.perl $$SF || exit 1; \
+          done \
+        )
 
 check_lesson_doc_completeness: lessons.html \
                                xlinked_source_html \
@@ -109,6 +127,7 @@ xlinked_source_html:
 	rm -rf $@
 	mkdir $@
 	find . -name "*.[ch]" -exec cp \{\} $@ \;
+	./nuke_non_highlightable_files.perl $@;
 	cd $@ ; source-highlight --gen-references=inline *.[ch]
 	# This gets a bit wild.  We use ||= to take advantage of non-lexical
 	# vars which aren't reinitialized every time through implicit -p loop,
@@ -260,7 +279,7 @@ view_web_page:
 # it must be invoked like this: 'make -f ../Makefile grab_arduino_libs'.
 # Note that compiling all this junk together will result in a program too
 # big to upload (FIXME: WHY? cpp constructors are always in scope or just
-# too much static data or what? Is there a way to stip more junk out?) See
+# too much static data or what? Is there a way to strip more junk out?) See
 # arduino_lib_code/README for more details.
 .PHONY:
 grab_arduino_libs:

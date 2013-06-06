@@ -1,6 +1,9 @@
-// Interface to an 16x2 character HD44780 compatible display.  This interface
-// always uses four bit control.  Only ASCII character in left-to-right
-// text mode are supported.
+// Interface to an 16x2 character HD44780 compatible display.
+//
+// Test driver: lcd_test.c    Implementation: lcd.c
+//
+// This interface always uses four bit control.  Only ASCII characters in
+// left-to-right text mode are supported.
 
 #ifndef LCD_H
 #define LCD_H

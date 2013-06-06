@@ -1,4 +1,4 @@
-// Implementation of the interface described in timer0_stopwatch.c.
+// Implementation of the interface described in timer0_stopwatch.h.
 
 #include <avr/interrupt.h>
 #include <util/atomic.h>
@@ -71,6 +71,7 @@ timer0_stopwatch_init (void)
   TIMSK0 |= _BV (TOIE0);   // Enable overflow interrupts for timer/counter0.
 
   timer0_stopwatch_oc = 0;
+
   TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
   GTCCR |= _BV (PSRSYNC);   // Reset the prescaler (affects timer1 also)
   TCNT0 = 0;
