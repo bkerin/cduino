@@ -120,13 +120,13 @@
 // When initializing a pin for input, the pin is first set for input,
 // then the internal pullup resistor enabled if requested.  This means
 // that the pin might float for a few microseconds (which might possibly
-// result in a spurious pin change interrupt if those are enabled (and
+// result in a spurious pin change interrupt if those are enabled and
 // there is no external pull-up or pull-down resister).  We do things in
 // this order to ensure that we don't have to risk a spurious change to the
 // output value in case the pin is being reconfigured from output to input.
 // When initializing a pin for output, the requested initial value is first
-// set and the the pin direction set for output.  This might likewise result
-// in a momentarily floating input pin (and potential interrupt).
+// set and then the pin direction set for output.  This might likewise
+// result in a momentarily floating input pin (and potential interrupt).
 
 // FIXME: possibly all the loop_until_bit_is_* calls could be replaced with
 // single *hardware* no-ops.  Recent versions of AVR libc have added a _NOP
