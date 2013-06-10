@@ -88,7 +88,8 @@ check_api_doc_completeness: apis_and_sources.html \
           FNP=`echo $$SF | perl -p -e 's/.*\/(.*)\.html/$$1/'`; \
           echo $$SF | perl -n -e 'not m/\/lesson.*/ or exit 1' || continue; \
           echo $$SF | perl -n -e 'not m/\/blink\.c/ or exit 1' || continue; \
-          grep -q -P "\Q\"$$SF\"\E" $< || ERROR="no link to $$SF in $<"; \
+          grep -q -P "\Q\"$$SF\"\E" $< || \
+            ERROR="probably no link to $$SF in $<"; \
           grep -q -P "^\s*\Q$$FNP\E\s*$$" $< || \
             ERROR="probably no link named $$FNP in $<"; \
         done; \
