@@ -13,13 +13,25 @@
 #define TRUE  0x1
 #define FALSE 0x0
 
-#define CLOCK_CYCLES_PER_MICROSECOND() (F_CPU / 1000000L)
-#define CLOCK_CYCLES_TO_MICROSECONDS(a) (((a) * 1000L) / (F_CPU / 1000L))
-#define MICROSECONDS_TO_CLOCK_CYCLES(a) (((a) * (F_CPU / 1000L)) / 1000L)
+// NOTE: Only F_CPU values of greater that 1MHz with even multiples of 1MHz
+// are accurate.  There are some alternate low-frequency macros which are
+// pretty close, but haven't been tested.
+#if F_CPU >= 1000000L
+#  define CLOCK_CYCLES_PER_MICROSECOND() (F_CPU / 1000000L)
+#  define CLOCK_CYCLES_TO_MICROSECONDS(a) \
+     ((a) / CLOCK_CYCLES_PER_MICROSECOND())
+#  define MICROSECONDS_TO_CLOCK_CYCLES(a) \
+     ((a) * CLOCK_CYCLES_PER_MICROSECOND())
+#else
+#  error Interface untested with low-f clocks.  Remove #error and try :)
+#  warning CLOCK_CYCLES_PER_MICROSECOND() would be less than 1 at this F_CPU
+#  define CLOCK_CYCLES_TO_MICROSECONDS(a) (((a) * 1000L) / (F_CPU / 1000L))
+#  define MICROSECONDS_TO_CLOCK_CYCLES(a) (((a) * (F_CPU / 1000L)) / 1000L)
+#endif
 
-// Initialize and blink the LED on PB5 three quick times to indicate
-// we're hit a checkpoint.  WARNING: no effort has been made to anticipate
-// everything a client might have done to put PB5 in a mode where it can't
+// Initialize and blink the LED on PB5 three quick times to indicate that
+// we've hit a checkpoint.  WARNING: no effort has been made to anticipate
+// everything a client might have done to put PB5 in a state where it can't
 // be properly initialized/blinked.  Test this test function first :)
 #define CHKP() \
   do { \
