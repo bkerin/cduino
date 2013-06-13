@@ -98,9 +98,6 @@ OBJS ?= $(patsubst %.c,%.o,$(wildcard *.c)) \
         $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 HEADERS ?= $(wildcard *.h)
 
-echo_pn:
-	echo $(PROGNAME)
-
 
 ##### Upload Method (Overridable) {{{1
 
