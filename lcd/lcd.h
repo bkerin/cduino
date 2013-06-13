@@ -1,4 +1,4 @@
-// Interface to an 16x2 character HD44780 compatible display.
+// Interface to a 16x2 character HD44780 compatible display.
 //
 // Test driver: lcd_test.c    Implementation: lcd.c
 //
