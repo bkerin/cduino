@@ -1,4 +1,4 @@
-$(error This module is unfinished)
+#$(error This module is unfinished)
 
 include run_screen.mk
 
@@ -29,7 +29,6 @@ CPPFLAGS += -DSPI_SS_INIT=DIO_INIT_DIGITAL_10 \
             -DSPI_SCK_SET=DIO_SET_DIGITAL_13 \
             -DSPI_SCK_SET_HIGH=DIO_SET_DIGITAL_13_HIGH \
             -DSPI_SCK_SET_LOW=DIO_SET_DIGITAL_13_LOW \
-            \
             \
             -DCHIP_SELECT_INIT=DIO_INIT_DIGITAL_4 \
             -DCHIP_SELECT_SET=DIO_SET_DIGITAL_4 \
