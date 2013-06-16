@@ -16,7 +16,11 @@ main (void)
 {
   term_io_init ();
 
+  printf ("term_io_init() worked\n");
+
   sd_card_init (SPI_HALF_SPEED);
+  
+  printf ("finished sd_card_init (SPI_HALF_SPEED)\n");
 
   uint32_t card_size = sd_card_size ();
 
