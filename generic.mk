@@ -287,11 +287,14 @@ CFLAGS += -std=gnu99 -fshort-enums -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) \
           -Werror -Wall -Wextra -Wimplicit-int -Winline -Wmissing-prototypes \
           -Wold-style-declaration -Wredundant-decls -Wstrict-prototypes
 
-# There are a number of C compiler flags that the C++ compiler doesn't like.
+# There are a number of C compiler flags that the C++ compiler doesn't like, or
+# that the standard arduino libs dont satisfy.
 NONCXXFLAGS = -std=gnu99 \
               -Wimplicit-int \
+              -Winline \
               -Wmissing-prototypes \
               -Wold-style-declaration \
+              -Wredundant-decls \
               -Wstrict-prototypes \
 
 # Support building C++ files.  Currently this has mainly been used to ease
