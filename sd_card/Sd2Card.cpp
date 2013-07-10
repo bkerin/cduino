@@ -21,6 +21,7 @@
 #include "Sd2Card.h"
 
 #include "dio.h"
+#include "timer0_stopwatch.h"
 
 static uint32_t block_;
 static sd_card_error_t errorCode_;
@@ -85,7 +86,7 @@ waitNotBusy(uint16_t timeoutMillis) {
 //------------------------------------------------------------------------------
 /** Skip remaining data in a block when in partial block read mode. */
 static void
-readEnd(void) {
+read_end (void) {
   if (inBlock_) {
       // skip data and crc
 #ifdef OPTIMIZE_HARDWARE_SPI
@@ -114,10 +115,10 @@ readEnd(void) {
 //------------------------------------------------------------------------------
 // send command and return error code.  Return zero for OK
 static uint8_t
-cardCommand(uint8_t cmd, uint32_t arg) {
+card_command (uint8_t cmd, uint32_t arg) {
 
   // end read if in partialBlockRead mode
-  readEnd();
+  read_end ();
 
   // select card
   CHIP_SELECT_SET_LOW ();
@@ -221,7 +222,7 @@ static uint8_t
 readRegister (uint8_t cmd, void* buf)
 {
   uint8_t* dst = reinterpret_cast<uint8_t*>(buf);
-  if (cardCommand(cmd, 0)) {
+  if (card_command (cmd, 0)) {
     error(SD_CARD_ERROR_READ_REG);
     goto fail;
   }
@@ -299,9 +300,9 @@ sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock) {
     firstBlock <<= 9;
     lastBlock <<= 9;
   }
-  if (cardCommand(CMD32, firstBlock)
-    || cardCommand(CMD33, lastBlock)
-    || cardCommand(CMD38, 0)) {
+  if (card_command (CMD32, firstBlock)
+    || card_command (CMD33, lastBlock)
+    || card_command (CMD38, 0)) {
       error(SD_CARD_ERROR_ERASE);
       goto fail;
   }
@@ -320,8 +321,8 @@ sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock) {
 static uint8_t
 cardAcmd (uint8_t cmd, uint32_t arg)
 {
-  cardCommand (CMD55, 0);
-  return cardCommand (cmd, arg);
+  card_command (CMD55, 0);
+  return card_command (cmd, arg);
 }
 
 //------------------------------------------------------------------------------
@@ -394,14 +395,14 @@ sd_card_init (sd_card_spi_speed_t speed)
   CHIP_SELECT_SET_LOW ();
 
   // command to go idle in SPI mode
-  while ((status_ = cardCommand(CMD0, 0)) != R1_IDLE_STATE) {
+  while ((status_ = card_command (CMD0, 0)) != R1_IDLE_STATE) {
     if (((uint16_t)millis() - t0) > SD_INIT_TIMEOUT) {
       error(SD_CARD_ERROR_CMD0);
       goto fail;
     }
   }
   // check SD version
-  if ( (cardCommand (CMD8, 0x1AA) & R1_ILLEGAL_COMMAND) ) {
+  if ( (card_command (CMD8, 0x1AA) & R1_ILLEGAL_COMMAND) ) {
     set_type (SD_CARD_TYPE_SD1);
   } else {
     // only need last byte of r7 response
@@ -424,7 +425,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   }
   // if SD2 read OCR register to check for SDHC card
   if (sd_card_type () == SD_CARD_TYPE_SD2) {
-    if (cardCommand(CMD58, 0)) {
+    if (card_command (CMD58, 0)) {
       error(SD_CARD_ERROR_CMD58);
       goto fail;
     }
@@ -466,7 +467,7 @@ readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
     if ( sd_card_type () != SD_CARD_TYPE_SDHC ) {
       block <<= 9;
     }
-    if (cardCommand(CMD17, block)) {
+    if (card_command (CMD17, block)) {
       error(SD_CARD_ERROR_CMD17);
       goto fail;
     }
@@ -519,7 +520,7 @@ readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
   offset_ += count;
   if (!partialBlockRead_ || offset_ >= 512) {
     // read rest of data, checksum and set chip select high
-    readEnd();
+    read_end ();
   }
   return true;
 
@@ -566,7 +567,7 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
 
   // use address if not SDHC card
   if (sd_card_type () != SD_CARD_TYPE_SDHC) blockNumber <<= 9;
-  if (cardCommand(CMD24, blockNumber)) {
+  if (card_command (CMD24, blockNumber)) {
     error(SD_CARD_ERROR_CMD24);
     goto fail;
   }
@@ -578,7 +579,7 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
     goto fail;
   }
   // response is r2 so get and check two bytes for nonzero
-  if (cardCommand(CMD13, 0) || spiRec()) {
+  if (card_command (CMD13, 0) || spiRec()) {
     error(SD_CARD_ERROR_WRITE_PROGRAMMING);
     goto fail;
   }

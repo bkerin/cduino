@@ -30,18 +30,13 @@
 
 #define OPTIMIZE_HARDWARE_SPI
 
-//------------------------------------------------------------------------------
-/** Protect block zero from write if nonzero */
+// Protect block zero from write if nonzero
 #define SD_PROTECT_BLOCK_ZERO 1
 
-/** init timeout ms */
-uint16_t const SD_INIT_TIMEOUT = 2000;
-/** erase timeout ms */
-uint16_t const SD_ERASE_TIMEOUT = 10000;
-/** read timeout ms */
-uint16_t const SD_READ_TIMEOUT = 300;
-/** write time out ms */
-uint16_t const SD_WRITE_TIMEOUT = 600;
+uint16_t const SD_INIT_TIMEOUT  = 2000;    // Init timeout ms
+uint16_t const SD_ERASE_TIMEOUT = 10000;   // Erase timeout ms
+uint16_t const SD_READ_TIMEOUT  = 300;     // Read timeout ms
+uint16_t const SD_WRITE_TIMEOUT = 600;     // Write timeout ms
 
 // Errors that can occur when trying to talk to the SD card.
 typedef enum {
