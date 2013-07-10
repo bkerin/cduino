@@ -17,7 +17,7 @@
  * along with the Arduino Sd2Card Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-#include <Arduino.h>
+//#include <Arduino.h>
 #include "sd_card.h"
 
 #include "dio.h"
@@ -65,28 +65,28 @@ error (sd_card_error_t code)
 // Elapsed milliseconds since most recent timer0_stopwatch_reset().
 #define EMILLIS() (timer0_stopwatch_microseconds () / 1000)
 
-//------------------------------------------------------------------------------
-// wait for card to go not busy
 static uint8_t
 wait_not_busy (uint16_t timeoutMillis)
 {
+  // Wait for card to go not busy.
+
   timer0_stopwatch_reset ();
   do {
     if (spiRec() == 0XFF) {
-      return true;
+      return TRUE;
     }
     else {
       ;
     }
   } while ( EMILLIS () < timeoutMillis );
   
-  return false;
+  return FALSE;
 }
 
-//------------------------------------------------------------------------------
-/** Skip remaining data in a block when in partial block read mode. */
 static void
 read_end (void) {
+  // Skip remaining data in a block when in partial block read mode.
+
   if (inBlock_) {
       // skip data and crc
 #ifdef OPTIMIZE_HARDWARE_SPI
@@ -113,9 +113,9 @@ read_end (void) {
 }
 
 //------------------------------------------------------------------------------
-// send command and return error code.  Return zero for OK
 static uint8_t
 card_command (uint8_t cmd, uint32_t arg) {
+  // Send command and return error code, or zero for OK.
 
   // end read if in partialBlockRead mode
   read_end ();
@@ -148,10 +148,11 @@ card_command (uint8_t cmd, uint32_t arg) {
   return status_;
 }
 
-// Send one block of data for write block or write multiple blocks
 static uint8_t
 write_data_private (uint8_t token, const uint8_t* src)
 {
+  // Send one block of data for write block or write multiple blocks.
+
 #ifdef OPTIMIZE_HARDWARE_SPI
 
   // Send data - optimized loop
@@ -190,16 +191,16 @@ write_data_private (uint8_t token, const uint8_t* src)
   if ( (status_ & DATA_RES_MASK) != DATA_RES_ACCEPTED ) {
     error (SD_CARD_ERROR_WRITE);
     CHIP_SELECT_SET_HIGH ();
-    return false;
+    return FALSE;
   }
-  return true;
+  return TRUE;
 }
 
-//------------------------------------------------------------------------------
-/** Wait for start block token */
 static uint8_t
 wait_start_block (void)
 {
+  // Wait for start block token.
+
   timer0_stopwatch_reset ();
   while ( (status_ = spiRec()) == 0XFF ) {
     if ( EMILLIS () > SD_READ_TIMEOUT ) {
@@ -211,18 +212,18 @@ wait_start_block (void)
     error (SD_CARD_ERROR_READ);
     goto fail;
   }
-  return true;
+  return TRUE;
 
  fail:
   CHIP_SELECT_SET_HIGH ();
-  return false;
+  return FALSE;
 }
 
-//------------------------------------------------------------------------------
-/** read CID or CSR register */
 static uint8_t
 read_register (uint8_t cmd, void* buf)
 {
+  // Read CID or CSR register.
+
   uint8_t* dst = (uint8_t *) buf;
   if (card_command (cmd, 0)) {
     error(SD_CARD_ERROR_READ_REG);
@@ -236,11 +237,11 @@ read_register (uint8_t cmd, void* buf)
   spiRec();  // get first crc byte
   spiRec();  // get second crc byte
   CHIP_SELECT_SET_HIGH ();
-  return true;
+  return TRUE;
 
  fail:
   CHIP_SELECT_SET_HIGH ();
-  return false;
+  return FALSE;
 }
 
 sd_card_error_t
@@ -315,16 +316,19 @@ sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock) {
     goto fail;
   }
   CHIP_SELECT_SET_HIGH ();
-  return true;
+  return TRUE;
 
  fail:
   CHIP_SELECT_SET_HIGH ();
-  return false;
+  return FALSE;
 }
 
 static uint8_t
-cardAcmd (uint8_t cmd, uint32_t arg)
+card_application_command (uint8_t cmd, uint32_t arg)
 {
+  // There is a class of so-call "application commands" that apparently
+  // require an escape command to be sent first.
+
   card_command (CMD55, 0);
   return card_command (cmd, arg);
 }
@@ -343,10 +347,11 @@ cardAcmd (uint8_t cmd, uint32_t arg)
  * false, is returned for an invalid value of \a sckRateID.
  */
 static uint8_t
-setSckRate(uint8_t sckRateID) {
+setSckRate(uint8_t sckRateID)
+{
   if (sckRateID > 6) {
     error(SD_CARD_ERROR_SCK_RATE);
-    return false;
+    return FALSE;
   }
   // see avr processor datasheet for SPI register bit definitions
   if ((sckRateID & 1) || sckRateID == 6) {
@@ -357,7 +362,7 @@ setSckRate(uint8_t sckRateID) {
   SPCR &= ~((1 <<SPR1) | (1 << SPR0));
   SPCR |= (sckRateID & 4 ? (1 << SPR1) : 0)
     | (sckRateID & 2 ? (1 << SPR0) : 0);
-  return true;
+  return TRUE;
 }
 
 //------------------------------------------------------------------------------
@@ -424,9 +429,8 @@ sd_card_init (sd_card_spi_speed_t speed)
   // initialize card and send host supports SDHC if SD2
   arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0X40000000 : 0;
 
-  while ( (status_ = cardAcmd(ACMD41, arg)) != R1_READY_STATE ) {
-    // check for timeout
-    //**if ( ((uint16_t) millis () - t0) > SD_INIT_TIMEOUT ) {
+  while ( (status_ = card_application_command (ACMD41, arg))
+          != R1_READY_STATE ) {
     if ( EMILLIS () > SD_INIT_TIMEOUT ) {
       error (SD_CARD_ERROR_ACMD41);
       goto fail;
@@ -448,7 +452,7 @@ sd_card_init (sd_card_spi_speed_t speed)
 
  fail:
   CHIP_SELECT_SET_HIGH ();
-  return false;
+  return FALSE;
 }
 
 //------------------------------------------------------------------------------
@@ -466,7 +470,7 @@ static uint8_t
 readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
 {
   uint16_t n;
-  if (count == 0) return true;
+  if (count == 0) return TRUE;
   if ((count + offset) > 512) {
     goto fail;
   }
@@ -531,11 +535,11 @@ readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
     // read rest of data, checksum and set chip select high
     read_end ();
   }
-  return true;
+  return TRUE;
 
  fail:
   CHIP_SELECT_SET_HIGH ();
-  return false;
+  return FALSE;
 }
 
 //------------------------------------------------------------------------------
@@ -595,11 +599,11 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
     goto fail;
   }
   CHIP_SELECT_SET_HIGH ();
-  return true;
+  return TRUE;
 
  fail:
   CHIP_SELECT_SET_HIGH ();
-  return false;
+  return FALSE;
 }
 
 uint8_t

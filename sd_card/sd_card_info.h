@@ -75,7 +75,7 @@
 
 // }}}1
 
-// FIXME: make a fold here
+// Card status codes and masks {{{1
 
 //------------------------------------------------------------------------------
 /** status for card in the ready state */
@@ -94,6 +94,8 @@
 #define DATA_RES_MASK 0X1F
 /** write data accepted token */
 #define DATA_RES_ACCEPTED 0X05
+
+// }}}1
 
 //------------------------------------------------------------------------------
 typedef struct CID {
