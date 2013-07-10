@@ -232,7 +232,7 @@ or $duemilanove_baud for a Duemilanove.
 
 These Make variables can be set from the command line as well, e.g.:
 
-   make -R writeflash ARDUINO_PORT=/dev/ttyACM0 ARDUINO_BAUD=$uno_rev3_baud
+   make -rR writeflash ARDUINO_PORT=/dev/ttyACM0 ARDUINO_BAUD=$uno_rev3_baud
 
 In case you want to use custom shell commands to quickly flip back and
 forth between programming two different Arduinos.

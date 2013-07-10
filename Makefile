@@ -51,9 +51,9 @@ build_all_test_programs:
            echo "$$md" | grep --silent 'dio$$' || \
            echo "$$md" | grep --silent 'lesson12$$' || \
            ( \
-             $(MAKE) -C $$md -R clean && \
-             $(MAKE) -R -C $$md program_to_upload.out && \
-             $(MAKE) -C $$md -R clean \
+             $(MAKE) -rR -C $$md clean && \
+             $(MAKE) -rR -C $$md program_to_upload.out && \
+             $(MAKE) -rR -C $$md clean \
            ) || \
            exit 1; \
          done)
@@ -62,10 +62,10 @@ build_all_test_programs:
 .PHONY: clean_all_modules
 clean_all_modules:
 	find . -mindepth 1 -maxdepth 1 -type d \
-               -exec $(MAKE) -C \{\} -R clean \;
+               -exec $(MAKE) -rR -C \{\} clean \;
 	# This is needed because this lesson requires a non-bootloader upload
 	# method at the moment (FIXME: remove this when fixed upstream)
-	$(MAKE) -C lesson12 -R 'UPLOAD_METHOD = AVRISPmkII' clean
+	$(MAKE) -C lesson12 -rR 'UPLOAD_METHOD = AVRISPmkII' clean
 
 # Push all the latest changes to gitorious (tolerate untracked files but
 # not changed files or uncommited changes).

@@ -103,8 +103,8 @@ The simplest possible Makefile for a module consists of a single line:
 link to the file generic.mk in the distribution top-level directory).
 <p />
 
-To disable some troublesome crufty old Make behavior, the -R option must be
-passed to all make invocations that use <code>generic.mk</code>.
+To disable some troublesome crufty old Make behavior, the -R and -r options
+must be passed to all make invocations that use <code>generic.mk</code>.
 
 The <code>generic.mk</code> file provides the following targets intended for
 public use:
@@ -123,10 +123,9 @@ public use:
 
 </ul>
 
-So by default, you just write your code and type <code>make -R
-  writeflash</code> in your module subdirectory.  You may not need to know any
-further details.
-<p />
+So by default, you just write your code and type
+<code>make -rR writeflash</code> in your module subdirectory.  You may not
+need to know any further details.  <p />
 
 If more control is needed, there are a number of Make variables that affect how
 generic.mk behaves.  These occur in sections marked "Overridable" in that file.
