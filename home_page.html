@@ -76,7 +76,7 @@
 
         <blockquote>
           <code>
-            make -R -C blink writeflash 
+            make -rR -C blink writeflash 
           </code>
         </blockquote>
         <p />
@@ -94,9 +94,9 @@
 
         <blockquote>
           <code>
-            make -R -C term_io writeflash<br />
+            make -rR -C term_io writeflash<br />
             # Wait a few seconds for the AVR to finish rebooting... <br />
-            make -R -C term_io run_screen<br />
+            make -rR -C term_io run_screen<br />
             # Maybe hit return a few times
           </code>
         </blockquote>
