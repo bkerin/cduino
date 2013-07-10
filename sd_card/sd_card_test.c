@@ -3,11 +3,7 @@
 
 #include <Sd2Card.h>
 
-#ifdef __cplusplus
-  extern "C" {
-#   include <term_io.h>
-  }
-#endif
+#include <term_io.h>
 
 #define SD_CARD_BLOCK_SIZE 512
 

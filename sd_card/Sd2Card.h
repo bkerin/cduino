@@ -20,11 +20,7 @@
 #ifndef SD_CARD_H
 #define SD_CARD_H
 
-#ifdef __cplusplus
-  extern "C" {
-#   include <term_io.h>
-  }
-#endif
+#include <term_io.h>
 
 #include "sd_card_info.h"
 
@@ -33,10 +29,10 @@
 // Protect block zero from write if nonzero
 #define SD_PROTECT_BLOCK_ZERO 1
 
-uint16_t const SD_INIT_TIMEOUT  = 2000;    // Init timeout ms
-uint16_t const SD_ERASE_TIMEOUT = 10000;   // Erase timeout ms
-uint16_t const SD_READ_TIMEOUT  = 300;     // Read timeout ms
-uint16_t const SD_WRITE_TIMEOUT = 600;     // Write timeout ms
+#define SD_INIT_TIMEOUT ((uint16_t const) 2000)     // Init timeout ms
+#define SD_ERASE_TIMEOUT ((uint16_t const) 10000)   // Erase timeout ms
+#define SD_READ_TIMEOUT  ((uint16_t const) 300)     // Read timeout ms
+#define SD_WRITE_TIMEOUT ((uint16_t const) 600)     // Write timeout ms
 
 // Errors that can occur when trying to talk to the SD card.
 typedef enum {

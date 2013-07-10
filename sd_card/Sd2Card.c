@@ -20,10 +20,8 @@
 #include <Arduino.h>
 #include "Sd2Card.h"
 
-extern "C" {
-#  include "dio.h"
-#  include "timer0_stopwatch.h"
-}
+#include "dio.h"
+#include "timer0_stopwatch.h"
 
 static uint32_t block_;
 static sd_card_error_t errorCode_;
@@ -223,9 +221,9 @@ wait_start_block (void)
 //------------------------------------------------------------------------------
 /** read CID or CSR register */
 static uint8_t
-readRegister (uint8_t cmd, void* buf)
+read_register (uint8_t cmd, void* buf)
 {
-  uint8_t* dst = reinterpret_cast<uint8_t*>(buf);
+  uint8_t* dst = (uint8_t *) buf;
   if (card_command (cmd, 0)) {
     error(SD_CARD_ERROR_READ_REG);
     goto fail;
@@ -606,11 +604,11 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
 uint8_t
 sd_card_read_cid (cid_t *cid)
 {
-  return readRegister(CMD10, cid);
+  return read_register (CMD10, cid);
 }
 
 uint8_t
 sd_card_read_csd (csd_t *csd)
 {
-  return readRegister(CMD9, csd);
+  return read_register (CMD9, csd);
 }
