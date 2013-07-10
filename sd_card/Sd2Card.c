@@ -62,7 +62,7 @@ error (sd_card_error_t code)
   errorCode_ = code;
 }
 
-// Elapsed millis since most recent timer0_stopwatch_reset().
+// Elapsed milliseconds since most recent timer0_stopwatch_reset().
 #define EMILLIS() (timer0_stopwatch_microseconds () / 1000)
 
 //------------------------------------------------------------------------------
@@ -70,7 +70,6 @@ error (sd_card_error_t code)
 static uint8_t
 wait_not_busy (uint16_t timeoutMillis)
 {
-  //**uint16_t t0 = millis();
   timer0_stopwatch_reset ();
   do {
     if (spiRec() == 0XFF) {
@@ -149,45 +148,47 @@ card_command (uint8_t cmd, uint32_t arg) {
   return status_;
 }
 
-//------------------------------------------------------------------------------
-// send one block of data for write block or write multiple blocks
+// Send one block of data for write block or write multiple blocks
 static uint8_t
-writeData_private (uint8_t token, const uint8_t* src)
+write_data_private (uint8_t token, const uint8_t* src)
 {
 #ifdef OPTIMIZE_HARDWARE_SPI
 
-  // send data - optimized loop
+  // Send data - optimized loop
   SPDR = token;
 
-  // send two byte per iteration
-  for (uint16_t i = 0; i < 512; i += 2) {
+  // Send two byte per iteration
+  for ( uint16_t ii = 0; ii < 512; ii += 2 ) {
     while ( ! (SPSR & (1 << SPIF)) ) {
       ;
     }
-    SPDR = src[i];
+    SPDR = src[ii];
     while ( ! (SPSR & (1 << SPIF)) ) {
       ;
     }
-    SPDR = src[i+1];
+    SPDR = src[ii + 1];
   }
 
   // wait for last data byte
-  while ( ! (SPSR & (1 << SPIF))){
+  while ( ! (SPSR & (1 << SPIF)) ) {
     ;
   }
 
-#else  // OPTIMIZE_HARDWARE_SPI
+#else  // ! OPTIMIZE_HARDWARE_SPI
+
   spiSend(token);
   for (uint16_t i = 0; i < 512; i++) {
     spiSend(src[i]);
   }
-#endif  // OPTIMIZE_HARDWARE_SPI
+
+#endif  // end of if-else on OPTIMIZE_HARDWARE_SPI
+
   spiSend(0xff);  // dummy crc
   spiSend(0xff);  // dummy crc
 
   status_ = spiRec();
-  if ((status_ & DATA_RES_MASK) != DATA_RES_ACCEPTED) {
-    error(SD_CARD_ERROR_WRITE);
+  if ( (status_ & DATA_RES_MASK) != DATA_RES_ACCEPTED ) {
+    error (SD_CARD_ERROR_WRITE);
     CHIP_SELECT_SET_HIGH ();
     return false;
   }
@@ -200,7 +201,6 @@ static uint8_t
 wait_start_block (void)
 {
   timer0_stopwatch_reset ();
-  //** uint16_t t0 = millis();
   while ( (status_ = spiRec()) == 0XFF ) {
     if ( EMILLIS () > SD_READ_TIMEOUT ) {
       error (SD_CARD_ERROR_READ_TIMEOUT);
@@ -378,8 +378,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   errorCode_ = SD_CARD_ERROR_NONE;
   type_ = SD_CARD_TYPE_INDETERMINATE;
   inBlock_ = partialBlockRead_ = 0;
-  // 16-bit init start time allows over a minute
-  //**uint16_t t0 = (uint16_t)millis();
+
   timer0_stopwatch_reset ();
 
   uint32_t arg;
@@ -581,7 +580,9 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
     error(SD_CARD_ERROR_CMD24);
     goto fail;
   }
-  if (!writeData_private (DATA_START_BLOCK, src)) goto fail;
+  if ( ! write_data_private (DATA_START_BLOCK, src) ) {
+    goto fail;
+  }
 
   // wait for flash programming to complete
   if ( ! wait_not_busy (SD_WRITE_TIMEOUT) ) {
