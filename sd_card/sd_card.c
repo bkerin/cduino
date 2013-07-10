@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 #include <Arduino.h>
-#include "Sd2Card.h"
+#include "sd_card.h"
 
 #include "dio.h"
 #include "timer0_stopwatch.h"

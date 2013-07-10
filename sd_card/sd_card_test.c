@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include <Sd2Card.h>
+#include <sd_card.h>
 
 #include <term_io.h>
 
