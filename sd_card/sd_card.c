@@ -469,7 +469,6 @@ sd_card_init (sd_card_spi_speed_t speed)
 static uint8_t
 readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
 {
-  uint16_t n;
   if (count == 0) return TRUE;
   if ((count + offset) > 512) {
     goto fail;
@@ -503,7 +502,7 @@ readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
     SPDR = 0XFF;
   }
   // transfer data
-  n = count - 1;
+  uint16_t n = count - 1;
   for (uint16_t i = 0; i < n; i++) {
     // FIXME: can these all be replaced with loop_until_bit_set() calls?
     while ( ! (SPSR & (1 << SPIF)) ) {

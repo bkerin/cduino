@@ -24,7 +24,7 @@
 
 #include "sd_card_info.h"
 
-#define OPTIMIZE_HARDWARE_SPI
+//#define OPTIMIZE_HARDWARE_SPI
 
 // Protect block zero from write if nonzero
 #define SD_PROTECT_BLOCK_ZERO 1
