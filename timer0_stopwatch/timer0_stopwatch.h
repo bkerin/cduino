@@ -79,7 +79,7 @@ timer0_stopwatch_init (void);
 void
 timer0_stopwatch_reset (void);
 
-// This is the number of ticks we can measure without overflow,
+// This is the number of ticks we can measure without overflow.
 #define TIMER0_STOPWATCH_OVERFLOW_TICKS UINT32_MAX
 
 // An interface macro or function should be used to access this variable.
@@ -174,7 +174,7 @@ timer0_stopwatch_microseconds (void);
     } \
   } while ( 0 )
 
-// This macro evaluate to the current value of the counter.  It should be
+// This macro evaluates to the current value of the counter.  It should be
 // used together with TIMER0_STOPWATCH_RESET_TCNT0.  See the description
 // of that macro for more details.
 #define TIMER0_STOPWATCH_TCNT0() TCNT0
