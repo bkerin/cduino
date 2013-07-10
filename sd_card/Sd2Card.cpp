@@ -20,8 +20,10 @@
 #include <Arduino.h>
 #include "Sd2Card.h"
 
-#include "dio.h"
-#include "timer0_stopwatch.h"
+extern "C" {
+#  include "dio.h"
+#  include "timer0_stopwatch.h"
+}
 
 static uint32_t block_;
 static sd_card_error_t errorCode_;
@@ -62,26 +64,27 @@ error (sd_card_error_t code)
   errorCode_ = code;
 }
 
+// Elapsed millis since most recent timer0_stopwatch_reset().
+#define EMILLIS() (timer0_stopwatch_microseconds () / 1000)
+
 //------------------------------------------------------------------------------
 // wait for card to go not busy
 static uint8_t
-waitNotBusy(uint16_t timeoutMillis) {
-  uint16_t t0 = millis();
+waitNotBusy (uint16_t timeoutMillis)
+{
+  //**uint16_t t0 = millis();
+  timer0_stopwatch_reset ();
   do {
     if (spiRec() == 0XFF) {
       return true;
     }
     else {
+      ;
     }
-  }
-  // FIXME: this code looks broken: it looks like it will hang for 47 hours or
-  // so if called at the wront time every 47th hour.  The breakage is in the
-  // millis fctn of wiring.h or Arduino.h or whatever, that doesn't require a
-  // reset before measurement begin or specify how long before the reset
-  // happens.  Perhaps if unsigned long is a 64 bit type it doesn't matter but
-  // C doesn't guarantee that, and there is no reason to depend on weird
-  // avr-gcc behavior that does even if it does.
-  while (((uint16_t)millis() - t0) < timeoutMillis); return false; }
+  } while ( EMILLIS () < timeoutMillis );
+  
+  return false;
+}
 
 //------------------------------------------------------------------------------
 /** Skip remaining data in a block when in partial block read mode. */
@@ -198,9 +201,10 @@ writeData_private (uint8_t token, const uint8_t* src)
 static uint8_t
 waitStartBlock (void)
 {
-  uint16_t t0 = millis();
+  timer0_stopwatch_reset ();
+  //** uint16_t t0 = millis();
   while ( (status_ = spiRec()) == 0XFF ) {
-    if ( ((uint16_t) millis () - t0) > SD_READ_TIMEOUT ) {
+    if ( EMILLIS () > SD_READ_TIMEOUT ) {
       error (SD_CARD_ERROR_READ_TIMEOUT);
       goto fail;
     }
@@ -369,11 +373,15 @@ setSckRate(uint8_t sckRateID) {
 uint8_t
 sd_card_init (sd_card_spi_speed_t speed) 
 {
+  timer0_stopwatch_init ();
+
   errorCode_ = SD_CARD_ERROR_NONE;
   type_ = SD_CARD_TYPE_INDETERMINATE;
   inBlock_ = partialBlockRead_ = 0;
   // 16-bit init start time allows over a minute
-  uint16_t t0 = (uint16_t)millis();
+  //**uint16_t t0 = (uint16_t)millis();
+  timer0_stopwatch_reset ();
+
   uint32_t arg;
 
   // Set pin modes
@@ -396,7 +404,8 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   // command to go idle in SPI mode
   while ((status_ = card_command (CMD0, 0)) != R1_IDLE_STATE) {
-    if (((uint16_t)millis() - t0) > SD_INIT_TIMEOUT) {
+    //**if (((uint16_t)millis() - t0) > SD_INIT_TIMEOUT) {
+    if (EMILLIS () > SD_INIT_TIMEOUT) {
       error(SD_CARD_ERROR_CMD0);
       goto fail;
     }
@@ -418,7 +427,8 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   while ( (status_ = cardAcmd(ACMD41, arg)) != R1_READY_STATE ) {
     // check for timeout
-    if ( ((uint16_t) millis () - t0) > SD_INIT_TIMEOUT ) {
+    //**if ( ((uint16_t) millis () - t0) > SD_INIT_TIMEOUT ) {
+    if ( EMILLIS () > SD_INIT_TIMEOUT ) {
       error (SD_CARD_ERROR_ACMD41);
       goto fail;
     }
