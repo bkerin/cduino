@@ -107,7 +107,7 @@ typedef enum {
 // Initialize an SD flash card and this interface.  The speed argument sets
 // the communcation rate between card and microcontroller.  Returns true
 // on success and zero on error (in which case sd_card_last_error() can
-// be called).
+// be called).  This calls time0_stopwatch_init() and spi_init().
 uint8_t
 sd_card_init (sd_card_spi_speed_t speed);
 
@@ -136,8 +136,8 @@ uint8_t
 sd_card_read_cid (cid_t *cid);
 
 // Read a cards CSD register. The CSD contains card-specific data that
-// provides information regarding access to the card's contents.  Returne
-// true on success, and false on failure (in which case sd_card_error_code()
+// provides information regarding access to the card's contents.  Returne true
+// on success, and false on failure (in which case sd_card_error_code()
 // can be called).
 uint8_t
 sd_card_read_csd (csd_t *csd);
