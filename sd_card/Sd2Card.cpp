@@ -70,7 +70,7 @@ error (sd_card_error_t code)
 //------------------------------------------------------------------------------
 // wait for card to go not busy
 static uint8_t
-waitNotBusy (uint16_t timeoutMillis)
+wait_not_busy (uint16_t timeoutMillis)
 {
   //**uint16_t t0 = millis();
   timer0_stopwatch_reset ();
@@ -127,7 +127,7 @@ card_command (uint8_t cmd, uint32_t arg) {
   CHIP_SELECT_SET_LOW ();
 
   // wait up to 300 ms if busy
-  waitNotBusy(300);
+  wait_not_busy (300);
 
   // send command
   spiSend(cmd | 0x40);
@@ -199,7 +199,7 @@ writeData_private (uint8_t token, const uint8_t* src)
 //------------------------------------------------------------------------------
 /** Wait for start block token */
 static uint8_t
-waitStartBlock (void)
+wait_start_block (void)
 {
   timer0_stopwatch_reset ();
   //** uint16_t t0 = millis();
@@ -230,7 +230,9 @@ readRegister (uint8_t cmd, void* buf)
     error(SD_CARD_ERROR_READ_REG);
     goto fail;
   }
-  if (!waitStartBlock()) goto fail;
+  if ( ! wait_start_block () ) {
+    goto fail;
+  }
   // transfer data
   for (uint16_t i = 0; i < 16; i++) dst[i] = spiRec();
   spiRec();  // get first crc byte
@@ -310,7 +312,7 @@ sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock) {
       error(SD_CARD_ERROR_ERASE);
       goto fail;
   }
-  if (!waitNotBusy(SD_ERASE_TIMEOUT)) {
+  if ( ! wait_not_busy (SD_ERASE_TIMEOUT) ) {
     error(SD_CARD_ERROR_ERASE_TIMEOUT);
     goto fail;
   }
@@ -481,7 +483,7 @@ readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
       error(SD_CARD_ERROR_CMD17);
       goto fail;
     }
-    if (!waitStartBlock()) {
+    if ( ! wait_start_block () ) {
       goto fail;
     }
     offset_ = 0;
@@ -584,7 +586,7 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
   if (!writeData_private (DATA_START_BLOCK, src)) goto fail;
 
   // wait for flash programming to complete
-  if (!waitNotBusy(SD_WRITE_TIMEOUT)) {
+  if ( ! wait_not_busy (SD_WRITE_TIMEOUT) ) {
     error(SD_CARD_ERROR_WRITE_TIMEOUT);
     goto fail;
   }
