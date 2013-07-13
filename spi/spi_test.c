@@ -14,8 +14,6 @@
 // voltage output sequence of ~0V, ~1/4 Vcc, ~1/2 Vcc, ~3/4 Vcc, and ~Vcc
 // at wiper pin W6.  It then repeats this sequence using all the different
 // clock divider frequencies (of which there are a total of 7).
-//
-// 
 
 #include <assert.h>
 #include <stdlib.h>   // FIXME: remove this once assert.h is fixed (new avrlibc)
@@ -37,16 +35,24 @@ main (void)
   assert (SPI_CLOCK_DIVIDER_DIV4 == 0x00);
   assert (SPI_CLOCK_DIVIDER_DIV32 == 0x06);
  
-  uint8_t cds = 0;   // Clock Divider Setting
-  for ( cds = 0x00 ; cds <= 0x06 ; cds++ ) {
+  // Smallest, Largest Clock divider Setting
+  uint8_t scs = SPI_CLOCK_DIVIDER_DIV4, lcs = SPI_CLOCK_DIVIDER_DIV32;
+
+  // For each clock divider setting...
+  for ( uint8_t cds = scs ; cds <= lcs ; cds++ ) {
+
     spi_set_clock_divider (cds); 
-    int ii;
-    for ( ii = 0 ; ii <= 4 ; ii++ ) {
-      SPI_SS_LOW ();
+
+    // Number of different resistor setting we test
+    int const test_steps = 5;
+
+    // For each different resistance setting we want to test...
+    for ( int ii = 0 ; ii < test_steps ; ii++ ) {
+      SPI_SLAVE_1_SELECT_SET_LOW ();
       uint8_t const channel_six_address = 0x05;   // From AD5206 datasheet
       spi_transfer (channel_six_address);
       spi_transfer (ii * 255 / 4);
-      SPI_SS_HIGH ();
+      SPI_SLAVE_1_SELECT_SET_HIGH ();
       double const seconds_per_step = 5.0;
       _delay_ms (1000.0 * seconds_per_step);
     }
