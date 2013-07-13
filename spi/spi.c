@@ -89,7 +89,7 @@ spi_transfer (uint8_t data)
   //loop_until_bit_clear (SPSR, SPIF);
   // FIXME: I like ot use the avr libc loop_until_bit_clear (above) to
   // replace this (below) but must verify it works:
-  while ( !(SPSR & _BV (SPIF)) ) {
+  while ( ! (SPSR & _BV (SPIF)) ) {
     ;
   }
   return SPDR;
