@@ -5,15 +5,15 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#define HIGH 0x1
-#define LOW  0x0
+#define HIGH 0x01
+#define LOW  0x00
 
 // FIXME: what about putting a blink blink routine in here for use as
 // checkpoint, also maybe a trap point routine?
 
 // WARNING: of course some contexts might understand things differently...
-#define TRUE  0x1
-#define FALSE 0x0
+#define TRUE  0x01
+#define FALSE 0x00
 
 // NOTE: Only F_CPU values of greater that 1MHz with even multiples of 1MHz
 // are accurate.  There are some alternate low-frequency macros which are
