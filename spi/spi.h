@@ -1,22 +1,91 @@
 // Interface to hardware SPI controller (master mode only).
 //
 // Test Driver: spi_test.c    Implementation: spi.c
+
+#ifndef SPI_H
+#define SPI_H
+
+#include <stdio.h>
+#include <avr/pgmspace.h>
+
+#include "dio.h"
+
+////////////////////////////////////////////////////////////////////////////////
+// 
+// How This Interface Works
 //
-// There is a particular call order which should probably always be used,
-// which will look something like this:
-//
+// You have to define and use some macros which specify which pin you're
+// using for slave selection.  Typical use looks like this:
+/*
+//   #define MY_SPI_SLAVE_1_SELECT_INIT() \
+//     SPI_SS_INIT(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
+//   #define MY_SPI_SLAVE_1_SELECT_SET_LOW SPI_SS_SET_LOW
+//   #define MY_SPI_SLAVE_1_SELECT_SET_HIGH SPI_SS_SET_HIGH
+*/
+//   MY_SPI_SLAVE_1_SELECT_INIT ();
 //   spi_init ();
 //   spi_set_bit_order (SPI_BIT_ORDER_LSB_FIRST);
 //   spi_set_data_mode (SPI_DATA_MODE_0);
 //   spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
+//   MY_SPI_SLAVE_1_SELECT_SET_LOW ();
+//   uint8_t input_byte1 = spi_transfer (output_byte1);
+//   uint8_t input_byte2 = spi_transfer (output_byte2);
+//   //...
+//   MY_SPI_SLAVE_1_SELECT_SET_HIGH ();
+//   spi_shutdown ();   // Possibly
+//
+// See spi_test.c for a complete example using a single slave.
+//
+// The spi_init() function will automatically initialize the SS pin (aka
+// PB2, aka DIGITAL_10) for output.  The ATMega requires this for correct
+// SPI master mode operation.  The SS pin is also usually a logical choice
+// to use to control the first SPI slave device, and is the only one you'll
+// need to use if you're talking to just one slave.  It's possible to use
+// another digital output to control a SPI slave, however.  If there are
+// multiple slaves, you'll need to use a different output pin for each
+// of them.  All that is required is that the output pin to be used be
+// initialized for output, and that you take the pin for the device you
+// want to talk to low before talking.  The example given at the top of
+// this file could change to look like this:
+/*
+//   #define MY_SPI_SLAVE_1_SELECT_INIT() \
+//     SPI_SS_INIT(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
+//   #define MY_SPI_SLAVE_1_SELECT_SET_LOW SPI_SS_SET_LOW
+//   #define MY_SPI_SLAVE_1_SELECT_SET_HIGH SPI_SS_SET_HIGH
+//
+//   #define MY_SPI_SLAVE_2_SELECT_INIT() \
+//     DIO_INIT_DIGITAL_4(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
+//   #define MY_SPI_SLAVE_2_SELECT_SET_LOW DIO_SET_DIGITAL_4_LOW
+//   #define MY_SPI_SLAVE_2_SELECT_SET_HIGH DIO_SET_DIGITAL_4_HIGH
+*/
+//   SPI_SLAVE_1_SELECT_INIT ();
+//   SPI_SLAVE_2_SELECT_INIT ();
+//
+//   spi_init ();
+//
+//   spi_set_bit_order (SPI_BIT_ORDER_LSB_FIRST);
+//   spi_set_data_mode (SPI_DATA_MODE_0);
+//   spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
+//
+//   // Talk to first slave device
 //   SPI_SLAVE_1_SELECT_SET_LOW ();
 //   uint8_t input_byte1 = spi_transfer (output_byte1);
 //   uint8_t input_byte2 = spi_transfer (output_byte2);
 //   //...
 //   SPI_SLAVE_1_SELECT_SET_HIGH ();
+//
+//   // Talk to second slave device
+//   SPI_SLAVE_2_SELECT_SET_LOW ();
+//   uint8_t input_byte1 = spi_transfer (output_byte1);
+//   uint8_t input_byte2 = spi_transfer (output_byte2);
+//   //...
+//   SPI_SLAVE_2_SELECT_SET_HIGH ();
+//
 //   spi_shutdown ();   // Possibly
 //
-// See spi_test.c for an example.
+// Of course, it might also be necessary to change SPI bit order, data
+// mode, and/or clock rate settings between different slaves (which should
+// be possible).
 //
 /*
  * Copyright (c) 2010 by Cristian Maglie <c.maglie@bug.st>
@@ -27,14 +96,6 @@
  * or the GNU Lesser General Public License version 2.1, both as
  * published by the Free Software Foundation.
  */
-
-#ifndef SPI_H
-#define SPI_H
-
-#include <stdio.h>
-#include <avr/pgmspace.h>
-
-#include "dio.h"
 
 #ifndef UNTESTEDNESS_ACKNOWLEDGED
 #  error This module not fully tested.  I have tested output with \
@@ -73,81 +134,30 @@ typedef enum {
   SPI_DATA_MODE_3 = 0x0C,   // CPOL == 1, CPHA == 1
 } spi_data_mode_t;
 
-// The SS pin (aka PB2, aka DIGITAL_10) will *always* be initialized for
-// output, even it it isn't used as a slave select line.  The ATMega requires
-// this in order for SPI master mode to operate correctly.  See comments
-// below for details on how to use other pins instead of or in addition to
-// SS as slave select pins.
+// The SS pin (aka PB2, aka DIGITAL_10) will *always* be initialized
+// for output, even it it isn't used as a slave select line (usually its
+// reasonable to use it as a slave select line).  The ATMega requires this
+// in order for SPI master mode to operate correctly.  Its usually good to
+// go ahead and use it as a slave select pin.  See comments at the top of
+// this file for details on how to use other pins instead of or in addition
+// to SS as slave select pins.
 #define SPI_SS_INIT DIO_INIT_DIGITAL_10
 #define SPI_SS_SET_LOW DIO_SET_DIGITAL_10_LOW
 #define SPI_SS_SET_HIGH DIO_SET_DIGITAL_10_HIGH
 
-// We require clients to set some macros at compile time to specify which
-// pins are being used for SPI communication.  The Makefile in the spi
-// module direcory shows one way to do this.
-//
-// NOTE: SPI_SCK_INIT and SPI_MOSI_INIT probably shouldn't be changed.
-//
-// NOTE: The MISO pin (aka PB4, aka DIGITAL_12) will automatically override
-// to act as an input when spi_init() is called.
-//
-// NOTE: spi_init() will automatically initialize the SS pin (aka PB2,
-// aka DIGITAL_10) for output.  The ATMega requires this for correct SPI
-// master mode operation.  The SS pin is also usually a logical one to use
-// to control the first SPI slave device, and is the only one you'll need to
-// use if you're talking to just one slave.  It is possible to use another
-// digital output to control a SPI slave, however.  If there are multiple
-// slaves, you'll need to use a different output pin for each of them.
-// All that is required is that the output pin to be used be initialized
-// for output, and that you take the pin for the device you want to talk
-// to low before talking.  The example given at the top of this file could
-// change to look like this:
-//
-//   #define SPI_SLAVE_2_SELECT_INIT DIO_INIT_DIGITAL_4
-//   #define SPI_SLAVE_2_SELECT_SET_LOW DIO_SET_DIGITAL_4_LOW
-//   #define SPI_SLAVE_2_SELECT_SET_HIGH DIO_SET_DIGITAL_4_HIGH
-//
-//   SPI_SLAVE_2_SELECT_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-//
-//   spi_init ();
-//
-//   spi_set_bit_order (SPI_BIT_ORDER_LSB_FIRST);
-//   spi_set_data_mode (SPI_DATA_MODE_0);
-//   spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
-//
-//   // Talk to first slave device
-//   SPI_SLAVE_1_SELECT_SET_LOW ();
-//   uint8_t input_byte1 = spi_transfer (output_byte1);
-//   uint8_t input_byte2 = spi_transfer (output_byte2);
-//   //...
-//   SPI_SLAVE_1_SELECT_SET_HIGH ();
-//
-//   // Talk to second slave device
-//   SPI_SLAVE_2_SELECT_SET_LOW ();
-//   uint8_t input_byte1 = spi_transfer (output_byte1);
-//   uint8_t input_byte2 = spi_transfer (output_byte2);
-//   //...
-//   SPI_SLAVE_2_SELECT_SET_HIGH ();
-//
-//   spi_shutdown ();   // Possibly
-//
-// Of course, it might also be necessary to change SPI bit order, data
-// mode, and/or clock rate settings to talk to other slaves (which should
-// be possible).
-#if ! (defined (SPI_SLAVE_1_SELECT_INIT) && \
-       defined (SPI_SLAVE_1_SELECT_SET_LOW) && \
-       defined (SPI_SLAVE_1_SELECT_SET_HIGH) && \
-       defined (SPI_SCK_INIT) && \
-       defined (SPI_MOSI_INIT))
-#  error The macros which specify which pins should be used for SPI \
-         communication are not set.  Please see the example in the Makefile \
-         in the spi module directory.
-#endif
+// This interface assumes that the SCK and MOSI pins are always used as
+// the clock and Master Out Slave In pins.  I've never tried anything else,
+// though I have a vague idea that it might be possible.  The MISO pin (aka
+// PB4, aka DIGITAL_12) will automatically override to act as an input when
+// spi_init() is called.
+#define SPI_SCK_INIT DIO_INIT_DIGITAL_13
+#define SPI_MOSI_INIT DIO_INIT_DIGITAL_11
 
-// Initialize hardware SPI interface.  This function initializes the
-// SS pin for output.  See the comments near the first mention of
-// SPI_SLAVE_1_select_INIT in this file for information on how to use
-// different or multiple pins for SPI slave selection.
+// Initialize hardware SPI interface.  This function initializes the SS (aka
+// PB2, aka DIGITAL_10) pin for output, which is always required for correct
+// SPI master mode operation regardless of which pin is actually used for
+// slave selection.  See the comments at the top of this file for information
+// on how to use different or multiple pins for SPI slave selection.
 void
 spi_init (void);
 
@@ -170,20 +180,6 @@ spi_attach_interrupt (void);
 // FIXME: lose this guy?
 void
 spi_detach_interrupt (void);
-
-// FIXME: some stuff needs to be turned into macros.  Heck, maybe everything.
-
-// Set the first SS line low.  It is required to set the slave select line
-// for a slave low before a sequence of spi_transfer() calls intented to
-// communicate with that slave.  See comments near spi_init() for a pointer
-// to details about how to communicate with multiple slave devices.
-#define SPI_SS_LOW() SPI_SS_SET_LOW ()
-
-// Set the first SS line high.  This should be done at the end of a
-// sequence of spi_transfer() calls communicating with a SPI slave device.
-// See comments near spi_init() for a pointer to details about how to
-// communicate with multiple slave devices.
-#define SPI_SS_HIGH() SPI_SS_SET_HIGH ()
 
 // Transfer data (in both directions, either of which might be meaningless).
 uint8_t

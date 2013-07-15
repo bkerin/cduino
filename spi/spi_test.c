@@ -21,9 +21,19 @@
 
 #include "spi.h"
 
+#if ! (defined (MY_SPI_SLAVE_1_SELECT_INIT) && \
+       defined (MY_SPI_SLAVE_1_SELECT_SET_LOW) && \
+       defined (MY_SPI_SLAVE_1_SELECT_SET_HIGH))
+#  error The macros which specify which pin should be used for SPI slave \
+         selection are not set.  Please see the example in the Makefile \
+         in the spi module directory.
+#endif
+
 int
 main (void)
 {
+  MY_SPI_SLAVE_1_SELECT_INIT (); 
+
   spi_init ();
 
   spi_set_bit_order (SPI_BIT_ORDER_MSB_FIRST);
@@ -48,11 +58,11 @@ main (void)
 
     // For each different resistance setting we want to test...
     for ( int ii = 0 ; ii < test_steps ; ii++ ) {
-      SPI_SLAVE_1_SELECT_SET_LOW ();
+      MY_SPI_SLAVE_1_SELECT_SET_LOW ();
       uint8_t const channel_six_address = 0x05;   // From AD5206 datasheet
       spi_transfer (channel_six_address);
       spi_transfer (ii * 255 / 4);
-      SPI_SLAVE_1_SELECT_SET_HIGH ();
+      MY_SPI_SLAVE_1_SELECT_SET_HIGH ();
       double const seconds_per_step = 5.0;
       _delay_ms (1000.0 * seconds_per_step);
     }
