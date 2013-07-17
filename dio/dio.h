@@ -136,11 +136,11 @@
 // due with the normal C definition of truth, but I like to be paranoid
 // and keep it the same everywhere in case someone likes to write 
 // 'if ( some_boolean == TRUE )'.
-#if HIGH != 0x1
-#  error uh oh, HIGH != 0x1
+#if HIGH != 0x01
+#  error uh oh, HIGH != 0x01
 #endif
-#if LOW != 0x0
-#  error uh oh, LOW != 0x0
+#if LOW != 0x00
+#  error uh oh, LOW != 0x00
 #endif
 
 // Pin Initialization {{{1
@@ -152,347 +152,162 @@
 #define DIO_DISABLE_PULLUP FALSE
 #define DIO_DONT_CARE FALSE
 
+// Packaged names for the register and bit macros associated with IO pins.
+// These can be used by clients that want to let their clients select which
+// pin to use at compile-time (see also the DIO_INIT(), DIO_SET_LOW(),
+// DIO_SET_HIGH(), and DIO_SET() macros).  NOTE: to support the use of
+// these tuples, a number of macros have a variadic top layer.
+//
+#define DIO_PIN_PB0_MACROS DDRB, DDB0, PORTB, PORTB0
+#define DIO_PIN_PB1_MACROS DDRB, DDB1, PORTB, PORTB1
+#define DIO_PIN_PB2_MACROS DDRB, DDB2, PORTB, PORTB2
+#define DIO_PIN_PB3_MACROS DDRB, DDB3, PORTB, PORTB3
+#define DIO_PIN_PB4_MACROS DDRB, DDB4, PORTB, PORTB4
+#define DIO_PIN_PB5_MACROS DDRB, DDB5, PORTB, PORTB5
+#define DIO_PIN_PB6_MACROS DDRB, DDB6, PORTB, PORTB6
+#define DIO_PIN_PB7_MACROS DDRB, DDB7, PORTB, PORTB7
+
+#define DIO_PIN_PC0_MACROS DDRC, DDC0, PORTC, PORTC0
+#define DIO_PIN_PC1_MACROS DDRC, DDC1, PORTC, PORTC1
+#define DIO_PIN_PC2_MACROS DDRC, DDC2, PORTC, PORTC2
+#define DIO_PIN_PC3_MACROS DDRC, DDC3, PORTC, PORTC3
+#define DIO_PIN_PC4_MACROS DDRC, DDC4, PORTC, PORTC4
+#define DIO_PIN_PC5_MACROS DDRC, DDC5, PORTC, PORTC5
+#define DIO_PIN_PC6_MACROS DDRC, DDC6, PORTC, PORTC6
+
+#define DIO_PIN_PD0_MACROS DDRD, DDD0, PORTD, PORTD0
+#define DIO_PIN_PD1_MACROS DDRD, DDD1, PORTD, PORTD1
+#define DIO_PIN_PD2_MACROS DDRD, DDD2, PORTD, PORTD2
+#define DIO_PIN_PD3_MACROS DDRD, DDD3, PORTD, PORTD3
+#define DIO_PIN_PD4_MACROS DDRD, DDD4, PORTD, PORTD4
+#define DIO_PIN_PD5_MACROS DDRD, DDD5, PORTD, PORTD5
+#define DIO_PIN_PD6_MACROS DDRD, DDD6, PORTD, PORTD6
+#define DIO_PIN_PD7_MACROS DDRD, DDD7, PORTD, PORTD7
+
+// Set a pin (which must have been initialized for output) low.  The argument
+// is intended to be one of the DIO_PIN_P*_MACROS tuples.
+#define DIO_SET_LOW(...) DIO_SET_LOW_NA (__VA_ARGS__)
+
+// Underlying named-argument macro implementing the DIO_SET_LOW() macro.
+#define DIO_SET_LOW_NA(dir_reg, dir_bit, port_reg, port_bit) \
+  do { \
+    port_reg &= ~(_BV (port_bit)); \
+    loop_until_bit_is_clear (port_reg, port_bit); \
+  } while ( 0 )
+
+// Set a pin (which must have been initialized for output) high.  This macro
+// is intended to take one of the DIO_PIN_P*_MACROS tuples as its argument.
+#define DIO_SET_HIGH(...) DIO_SET_HIGH_NA (__VA_ARGS__)
+
+// Underlying named-argument macro implementing the DIO_SET_HIGH() macro.
+#define DIO_SET_HIGH_NA(dir_reg, dir_bit, port_reg, port_bit) \
+  do { \
+    port_reg |= _BV (port_bit); \
+    loop_until_bit_is_set (port_reg, port_bit); \
+  } while ( 0 )
+
+// Set a pin (which must already be initialized for output) to the value
+// given as the last argument.  The first argument is intended to be one
+// of the DIO_PIN_P*_MACROS tuples.
+#define DIO_SET(...) DIO_SET_NA (__VA_ARGS__)
+
+// Underlying named-argument macro implementing the DIO_SET() macro.
+#define DIO_SET_NA(dir_reg, dir_bit, port_reg, port_bit, value) \
+  do { \
+    if ( value ) { \
+      DIO_SET_HIGH_NA (dir_reg, dir_bit, port_reg, port_bit); \
+    } \
+    else { \
+      DIO_SET_LOW_NA (dir_reg, dir_bit, port_reg, port_bit); \
+    } \
+  } while ( 0 )
+
+// Initialize the pin given as the first argument (which should be one of
+// the DIO_PIN_P_*_MACROS tuples) according to the next three arguments
+// (see DIO_INIT_NA() for details on these.
+#define DIO_INIT(...) DIO_INIT_NA (__VA_ARGS__)
+
+// Underlying named-argument macro implementing the DIO_INIT() macro.
+#define DIO_INIT_NA( \
+    dir_reg, dir_bit, port_reg, port_bit, \
+    for_input, enable_pullup, initial_value ) \
+  do { \
+      if ( for_input ) { \
+        dir_reg &= ~(_BV (dir_bit)); \
+        loop_until_bit_is_clear (dir_reg, dir_bit); \
+        if ( enable_pullup ) { \
+          port_reg |= _BV (port_bit); \
+          loop_until_bit_is_set (port_reg, port_bit); \
+        } \
+        else { \
+          port_reg &= ~(_BV (port_bit)); \
+          loop_until_bit_is_clear (port_reg, port_bit); \
+        } \
+      } \
+      else { \
+        DIO_SET (dir_reg, dir_bit, port_reg, port_bit, initial_value); \
+        dir_reg |= _BV (dir_bit); \
+        loop_until_bit_is_set (dir_reg, dir_bit); \
+      } \
+      break; \
+  } while ( 0 )
+
 // Pin PB* Initialization {{{2 
 
 #define DIO_INIT_PB0(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRB &= ~(_BV (DDB0)); \
-        loop_until_bit_is_clear (DDRB, DDB0); \
-        if ( enable_pullup ) { \
-          PORTB |= _BV (PORTB0); \
-          loop_until_bit_is_set (PORTB, PORTB0); \
-        } \
-        else { \
-          PORTB &= ~(_BV (PORTB0)); \
-          loop_until_bit_is_clear (PORTB, PORTB0); \
-        } \
-      } \
-      else { \
-        DIO_SET_PB0 (initial_value); \
-        DDRB |= _BV (DDB0); \
-        loop_until_bit_is_set (DDRB, DDB0); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PB0_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PB1(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRB &= ~(_BV (DDB1)); \
-        loop_until_bit_is_clear (DDRB, DDB1); \
-        if ( enable_pullup ) { \
-          PORTB |= _BV (PORTB1); \
-          loop_until_bit_is_set (PORTB, PORTB1); \
-        } \
-        else { \
-          PORTB &= ~(_BV (PORTB1)); \
-          loop_until_bit_is_clear (PORTB, PORTB1); \
-        } \
-      } \
-      else { \
-        DIO_SET_PB1 (initial_value); \
-        DDRB |= _BV (DDB1); \
-        loop_until_bit_is_set (DDRB, DDB1); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PB1_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PB2(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRB &= ~(_BV (DDB2)); \
-        loop_until_bit_is_clear (DDRB, DDB2); \
-        if ( enable_pullup ) { \
-          PORTB |= _BV (PORTB2); \
-          loop_until_bit_is_set (PORTB, PORTB2); \
-        } \
-        else { \
-          PORTB &= ~(_BV (PORTB2)); \
-          loop_until_bit_is_clear (PORTB, PORTB2); \
-        } \
-      } \
-      else { \
-        DIO_SET_PB2 (initial_value); \
-        DDRB |= _BV (DDB2); \
-        loop_until_bit_is_set (DDRB, DDB2); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PB2_MACROS, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PB3(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRB &= ~(_BV (DDB3)); \
-        loop_until_bit_is_clear (DDRB, DDB3); \
-        if ( enable_pullup ) { \
-          PORTB |= _BV (PORTB3); \
-          loop_until_bit_is_set (PORTB, PORTB3); \
-        } \
-        else { \
-          PORTB &= ~(_BV (PORTB3)); \
-          loop_until_bit_is_clear (PORTB, PORTB3); \
-        } \
-      } \
-      else { \
-        DIO_SET_PB3 (initial_value); \
-        DDRB |= _BV (DDB3); \
-        loop_until_bit_is_set (DDRB, DDB3); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PB3_MACROS, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PB4(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRB &= ~(_BV (DDB4)); \
-        loop_until_bit_is_clear (DDRB, DDB4); \
-        if ( enable_pullup ) { \
-          PORTB |= _BV (PORTB4); \
-          loop_until_bit_is_set (PORTB, PORTB4); \
-        } \
-        else { \
-          PORTB &= ~(_BV (PORTB4)); \
-          loop_until_bit_is_clear (PORTB, PORTB4); \
-        } \
-      } \
-      else { \
-        DIO_SET_PB4 (initial_value); \
-        DDRB |= _BV (DDB4); \
-        loop_until_bit_is_set (DDRB, DDB4); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PB4_MACROS, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PB5(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRB &= ~(_BV (DDB5)); \
-        loop_until_bit_is_clear (DDRB, DDB5); \
-        if ( enable_pullup ) { \
-          PORTB |= _BV (PORTB5); \
-          loop_until_bit_is_set (PORTB, PORTB5); \
-        } \
-        else { \
-          PORTB &= ~(_BV (PORTB5)); \
-          loop_until_bit_is_clear (PORTB, PORTB5); \
-        } \
-      } \
-      else { \
-        DIO_SET_PB5 (initial_value); \
-        DDRB |= _BV (DDB5); \
-        loop_until_bit_is_set (DDRB, DDB5); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PB5_MACROS, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PB6(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRB &= ~(_BV (DDB6)); \
-        loop_until_bit_is_clear (DDRB, DDB6); \
-        if ( enable_pullup ) { \
-          PORTB |= _BV (PORTB6); \
-          loop_until_bit_is_set (PORTB, PORTB6); \
-        } \
-        else { \
-          PORTB &= ~(_BV (PORTB6)); \
-          loop_until_bit_is_clear (PORTB, PORTB6); \
-        } \
-      } \
-      else { \
-        DIO_SET_PB6 (initial_value); \
-        DDRB |= _BV (DDB6); \
-        loop_until_bit_is_set (DDRB, DDB6); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PB6_MACROS, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PB7(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRB &= ~(_BV (DDB7)); \
-        loop_until_bit_is_clear (DDRB, DDB7); \
-        if ( enable_pullup ) { \
-          PORTB |= _BV (PORTB7); \
-          loop_until_bit_is_set (PORTB, PORTB7); \
-        } \
-        else { \
-          PORTB &= ~(_BV (PORTB7)); \
-          loop_until_bit_is_clear (PORTB, PORTB7); \
-        } \
-      } \
-      else { \
-        DIO_SET_PB7 (initial_value); \
-        DDRB |= _BV (DDB7); \
-        loop_until_bit_is_set (DDRB, DDB7); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PB7_MACROS, for_input, enable_pullup, initial_value)
 
 /// }}}2
 
 // Pin PC* Initialization {{{2
 
 #define DIO_INIT_PC0(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRC &= ~(_BV (DDC0)); \
-        loop_until_bit_is_clear (DDRC, DDC0); \
-        if ( enable_pullup ) { \
-          PORTC |= _BV (PORTC0); \
-          loop_until_bit_is_set (PORTC, PORTC0); \
-        } \
-        else { \
-          PORTC &= ~(_BV (PORTC0)); \
-          loop_until_bit_is_clear (PORTC, PORTC0); \
-        } \
-      } \
-      else { \
-        DIO_SET_PC0 (initial_value); \
-        DDRC |= _BV (DDC0); \
-        loop_until_bit_is_set (DDRC, DDC0); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PC0_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PC1(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRC &= ~(_BV (DDC1)); \
-        loop_until_bit_is_clear (DDRC, DDC1); \
-        if ( enable_pullup ) { \
-          PORTC |= _BV (PORTC1); \
-          loop_until_bit_is_set (PORTC, PORTC1); \
-        } \
-        else { \
-          PORTC &= ~(_BV (PORTC1)); \
-          loop_until_bit_is_clear (PORTC, PORTC1); \
-        } \
-      } \
-      else { \
-        DIO_SET_PC1 (initial_value); \
-        DDRC |= _BV (DDC1); \
-        loop_until_bit_is_set (DDRC, DDC1); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PC1_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PC2(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRC &= ~(_BV (DDC2)); \
-        loop_until_bit_is_clear (DDRC, DDC2); \
-        if ( enable_pullup ) { \
-          PORTC |= _BV (PORTC2); \
-          loop_until_bit_is_set (PORTC, PORTC2); \
-        } \
-        else { \
-          PORTC &= ~(_BV (PORTC2)); \
-          loop_until_bit_is_clear (PORTC, PORTC2); \
-        } \
-      } \
-      else { \
-        DIO_SET_PC2 (initial_value); \
-        DDRC |= _BV (DDC2); \
-        loop_until_bit_is_set (DDRC, DDC2); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PC2_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PC3(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRC &= ~(_BV (DDC3)); \
-        loop_until_bit_is_clear (DDRC, DDC3); \
-        if ( enable_pullup ) { \
-          PORTC |= _BV (PORTC3); \
-          loop_until_bit_is_set (PORTC, PORTC3); \
-        } \
-        else { \
-          PORTC &= ~(_BV (PORTC3)); \
-          loop_until_bit_is_clear (PORTC, PORTC3); \
-        } \
-      } \
-      else { \
-        DIO_SET_PC3 (initial_value); \
-        DDRC |= _BV (DDC3); \
-        loop_until_bit_is_set (DDRC, DDC3); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PC3_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PC4(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRC &= ~(_BV (DDC4)); \
-        loop_until_bit_is_clear (DDRC, DDC4); \
-        if ( enable_pullup ) { \
-          PORTC |= _BV (PORTC4); \
-          loop_until_bit_is_set (PORTC, PORTC4); \
-        } \
-        else { \
-          PORTC &= ~(_BV (PORTC4)); \
-          loop_until_bit_is_clear (PORTC, PORTC4); \
-        } \
-      } \
-      else { \
-        DIO_SET_PC4 (initial_value); \
-        DDRC |= _BV (DDC4); \
-        loop_until_bit_is_set (DDRC, DDC4); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PC4_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PC5(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRC &= ~(_BV (DDC5)); \
-        loop_until_bit_is_clear (DDRC, DDC5); \
-        if ( enable_pullup ) { \
-          PORTC |= _BV (PORTC5); \
-          loop_until_bit_is_set (PORTC, PORTC5); \
-        } \
-        else { \
-          PORTC &= ~(_BV (PORTC5)); \
-          loop_until_bit_is_clear (PORTC, PORTC5); \
-        } \
-      } \
-      else { \
-        DIO_SET_PC5 (initial_value); \
-        DDRC |= _BV (DDC5); \
-        loop_until_bit_is_set (DDRC, DDC5); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PC5_MACROS, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PC6(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRC &= ~(_BV (DDC6)); \
-        loop_until_bit_is_clear (DDRC, DDC6); \
-        if ( enable_pullup ) { \
-          PORTC |= _BV (PORTC6); \
-          loop_until_bit_is_set (PORTC, PORTC6); \
-        } \
-        else { \
-          PORTC &= ~(_BV (PORTC6)); \
-          loop_until_bit_is_clear (PORTC, PORTC6); \
-        } \
-      } \
-      else { \
-        DIO_SET_PC6 (initial_value); \
-        DDRC |= _BV (DDC6); \
-        loop_until_bit_is_set (DDRC, DDC6); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PC6_MACROS, for_input, enable_pullup, initial_value)
 
 // }}}2
 
@@ -500,181 +315,29 @@
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PD0(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRD &= ~(_BV (DDD0)); \
-        loop_until_bit_is_clear (DDRD, DDD0); \
-        if ( enable_pullup ) { \
-          PORTD |= _BV (PORTD0); \
-          loop_until_bit_is_set (PORTD, PORTD0); \
-        } \
-        else { \
-          PORTD &= ~(_BV (PORTD0)); \
-          loop_until_bit_is_clear (PORTD, PORTD0); \
-        } \
-      } \
-      else { \
-        DIO_SET_PD0 (initial_value); \
-        DDRD |= _BV (DDD0); \
-        loop_until_bit_is_set (DDRD, DDD0); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PD0_MACROS, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PD1(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRD &= ~(_BV (DDD1)); \
-        loop_until_bit_is_clear (DDRD, DDD1); \
-        if ( enable_pullup ) { \
-          PORTD |= _BV (PORTD1); \
-          loop_until_bit_is_set (PORTD, PORTD1); \
-        } \
-        else { \
-          PORTD &= ~(_BV (PORTD1)); \
-          loop_until_bit_is_clear (PORTD, PORTD1); \
-        } \
-      } \
-      else { \
-        DIO_SET_PD1 (initial_value); \
-        DDRD |= _BV (DDD1); \
-        loop_until_bit_is_set (DDRD, DDD1); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PD1_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD2(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRD &= ~(_BV (DDD2)); \
-        loop_until_bit_is_clear (DDRD, DDD2); \
-        if ( enable_pullup ) { \
-          PORTD |= _BV (PORTD2); \
-          loop_until_bit_is_set (PORTD, PORTD2); \
-        } \
-        else { \
-          PORTD &= ~(_BV (PORTD2)); \
-          loop_until_bit_is_clear (PORTD, PORTD2); \
-        } \
-      } \
-      else { \
-        DIO_SET_PD2 (initial_value); \
-        DDRD |= _BV (DDD2); \
-        loop_until_bit_is_set (DDRD, DDD2); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PD2_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD3(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRD &= ~(_BV (DDD3)); \
-        loop_until_bit_is_clear (DDRD, DDD3); \
-        if ( enable_pullup ) { \
-          PORTD |= _BV (PORTD3); \
-          loop_until_bit_is_set (PORTD, PORTD3); \
-        } \
-        else { \
-          PORTD &= ~(_BV (PORTD3)); \
-          loop_until_bit_is_clear (PORTD, PORTD3); \
-        } \
-      } \
-      else { \
-        DIO_SET_PD3 (initial_value); \
-        DDRD |= _BV (DDD3); \
-        loop_until_bit_is_set (DDRD, DDD3); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PD3_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD4(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRD &= ~(_BV (DDD4)); \
-        loop_until_bit_is_clear (DDRD, DDD4); \
-        if ( enable_pullup ) { \
-          PORTD |= _BV (PORTD4); \
-          loop_until_bit_is_set (PORTD, PORTD4); \
-        } \
-        else { \
-          PORTD &= ~(_BV (PORTD4)); \
-          loop_until_bit_is_clear (PORTD, PORTD4); \
-        } \
-      } \
-      else { \
-        DIO_SET_PD4 (initial_value); \
-        DDRD |= _BV (DDD4); \
-        loop_until_bit_is_set (DDRD, DDD4); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PD4_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD5(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRD &= ~(_BV (DDD5)); \
-        loop_until_bit_is_clear (DDRD, DDD5); \
-        if ( enable_pullup ) { \
-          PORTD |= _BV (PORTD5); \
-          loop_until_bit_is_set (PORTD, PORTD5); \
-        } \
-        else { \
-          PORTD &= ~(_BV (PORTD5)); \
-          loop_until_bit_is_clear (PORTD, PORTD5); \
-        } \
-      } \
-      else { \
-        DIO_SET_PD5 (initial_value); \
-        DDRD |= _BV (DDD5); \
-        loop_until_bit_is_set (DDRD, DDD5); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PD5_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD6(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRD &= ~(_BV (DDD6)); \
-        loop_until_bit_is_clear (DDRD, DDD6); \
-        if ( enable_pullup ) { \
-          PORTD |= _BV (PORTD6); \
-          loop_until_bit_is_set (PORTD, PORTD6); \
-        } \
-        else { \
-          PORTD &= ~(_BV (PORTD6)); \
-          loop_until_bit_is_clear (PORTD, PORTD6); \
-        } \
-      } \
-      else { \
-        DIO_SET_PD6 (initial_value); \
-        DDRD |= _BV (DDD6); \
-        loop_until_bit_is_set (DDRD, DDD6); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PD6_MACROS, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD7(for_input, enable_pullup, initial_value) \
-  do { \
-      if ( for_input ) { \
-        DDRD &= ~(_BV (DDD7)); \
-        loop_until_bit_is_clear (DDRD, DDD7); \
-        if ( enable_pullup ) { \
-          PORTD |= _BV (PORTD7); \
-          loop_until_bit_is_set (PORTD, PORTD7); \
-        } \
-        else { \
-          PORTD &= ~(_BV (PORTD7)); \
-          loop_until_bit_is_clear (PORTD, PORTD7); \
-        } \
-      } \
-      else { \
-        DIO_SET_PD7 (initial_value); \
-        DDRD |= _BV (DDD7); \
-        loop_until_bit_is_set (DDRD, DDD7); \
-      } \
-      break; \
-  } while ( 0 )
+  DIO_INIT (DIO_PIN_PD7_MACROS, for_input, enable_pullup, initial_value)
 
 // }}}2
 
@@ -683,11 +346,7 @@
 // Pin Setting {{{1
 
 // Pins PB* Without Argument {{{2
-#define DIO_SET_PB0_LOW() \
-  do { \
-    PORTB &= ~(_BV (PORTB0)); \
-    loop_until_bit_is_clear (PORTB, PORTB0); \
-  } while ( 0 )
+#define DIO_SET_PB0_LOW() DIO_SET_LOW (DIO_PIN_PB0_MACROS)
 
 #define DIO_SET_PB0_HIGH() \
   do { \
