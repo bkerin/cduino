@@ -27,13 +27,18 @@ use Data::Dumper;
 use Getopt::Long;
 
 # We require an option saying what attribute we're guessing.
-my ($device, $baud, $bootloader) = (0, 0, 0);  
+my ($model, $device, $baud, $bootloader) = (0, 0, 0, 0);  
 
-GetOptions("device" => \$device, "baud" => \$baud, "bootloader" => \$bootloader)
+GetOptions(
+    "model" => \$model,
+    "device" => \$device,
+    "baud" => \$baud,
+    "bootloader" => \$bootloader )
     or die "option parsing error";
 
-($device xor $baud xor $bootloader)
-    or die "didn't get exactly one of --device, --baud or --bootloader options";
+($model xor $device xor $baud xor $bootloader)
+    or die ("didn't get exactly one of --model, --device, --baud or ".
+            "--bootloader options");
 
 sub find_usb_tty_devices # {{{1
 {
@@ -157,7 +162,10 @@ my ($uno_rev3_bootloader, $duemilanove_bootloader) = (
     'optiboot_atmega328.hex', 'ATmegaBOOT_168_atmega328.hex' );
 
 if ( @uno_rev3_devs == 1 and @duemilanove_devs == 0 ) {
-    if ( $device ) {
+    if ( $model ) {
+        print "Uno Rev3\n";
+    }
+    elsif ( $device ) {
         print $uno_rev3_devs[0]."\n";
     }
     elsif ( $baud ) {
@@ -171,7 +179,10 @@ if ( @uno_rev3_devs == 1 and @duemilanove_devs == 0 ) {
     }
 }
 elsif ( @uno_rev3_devs == 0 and @duemilanove_devs == 1 ) {
-    if ( $device ) {
+    if ( $model ) {
+        print "Duemilanove\n";
+    }
+    elsif ( $device ) {
         print $duemilanove_devs[0]."\n";
     }
     elsif ( $baud ) {
