@@ -39,7 +39,7 @@ PRINT_DEFAULT_GOAL_TRAP_ERROR_MESSAGE := \
   echo Useful targets:; \
   echo ; \
   echo '  *' some_file.o  --  Compile some_file.c ; \
-  echo '  *' writeflash   --  Compile and link current module, and upload it ; \
+  echo '  *' writeflash   --  Compile, link, and upload current module test ; \
   echo
 
 .DEFAULT_GOAL = default_goal_trap
