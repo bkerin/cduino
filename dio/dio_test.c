@@ -19,7 +19,6 @@ void
 signal_checkpoint_with_pb5_blinks (void)
 // {{{1
 { 
-
   DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
 
   const int blink_count = 3, blinks_per_second = 4;
@@ -43,7 +42,6 @@ void
 signal_checkpoint_with_pb0_blinks (void)
 // {{{1
 { 
-
   DIO_INIT_PB0 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
 
   const int blink_count = 3, blinks_per_second = 4;
@@ -168,14 +166,29 @@ main (void)
 
   value = DIO_READ_PB4 ();
   assert (value);
-
-  // NOTE: on the Arduino, PB5 is pulled towards ground via one or two 1 kohm
-  // resistors in parallel and a LED.  This is a stronger pull than that
-  // exerted by the internal pull-up resistor (which is at least 20 kohm),
-  // and so we would expect to read a low value from this pin even with the
-  // pull-up enabled.
+  
+  // NOTE: on the Arduino Duemilanove, PB5 is pulled towards ground via
+  // one or two 1 kohm resistors in parallel and a LED.  This is a stronger
+  // pull than that exerted by the internal pull-up resistor (which is at
+  // least 20 kohm), and so we would expect to read a low value from this
+  // pin even with the pull-up enabled.  However, on the Arduino Uno Rev. 3
+  // (and perhaps on earlier Uno boards) an op-amp buffer (refdes U5B on
+  // my schematic) is included between PB5 and the resistor and led L.
+  // This high-impedance buffer doesn't out-pull in internal pull-up, so
+  // this pin will still read high on these boards.
   value = DIO_READ_PB5 ();
+#    ifdef ARDUINO_MODEL_IS_UNO_REV3
+  assert (value);
+#    endif
+#    ifdef ARDUINO_MODEL_IS_DUEMILANOVE
   assert (!value);
+#    endif
+#    if !(defined (ARDUINO_MODEL_IS_UNO_REV3) || \
+          defined (ARDUINO_MODEL_IS_DUEMILANOVE))
+#      error Neither of the expected Arduino model defines is actually defined
+#    endif
+
+  assert (value);
 
 #  endif // TEST_ISP_PINS
 

@@ -38,6 +38,19 @@ endif
 # in dio_test.c.
 #CPPFLAGS += -DUNDERSTAND_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED
 
+# The hardware of the different versions is slightly different, so we define
+# an appropriate preprocessor symbol to make sure our test code expects
+# the right thing.  see the notes near the uses of the macros defined in
+# this conditional for details.
+ARDUINO_MODEL := $(shell ./guess_arduino_attribute.perl --model)
+ifeq ($(ARDUINO_MODEL),Uno Rev3)
+  CPPFLAGS += -DARDUINO_MODEL_IS_UNO_REV3
+else ifeq ($(ARDUINO_MODEL),Duemilanove)
+  CPPFLAGS += -DARDUINO_MODEL_IS_DUEMILANOVE
+else
+  $(error Unknown (or poory detected) Arduino model '$(ARDUINO_MODEL)')
+endif
+
 # Each condition here represents a different hardware setup capable of
 # exercising different uses of the interface (e.g. input, output, pullups).
 
