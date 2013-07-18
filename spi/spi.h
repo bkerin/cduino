@@ -14,8 +14,9 @@
 // 
 // How This Interface Works
 //
-// You have to define and use some macros which specify which pin you're
-// using for slave selection.  Typical use looks like this:
+// You have to ensure that the slave select line for the device you want to
+// talk to is brought low before you talk to it (of course this line should
+// normally be high.  It may be convenient to define macros like this:
 /*
 //   #define MY_SPI_SLAVE_1_SELECT_INIT() \
 //     SPI_SS_INIT(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
@@ -97,7 +98,7 @@
  * published by the Free Software Foundation.
  */
 
-#ifndef UNTESTEDNESS_ACKNOWLEDGED
+#ifndef SPI_UNTESTEDNESS_ACKNOWLEDGED
 #  error This module not fully tested.  I have tested output with \
          SPI_BIT_ORDER_MSB_FIRST and SPI_DATA_MODE_0 with all \
          SPI_CLOCK_DIVIDER_* settings.  The other bit orders and modes are \
@@ -152,6 +153,7 @@ typedef enum {
 // spi_init() is called.
 #define SPI_SCK_INIT DIO_INIT_DIGITAL_13
 #define SPI_MOSI_INIT DIO_INIT_DIGITAL_11
+#define SPI_MISO_INIT DIO_INIT_DIGITAL_12
 
 // Initialize hardware SPI interface.  This function initializes the SS (aka
 // PB2, aka DIGITAL_10) pin for output, which is always required for correct
