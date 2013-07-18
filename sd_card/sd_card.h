@@ -1,3 +1,27 @@
+// Interface to SD card (via SPI controller).
+//
+// Test Driver: sd_card_test.c    Implementation: sd_card.c
+
+#ifndef SD_CARD_H
+#define SD_CARD_H
+
+#include <term_io.h>
+
+#include "sd_card_info.h"
+#include "spi.h"
+
+// WARNING: many SD cards are utter junk.  They lack any wear leveling for
+// the underlying flash memory and are horribly intolerant of power cuts.
+// If you're doing anything remotely serious you must invest in an
+// "industrial" SD card.  I've used the Apacer AP-MSD04GCS4P-1TM with
+// good results.
+//
+// This interface has been tested with the SD card hardware on the official
+// Arduino Ethernet/SD Card shield (FIXME: URL here).
+//
+// This interface supports using the card simply as a large memory.
+// FAT filesystem support is (FIXME) not done yet.
+
 /* Arduino Sd2Card Library
  * Copyright (C) 2009 by William Greiman
  *
@@ -17,19 +41,20 @@
  * along with the Arduino Sd2Card Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-#ifndef SD_CARD_H
-#define SD_CARD_H
 
-#include <term_io.h>
+#ifndef SD_CARD_SPI_SLAVE_SELECT_PIN
+#  error The SD_CARD_SPI_SLAVE_SELEC_PIN which is supposed to specify the \
+         pin to use to select the SD card controller SPI slave is not set. \
+         See the example in the Makefile in the sd_card module directory.
+#endif
 
-#include "sd_card_info.h"
-
+// FIXME: probably remove this if we stop supporting it
 //#define OPTIMIZE_HARDWARE_SPI
 
 // Protect block zero from write if nonzero
 #define SD_PROTECT_BLOCK_ZERO 1
 
-#define SD_INIT_TIMEOUT ((uint16_t const) 2000)     // Init timeout ms
+#define SD_INIT_TIMEOUT  ((uint16_t const) 2000)    // Init timeout ms
 #define SD_ERASE_TIMEOUT ((uint16_t const) 10000)   // Erase timeout ms
 #define SD_READ_TIMEOUT  ((uint16_t const) 300)     // Read timeout ms
 #define SD_WRITE_TIMEOUT ((uint16_t const) 600)     // Write timeout ms
@@ -119,9 +144,9 @@ sd_card_size (void);
 // Card types. 
 typedef enum {
   SD_CARD_TYPE_INDETERMINATE = 0,   // Car type not known (yet).
-  SD_CARD_TYPE_SD1 = 1,    // SD V1
-  SD_CARD_TYPE_SD2 = 2,    // SD V2
-  SD_CARD_TYPE_SDHC = 3,   // SDHC
+  SD_CARD_TYPE_SD1           = 1,   // SD V1
+  SD_CARD_TYPE_SD2           = 2,   // SD V2
+  SD_CARD_TYPE_SDHC          = 3,   // SDHC
 } sd_card_type_t;
 
 // Return the card type.
@@ -142,14 +167,16 @@ sd_card_read_cid (cid_t *cid);
 uint8_t
 sd_card_read_csd (csd_t *csd);
 
+// Read a block of data.
 uint8_t
 sd_card_read_block (uint32_t block, uint8_t *dst);
 
+// Write a block of data (but see SD_PROTECT_BLOCK_ZERO).
 uint8_t
 sd_card_write_block (uint32_t blockNumber, const uint8_t *src);
 
 // Returns true iff the SD card provides an erase operation for individual
-// blocks.  Note that its always possible to simply overwrite the data.
+// blocks.  Note that its always possible to simply overwrite blocks.
 uint8_t
 sd_card_single_block_erase_supported (void);
 
