@@ -23,11 +23,21 @@
 #include "dio.h"
 #include "timer0_stopwatch.h"
 
-static uint32_t block_;
-static sd_card_error_t errorCode_;
-static uint8_t inBlock_;
-static uint16_t offset_;
-static uint8_t partialBlockRead_;
+#define SD_CARD_SPI_SLAVE_SELECT_INIT(for_input, enable_pullup, initial_value) \
+  DIO_INIT ( \
+      SD_CARD_SPI_SLAVE_SELECT_PIN, for_input, enable_pullup, initial_value )
+#define SD_CARD_SPI_SLAVE_SELECT_SET_LOW() \
+  DIO_SET_LOW (SD_CARD_SPI_SLAVE_SELECT_PIN)
+#define SD_CARD_SPI_SLAVE_SELECT_SET_HIGH() \
+  DIO_SET_HIGH (SD_CARD_SPI_SLAVE_SELECT_PIN)
+
+static uint32_t cur_block;   // Current block
+static sd_card_error_t cur_error;   // Current error (might be none)
+static uint8_t in_block;   // True iff we are in the process of reading a block
+static uint16_t cur_offset;   // Offset within current block
+// FIXME: the interface fctn to enable this mode currently doesn't exist, could
+// be included from model easily enough.
+static uint8_t partial_block_read_mode;   // Mode supporting partai block reads
 static uint8_t status_;
 static sd_card_type_t type_;
 
@@ -59,7 +69,7 @@ uint8_t spiRec (void)
 static void
 error (sd_card_error_t code)
 {
-  errorCode_ = code;
+  cur_error = code;
 }
 
 // Elapsed milliseconds since most recent timer0_stopwatch_reset().
@@ -85,30 +95,31 @@ wait_not_busy (uint16_t timeoutMillis)
 
 static void
 read_end (void) {
-  // Skip remaining data in a block when in partial block read mode.
+    // Read any remaining block data and checksum, set chip select high,
+    // and clear the in_block flag.
 
-  if (inBlock_) {
-      // skip data and crc
+  if ( in_block ) {
+      // Skip data and crc
 #ifdef OPTIMIZE_HARDWARE_SPI
     // optimize skip for hardware
     SPDR = 0XFF;
-    while (offset_++ < 513) {
+    while ( cur_offset++ < 513 ) {
       while ( ! (SPSR & (1 << SPIF)) ) {
         ;
       }
       SPDR = 0XFF;
     }
-    // wait for last crc byte
+    // Wait for last crc byte
     while ( ! (SPSR & (1 << SPIF)) ) {
       ;
     }
 #else  // OPTIMIZE_HARDWARE_SPI
-    while ( offset_++ < 514 ) {
-      spiRec();
+    while ( cur_offset++ < 514 ) {
+      spiRec ();
     }
 #endif  // OPTIMIZE_HARDWARE_SPI
-    CHIP_SELECT_SET_HIGH ();
-    inBlock_ = 0;
+    SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
+    in_block = 0;
   }
 }
 
@@ -117,17 +128,17 @@ static uint8_t
 card_command (uint8_t cmd, uint32_t arg) {
   // Send command and return error code, or zero for OK.
 
-  // end read if in partialBlockRead mode
+  // Ensure read is done (in case we're in partial_block_read_mode mode)
   read_end ();
 
   // select card
-  CHIP_SELECT_SET_LOW ();
+  SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
 
   // wait up to 300 ms if busy
   wait_not_busy (300);
 
   // send command
-  spiSend(cmd | 0x40);
+  spiSend (cmd | 0x40);
 
   // send argument
   for ( int8_t s = 24 ; s >= 0 ; s -= 8 ) {
@@ -141,7 +152,7 @@ card_command (uint8_t cmd, uint32_t arg) {
   spiSend(crc);
 
   // wait for response
-  for ( uint8_t i = 0 ; ((status_ = spiRec()) & 0X80) && i != 0XFF ; i++ ) {
+  for ( uint8_t ii = 0 ; ((status_ = spiRec()) & 0X80) && ii != 0XFF ; ii++ ) {
     ;
   }
 
@@ -190,7 +201,7 @@ write_data_private (uint8_t token, const uint8_t* src)
   status_ = spiRec();
   if ( (status_ & DATA_RES_MASK) != DATA_RES_ACCEPTED ) {
     error (SD_CARD_ERROR_WRITE);
-    CHIP_SELECT_SET_HIGH ();
+    SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
     return FALSE;
   }
   return TRUE;
@@ -215,7 +226,7 @@ wait_start_block (void)
   return TRUE;
 
  fail:
-  CHIP_SELECT_SET_HIGH ();
+  SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
 
@@ -225,8 +236,8 @@ read_register (uint8_t cmd, void* buf)
   // Read CID or CSR register.
 
   uint8_t* dst = (uint8_t *) buf;
-  if (card_command (cmd, 0)) {
-    error(SD_CARD_ERROR_READ_REG);
+  if ( card_command (cmd, 0) ) {
+    error (SD_CARD_ERROR_READ_REG);
     goto fail;
   }
   if ( ! wait_start_block () ) {
@@ -236,18 +247,18 @@ read_register (uint8_t cmd, void* buf)
   for (uint16_t i = 0; i < 16; i++) dst[i] = spiRec();
   spiRec();  // get first crc byte
   spiRec();  // get second crc byte
-  CHIP_SELECT_SET_HIGH ();
+  SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return TRUE;
 
  fail:
-  CHIP_SELECT_SET_HIGH ();
+  SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
 
 sd_card_error_t
 sd_card_last_error (void)
 {
-  return errorCode_;
+  return cur_error;
 }
 
 uint8_t
@@ -315,11 +326,11 @@ sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock) {
     error(SD_CARD_ERROR_ERASE_TIMEOUT);
     goto fail;
   }
-  CHIP_SELECT_SET_HIGH ();
+  SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return TRUE;
 
  fail:
-  CHIP_SELECT_SET_HIGH ();
+  SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
 
@@ -380,53 +391,62 @@ sd_card_init (sd_card_spi_speed_t speed)
 {
   timer0_stopwatch_init ();
 
-  errorCode_ = SD_CARD_ERROR_NONE;
+  cur_error = SD_CARD_ERROR_NONE;
   type_ = SD_CARD_TYPE_INDETERMINATE;
-  inBlock_ = partialBlockRead_ = 0;
+  in_block = partial_block_read_mode = 0;
 
   timer0_stopwatch_reset ();
 
   uint32_t arg;
 
-  // Set pin modes
-  CHIP_SELECT_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
+  // Set pin modes FIXME: WORK POINT: here is a troublesome spot.  The
+  // interface manipulates the slave select line all the time, so it has
+  // to be a blank to be filled in.  I don't think there is any way to do
+  // this with with macros, so dio.h might have to be expanded to include
+  // a function with pin arguments.
+  SD_CARD_SPI_SLAVE_SELECT_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
   SPI_MISO_INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
   SPI_MOSI_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   SPI_SCK_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   // SS must be in output mode even if it is not chip select
   SPI_SS_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
 
-  // Enable SPI, Master, clock rate f_osc/128
+  // Enable SPI, master mode, clock rate f_osc/128
   SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0);
-  // clear double speed
+  // Clear double speed
   SPSR &= ~(1 << SPI2X);
 
-  // must supply min of 74 clock cycles with CS high.
-  for (uint8_t i = 0; i < 10; i++) spiSend(0XFF);
+  // Must supply min of 74 clock cycles with CS high
+  for ( uint8_t i = 0; i < 10; i++ ) {
+    spiSend(0XFF);
+  }
 
-  CHIP_SELECT_SET_LOW ();
+  SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
 
-  // command to go idle in SPI mode
-  while ((status_ = card_command (CMD0, 0)) != R1_IDLE_STATE) {
-    //**if (((uint16_t)millis() - t0) > SD_INIT_TIMEOUT) {
-    if (EMILLIS () > SD_INIT_TIMEOUT) {
-      error(SD_CARD_ERROR_CMD0);
+  // Command to go idle in SPI mode
+  while ( (status_ = card_command (CMD0, 0)) != R1_IDLE_STATE ) {
+    if ( EMILLIS () > SD_INIT_TIMEOUT ) {
+      error (SD_CARD_ERROR_CMD0);
       goto fail;
     }
   }
-  // check SD version
+
+  // Check SD version
   if ( (card_command (CMD8, 0x1AA) & R1_ILLEGAL_COMMAND) ) {
     set_type (SD_CARD_TYPE_SD1);
   } else {
-    // only need last byte of r7 response
-    for (uint8_t i = 0; i < 4; i++) status_ = spiRec();
-    if (status_ != 0XAA) {
-      error(SD_CARD_ERROR_CMD8);
+    // Only need last byte of r7 response
+    for ( uint8_t ii = 0; ii < 4; ii++ ) {
+      status_ = spiRec();
+    }
+    if ( status_ != 0XAA ) {
+      error (SD_CARD_ERROR_CMD8);
       goto fail;
     }
-    set_type(SD_CARD_TYPE_SD2);
+    set_type (SD_CARD_TYPE_SD2);
   }
-  // initialize card and send host supports SDHC if SD2
+
+  // Initialize card and send host supports SDHC if SD2
   arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0X40000000 : 0;
 
   while ( (status_ = card_application_command (ACMD41, arg))
@@ -436,22 +456,27 @@ sd_card_init (sd_card_spi_speed_t speed)
       goto fail;
     }
   }
-  // if SD2 read OCR register to check for SDHC card
-  if (sd_card_type () == SD_CARD_TYPE_SD2) {
-    if (card_command (CMD58, 0)) {
-      error(SD_CARD_ERROR_CMD58);
+  // If SD2, read OCR register to check for SDHC card
+  if ( sd_card_type () == SD_CARD_TYPE_SD2 ) {
+    if ( card_command (CMD58, 0) ) {
+      error (SD_CARD_ERROR_CMD58);
       goto fail;
     }
-    if ((spiRec() & 0XC0) == 0XC0) set_type(SD_CARD_TYPE_SDHC);
-    // discard rest of ocr - contains allowed voltage range
-    for (uint8_t i = 0; i < 3; i++) spiRec();
+    if ( (spiRec () & 0XC0) == 0XC0 ) {
+      set_type (SD_CARD_TYPE_SDHC);
+    }
+    // Discard rest of ocr - contains allowed voltage range
+    for ( uint8_t i = 0; i < 3; i++ ) {
+      spiRec ();
+    }
   }
-  CHIP_SELECT_SET_HIGH ();
+
+  SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
 
   return setSckRate (speed);
 
  fail:
-  CHIP_SELECT_SET_HIGH ();
+  SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
 
@@ -467,27 +492,29 @@ sd_card_init (sd_card_spi_speed_t speed)
  * the value zero, false, is returned for failure.
  */
 static uint8_t
-readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
+read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
 {
-  if (count == 0) return TRUE;
-  if ((count + offset) > 512) {
+  if (count == 0) {
+    return TRUE;
+  }
+  if ( (count + offset) > 512 ) {
     goto fail;
   }
-  if (!inBlock_ || block != block_ || offset < offset_) {
-    block_ = block;
-    // use address if not SDHC card
+  if ( ! in_block || block != cur_block || offset < cur_offset ) {
+    cur_block = block;
+    // Use address if not SDHC card
     if ( sd_card_type () != SD_CARD_TYPE_SDHC ) {
       block <<= 9;
     }
-    if (card_command (CMD17, block)) {
-      error(SD_CARD_ERROR_CMD17);
+    if ( card_command (CMD17, block) ) {
+      error (SD_CARD_ERROR_CMD17);
       goto fail;
     }
     if ( ! wait_start_block () ) {
       goto fail;
     }
-    offset_ = 0;
-    inBlock_ = 1;
+    cur_offset = 0;
+    in_block = 1;
   }
 
 #ifdef OPTIMIZE_HARDWARE_SPI
@@ -495,7 +522,7 @@ readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
   SPDR = 0XFF;
 
   // skip data before offset
-  for (;offset_ < offset; offset_++) {
+  for ( ; cur_offset < offset ; cur_offset++ ) {
     while ( ! (SPSR & (1 << SPIF)) ) {
       ;
     }
@@ -503,7 +530,7 @@ readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
   }
   // transfer data
   uint16_t n = count - 1;
-  for (uint16_t i = 0; i < n; i++) {
+  for ( uint16_t ii = 0; ii < n; ii++ ) {
     // FIXME: can these all be replaced with loop_until_bit_set() calls?
     while ( ! (SPSR & (1 << SPIF)) ) {
       ;
@@ -519,25 +546,24 @@ readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
 
 #else  // OPTIMIZE_HARDWARE_SPI
 
-  // skip data before offset
-  for (;offset_ < offset; offset_++) {
+  // Skip data before offset
+  for ( ; cur_offset < offset ; cur_offset++ ) {
     spiRec();
   }
-  // transfer data
-  for (uint16_t i = 0; i < count; i++) {
-    dst[i] = spiRec();
+  // Transfer data
+  for ( uint16_t ii = 0; ii < count; ii++ ) {
+    dst[ii] = spiRec();
   }
 #endif  // OPTIMIZE_HARDWARE_SPI
 
-  offset_ += count;
-  if (!partialBlockRead_ || offset_ >= 512) {
-    // read rest of data, checksum and set chip select high
+  cur_offset += count;
+  if ( ! partial_block_read_mode || cur_offset >= 512 ) {
     read_end ();
   }
   return TRUE;
 
  fail:
-  CHIP_SELECT_SET_HIGH ();
+  SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
 
@@ -554,7 +580,7 @@ readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst)
 uint8_t
 sd_card_read_block (uint32_t block, uint8_t* dst)
 {
-  return readData(block, 0, 512, dst);
+  return read_data (block, 0, 512, dst);
 }
 
 //------------------------------------------------------------------------------
@@ -571,37 +597,41 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
 {
 #if SD_PROTECT_BLOCK_ZERO
   // don't allow write to first block
-  if (blockNumber == 0) {
-    error(SD_CARD_ERROR_WRITE_BLOCK_ZERO);
+  if ( blockNumber == 0 ) {
+    error (SD_CARD_ERROR_WRITE_BLOCK_ZERO);
     goto fail;
   }
 #endif  // SD_PROTECT_BLOCK_ZERO
 
-  // use address if not SDHC card
-  if (sd_card_type () != SD_CARD_TYPE_SDHC) blockNumber <<= 9;
-  if (card_command (CMD24, blockNumber)) {
-    error(SD_CARD_ERROR_CMD24);
+  // Use address if not SDHC card
+  if ( sd_card_type () != SD_CARD_TYPE_SDHC ) {
+    blockNumber <<= 9;
+  }
+  if ( card_command (CMD24, blockNumber) ) {
+    error (SD_CARD_ERROR_CMD24);
     goto fail;
   }
   if ( ! write_data_private (DATA_START_BLOCK, src) ) {
     goto fail;
   }
 
-  // wait for flash programming to complete
+  // Wait for flash programming to complete
   if ( ! wait_not_busy (SD_WRITE_TIMEOUT) ) {
-    error(SD_CARD_ERROR_WRITE_TIMEOUT);
+    error (SD_CARD_ERROR_WRITE_TIMEOUT);
     goto fail;
   }
-  // response is r2 so get and check two bytes for nonzero
-  if (card_command (CMD13, 0) || spiRec()) {
-    error(SD_CARD_ERROR_WRITE_PROGRAMMING);
+
+  // Response is r2, so get and check two bytes for nonzero
+  if ( card_command (CMD13, 0) || spiRec () ) {
+    error (SD_CARD_ERROR_WRITE_PROGRAMMING);
     goto fail;
   }
-  CHIP_SELECT_SET_HIGH ();
+
+  SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return TRUE;
 
  fail:
-  CHIP_SELECT_SET_HIGH ();
+  SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
 
