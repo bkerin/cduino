@@ -35,7 +35,9 @@
 // September 25, 2006
 //
 // www.sdcard.org/developers/tech/sdcard/pls/Simplified_Physical_Layer_Spec.pdf
-
+//
+// NOTE: it may be easier to use one of the interface functions in sd_card.h,
+// rather than using sd_card_read_csd() and interpreting its results.
 
 // SD card commands {{{1
 
@@ -97,7 +99,7 @@
 
 // }}}1
 
-//------------------------------------------------------------------------------
+// Im not sure what CID stands for exactly.  But everyone calls it that :)
 typedef struct CID {
   // byte 0
   uint8_t mid;  // Manufacturer ID
@@ -121,8 +123,9 @@ typedef struct CID {
   unsigned crc : 7;
 } cid_t;
 
-//------------------------------------------------------------------------------
-// CSD for version 1.00 cards
+// I'm not sure what CSD stands for exactly.  But everyone calls it that:)
+// See also the interface functions in sd_card.h.  There are two version
+// of this structure depending on the SD card version.
 typedef struct CSDV1 {
   // byte 0
   unsigned reserved1 : 6;
@@ -183,8 +186,9 @@ typedef struct CSDV1 {
   unsigned crc : 7;
 } csd1_t;
 
-//------------------------------------------------------------------------------
-// CSD for version 2.00 cards
+// I'm not sure what CSD stands for exactly.  But everyone calls it that:)
+// See also the interface functions in sd_card.h.  There are two version
+// of this structure depending on the SD card version.  
 typedef struct CSDV2 {
   // byte 0
   unsigned reserved1 : 6;
@@ -241,8 +245,7 @@ typedef struct CSDV2 {
   unsigned crc : 7;
 } csd2_t;
 
-//------------------------------------------------------------------------------
-// union of old and new style CSD register
+// Union of old and new style CSD register types.
 typedef union {
   csd1_t v1;
   csd2_t v2;
