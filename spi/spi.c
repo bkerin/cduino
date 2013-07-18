@@ -23,8 +23,13 @@ spi_init (void)
   // Initialize the SS pin for ouput with a HIGH value
   SPI_SS_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
 
-  SPCR |= _BV (MSTR);   // Set SPI master mode
-  SPCR |= _BV (SPE);    // Enable SPI
+  // FIXME: WORK POINT: SSPR1 and SPR0 setst the clock divider to f_osc/128,
+  // is that a sensible default?
+
+  // NOTE: setting SPR1 and SPR0 results in the largest clocke divider,
+  // i.e. the slowest possible operation, which is probably a sensible
+  // default.  The other bits set SPI master mode and enable SPI.
+  SPCR |= _BV (MSTR) | _BV (SPE) | _BV (SPR1) | _BV (SPR0);
 
   // Set the SCK and MOSI pins as OUTPUTS.  The MISO pin automatically
   // overrides to act as an input, but according to the ATMega328P datasheet

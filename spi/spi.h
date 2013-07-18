@@ -156,11 +156,13 @@ typedef enum {
 #define SPI_MOSI_INIT DIO_INIT_DIGITAL_11
 #define SPI_MISO_INIT DIO_INIT_DIGITAL_12
 
-// Initialize hardware SPI interface.  This function initializes the SS (aka
-// PB2, aka DIGITAL_10) pin for output, which is always required for correct
-// SPI master mode operation regardless of which pin is actually used for
-// slave selection.  See the comments at the top of this file for information
-// on how to use different or multiple pins for SPI slave selection.
+// Initialize hardware SPI interface.  This function initializes the SS
+// (aka PB2, aka DIGITAL_10) pin for output, which is always required for
+// correct SPI master mode operation regardless of which pin is actually
+// used for slave selection.  See the comments at the top of this file
+// for information on how to use different or multiple pins for SPI slave
+// selection.  The bit order default to FIXME: what?, clock divider defaults
+// to SPI_CLOCK_DIVIDER_DIV128, and the data mode defaults to FIXME: what?
 void
 spi_init (void);
 
