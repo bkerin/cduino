@@ -31,7 +31,7 @@
        \
        defined (LCD_DB7_INIT))
 #  error The macros which specify which pins the LCD should use are not set. \
-         Please see the example in the Makefile in the dio module directory.
+         See the example in the Makefile in the dio module directory.
 #endif
 
 // Initialize display.  This routine takes about 50 milliseconds (to ensure
