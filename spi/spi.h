@@ -135,22 +135,23 @@ typedef enum {
   SPI_DATA_MODE_3 = 0x0C,   // CPOL == 1, CPHA == 1
 } spi_data_mode_t;
 
-// The SS pin (aka PB2, aka DIGITAL_10) will *always* be initialized
-// for output, even it it isn't used as a slave select line (usually its
-// reasonable to use it as a slave select line).  The ATMega requires this
-// in order for SPI master mode to operate correctly.  Its usually good to
-// go ahead and use it as a slave select pin.  See comments at the top of
-// this file for details on how to use other pins instead of or in addition
-// to SS as slave select pins.
+// The SS pin (aka PB2, aka DIGITAL_10) will *always* be initialized for
+// output with a HIGH value, even it it isn't used as a slave select line
+// (usually its reasonable to use it as a slave select line).  The ATMega
+// requires this in order for SPI master mode to operate correctly.
+// See comments at the top of this file for details on how to use other
+// pins instead of or in addition to SS as slave select pins.
+#define SPI_SS_PIN DIO_PIN_DIGITAL_10
 #define SPI_SS_INIT DIO_INIT_DIGITAL_10
 #define SPI_SS_SET_LOW DIO_SET_DIGITAL_10_LOW
 #define SPI_SS_SET_HIGH DIO_SET_DIGITAL_10_HIGH
 
-// This interface assumes that the SCK and MOSI pins are always used as
-// the clock and Master Out Slave In pins.  I've never tried anything else,
-// though I have a vague idea that it might be possible.  The MISO pin (aka
-// PB4, aka DIGITAL_12) will automatically override to act as an input when
-// spi_init() is called.
+// This interface assumes that the SCK and MOSI pins are always used as the
+// clock and Master Out Slave In pins.  I've never tried anything else,
+// though I have a vague idea that it might be possible.  The MISO pin
+// (aka PB4, aka DIGITAL_12) will automatically override to act as an input
+// when spi_init() is called, but we still control the status of the MISO
+// internal pull-up resistor.  This interface always disables this pull-up.
 #define SPI_SCK_INIT DIO_INIT_DIGITAL_13
 #define SPI_MOSI_INIT DIO_INIT_DIGITAL_11
 #define SPI_MISO_INIT DIO_INIT_DIGITAL_12
