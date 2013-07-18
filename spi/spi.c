@@ -20,19 +20,23 @@
 void
 spi_init (void)
 {
-  // Initialize the SS pin for ouput with a HIGH value.
+  // Initialize the SS pin for ouput with a HIGH value
   SPI_SS_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
 
   SPCR |= _BV (MSTR);   // Set SPI master mode
   SPCR |= _BV (SPE);    // Enable SPI
 
-  // Set the SCK and MOSI pins as OUTPUTS.  The MISO pin
-  // automatically overrides to act as an input.  By doing this
-  // AFTER enabling SPI, we avoid accidentally clocking in a single
-  // bit since the lines go directly from "input" to SPI control.
+  // Set the SCK and MOSI pins as OUTPUTS.  The MISO pin automatically
+  // overrides to act as an input, but according to the ATMega328P datasheet
+  // we still control the status of the pull-up resistor.  I believe we
+  // probably never want this pull-up enabled for SPI operation, so we
+  // go ahead and call SPI_MISO_INIT for the pull-up disabling effect.
+  // By doing this AFTER enabling SPI, we avoid accidentally clocking in
+  // a single bit since the lines go directly from "input" to SPI control.
   // http://code.google.com/p/arduino/issues/detail?id=888
   SPI_SCK_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   SPI_MOSI_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
+  SPI_MISO_INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
 }
 
 void
