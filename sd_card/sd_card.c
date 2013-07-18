@@ -21,6 +21,7 @@
 #include "sd_card.h"
 
 #include "dio.h"
+#include "spi.h"
 #include "timer0_stopwatch.h"
 
 #define SD_CARD_SPI_SLAVE_SELECT_INIT(for_input, enable_pullup, initial_value) \
@@ -399,12 +400,9 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   uint32_t arg;
 
-  // Set pin modes FIXME: WORK POINT: here is a troublesome spot.  The
-  // interface manipulates the slave select line all the time, so it has
-  // to be a blank to be filled in.  I don't think there is any way to do
-  // this with with macros, so dio.h might have to be expanded to include
-  // a function with pin arguments.
   SD_CARD_SPI_SLAVE_SELECT_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
+  // Set pin modes FIXME: WORK POINT: these should go away when we switch
+  // to using the spi.h interface entirely.
   SPI_MISO_INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
   SPI_MOSI_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   SPI_SCK_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);

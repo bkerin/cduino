@@ -8,7 +8,6 @@
 #include <term_io.h>
 
 #include "sd_card_info.h"
-#include "spi.h"
 
 // WARNING: many SD cards are utter junk.  They lack any wear leveling for
 // the underlying flash memory and are horribly intolerant of power cuts.
@@ -16,8 +15,9 @@
 // "industrial" SD card.  I've used the Apacer AP-MSD04GCS4P-1TM with
 // good results.
 //
-// This interface has been tested with the SD card hardware on the official
-// Arduino Ethernet/SD Card shield (FIXME: URL here).
+// This interface has been tested with the SD card
+// hardware on the official Arduino Ethernet/SD Card shield
+// (http://arduino.cc/en/Main/ArduinoEthernetShield).
 //
 // This interface supports using the card simply as a large memory.
 // FAT filesystem support is (FIXME) not done yet.
@@ -42,6 +42,9 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+// Clients must specify the SPI slave select pin being used at compile
+// time, but the other SPI lines (MISO, MOSI, and SCK) are fixed by the
+// spi module implementation.
 #ifndef SD_CARD_SPI_SLAVE_SELECT_PIN
 #  error The SD_CARD_SPI_SLAVE_SELEC_PIN which is supposed to specify the \
          pin to use to select the SD card controller SPI slave is not set. \
