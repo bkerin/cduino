@@ -400,6 +400,9 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   uint32_t arg;
 
+  // FIXME: where exactly is the equivalent of spi_set_data_mode happening,
+  // or is the default getting used, or what?  same question for bit order.
+
   SD_CARD_SPI_SLAVE_SELECT_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
   // Set pin modes FIXME: WORK POINT: these should go away when we switch
   // to using the spi.h interface entirely.
