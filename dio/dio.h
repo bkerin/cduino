@@ -42,7 +42,7 @@
 //
 //   DIO_SET_PB0_HIGH ();
 //
-// I finds these macros easier to read and remember than the individual
+// I find these macros easier to read and remember than the individual
 // bit fiddling instructions and wait-till-set code.
 //
 // This interface doesn't support configuring/reading/writing multiple pins
@@ -56,6 +56,25 @@
 //   DIO_INIT_DIGITAL_8 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
 //
 // All caveats described for the underlying macros apply.
+//
+// There are also macros that expand to tuples of the various register and
+// bit macros associated with each pin, and variadic macros which can accept
+// these tuple macros as arguments.  So its also possible to write things like
+// this:
+//
+//   DIO_INIT (DIO_PIN_PB0, DIO_OUTPUT, DIO_DONT_CARE, LOW);
+//   DIO_SET (DIO_PIN_PB0, HIGH);
+//   DIO_SET_LOW (DIO_PIN_PB0);
+//   DIO_SET_HIGH (DIO_PIN_PB0);
+//   DIO_INIT (DIO_PIN_PB1, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
+//   uint8_t pb1_value = DIO_READ (DIO_PIN_PB1);
+//
+// I find these forms harder to read, and the macros are variadic, which
+// means you're likely to get strange hard-to-interpret errors if you call
+// them wrong.  So I don't reccomend these forms.  However, they may be
+// convenient for clients that want to allow compile-time pin configuration.
+// See the FIXME: give a correct pointer when the SPI or SD example is actually
+// done.  Also run all the tests. 
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -155,52 +174,54 @@
 // Packaged names for the register and bit macros associated with IO pins.
 // These can be used by clients that want to let their clients select which
 // pin to use at compile-time (see also the DIO_INIT(), DIO_SET_LOW(),
-// DIO_SET_HIGH(), and DIO_SET() macros).  NOTE: to support the use of
-// these tuples, a number of macros have a variadic top layer.
-//
-#define DIO_PIN_PB0_MACROS DDRB, DDB0, PORTB, PORTB0
-#define DIO_PIN_PB1_MACROS DDRB, DDB1, PORTB, PORTB1
-#define DIO_PIN_PB2_MACROS DDRB, DDB2, PORTB, PORTB2
-#define DIO_PIN_PB3_MACROS DDRB, DDB3, PORTB, PORTB3
-#define DIO_PIN_PB4_MACROS DDRB, DDB4, PORTB, PORTB4
-#define DIO_PIN_PB5_MACROS DDRB, DDB5, PORTB, PORTB5
-#define DIO_PIN_PB6_MACROS DDRB, DDB6, PORTB, PORTB6
-#define DIO_PIN_PB7_MACROS DDRB, DDB7, PORTB, PORTB7
+// DIO_SET_HIGH(), DIO_SET(), and DIO_READ() macros).  NOTE: to support
+// the use of these tuples, a number of macros have a variadic top layer.
+// Obviously these tuples are best interpreted by the variadic macros
+// intented to receive them.
+#define DIO_PIN_PB0 DDRB, DDB0, PORTB, PORTB0, PINB, PINB0
+#define DIO_PIN_PB1 DDRB, DDB1, PORTB, PORTB1, PINB, PINB1
+#define DIO_PIN_PB2 DDRB, DDB2, PORTB, PORTB2, PINB, PINB2
+#define DIO_PIN_PB3 DDRB, DDB3, PORTB, PORTB3, PINB, PINB3
+#define DIO_PIN_PB4 DDRB, DDB4, PORTB, PORTB4, PINB, PINB4
+#define DIO_PIN_PB5 DDRB, DDB5, PORTB, PORTB5, PINB, PINB5
+#define DIO_PIN_PB6 DDRB, DDB6, PORTB, PORTB6, PINB, PINB6
+#define DIO_PIN_PB7 DDRB, DDB7, PORTB, PORTB7, PINB, PINB7
 
-#define DIO_PIN_PC0_MACROS DDRC, DDC0, PORTC, PORTC0
-#define DIO_PIN_PC1_MACROS DDRC, DDC1, PORTC, PORTC1
-#define DIO_PIN_PC2_MACROS DDRC, DDC2, PORTC, PORTC2
-#define DIO_PIN_PC3_MACROS DDRC, DDC3, PORTC, PORTC3
-#define DIO_PIN_PC4_MACROS DDRC, DDC4, PORTC, PORTC4
-#define DIO_PIN_PC5_MACROS DDRC, DDC5, PORTC, PORTC5
-#define DIO_PIN_PC6_MACROS DDRC, DDC6, PORTC, PORTC6
+#define DIO_PIN_PC0 DDRC, DDC0, PORTC, PORTC0, PINC, PINC0
+#define DIO_PIN_PC1 DDRC, DDC1, PORTC, PORTC1, PINC, PINC1
+#define DIO_PIN_PC2 DDRC, DDC2, PORTC, PORTC2, PINC, PINC2
+#define DIO_PIN_PC3 DDRC, DDC3, PORTC, PORTC3, PINC, PINC3
+#define DIO_PIN_PC4 DDRC, DDC4, PORTC, PORTC4, PINC, PINC4
+#define DIO_PIN_PC5 DDRC, DDC5, PORTC, PORTC5, PINC, PINC5
+#define DIO_PIN_PC6 DDRC, DDC6, PORTC, PORTC6, PINC, PINC6
 
-#define DIO_PIN_PD0_MACROS DDRD, DDD0, PORTD, PORTD0
-#define DIO_PIN_PD1_MACROS DDRD, DDD1, PORTD, PORTD1
-#define DIO_PIN_PD2_MACROS DDRD, DDD2, PORTD, PORTD2
-#define DIO_PIN_PD3_MACROS DDRD, DDD3, PORTD, PORTD3
-#define DIO_PIN_PD4_MACROS DDRD, DDD4, PORTD, PORTD4
-#define DIO_PIN_PD5_MACROS DDRD, DDD5, PORTD, PORTD5
-#define DIO_PIN_PD6_MACROS DDRD, DDD6, PORTD, PORTD6
-#define DIO_PIN_PD7_MACROS DDRD, DDD7, PORTD, PORTD7
+#define DIO_PIN_PD0 DDRD, DDD0, PORTD, PORTD0, PIND, PIND0
+#define DIO_PIN_PD1 DDRD, DDD1, PORTD, PORTD1, PIND, PIND1
+#define DIO_PIN_PD2 DDRD, DDD2, PORTD, PORTD2, PIND, PIND2
+#define DIO_PIN_PD3 DDRD, DDD3, PORTD, PORTD3, PIND, PIND3
+#define DIO_PIN_PD4 DDRD, DDD4, PORTD, PORTD4, PIND, PIND4
+#define DIO_PIN_PD5 DDRD, DDD5, PORTD, PORTD5, PIND, PIND5
+#define DIO_PIN_PD6 DDRD, DDD6, PORTD, PORTD6, PIND, PIND6
+#define DIO_PIN_PD7 DDRD, DDD7, PORTD, PORTD7, PIND, PIND7
 
 // Set a pin (which must have been initialized for output) low.  The argument
-// is intended to be one of the DIO_PIN_P*_MACROS tuples.
+// is intended to be one of the DIO_PIN_P* tuples.
 #define DIO_SET_LOW(...) DIO_SET_LOW_NA (__VA_ARGS__)
 
 // Underlying named-argument macro implementing the DIO_SET_LOW() macro.
-#define DIO_SET_LOW_NA(dir_reg, dir_bit, port_reg, port_bit) \
+#define DIO_SET_LOW_NA(dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit) \
   do { \
     port_reg &= ~(_BV (port_bit)); \
     loop_until_bit_is_clear (port_reg, port_bit); \
   } while ( 0 )
 
 // Set a pin (which must have been initialized for output) high.  This macro
-// is intended to take one of the DIO_PIN_P*_MACROS tuples as its argument.
+// is intended to take one of the DIO_PIN_P* tuples as its argument.
 #define DIO_SET_HIGH(...) DIO_SET_HIGH_NA (__VA_ARGS__)
 
 // Underlying named-argument macro implementing the DIO_SET_HIGH() macro.
-#define DIO_SET_HIGH_NA(dir_reg, dir_bit, port_reg, port_bit) \
+#define DIO_SET_HIGH_NA( \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit) \
   do { \
     port_reg |= _BV (port_bit); \
     loop_until_bit_is_set (port_reg, port_bit); \
@@ -208,28 +229,31 @@
 
 // Set a pin (which must already be initialized for output) to the value
 // given as the last argument.  The first argument is intended to be one
-// of the DIO_PIN_P*_MACROS tuples.
+// of the DIO_PIN_P* tuples.
 #define DIO_SET(...) DIO_SET_NA (__VA_ARGS__)
 
 // Underlying named-argument macro implementing the DIO_SET() macro.
-#define DIO_SET_NA(dir_reg, dir_bit, port_reg, port_bit, value) \
+#define DIO_SET_NA( \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, value) \
   do { \
     if ( value ) { \
-      DIO_SET_HIGH_NA (dir_reg, dir_bit, port_reg, port_bit); \
+      DIO_SET_HIGH_NA ( \
+          dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit); \
     } \
     else { \
-      DIO_SET_LOW_NA (dir_reg, dir_bit, port_reg, port_bit); \
+      DIO_SET_LOW_NA ( \
+          dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit); \
     } \
   } while ( 0 )
 
 // Initialize the pin given as the first argument (which should be one of
-// the DIO_PIN_P_*_MACROS tuples) according to the next three arguments
-// (see DIO_INIT_NA() for details on these.
+// the DIO_PIN_P_* tuples) according to the next three arguments
+// (see DIO_INIT_NA() for details on these).
 #define DIO_INIT(...) DIO_INIT_NA (__VA_ARGS__)
 
 // Underlying named-argument macro implementing the DIO_INIT() macro.
 #define DIO_INIT_NA( \
-    dir_reg, dir_bit, port_reg, port_bit, \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
     for_input, enable_pullup, initial_value ) \
   do { \
       if ( for_input ) { \
@@ -245,7 +269,9 @@
         } \
       } \
       else { \
-        DIO_SET (dir_reg, dir_bit, port_reg, port_bit, initial_value); \
+        DIO_SET ( \
+            dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+            initial_value ); \
         dir_reg |= _BV (dir_bit); \
         loop_until_bit_is_set (dir_reg, dir_bit); \
       } \
@@ -255,59 +281,59 @@
 // Pin PB* Initialization {{{2 
 
 #define DIO_INIT_PB0(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PB0_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PB0, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PB1(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PB1_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PB1, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PB2(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PB2_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PB2, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PB3(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PB3_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PB3, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PB4(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PB4_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PB4, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PB5(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PB5_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PB5, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PB6(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PB6_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PB6, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PB7(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PB7_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PB7, for_input, enable_pullup, initial_value)
 
 /// }}}2
 
 // Pin PC* Initialization {{{2
 
 #define DIO_INIT_PC0(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PC0_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PC0, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PC1(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PC1_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PC1, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PC2(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PC2_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PC2, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PC3(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PC3_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PC3, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PC4(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PC4_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PC4, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PC5(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PC5_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PC5, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PC6(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PC6_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PC6, for_input, enable_pullup, initial_value)
 
 // }}}2
 
@@ -315,29 +341,29 @@
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PD0(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PD0_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PD0, for_input, enable_pullup, initial_value)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
 #define DIO_INIT_PD1(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PD1_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PD1, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD2(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PD2_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PD2, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD3(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PD3_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PD3, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD4(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PD4_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PD4, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD5(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PD5_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PD5, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD6(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PD6_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PD6, for_input, enable_pullup, initial_value)
 
 #define DIO_INIT_PD7(for_input, enable_pullup, initial_value) \
-  DIO_INIT (DIO_PIN_PD7_MACROS, for_input, enable_pullup, initial_value)
+  DIO_INIT (DIO_PIN_PD7, for_input, enable_pullup, initial_value)
 
 // }}}2
 
@@ -346,568 +372,137 @@
 // Pin Setting {{{1
 
 // Pins PB* Without Argument {{{2
-#define DIO_SET_PB0_LOW() DIO_SET_LOW (DIO_PIN_PB0_MACROS)
 
-#define DIO_SET_PB0_HIGH() \
-  do { \
-    PORTB |= _BV (PORTB0); \
-    loop_until_bit_is_set (PORTB, PORTB0); \
-  } while ( 0 )
+#define DIO_SET_PB0_LOW() DIO_SET_LOW (DIO_PIN_PB0)
+#define DIO_SET_PB0_HIGH() DIO_SET_HIGH (DIO_PIN_PB0)
 
+#define DIO_SET_PB1_LOW() DIO_SET_LOW (DIO_PIN_PB1)
+#define DIO_SET_PB1_HIGH() DIO_SET_HIGH (DIO_PIN_PB1)
 
-#define DIO_SET_PB1_LOW() \
-  do { \
-    PORTB &= ~(_BV (PORTB1)); \
-    loop_until_bit_is_clear (PORTB, PORTB1); \
-  } while ( 0 )
-
-#define DIO_SET_PB1_HIGH() \
-  do { \
-    PORTB |= _BV (PORTB1); \
-    loop_until_bit_is_set (PORTB, PORTB1); \
-  } while ( 0 )
-
-
-#define DIO_SET_PB2_LOW() \
-  do { \
-    PORTB &= ~(_BV (PORTB2)); \
-    loop_until_bit_is_clear (PORTB, PORTB2); \
-  } while ( 0 )
-
-#define DIO_SET_PB2_HIGH() \
-  do { \
-    PORTB |= _BV (PORTB2); \
-    loop_until_bit_is_set (PORTB, PORTB2); \
-  } while ( 0 )
-
+#define DIO_SET_PB2_LOW() DIO_SET_LOW (DIO_PIN_PB2)
+#define DIO_SET_PB2_HIGH() DIO_SET_HIGH (DIO_PIN_PB2)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB3_LOW() \
-  do { \
-    PORTB &= ~(_BV (PORTB3)); \
-    loop_until_bit_is_clear (PORTB, PORTB3); \
-  } while ( 0 )
+#define DIO_SET_PB3_LOW() DIO_SET_LOW (DIO_PIN_PB3)
+#define DIO_SET_PB3_HIGH() DIO_SET_HIGH (DIO_PIN_PB3)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB3_HIGH() \
-  do { \
-    PORTB |= _BV (PORTB3); \
-    loop_until_bit_is_set (PORTB, PORTB3); \
-  } while ( 0 )
-
+#define DIO_SET_PB4_LOW() DIO_SET_LOW (DIO_PIN_PB4)
+#define DIO_SET_PB4_HIGH() DIO_SET_HIGH (DIO_PIN_PB4)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB4_LOW() \
-  do { \
-    PORTB &= ~(_BV (PORTB4)); \
-    loop_until_bit_is_clear (PORTB, PORTB4); \
-  } while ( 0 )
+#define DIO_SET_PB5_LOW() DIO_SET_LOW (DIO_PIN_PB5)
+#define DIO_SET_PB5_HIGH() DIO_SET_HIGH (DIO_PIN_PB5)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB4_HIGH() \
-  do { \
-    PORTB |= _BV (PORTB4); \
-    loop_until_bit_is_set (PORTB, PORTB4); \
-  } while ( 0 )
+#define DIO_SET_PB6_LOW() DIO_SET_LOW (DIO_PIN_PB6)
+#define DIO_SET_PB6_HIGH() DIO_SET_HIGH (DIO_PIN_PB6)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB5_LOW() \
-  do { \
-    PORTB &= ~(_BV (PORTB5)); \
-    loop_until_bit_is_clear (PORTB, PORTB5); \
-  } while ( 0 )
-
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB5_HIGH() \
-  do { \
-    PORTB |= _BV (PORTB5); \
-    loop_until_bit_is_set (PORTB, PORTB5); \
-  } while ( 0 )
-
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB6_LOW() \
-  do { \
-    PORTB &= ~(_BV (PORTB6)); \
-    loop_until_bit_is_clear (PORTB, PORTB6); \
-  } while ( 0 )
-
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB6_HIGH() \
-  do { \
-    PORTB |= _BV (PORTB6); \
-    loop_until_bit_is_set (PORTB, PORTB6); \
-  } while ( 0 )
-
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB7_LOW() \
-  do { \
-    PORTB &= ~(_BV (PORTB7)); \
-    loop_until_bit_is_clear (PORTB, PORTB7); \
-  } while ( 0 )
-
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB7_HIGH() \
-  do { \
-    PORTB |= _BV (PORTB7); \
-    loop_until_bit_is_set (PORTB, PORTB7); \
-  } while ( 0 )
+#define DIO_SET_PB7_LOW() DIO_SET_LOW (DIO_PIN_PB7)
+#define DIO_SET_PB7_HIGH() DIO_SET_HIGH (DIO_PIN_PB7)
 
 // }}}2
 
 // Pins PC* Without Argument {{{2
 
-#define DIO_SET_PC0_LOW() \
-  do { \
-    PORTC &= ~(_BV (PORTC0)); \
-    loop_until_bit_is_clear (PORTC, PORTC0); \
-  } while ( 0 )
+#define DIO_SET_PC0_LOW() DIO_SET_LOW (DIO_PIN_PC0)
+#define DIO_SET_PC0_HIGH() DIO_SET_HIGH (DIO_PIN_PC0)
 
-#define DIO_SET_PC0_HIGH() \
-  do { \
-    PORTC |= _BV (PORTC0); \
-    loop_until_bit_is_set (PORTC, PORTC0); \
-  } while ( 0 )
+#define DIO_SET_PC1_LOW() DIO_SET_LOW (DIO_PIN_PC1)
+#define DIO_SET_PC1_HIGH() DIO_SET_HIGH (DIO_PIN_PC1)
 
+#define DIO_SET_PC2_LOW() DIO_SET_LOW (DIO_PIN_PC2)
+#define DIO_SET_PC2_HIGH() DIO_SET_HIGH (DIO_PIN_PC2)
 
-#define DIO_SET_PC1_LOW() \
-  do { \
-    PORTC &= ~(_BV (PORTC1)); \
-    loop_until_bit_is_clear (PORTC, PORTC1); \
-  } while ( 0 )
+#define DIO_SET_PC3_LOW() DIO_SET_LOW (DIO_PIN_PC3)
+#define DIO_SET_PC3_HIGH() DIO_SET_HIGH (DIO_PIN_PC3)
 
-#define DIO_SET_PC1_HIGH() \
-  do { \
-    PORTC |= _BV (PORTC1); \
-    loop_until_bit_is_set (PORTC, PORTC1); \
-  } while ( 0 )
+#define DIO_SET_PC4_LOW() DIO_SET_LOW (DIO_PIN_PC4)
+#define DIO_SET_PC4_HIGH() DIO_SET_HIGH (DIO_PIN_PC4)
 
-
-#define DIO_SET_PC2_LOW() \
-  do { \
-    PORTC &= ~(_BV (PORTC2)); \
-    loop_until_bit_is_clear (PORTC, PORTC2); \
-  } while ( 0 )
-
-#define DIO_SET_PC2_HIGH() \
-  do { \
-    PORTC |= _BV (PORTC2); \
-    loop_until_bit_is_set (PORTC, PORTC2); \
-  } while ( 0 )
-
-
-#define DIO_SET_PC3_LOW() \
-  do { \
-    PORTC &= ~(_BV (PORTC3)); \
-    loop_until_bit_is_clear (PORTC, PORTC3); \
-  } while ( 0 )
-
-#define DIO_SET_PC3_HIGH() \
-  do { \
-    PORTC |= _BV (PORTC3); \
-    loop_until_bit_is_set (PORTC, PORTC3); \
-  } while ( 0 )
-
-
-#define DIO_SET_PC4_LOW() \
-  do { \
-    PORTC &= ~(_BV (PORTC4)); \
-    loop_until_bit_is_clear (PORTC, PORTC4); \
-  } while ( 0 )
-
-#define DIO_SET_PC4_HIGH() \
-  do { \
-    PORTC |= _BV (PORTC4); \
-    loop_until_bit_is_set (PORTC, PORTC4); \
-  } while ( 0 )
-
-
-#define DIO_SET_PC5_LOW() \
-  do { \
-    PORTC &= ~(_BV (PORTC5)); \
-    loop_until_bit_is_clear (PORTC, PORTC5); \
-  } while ( 0 )
-
-#define DIO_SET_PC5_HIGH() \
-  do { \
-    PORTC |= _BV (PORTC5); \
-    loop_until_bit_is_set (PORTC, PORTC5); \
-  } while ( 0 )
-
+#define DIO_SET_PC5_LOW() DIO_SET_LOW (DIO_PIN_PC5)
+#define DIO_SET_PC5_HIGH() DIO_SET_HIGH (DIO_PIN_PC5)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PC6_LOW() \
-  do { \
-    PORTC &= ~(_BV (PORTC6)); \
-    loop_until_bit_is_clear (PORTC, PORTC6); \
-  } while ( 0 )
-
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PC6_HIGH() \
-  do { \
-    PORTC |= _BV (PORTC6); \
-    loop_until_bit_is_set (PORTC, PORTC6); \
-  } while ( 0 )
+#define DIO_SET_PC6_LOW() DIO_SET_LOW (DIO_PIN_PC6)
+#define DIO_SET_PC6_HIGH() DIO_SET_HIGH (DIO_PIN_PC6)
 
 // }}}2
 
 // Pins PD* Without Argument {{{2
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PD0_HIGH() \
-  do { \
-    PORTD |= _BV (PORTD0); \
-    loop_until_bit_is_set (PORTD, PORTD0); \
-  } while ( 0 )
+#define DIO_SET_PD0_LOW() DIO_SET_LOW (DIO_PIN_PD0)
+#define DIO_SET_PD0_HIGH() DIO_SET_HIGH (DIO_PIN_PD0)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PD0_LOW() \
-  do { \
-    PORTD &= ~(_BV (PORTD0)); \
-    loop_until_bit_is_clear (PORTD, PORTD0); \
-  } while ( 0 )
+#define DIO_SET_PD1_LOW() DIO_SET_LOW (DIO_PIN_PD1)
+#define DIO_SET_PD1_HIGH() DIO_SET_HIGH (DIO_PIN_PD1)
 
+#define DIO_SET_PD2_LOW() DIO_SET_LOW (DIO_PIN_PD2)
+#define DIO_SET_PD2_HIGH() DIO_SET_HIGH (DIO_PIN_PD2)
 
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PD1_HIGH() \
-  do { \
-    PORTD |= _BV (PORTD1); \
-    loop_until_bit_is_set (PORTD, PORTD1); \
-  } while ( 0 )
+#define DIO_SET_PD3_LOW() DIO_SET_LOW (DIO_PIN_PD3)
+#define DIO_SET_PD3_HIGH() DIO_SET_HIGH (DIO_PIN_PD3)
 
-// WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PD1_LOW() \
-  do { \
-    PORTD &= ~(_BV (PORTD1)); \
-    loop_until_bit_is_clear (PORTD, PORTD1); \
-  } while ( 0 )
+#define DIO_SET_PD4_LOW() DIO_SET_LOW (DIO_PIN_PD4)
+#define DIO_SET_PD4_HIGH() DIO_SET_HIGH (DIO_PIN_PD4)
 
+#define DIO_SET_PD5_LOW() DIO_SET_LOW (DIO_PIN_PD5)
+#define DIO_SET_PD5_HIGH() DIO_SET_HIGH (DIO_PIN_PD5)
 
-#define DIO_SET_PD2_HIGH() \
-  do { \
-    PORTD |= _BV (PORTD2); \
-    loop_until_bit_is_set (PORTD, PORTD2); \
-  } while ( 0 )
+#define DIO_SET_PD6_LOW() DIO_SET_LOW (DIO_PIN_PD6)
+#define DIO_SET_PD6_HIGH() DIO_SET_HIGH (DIO_PIN_PD6)
 
-#define DIO_SET_PD2_LOW() \
-  do { \
-    PORTD &= ~(_BV (PORTD2)); \
-    loop_until_bit_is_clear (PORTD, PORTD2); \
-  } while ( 0 )
-
-
-#define DIO_SET_PD3_HIGH() \
-  do { \
-    PORTD |= _BV (PORTD3); \
-    loop_until_bit_is_set (PORTD, PORTD3); \
-  } while ( 0 )
-
-#define DIO_SET_PD3_LOW() \
-  do { \
-    PORTD &= ~(_BV (PORTD3)); \
-    loop_until_bit_is_clear (PORTD, PORTD3); \
-  } while ( 0 )
-
-
-#define DIO_SET_PD4_HIGH() \
-  do { \
-    PORTD |= _BV (PORTD4); \
-    loop_until_bit_is_set (PORTD, PORTD4); \
-  } while ( 0 )
-
-#define DIO_SET_PD4_LOW() \
-  do { \
-    PORTD &= ~(_BV (PORTD4)); \
-    loop_until_bit_is_clear (PORTD, PORTD4); \
-  } while ( 0 )
-
-
-#define DIO_SET_PD5_HIGH() \
-  do { \
-    PORTD |= _BV (PORTD5); \
-    loop_until_bit_is_set (PORTD, PORTD5); \
-  } while ( 0 )
-
-#define DIO_SET_PD5_LOW() \
-  do { \
-    PORTD &= ~(_BV (PORTD5)); \
-    loop_until_bit_is_clear (PORTD, PORTD5); \
-  } while ( 0 )
-
-
-#define DIO_SET_PD6_HIGH() \
-  do { \
-    PORTD |= _BV (PORTD6); \
-    loop_until_bit_is_set (PORTD, PORTD6); \
-  } while ( 0 )
-
-#define DIO_SET_PD6_LOW() \
-  do { \
-    PORTD &= ~(_BV (PORTD6)); \
-    loop_until_bit_is_clear (PORTD, PORTD6); \
-  } while ( 0 )
-
-
-#define DIO_SET_PD7_HIGH() \
-  do { \
-    PORTD |= _BV (PORTD7); \
-    loop_until_bit_is_set (PORTD, PORTD7); \
-  } while ( 0 )
-
-#define DIO_SET_PD7_LOW() \
-  do { \
-    PORTD &= ~(_BV (PORTD7)); \
-    loop_until_bit_is_clear (PORTD, PORTD7); \
-  } while ( 0 )
+#define DIO_SET_PD7_LOW() DIO_SET_LOW (DIO_PIN_PD7)
+#define DIO_SET_PD7_HIGH() DIO_SET_HIGH (DIO_PIN_PD7)
 
 // }}}2
 
 // Pins PB* With Argument {{{2
 
-#define DIO_SET_PB0(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PB0_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PB0_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PB1(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PB1_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PB1_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PB2(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PB2_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PB2_LOW (); \
-    } \
-  } while ( 0 )
-
+#define DIO_SET_PB0(value) DIO_SET (DIO_PIN_PB0, value)
+#define DIO_SET_PB1(value) DIO_SET (DIO_PIN_PB1, value)
+#define DIO_SET_PB2(value) DIO_SET (DIO_PIN_PB2, value)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB3(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PB3_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PB3_LOW (); \
-    } \
-  } while ( 0 )
-
+#define DIO_SET_PB3(value) DIO_SET (DIO_PIN_PB3, value)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB4(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PB4_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PB4_LOW (); \
-    } \
-  } while ( 0 )
- 
+#define DIO_SET_PB4(value) DIO_SET (DIO_PIN_PB4, value)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB5(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PB5_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PB5_LOW (); \
-    } \
-  } while ( 0 )
-
+#define DIO_SET_PB5(value) DIO_SET (DIO_PIN_PB5, value)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB6(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PB6_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PB6_LOW (); \
-    } \
-  } while ( 0 )
-
+#define DIO_SET_PB6(value) DIO_SET (DIO_PIN_PB6, value)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PB7(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PB7_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PB7_LOW (); \
-    } \
-  } while ( 0 )
+#define DIO_SET_PB7(value) DIO_SET (DIO_PIN_PB7, value)
 
 // }}}2
 
 // Pins PC* With Argument {{{2
 
-#define DIO_SET_PC0(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PC0_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PC0_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PC1(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PC1_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PC1_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PC2(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PC2_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PC2_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PC3(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PC3_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PC3_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PC4(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PC4_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PC4_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PC5(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PC5_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PC5_LOW (); \
-    } \
-  } while ( 0 )
-
+#define DIO_SET_PC0(value) DIO_SET (DIO_PIN_PC0, value)
+#define DIO_SET_PC1(value) DIO_SET (DIO_PIN_PC1, value)
+#define DIO_SET_PC2(value) DIO_SET (DIO_PIN_PC2, value)
+#define DIO_SET_PC3(value) DIO_SET (DIO_PIN_PC3, value)
+#define DIO_SET_PC4(value) DIO_SET (DIO_PIN_PC4, value)
+#define DIO_SET_PC5(value) DIO_SET (DIO_PIN_PC5, value)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PC6(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PC6_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PC6_LOW (); \
-    } \
-  } while ( 0 )
+#define DIO_SET_PC6(value) DIO_SET (DIO_PIN_PC6, value)
 
 // }}}2
 
 // Pins PD* With Argument {{{2
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PD0(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PD0_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PD0_LOW (); \
-    } \
-  } while ( 0 )
-
+#define DIO_SET_PD0(value) DIO_SET (DIO_PIN_PD0, value)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_SET_PD1(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PD1_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PD1_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PD2(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PD2_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PD2_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PD3(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PD3_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PD3_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PD4(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PD4_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PD4_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PD5(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PD5_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PD5_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PD6(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PD6_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PD6_LOW (); \
-    } \
-  } while ( 0 )
-
-#define DIO_SET_PD7(value) \
-  do { \
-    if ( value ) { \
-      DIO_SET_PD7_HIGH (); \
-    } \
-    else { \
-      DIO_SET_PD7_LOW (); \
-    } \
-  } while ( 0 )
+#define DIO_SET_PD1(value) DIO_SET (DIO_PIN_PD1, value)
+#define DIO_SET_PD2(value) DIO_SET (DIO_PIN_PD2, value)
+#define DIO_SET_PD3(value) DIO_SET (DIO_PIN_PD3, value)
+#define DIO_SET_PD4(value) DIO_SET (DIO_PIN_PD4, value)
+#define DIO_SET_PD5(value) DIO_SET (DIO_PIN_PD5, value)
+#define DIO_SET_PD6(value) DIO_SET (DIO_PIN_PD6, value)
+#define DIO_SET_PD7(value) DIO_SET (DIO_PIN_PD7, value)
 
 // }}}2
 
@@ -915,51 +510,73 @@
 
 // Pin Reading {{{1
 
-// NOTE: The bit shifts are only included so that the results will work in
-// case the user actually compares the result to the value of the 'HIGH'
-// macro.  We waste an instruction doing this, but the Arduino libraries
+// Read a pin (which must have been initialized for input).  This macro is
+// intended to take one of the DIO_PIN_P* tuples as its argument.
+#define DIO_READ(...) DIO_READ_NA(__VA_ARGS__)
+
+// Underlying named-argument macro implementing the DIO_READ() macro.  NOTE:
+// The bit shifts are only included so that the results will work in case
+// the user actually compares the result to the value of the 'HIGH' macro.
+// We probably waste an instruction doing this, but the Arduino libraries
 // define HIGH this way and its kind of nice to keep everything symbolic,
 // so we do the same.
+#define DIO_READ_NA(dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit) \
+  ((pin_reg & _BV (pin_bit)) >> pin_bit)
 
-#define DIO_READ_PB0() ((PINB & _BV (PINB0)) >> PINB0)
-#define DIO_READ_PB1() ((PINB & _BV (PINB1)) >> PINB1)
-#define DIO_READ_PB2() ((PINB & _BV (PINB2)) >> PINB2)
+#define DIO_READ_PB0() DIO_READ (DIO_PIN_PB0)
+#define DIO_READ_PB1() DIO_READ (DIO_PIN_PB1)
+#define DIO_READ_PB2() DIO_READ (DIO_PIN_PB2)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PB3() ((PINB & _BV (PINB3)) >> PINB3)
+#define DIO_READ_PB3() DIO_READ (DIO_PIN_PB3)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PB4() ((PINB & _BV (PINB4)) >> PINB4)
+#define DIO_READ_PB4() DIO_READ (DIO_PIN_PB4)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PB5() ((PINB & _BV (PINB5)) >> PINB5)
+#define DIO_READ_PB5() DIO_READ (DIO_PIN_PB5)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PB6() ((PINB & _BV (PINB6)) >> PINB6)
+#define DIO_READ_PB6() DIO_READ (DIO_PIN_PB6)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PB7() ((PINB & _BV (PINB7)) >> PINB7)
+#define DIO_READ_PB7() DIO_READ (DIO_PIN_PB7)
 
-#define DIO_READ_PC0() ((PINC & _BV (PINC0)) >> PINC0)
-#define DIO_READ_PC1() ((PINC & _BV (PINC1)) >> PINC1)
-#define DIO_READ_PC2() ((PINC & _BV (PINC2)) >> PINC2)
-#define DIO_READ_PC3() ((PINC & _BV (PINC3)) >> PINC3)
-#define DIO_READ_PC4() ((PINC & _BV (PINC4)) >> PINC4)
-#define DIO_READ_PC5() ((PINC & _BV (PINC5)) >> PINC5)
+#define DIO_READ_PC0() DIO_READ (DIO_PIN_PC0)
+#define DIO_READ_PC1() DIO_READ (DIO_PIN_PC1)
+#define DIO_READ_PC2() DIO_READ (DIO_PIN_PC2)
+#define DIO_READ_PC3() DIO_READ (DIO_PIN_PC3)
+#define DIO_READ_PC4() DIO_READ (DIO_PIN_PC4)
+#define DIO_READ_PC5() DIO_READ (DIO_PIN_PC5)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PC6() ((PINC & _BV (PINC6)) >> PINC6)
+#define DIO_READ_PC6() DIO_READ (DIO_PIN_PC6)
 
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PD0() ((PIND & _BV (PIND0)) >> PIND0)
+#define DIO_READ_PD0() DIO_READ (DIO_PIN_PD0)
 // WARNING: See comments in 'Notes About Particular Pins' above.
-#define DIO_READ_PD1() ((PIND & _BV (PIND1)) >> PIND1)
-#define DIO_READ_PD2() ((PIND & _BV (PIND2)) >> PIND2)
-#define DIO_READ_PD3() ((PIND & _BV (PIND3)) >> PIND3)
-#define DIO_READ_PD4() ((PIND & _BV (PIND4)) >> PIND4)
-#define DIO_READ_PD5() ((PIND & _BV (PIND5)) >> PIND5)
-#define DIO_READ_PD6() ((PIND & _BV (PIND6)) >> PIND6)
-#define DIO_READ_PD7() ((PIND & _BV (PIND7)) >> PIND7)
+#define DIO_READ_PD1() DIO_READ (DIO_PIN_PD1)
+#define DIO_READ_PD2() DIO_READ (DIO_PIN_PD2)
+#define DIO_READ_PD3() DIO_READ (DIO_PIN_PD3)
+#define DIO_READ_PD4() DIO_READ (DIO_PIN_PD4)
+#define DIO_READ_PD5() DIO_READ (DIO_PIN_PD5)
+#define DIO_READ_PD6() DIO_READ (DIO_PIN_PD6)
+#define DIO_READ_PD7() DIO_READ (DIO_PIN_PD7)
 
 // }}}1
 
 // Arduino Compatible Pin Number Macros {{{1
 
 // WARNING: all caveats described for the underlying macros apply.
+
+#define DIO_PIN_DIGITAL_0 DIO_PIN_PD0
+#define DIO_PIN_DIGITAL_1 DIO_PIN_PD1
+#define DIO_PIN_DIGITAL_2 DIO_PIN_PD2
+#define DIO_PIN_DIGITAL_3 DIO_PIN_PD3
+#define DIO_PIN_DIGITAL_4 DIO_PIN_PD4
+#define DIO_PIN_DIGITAL_5 DIO_PIN_PD5
+#define DIO_PIN_DIGITAL_6 DIO_PIN_PD6
+#define DIO_PIN_DIGITAL_7 DIO_PIN_PD7
+#define DIO_PIN_DIGITAL_8 DIO_PIN_PB0
+#define DIO_PIN_DIGITAL_9 DIO_PIN_PB1 
+#define DIO_PIN_DIGITAL_10 DIO_PIN_PB2 
+#define DIO_PIN_DIGITAL_11 DIO_PIN_PB3 
+#define DIO_PIN_DIGITAL_12 DIO_PIN_PB4 
+#define DIO_PIN_DIGITAL_13 DIO_PIN_PB5 
 
 #define DIO_INIT_DIGITAL_0 DIO_INIT_PD0
 #define DIO_INIT_DIGITAL_1 DIO_INIT_PD1
