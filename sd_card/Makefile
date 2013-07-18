@@ -14,8 +14,8 @@ include generic.mk
 # it will still be initialized as an output as required for correct ATMega
 # hardware SPI master mode operation), because we're targeting the Arduino
 # SD Card/Ethernet shield, which uses a different pin for control of the
-# SD card SPI slave.
-CPPFLAGS += -DSD_CARD_SPI_SLAVE_SELECT_PIN=DIO_PIN_DIGITAL_10
+# SD card controller SPI slave.
+CPPFLAGS += -DSD_CARD_SPI_SLAVE_SELECT_PIN=DIO_PIN_DIGITAL_4
 
 # Pull in some macros that make debugging with term_io easier.
 CPPFLAGS += -DTERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
