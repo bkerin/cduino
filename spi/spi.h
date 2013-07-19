@@ -25,7 +25,7 @@
 */
 //   MY_SPI_SLAVE_1_SELECT_INIT ();
 //   spi_init ();
-//   spi_set_bit_order (SPI_BIT_ORDER_LSB_FIRST);
+//   spi_set_data_order (SPI_BIT_ORDER_LSB_FIRST);
 //   spi_set_data_mode (SPI_DATA_MODE_0);
 //   spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
 //   MY_SPI_SLAVE_1_SELECT_SET_LOW ();
@@ -64,7 +64,7 @@
 //
 //   spi_init ();
 //
-//   spi_set_bit_order (SPI_BIT_ORDER_LSB_FIRST);
+//   spi_set_data_order (SPI_BIT_ORDER_LSB_FIRST);
 //   spi_set_data_mode (SPI_DATA_MODE_0);
 //   spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
 //
@@ -84,7 +84,7 @@
 //
 //   spi_shutdown ();   // Possibly
 //
-// Of course, it might also be necessary to change SPI bit order, data
+// Of course, it might also be necessary to change SPI data order, data
 // mode, and/or clock rate settings between different slaves (which should
 // be possible).
 //
@@ -101,16 +101,16 @@
 #ifndef SPI_UNTESTEDNESS_ACKNOWLEDGED
 #  error This module not fully tested.  I have tested output with \
          SPI_BIT_ORDER_MSB_FIRST and SPI_DATA_MODE_0 with all \
-         SPI_CLOCK_DIVIDER_* settings.  The other bit orders and modes are \
+         SPI_CLOCK_DIVIDER_* settings.  The other data orders and modes are \
          only trivially different and should work fine, but I have not \
          personally tried them. Remove this warning trap and try it!
 #endif
 
 // Bit order expected by the connected device
 typedef enum {
-  SPI_BIT_ORDER_LSB_FIRST,
-  SPI_BIT_ORDER_MSB_FIRST
-} spi_bit_order_t;
+  SPI_DATA_ORDER_LSB_FIRST,
+  SPI_DATA_ORDER_MSB_FIRST
+} spi_data_order_t;
 
 // Clock divider to use for communication
 typedef enum {
@@ -156,19 +156,36 @@ typedef enum {
 #define SPI_MOSI_INIT DIO_INIT_DIGITAL_11
 #define SPI_MISO_INIT DIO_INIT_DIGITAL_12
 
-// Initialize hardware SPI interface.  This function initializes the SS
-// (aka PB2, aka DIGITAL_10) pin for output, which is always required for
-// correct SPI master mode operation regardless of which pin is actually
-// used for slave selection.  See the comments at the top of this file
-// for information on how to use different or multiple pins for SPI slave
-// selection.  The bit order default to FIXME: what?, clock divider defaults
-// to SPI_CLOCK_DIVIDER_DIV128, and the data mode defaults to FIXME: what?
+// Initialize hardware SPI interface.  This function initializes the SS (aka
+// PB2, aka DIGITAL_10) pin for output, which is always required for correct
+// SPI master mode operation regardless of which pin is actually used for
+// slave selection.  See the comments at the top of this file for information
+// on how to use different or multiple pins for SPI slave selection.
+//
+// The default SPI hardware configuration is as follows:
+//
+//   * Interrupts are disabled
+//
+//   * Master mode is enabled
+//
+//   * Data order is MSB first
+//
+//   * Data mode is 0 (~CPOL and ~CPHA), meaning the the clock is active-high
+//     (~CPOL) and sampled at the leading edge of the clock cycle
+//
+//   * A SPI clock frequency of F_CPU / 4 is used (SPR1, SPR0, and ~SPI2X)
+//
+// These are the default setting for the SPCR and SPSR registers, except that
+// that SPI is enabled (SPE) and set to master mode (MSTR).  Its possible
+// to change the data order, data mode, and SPI clock frequency using other
+// methods in this interface.
+//
 void
 spi_init (void);
 
-// Set bit order to use.
+// Set data (bit) order to use.
 void
-spi_set_bit_order (spi_bit_order_t bit_order);
+spi_set_data_order (spi_data_order_t data_order);
 
 // Set data mode to use.
 void

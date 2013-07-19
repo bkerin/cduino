@@ -23,13 +23,26 @@ spi_init (void)
   // Initialize the SS pin for ouput with a HIGH value
   SPI_SS_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
 
-  // FIXME: WORK POINT: SSPR1 and SPR0 setst the clock divider to f_osc/128,
-  // is that a sensible default?
-
-  // NOTE: setting SPR1 and SPR0 results in the largest clocke divider,
-  // i.e. the slowest possible operation, which is probably a sensible
-  // default.  The other bits set SPI master mode and enable SPI.
-  SPCR |= _BV (MSTR) | _BV (SPE) | _BV (SPR1) | _BV (SPR0);
+  // This is our default SPI hardware configuration:
+  // 
+  //   * Interrupts are disabled (~SPIE)
+  //
+  //   * Data order is MSB first (~DORD), the data mode is 0 (~CPOL
+  //     and ~CPHA), meaning the the clock is active-high (~CPOL) and sampled
+  //     at the leading edge of the clock cycle
+  //
+  //   * SPI is master-mode (SPIE)
+  //
+  //   * A SPI clock frequency of F_CPU / 4 is used (SPR1, SPR0, and ~SPI2X)
+  //
+  // These are the default setting for the SPCR and SPSR registers, except that
+  // that SPI is enabled (SPE) and set to master mode (MSTR)
+  //
+  SPCR &= ~(
+      _BV (SPIE) | _BV (DORD) | _BV (CPOL) | _BV (CPHA) | _BV (SPR1) | 
+      _BV (SPR0) );
+  SPCR |= _BV (MSTR) | _BV (SPE); 
+  SPSR &= ~(_BV (SPI2X));
 
   // Set the SCK and MOSI pins as OUTPUTS.  The MISO pin automatically
   // overrides to act as an input, but according to the ATMega328P datasheet
@@ -45,13 +58,13 @@ spi_init (void)
 }
 
 void
-spi_set_bit_order (spi_bit_order_t bit_order)
+spi_set_data_order (spi_data_order_t data_order)
 {
-  switch ( bit_order ) {
-    case SPI_BIT_ORDER_LSB_FIRST:
+  switch ( data_order ) {
+    case SPI_DATA_ORDER_LSB_FIRST:
       SPCR |= _BV (DORD);
       break;
-    case SPI_BIT_ORDER_MSB_FIRST:
+    case SPI_DATA_ORDER_MSB_FIRST:
       SPCR &= ~(_BV (DORD));
       break;
     default:
