@@ -48,28 +48,27 @@ set_type (sd_card_type_t type)
   card_type = type;
 }
 
-//------------------------------------------------------------------------------
-// functions for hardware SPI
-/** Send a byte to the card */
 static
-void spiSend (uint8_t b)
+void send_byte (uint8_t b)
 {
-  SPDR = b;
-  while ( ! (SPSR & (1 << SPIF)) ) {
-    ;
-  }
+  // Send a byte to the SD controller
+
+  spi_transfer (b);
 }
-/** Receive a byte from the card */
+
 static
-uint8_t spiRec (void)
+uint8_t receive_byte (void)
 {
-  spiSend(0XFF);
-  return SPDR;
+  // Receive a byte from the SD controller
+
+  return spi_transfer (0xFF);
 }
 
 static void
 error (sd_card_error_t code)
 {
+  // Set the current error code
+
   cur_error = code;
 }
 
@@ -77,19 +76,19 @@ error (sd_card_error_t code)
 #define EMILLIS() (timer0_stopwatch_microseconds () / 1000)
 
 static uint8_t
-wait_not_busy (uint16_t timeoutMillis)
+wait_not_busy (uint16_t timeout_ms)
 {
-  // Wait for card to go not busy.
+  // Wait timeout_ms milliseconds for card to go not busy.
 
   timer0_stopwatch_reset ();
   do {
-    if (spiRec() == 0XFF) {
+    if ( receive_byte () == 0XFF ) {
       return TRUE;
     }
     else {
       ;
     }
-  } while ( EMILLIS () < timeoutMillis );
+  } while ( EMILLIS () < timeout_ms );
   
   return FALSE;
 }
@@ -100,7 +99,7 @@ read_end (void) {
     // and clear the in_block flag.
 
   if ( in_block ) {
-      // Skip data and crc
+      // Skip data and CRC
 #ifdef OPTIMIZE_HARDWARE_SPI
     // optimize skip for hardware
     SPDR = 0XFF;
@@ -110,13 +109,13 @@ read_end (void) {
       }
       SPDR = 0XFF;
     }
-    // Wait for last crc byte
+    // Wait for last CRC byte
     while ( ! (SPSR & (1 << SPIF)) ) {
       ;
     }
 #else  // OPTIMIZE_HARDWARE_SPI
     while ( cur_offset++ < 514 ) {
-      spiRec ();
+      receive_byte ();
     }
 #endif  // OPTIMIZE_HARDWARE_SPI
     SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
@@ -139,21 +138,23 @@ card_command (uint8_t cmd, uint32_t arg) {
   wait_not_busy (300);
 
   // Send command
-  spiSend (cmd | 0x40);
+  send_byte (cmd | 0x40);
 
   // Send argument
   for ( int8_t s = 24 ; s >= 0 ; s -= 8 ) {
-    spiSend (arg >> s);
+    send_byte (arg >> s);
   }
 
   // Send CRC
   uint8_t crc = 0XFF;
-  if (cmd == CMD0) crc = 0X95;  // correct crc for CMD0 with arg 0
-  if (cmd == CMD8) crc = 0X87;  // correct crc for CMD8 with arg 0X1AA
-  spiSend(crc);
+  if (cmd == CMD0) crc = 0X95;  // Correct CRC for CMD0 with arg 0
+  if (cmd == CMD8) crc = 0X87;  // Correct CRC for CMD8 with arg 0X1AA
+  send_byte (crc);
 
   // Wait for response
-  for ( uint8_t ii = 0 ; ((status = spiRec()) & 0X80) && ii != 0XFF ; ii++ ) {
+  for ( uint8_t ii = 0 ;
+        ((status = receive_byte ()) & 0X80) && ii != 0XFF ;
+        ii++ ) {
     ;
   }
 
@@ -189,17 +190,17 @@ write_data_private (uint8_t token, const uint8_t* src)
 
 #else  // ! OPTIMIZE_HARDWARE_SPI
 
-  spiSend(token);
+  send_byte (token);
   for (uint16_t i = 0; i < 512; i++) {
-    spiSend(src[i]);
+    send_byte (src[i]);
   }
 
 #endif  // end of if-else on OPTIMIZE_HARDWARE_SPI
 
-  spiSend(0xff);  // dummy crc
-  spiSend(0xff);  // dummy crc
+  send_byte (0xff);  // Dummy CRC
+  send_byte (0xff);  // Dummy CRC
 
-  status = spiRec();
+  status = receive_byte ();
   if ( (status & DATA_RES_MASK) != DATA_RES_ACCEPTED ) {
     error (SD_CARD_ERROR_WRITE);
     SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
@@ -214,7 +215,7 @@ wait_start_block (void)
   // Wait for start block token.
 
   timer0_stopwatch_reset ();
-  while ( (status = spiRec()) == 0XFF ) {
+  while ( (status = receive_byte ()) == 0XFF ) {
     if ( EMILLIS () > SD_READ_TIMEOUT ) {
       error (SD_CARD_ERROR_READ_TIMEOUT);
       goto fail;
@@ -245,9 +246,9 @@ read_register (uint8_t cmd, void* buf)
     goto fail;
   }
   // transfer data
-  for (uint16_t i = 0; i < 16; i++) dst[i] = spiRec();
-  spiRec();  // get first crc byte
-  spiRec();  // get second crc byte
+  for (uint16_t i = 0; i < 16; i++) dst[i] = receive_byte ();
+  receive_byte ();  // Get first CRC byte
+  receive_byte ();  // Get second CRC byte
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return TRUE;
 
@@ -369,7 +370,7 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   // Must supply min of 74 clock cycles with CS high
   for ( uint8_t i = 0; i < 10; i++ ) {
-    spiSend(0XFF);
+    send_byte (0XFF);
   }
 
   SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
@@ -388,7 +389,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   } else {
     // Only need last byte of r7 response
     for ( uint8_t ii = 0; ii < 4; ii++ ) {
-      status = spiRec();
+      status = receive_byte ();
     }
     if ( status != 0XAA ) {
       error (SD_CARD_ERROR_CMD8);
@@ -413,12 +414,12 @@ sd_card_init (sd_card_spi_speed_t speed)
       error (SD_CARD_ERROR_CMD58);
       goto fail;
     }
-    if ( (spiRec () & 0XC0) == 0XC0 ) {
+    if ( (receive_byte () & 0XC0) == 0XC0 ) {
       set_type (SD_CARD_TYPE_SDHC);
     }
     // Discard rest of ocr - contains allowed voltage range
     for ( uint8_t i = 0; i < 3; i++ ) {
-      spiRec ();
+      receive_byte ();
     }
   }
 
@@ -516,11 +517,11 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
 
   // Skip data before offset
   for ( ; cur_offset < offset ; cur_offset++ ) {
-    spiRec();
+    receive_byte ();
   }
   // Transfer data
   for ( uint16_t ii = 0; ii < count; ii++ ) {
-    dst[ii] = spiRec();
+    dst[ii] = receive_byte ();
   }
 #endif  // OPTIMIZE_HARDWARE_SPI
 
@@ -579,7 +580,7 @@ sd_card_write_block (uint32_t block, uint8_t const *src)
   }
 
   // Response is r2, so get and check two bytes for nonzero
-  if ( card_command (CMD13, 0) || spiRec () ) {
+  if ( card_command (CMD13, 0) || receive_byte () ) {
     error (SD_CARD_ERROR_WRITE_PROGRAMMING);
     goto fail;
   }
