@@ -36,7 +36,7 @@ main (void)
 
   spi_init ();
 
-  spi_set_bit_order (SPI_BIT_ORDER_MSB_FIRST);
+  spi_set_data_order (SPI_DATA_ORDER_MSB_FIRST);
   
   spi_set_data_mode (SPI_DATA_MODE_0);
   
