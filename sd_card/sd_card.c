@@ -36,8 +36,8 @@ static uint32_t cur_block;   // Current block
 static sd_card_error_t cur_error;   // Current error (might be none)
 static uint8_t in_block;   // True iff we are in the process of reading a block
 static uint16_t cur_offset;   // Offset within current block
-// FIXME: the interface fctn to enable this mode currently doesn't exist, could
-// be included from model easily enough.
+// FIXXME: the interface fctn to enable this mode currently doesn't exist,
+// could be included from model easily enough.  I don't need it though.
 static uint8_t partial_block_read_mode;   // Mode supporting partai block reads
 static uint8_t status;   // SD controller status
 static sd_card_type_t card_type;   // Type of installed SD card
@@ -82,7 +82,7 @@ wait_not_busy (uint16_t timeout_ms)
 
   timer0_stopwatch_reset ();
   do {
-    if ( receive_byte () == 0XFF ) {
+    if ( receive_byte () == 0xFF ) {
       return TRUE;
     }
     else {
@@ -102,12 +102,12 @@ read_end (void) {
       // Skip data and CRC
 #ifdef OPTIMIZE_HARDWARE_SPI
     // optimize skip for hardware
-    SPDR = 0XFF;
+    SPDR = 0xFF;
     while ( cur_offset++ < 513 ) {
       while ( ! (SPSR & (1 << SPIF)) ) {
         ;
       }
-      SPDR = 0XFF;
+      SPDR = 0xFF;
     }
     // Wait for last CRC byte
     while ( ! (SPSR & (1 << SPIF)) ) {
@@ -119,7 +119,7 @@ read_end (void) {
     }
 #endif  // OPTIMIZE_HARDWARE_SPI
     SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
-    in_block = 0;
+    in_block = FALSE;
   }
 }
 
@@ -146,14 +146,14 @@ card_command (uint8_t cmd, uint32_t arg) {
   }
 
   // Send CRC
-  uint8_t crc = 0XFF;
-  if (cmd == CMD0) crc = 0X95;  // Correct CRC for CMD0 with arg 0
-  if (cmd == CMD8) crc = 0X87;  // Correct CRC for CMD8 with arg 0X1AA
+  uint8_t crc = 0xFF;
+  if (cmd == CMD0) crc = 0x95;  // Correct CRC for CMD0 with arg 0
+  if (cmd == CMD8) crc = 0x87;  // Correct CRC for CMD8 with arg 0x1AA
   send_byte (crc);
 
   // Wait for response
   for ( uint8_t ii = 0 ;
-        ((status = receive_byte ()) & 0X80) && ii != 0XFF ;
+        ((status = receive_byte ()) & 0x80) && ii != 0xFF ;
         ii++ ) {
     ;
   }
@@ -215,7 +215,7 @@ wait_start_block (void)
   // Wait for start block token.
 
   timer0_stopwatch_reset ();
-  while ( (status = receive_byte ()) == 0XFF ) {
+  while ( (status = receive_byte ()) == 0xFF ) {
     if ( EMILLIS () > SD_READ_TIMEOUT ) {
       error (SD_CARD_ERROR_READ_TIMEOUT);
       goto fail;
@@ -353,7 +353,8 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   cur_error = SD_CARD_ERROR_NONE;
   card_type = SD_CARD_TYPE_INDETERMINATE;
-  in_block = partial_block_read_mode = 0;
+  in_block = FALSE;
+  partial_block_read_mode = FALSE;
 
   timer0_stopwatch_reset ();
 
@@ -369,8 +370,8 @@ sd_card_init (sd_card_spi_speed_t speed)
   spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV128);
 
   // Must supply min of 74 clock cycles with CS high
-  for ( uint8_t i = 0; i < 10; i++ ) {
-    send_byte (0XFF);
+  for ( uint8_t ii = 0; ii < 10; ii++ ) {
+    send_byte (0xFF);
   }
 
   SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
@@ -391,7 +392,7 @@ sd_card_init (sd_card_spi_speed_t speed)
     for ( uint8_t ii = 0; ii < 4; ii++ ) {
       status = receive_byte ();
     }
-    if ( status != 0XAA ) {
+    if ( status != 0xAA ) {
       error (SD_CARD_ERROR_CMD8);
       goto fail;
     }
@@ -399,7 +400,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   }
 
   // Initialize card and send host supports SDHC if SD2
-  arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0X40000000 : 0;
+  arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0x40000000 : 0;
 
   while ( (status = card_application_command (ACMD41, arg))
           != R1_READY_STATE ) {
@@ -414,11 +415,11 @@ sd_card_init (sd_card_spi_speed_t speed)
       error (SD_CARD_ERROR_CMD58);
       goto fail;
     }
-    if ( (receive_byte () & 0XC0) == 0XC0 ) {
+    if ( (receive_byte () & 0xC0) == 0xC0 ) {
       set_type (SD_CARD_TYPE_SDHC);
     }
     // Discard rest of ocr - contains allowed voltage range
-    for ( uint8_t i = 0; i < 3; i++ ) {
+    for ( uint8_t ii = 0; ii < 3; ii++ ) {
       receive_byte ();
     }
   }
@@ -488,24 +489,24 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
 
 #ifdef OPTIMIZE_HARDWARE_SPI
   // start first spi transfer
-  SPDR = 0XFF;
+  SPDR = 0xFF;
 
   // skip data before offset
   for ( ; cur_offset < offset ; cur_offset++ ) {
     while ( ! (SPSR & (1 << SPIF)) ) {
       ;
     }
-    SPDR = 0XFF;
+    SPDR = 0xFF;
   }
   // transfer data
   uint16_t n = count - 1;
   for ( uint16_t ii = 0; ii < n; ii++ ) {
-    // FIXME: can these all be replaced with loop_until_bit_set() calls?
+    // FIXXME: can these all be replaced with loop_until_bit_set() calls?
     while ( ! (SPSR & (1 << SPIF)) ) {
       ;
     }
     dst[i] = SPDR;
-    SPDR = 0XFF;
+    SPDR = 0xFF;
   }
   // wait for last byte
   while ( ! (SPSR & (1 << SPIF)) ) {
