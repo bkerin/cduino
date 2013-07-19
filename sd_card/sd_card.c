@@ -39,13 +39,13 @@ static uint16_t cur_offset;   // Offset within current block
 // FIXME: the interface fctn to enable this mode currently doesn't exist, could
 // be included from model easily enough.
 static uint8_t partial_block_read_mode;   // Mode supporting partai block reads
-static uint8_t status_;
-static sd_card_type_t type_;
+static uint8_t status;   // SD controller status
+static sd_card_type_t card_type;   // Type of installed SD card
 
 static void
 set_type (sd_card_type_t type)
 {
-  type_ = type;
+  card_type = type;
 }
 
 //------------------------------------------------------------------------------
@@ -132,32 +132,32 @@ card_command (uint8_t cmd, uint32_t arg) {
   // Ensure read is done (in case we're in partial_block_read_mode mode)
   read_end ();
 
-  // select card
+  // Select card
   SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
 
-  // wait up to 300 ms if busy
+  // Wait up to 300 ms if busy
   wait_not_busy (300);
 
-  // send command
+  // Send command
   spiSend (cmd | 0x40);
 
-  // send argument
+  // Send argument
   for ( int8_t s = 24 ; s >= 0 ; s -= 8 ) {
     spiSend (arg >> s);
   }
 
-  // send CRC
+  // Send CRC
   uint8_t crc = 0XFF;
   if (cmd == CMD0) crc = 0X95;  // correct crc for CMD0 with arg 0
   if (cmd == CMD8) crc = 0X87;  // correct crc for CMD8 with arg 0X1AA
   spiSend(crc);
 
-  // wait for response
-  for ( uint8_t ii = 0 ; ((status_ = spiRec()) & 0X80) && ii != 0XFF ; ii++ ) {
+  // Wait for response
+  for ( uint8_t ii = 0 ; ((status = spiRec()) & 0X80) && ii != 0XFF ; ii++ ) {
     ;
   }
 
-  return status_;
+  return status;
 }
 
 static uint8_t
@@ -199,8 +199,8 @@ write_data_private (uint8_t token, const uint8_t* src)
   spiSend(0xff);  // dummy crc
   spiSend(0xff);  // dummy crc
 
-  status_ = spiRec();
-  if ( (status_ & DATA_RES_MASK) != DATA_RES_ACCEPTED ) {
+  status = spiRec();
+  if ( (status & DATA_RES_MASK) != DATA_RES_ACCEPTED ) {
     error (SD_CARD_ERROR_WRITE);
     SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
     return FALSE;
@@ -214,13 +214,13 @@ wait_start_block (void)
   // Wait for start block token.
 
   timer0_stopwatch_reset ();
-  while ( (status_ = spiRec()) == 0XFF ) {
+  while ( (status = spiRec()) == 0XFF ) {
     if ( EMILLIS () > SD_READ_TIMEOUT ) {
       error (SD_CARD_ERROR_READ_TIMEOUT);
       goto fail;
     }
   }
-  if ( status_ != DATA_START_BLOCK ) {
+  if ( status != DATA_START_BLOCK ) {
     error (SD_CARD_ERROR_READ);
     goto fail;
   }
@@ -265,13 +265,13 @@ sd_card_last_error (void)
 uint8_t
 sd_card_last_error_data (void)
 {
-  return status_;
+  return status;
 }
 
 sd_card_type_t
 sd_card_type (void)
 {
-  return type_;
+  return card_type;
 }
 
 uint32_t
@@ -313,7 +313,7 @@ sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock) {
     error (SD_CARD_ERROR_ERASE_SINGLE_BLOCK);
     goto fail;
   }
-  if (type_ != SD_CARD_TYPE_SDHC) {
+  if (card_type != SD_CARD_TYPE_SDHC) {
     firstBlock <<= 9;
     lastBlock <<= 9;
   }
@@ -393,7 +393,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   timer0_stopwatch_init ();
 
   cur_error = SD_CARD_ERROR_NONE;
-  type_ = SD_CARD_TYPE_INDETERMINATE;
+  card_type = SD_CARD_TYPE_INDETERMINATE;
   in_block = partial_block_read_mode = 0;
 
   timer0_stopwatch_reset ();
@@ -425,7 +425,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
 
   // Command to go idle in SPI mode
-  while ( (status_ = card_command (CMD0, 0)) != R1_IDLE_STATE ) {
+  while ( (status = card_command (CMD0, 0)) != R1_IDLE_STATE ) {
     if ( EMILLIS () > SD_INIT_TIMEOUT ) {
       error (SD_CARD_ERROR_CMD0);
       goto fail;
@@ -438,9 +438,9 @@ sd_card_init (sd_card_spi_speed_t speed)
   } else {
     // Only need last byte of r7 response
     for ( uint8_t ii = 0; ii < 4; ii++ ) {
-      status_ = spiRec();
+      status = spiRec();
     }
-    if ( status_ != 0XAA ) {
+    if ( status != 0XAA ) {
       error (SD_CARD_ERROR_CMD8);
       goto fail;
     }
@@ -450,7 +450,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   // Initialize card and send host supports SDHC if SD2
   arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0X40000000 : 0;
 
-  while ( (status_ = card_application_command (ACMD41, arg))
+  while ( (status = card_application_command (ACMD41, arg))
           != R1_READY_STATE ) {
     if ( EMILLIS () > SD_INIT_TIMEOUT ) {
       error (SD_CARD_ERROR_ACMD41);

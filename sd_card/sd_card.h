@@ -10,9 +10,9 @@
 #include "sd_card_info.h"
 
 // WARNING: many SD cards are utter junk.  They lack any wear leveling for
-// the underlying flash memory and are horribly intolerant of power cuts.
-// If you're doing anything remotely serious you must invest in an
-// "industrial" SD card.  I've used the Apacer AP-MSD04GCS4P-1TM with
+// the flash memory and are horribly intolerant of asynchronous shutdown
+// (power cuts).  If you're doing anything remotely serious you must invest
+// in an "industrial" SD card.  I've used the Apacer AP-MSD04GCS4P-1TM with
 // good results.
 //
 // This interface has been tested with the SD card
