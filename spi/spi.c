@@ -11,6 +11,7 @@
  */
 
 #include <assert.h>
+#include <avr/io.h>
 #include <inttypes.h>
 #include <stdlib.h>
 
@@ -108,12 +109,9 @@ uint8_t
 spi_transfer (uint8_t data)
 {
   SPDR = data;
-  //loop_until_bit_clear (SPSR, SPIF);
-  // FIXME: I like ot use the avr libc loop_until_bit_clear (above) to
-  // replace this (below) but must verify it works:
-  while ( ! (SPSR & _BV (SPIF)) ) {
-    ;
-  }
+
+  loop_until_bit_is_set (SPSR, SPIF);
+
   return SPDR;
 }
 
