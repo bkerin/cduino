@@ -345,48 +345,6 @@ card_application_command (uint8_t cmd, uint32_t arg)
   return card_command (cmd, arg);
 }
 
-//------------------------------------------------------------------------------
-/**
- * Set the SPI clock rate.
- *
- * \param[in] sckRateID A value in the range [0, 6].
- *
- * The SPI clock will be set to F_CPU/pow(2, 1 + sckRateID). The maximum
- * SPI rate is F_CPU/2 for \a sckRateID = 0 and the minimum rate is F_CPU/128
- * for \a scsRateID = 6.
- *
- * \return The value one, true, is returned for success and the value zero,
- * false, is returned for an invalid value of \a sckRateID.
- */
-static uint8_t
-setSckRate(uint8_t sckRateID)
-{
-  if (sckRateID > 6) {
-    error(SD_CARD_ERROR_SCK_RATE);
-    return FALSE;
-  }
-  // see avr processor datasheet for SPI register bit definitions
-  if ((sckRateID & 1) || sckRateID == 6) {
-    SPSR &= ~(1 << SPI2X);
-  } else {
-    SPSR |= (1 << SPI2X);
-  }
-  SPCR &= ~((1 <<SPR1) | (1 << SPR0));
-  SPCR |= (sckRateID & 4 ? (1 << SPR1) : 0)
-    | (sckRateID & 2 ? (1 << SPR0) : 0);
-  return TRUE;
-}
-
-//------------------------------------------------------------------------------
-/**
- * Initialize an SD flash memory card.
- *
- * \param[in] sckRateID SPI clock rate selector. See setSckRate().
- *
- * \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.  The reason for failure
- * can be determined by calling errorCode() and errorData().
- */
 uint8_t
 sd_card_init (sd_card_spi_speed_t speed) 
 {
@@ -400,22 +358,14 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   uint32_t arg;
 
-  // FIXME: where exactly is the equivalent of spi_set_data_mode happening,
-  // or is the default getting used, or what?  same question for bit order.
-
+  // Initialize SPI interface to the SD card controller.
   SD_CARD_SPI_SLAVE_SELECT_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-  // Set pin modes FIXME: WORK POINT: these should go away when we switch
-  // to using the spi.h interface entirely.
-  SPI_MISO_INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
-  SPI_MOSI_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  SPI_SCK_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  // SS must be in output mode even if it is not chip select
-  SPI_SS_INIT (DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-
-  // Enable SPI, master mode, clock rate f_osc/128
-  SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0);
-  // Clear double speed
-  SPSR &= ~(1 << SPI2X);
+  spi_init ();
+  spi_set_data_order (SPI_DATA_ORDER_MSB_FIRST);
+  spi_set_data_mode (SPI_DATA_MODE_0);
+  // We start out talking slow to the SD card.  I'm not sure if we need to,
+  // but thats what the Arduino libs do and it seems like a safe choice.
+  spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV128);
 
   // Must supply min of 74 clock cycles with CS high
   for ( uint8_t i = 0; i < 10; i++ ) {
@@ -474,27 +424,44 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
 
-  return setSckRate (speed);
+  switch ( speed ) {
+    case SPI_FULL_SPEED:
+      spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV2);
+      break;
+    case SPI_HALF_SPEED:
+      spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
+      break;
+    case SPI_QUARTER_SPEED:
+      spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV8);
+      break;
+    default:
+      // This is really a client error and not an SD card problem, but since
+      // this interface doesn't use assert() yet it seems like a shame to start
+      // doing so.
+      error (SD_CARD_ERROR_SCK_RATE);
+      return FALSE;
+      break;
+  }
+
+  return TRUE;
 
  fail:
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
 
-//------------------------------------------------------------------------------
-/**
- * Read part of a 512 byte block from an SD card.
- *
- * \param[in] block Logical block to be read.
- * \param[in] offset Number of bytes to skip at start of block
- * \param[out] dst Pointer to the location that will receive the data.
- * \param[in] count Number of bytes to read
- * \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.
- */
 static uint8_t
 read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
 {
+  // Read part of a block from an SD card.  Parameters:
+  //
+  //   * block    Logical block to be read.
+  //   * offset   Number of bytes to skip at start of block
+  //   * dst      Pointer to the location that will receive the data
+  //   * count    Number of bytes to read
+  //
+  //  Return value: TRUE for success, FALSE for failure.
+
   if (count == 0) {
     return TRUE;
   }
@@ -568,37 +535,26 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
   return FALSE;
 }
 
-//------------------------------------------------------------------------------
-/**
- * Read a 512 byte block from an SD card device.
- *
- * \param[in] block Logical block to be read.
- * \param[out] dst Pointer to the location that will receive the data.
-
- * \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.
- */
 uint8_t
-sd_card_read_block (uint32_t block, uint8_t* dst)
+sd_card_read_block (uint32_t block, uint8_t *dst)
 {
+  // Read a block from an SD card device.  The block argument is the logical
+  // block to read, and the data read is stores at dst.  On success, TRUE
+  // is returned, otherwise FALSE is returned.
+
   return read_data (block, 0, 512, dst);
 }
 
-//------------------------------------------------------------------------------
-/**
- * Writes a 512 byte block to an SD card.
- *
- * \param[in] blockNumber Logical block to be written.
- * \param[in] src Pointer to the location of the data to be written.
- * \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.
- */
 uint8_t
-sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
+sd_card_write_block (uint32_t block, uint8_t const *src)
 {
+  // Write a block to an SD card device.  The block argument is the logical
+  // block to write, and the data to write is taken from location src.
+  // On success, TRUE is returned, otherwise FALSE is returned.
+
 #if SD_PROTECT_BLOCK_ZERO
   // don't allow write to first block
-  if ( blockNumber == 0 ) {
+  if ( block == 0 ) {
     error (SD_CARD_ERROR_WRITE_BLOCK_ZERO);
     goto fail;
   }
@@ -606,9 +562,9 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
 
   // Use address if not SDHC card
   if ( sd_card_type () != SD_CARD_TYPE_SDHC ) {
-    blockNumber <<= 9;
+    block <<= 9;
   }
-  if ( card_command (CMD24, blockNumber) ) {
+  if ( card_command (CMD24, block) ) {
     error (SD_CARD_ERROR_CMD24);
     goto fail;
   }
@@ -639,11 +595,17 @@ sd_card_write_block (uint32_t blockNumber, const uint8_t* src)
 uint8_t
 sd_card_read_cid (cid_t *cid)
 {
+  // Read the SD card CID register into *cid.  Return TRUE on success,
+  // FALSE otherwise.
+
   return read_register (CMD10, cid);
 }
 
 uint8_t
 sd_card_read_csd (csd_t *csd)
 {
+  // Read the SD card CSD register into *cid.  Return TRUE on success,
+  // FALSE otherwise.
+
   return read_register (CMD9, csd);
 }
