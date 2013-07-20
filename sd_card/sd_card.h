@@ -132,13 +132,13 @@ sd_card_last_error_data (void);
 
 // Communication speed between microcontroller and SD card.
 typedef enum {
-  SPI_FULL_SPEED    = 0,   // Maximum speed of F_CPU / 2.
-  SPI_HALF_SPEED    = 1,   // F_CPU / 4.
-  SPI_QUARTER_SPEED = 2    // F_CPU / 8.
+  SD_CARD_SPI_FULL_SPEED    = 0,   // Maximum speed of F_CPU / 2.
+  SD_CARD_SPI_HALF_SPEED    = 1,   // F_CPU / 4.
+  SD_CARD_SPI_QUARTER_SPEED = 2    // F_CPU / 8.
 } sd_card_spi_speed_t;
 
 // Initialize an SD flash card and this interface.  The speed argument sets
-// the SPI communcation rate between card and microcontroller.  Returns true
+// the SPI communcation rate between card and microcontroller.  Returns TRUE
 // on success and zero on error (in which case sd_card_last_error() can
 // be called).  This calls time0_stopwatch_init() and spi_init().
 uint8_t
@@ -163,14 +163,14 @@ sd_card_type (void);
 
 // Read a cards CID register. The CID contains card identification
 // information such as manufacturer ID, product name, product serial number
-// and manufacturing date.  Returns true on success, and false on failure
+// and manufacturing date.  Returns TRUE on success, and FALSE on failure
 // (in which case sd_card_error_code() can be called).
 uint8_t
 sd_card_read_cid (cid_t *cid);
 
 // Read a cards CSD register. The CSD contains card-specific data that
-// provides information regarding access to the card's contents.  Returne true
-// on success, and false on failure (in which case sd_card_error_code()
+// provides information regarding access to the card's contents.  Returne TRUE
+// on success, and FALSE on failure (in which case sd_card_error_code()
 // can be called).
 uint8_t
 sd_card_read_csd (csd_t *csd);
@@ -189,7 +189,7 @@ uint8_t
 sd_card_single_block_erase_supported (void);
 
 // Erase a range of blocks.  This method requires that
-// sd_card_single_block_erase_supported() return true.  The data on the
+// sd_card_single_block_erase_supported() return TRUE.  The data on the
 // card after this operation may be either zeros or ones, depending on the
 // card vendor.
 uint8_t

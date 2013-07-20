@@ -438,13 +438,13 @@ sd_card_init (sd_card_spi_speed_t speed)
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
 
   switch ( speed ) {
-    case SPI_FULL_SPEED:
+    case SD_CARD_SPI_FULL_SPEED:
       spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV2);
       break;
-    case SPI_HALF_SPEED:
+    case SD_CARD_SPI_HALF_SPEED:
       spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
       break;
-    case SPI_QUARTER_SPEED:
+    case SD_CARD_SPI_QUARTER_SPEED:
       spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV8);
       break;
     default:
