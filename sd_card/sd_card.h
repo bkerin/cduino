@@ -51,7 +51,12 @@
          See the example in the Makefile in the sd_card module directory.
 #endif
 
-// FIXME: probably remove this if we stop supporting it
+// FIXXME: Optimized hardware SPI isn't currently supported.  The point of
+// this in the origianl Arduino libs was to make the SD card interface go
+// fast enough to keep up with audio data rates, but I don't need that and
+// have never tested it.  I think all the code enabled by this should work
+// as it is, and it would probably be pretty easy to tidy it up and put it
+// in the spi.h interface.
 //#define OPTIMIZE_HARDWARE_SPI
 
 // Protect block zero from write if nonzero
@@ -127,13 +132,13 @@ sd_card_last_error_data (void);
 
 // Communication speed between microcontroller and SD card.
 typedef enum {
-  SPI_FULL_SPEED = 0,   // Maximum speed of F_CPU / 2.
-  SPI_HALF_SPEED = 1,   // F_CPU / 4.
-  SPI_QUARTER_SPEED = 2   // F_CPU / 8.
+  SPI_FULL_SPEED    = 0,   // Maximum speed of F_CPU / 2.
+  SPI_HALF_SPEED    = 1,   // F_CPU / 4.
+  SPI_QUARTER_SPEED = 2    // F_CPU / 8.
 } sd_card_spi_speed_t;
 
 // Initialize an SD flash card and this interface.  The speed argument sets
-// the communcation rate between card and microcontroller.  Returns true
+// the SPI communcation rate between card and microcontroller.  Returns true
 // on success and zero on error (in which case sd_card_last_error() can
 // be called).  This calls time0_stopwatch_init() and spi_init().
 uint8_t
@@ -176,7 +181,7 @@ sd_card_read_block (uint32_t block, uint8_t *dst);
 
 // Write a block of data (but see SD_PROTECT_BLOCK_ZERO).
 uint8_t
-sd_card_write_block (uint32_t blockNumber, const uint8_t *src);
+sd_card_write_block (uint32_t block, const uint8_t *src);
 
 // Returns true iff the SD card provides an erase operation for individual
 // blocks.  Note that its always possible to simply overwrite blocks.
@@ -188,6 +193,6 @@ sd_card_single_block_erase_supported (void);
 // card after this operation may be either zeros or ones, depending on the
 // card vendor.
 uint8_t
-sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock);
+sd_card_erase_blocks (uint32_t first_block, uint32_t last_block);
 
 #endif  // SD_CARD_H

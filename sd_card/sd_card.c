@@ -227,7 +227,7 @@ wait_start_block (void)
   }
   return TRUE;
 
- fail:
+  fail:
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
@@ -252,7 +252,7 @@ read_register (uint8_t cmd, void* buf)
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return TRUE;
 
- fail:
+  fail:
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
@@ -279,24 +279,30 @@ uint32_t
 sd_card_size (void)
 {
   csd_t csd;
-  if (!sd_card_read_csd (&csd)) {
+
+  if ( ! sd_card_read_csd (&csd) ) {
     return 0;
   }
-  else {
-  }
+
   if (csd.v1.csd_ver == 0) {
     uint8_t read_bl_len = csd.v1.read_bl_len;
-    uint16_t c_size = (csd.v1.c_size_high << 10)
-                      | (csd.v1.c_size_mid << 2) | csd.v1.c_size_low;
-    uint8_t c_size_mult = (csd.v1.c_size_mult_high << 1)
-                          | csd.v1.c_size_mult_low;
-    return (uint32_t)(c_size + 1) << (c_size_mult + read_bl_len - 7);
-  } else if (csd.v2.csd_ver == 1) {
-    uint32_t c_size = ((uint32_t)csd.v2.c_size_high << 16)
-                      | (csd.v2.c_size_mid << 8) | csd.v2.c_size_low;
+    uint16_t c_size =
+      (csd.v1.c_size_high << 10) |
+      (csd.v1.c_size_mid << 2) |
+      csd.v1.c_size_low;
+    uint8_t c_size_mult =
+      (csd.v1.c_size_mult_high << 1) |
+      csd.v1.c_size_mult_low;
+    return (uint32_t) (c_size + 1) << (c_size_mult + read_bl_len - 7);
+  }
+  else if ( csd.v2.csd_ver == 1 ) {
+    uint32_t c_size =
+      ((uint32_t) csd.v2.c_size_high << 16) |
+      (csd.v2.c_size_mid << 8) | csd.v2.c_size_low;
     return (c_size + 1) << 10;
-  } else {
-    error(SD_CARD_ERROR_BAD_CSD);
+  }
+  else {
+    error (SD_CARD_ERROR_BAD_CSD);
     return 0;
   }
 }
@@ -305,33 +311,38 @@ uint8_t
 sd_card_single_block_erase_supported (void)
 {
   csd_t csd;
-  return sd_card_read_csd (&csd) ? csd.v1.erase_blk_en : 0;
+  return sd_card_read_csd (&csd) ? csd.v1.erase_blk_en : FALSE;
 }
 
 uint8_t
-sd_card_erase_blocks (uint32_t firstBlock, uint32_t lastBlock) {
+sd_card_erase_blocks (uint32_t first_block, uint32_t last_block)
+{
   if ( ! sd_card_single_block_erase_supported () ) {
     error (SD_CARD_ERROR_ERASE_SINGLE_BLOCK);
     goto fail;
   }
+
   if (card_type != SD_CARD_TYPE_SDHC) {
-    firstBlock <<= 9;
-    lastBlock <<= 9;
+    first_block <<= 9;
+    last_block <<= 9;
   }
-  if (card_command (CMD32, firstBlock)
-    || card_command (CMD33, lastBlock)
-    || card_command (CMD38, 0)) {
-      error(SD_CARD_ERROR_ERASE);
+
+  if ( card_command (CMD32, first_block) ||
+       card_command (CMD33, last_block) ||
+       card_command (CMD38, 0)) {
+      error (SD_CARD_ERROR_ERASE);
       goto fail;
   }
+
   if ( ! wait_not_busy (SD_ERASE_TIMEOUT) ) {
-    error(SD_CARD_ERROR_ERASE_TIMEOUT);
+    error (SD_CARD_ERROR_ERASE_TIMEOUT);
     goto fail;
   }
+
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return TRUE;
 
- fail:
+  fail:
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
@@ -447,7 +458,7 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   return TRUE;
 
- fail:
+  fail:
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
@@ -532,7 +543,7 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
   }
   return TRUE;
 
- fail:
+  fail:
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
@@ -589,7 +600,7 @@ sd_card_write_block (uint32_t block, uint8_t const *src)
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return TRUE;
 
- fail:
+  fail:
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
 }
