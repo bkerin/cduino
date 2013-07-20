@@ -551,22 +551,14 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
 uint8_t
 sd_card_read_block (uint32_t block, uint8_t *dst)
 {
-  // Read a block from an SD card device.  The block argument is the logical
-  // block to read, and the data read is stores at dst.  On success, TRUE
-  // is returned, otherwise FALSE is returned.
-
   return read_data (block, 0, 512, dst);
 }
 
 uint8_t
 sd_card_write_block (uint32_t block, uint8_t const *src)
 {
-  // Write a block to an SD card device.  The block argument is the logical
-  // block to write, and the data to write is taken from location src.
-  // On success, TRUE is returned, otherwise FALSE is returned.
-
 #if SD_PROTECT_BLOCK_ZERO
-  // don't allow write to first block
+  // Don't allow write to first block
   if ( block == 0 ) {
     error (SD_CARD_ERROR_WRITE_BLOCK_ZERO);
     goto fail;

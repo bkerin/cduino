@@ -51,10 +51,12 @@
          See the example in the Makefile in the sd_card module directory.
 #endif
 
-// FIXXME: Optimized hardware SPI isn't currently supported.  The point of
-// this in the origianl Arduino libs was to make the SD card interface go
-// fast enough to keep up with audio data rates, but I don't need that and
-// have never tested it.  I think all the code enabled by this should work
+// FIXXME: Optimized hardware SPI isn't currently supported.  The point
+// of this in the origianl Arduino libs was to make the SD card interface
+// go fast enough to keep up with audio data rates, but I don't need that
+// and have never tested it.  Also, modern SDHC cards seem to support write
+// rates fast enough for audio support with out it (depending on the audio
+// buffering I guess).  I think all the code enabled by this should work
 // as it is, and it would probably be pretty easy to tidy it up and put it
 // in the spi.h interface.
 //#define OPTIMIZE_HARDWARE_SPI
@@ -124,9 +126,11 @@ typedef enum {
 sd_card_error_t
 sd_card_last_error (void);
 
-// Return any error data associated with the last error (which isn't
-// necessarilly anything relevant, depending on the error, and will probably
-// require inspection of the source code to interpret usefully).
+// Return any error data associated with the last error.  In practice
+// I believe this always means the most recent byte received from the
+// SD card controller.  This may not be anything relevant, depending on
+// the error, and will probably require inspection of the source code to
+// interpret usefully.  The status codes are defined in sd_card_info.h.
 uint8_t
 sd_card_last_error_data (void);
 
@@ -164,22 +168,27 @@ sd_card_type (void);
 // Read a cards CID register. The CID contains card identification
 // information such as manufacturer ID, product name, product serial number
 // and manufacturing date.  Returns TRUE on success, and FALSE on failure
-// (in which case sd_card_error_code() can be called).
+// (in which case sd_card_last_error() can be called).
 uint8_t
 sd_card_read_cid (cid_t *cid);
 
 // Read a cards CSD register. The CSD contains card-specific data that
 // provides information regarding access to the card's contents.  Returne TRUE
-// on success, and FALSE on failure (in which case sd_card_error_code()
+// on success, and FALSE on failure (in which case sd_card_last_error()
 // can be called).
 uint8_t
 sd_card_read_csd (csd_t *csd);
 
-// Read a block of data.
+// Read a block of data.  The block argument is the logical block to read, and
+// the data read is stores at dst.  On success, TRUE is returned, otherwise
+// FALSE is returned (in which case sd_card_last_error() may be called.
 uint8_t
 sd_card_read_block (uint32_t block, uint8_t *dst);
 
-// Write a block of data (but see SD_PROTECT_BLOCK_ZERO).
+// Write a block of data (but see SD_PROTECT_BLOCK_ZERO).  The block
+// argument is the logical block to write, and the data to write is taken
+// from location src.  On success, TRUE is returned, otherwise FALSE is
+// returned and sd_card_last_error() may be called.
 uint8_t
 sd_card_write_block (uint32_t block, const uint8_t *src);
 
