@@ -26,14 +26,47 @@ write_read_42s_at_block_42 (void)
   for ( ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
     data_block[ii] = 42;
   }
-  sd_card_write_block (bn, data_block);
+  uint8_t return_code = sd_card_write_block (bn, data_block);
+  assert (return_code);
 
   uint8_t reread_data[SD_CARD_BLOCK_SIZE];
-  sd_card_read_block (bn, reread_data);
+  return_code = sd_card_read_block (bn, reread_data);
+  assert (return_code);
 
   for ( ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
     assert (reread_data[ii] == 42);
   }
+}
+
+static void
+speed_test_1000_blocks (void)
+{
+  // Write and then read back in 1000 blocks, to give an idea of speed.
+
+  uint8_t data_block[SD_CARD_BLOCK_SIZE];
+  for ( int ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
+    data_block[ii] = 42;
+  }
+
+  printf ("Speed test: writing 1000 blocks... ");
+  for ( uint32_t ii = 0 ; ii < 1000 ; ii++ ) {
+    uint8_t return_code = sd_card_write_block (ii + 1, data_block);
+    assert (return_code);
+  }
+  printf ("done.\n");
+
+  printf ("Speed test: reading 1000 blocks... ");
+  for ( uint32_t ii = 0 ; ii < 1000 ; ii++ ) {
+    uint8_t return_code = sd_card_read_block (ii + 1, data_block);
+    assert (return_code);
+    // Here we double check that we're getting back the correct values,
+    // which makes the speed test take slightly longer, but its not going
+    // to be much compared to the read itself at hight F_CPU at least.
+    for ( int ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
+      assert (data_block[ii] == 42);
+    }
+  }
+  printf ("done.\n");
 }
 
 static void
@@ -121,23 +154,26 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     assert (0);
   }
 
+  speed_test_1000_blocks ();
+
   printf ("Everything worked with %s\n", speed_string);
 }
 
 int
 main (void)
 {
-  // FIXME: WORK POINT: adapt the errorCode and errorData methods over from
-  // the model, and print some stuff in these tests about how we don't bother
-  // to use their output even if we get an error during these tests :)
-
-  // FIXME: add a speed test
-
   printf ("\n");
 
+  // This isn't what we're testing exactly, but we need to know if its
+  // working or not to interpret other results.
   term_io_init ();
   printf ("term_io_init() worked.\n");
+  printf ("\n");
 
+  printf (
+      "NOTE: these tests don't bother to call sd_card_last_error() when\n"
+      "things go wrong.  You might be able to get information about the\n"
+      "nature of a failure by doing that.\n" );
   printf ("\n");
 
   per_speed_tests (SD_CARD_SPI_FULL_SPEED, "SD_CARD_SPI_FULL_SPEED");
@@ -150,4 +186,5 @@ main (void)
   printf ("\n");
 
   printf ("Everything worked!\n"); 
+  printf ("\n");
 }
