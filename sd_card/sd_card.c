@@ -147,8 +147,8 @@ card_command (uint8_t cmd, uint32_t arg) {
 
   // Send CRC
   uint8_t crc = 0xFF;
-  if (cmd == CMD0) crc = 0x95;  // Correct CRC for CMD0 with arg 0
-  if (cmd == CMD8) crc = 0x87;  // Correct CRC for CMD8 with arg 0x1AA
+  if (cmd == SD_CARD_CMD0) crc = 0x95;  // Correct CRC for CMD0 with arg 0
+  if (cmd == SD_CARD_CMD8) crc = 0x87;  // Correct CRC for CMD8 with arg 0x1AA
   send_byte (crc);
 
   // Wait for response
@@ -201,7 +201,7 @@ write_data_private (uint8_t token, const uint8_t* src)
   send_byte (0xff);  // Dummy CRC
 
   status = receive_byte ();
-  if ( (status & DATA_RES_MASK) != DATA_RES_ACCEPTED ) {
+  if ( (status & SD_CARD_DATA_RES_MASK) != SD_CARD_DATA_RES_ACCEPTED ) {
     error (SD_CARD_ERROR_WRITE);
     SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
     return FALSE;
@@ -221,7 +221,7 @@ wait_start_block (void)
       goto fail;
     }
   }
-  if ( status != DATA_START_BLOCK ) {
+  if ( status != SD_CARD_DATA_START_BLOCK ) {
     error (SD_CARD_ERROR_READ);
     goto fail;
   }
@@ -242,13 +242,19 @@ read_register (uint8_t cmd, void* buf)
     error (SD_CARD_ERROR_READ_REG);
     goto fail;
   }
+
   if ( ! wait_start_block () ) {
     goto fail;
   }
-  // transfer data
-  for (uint16_t i = 0; i < 16; i++) dst[i] = receive_byte ();
+
+  // Transfer data
+  for ( uint16_t ii = 0; ii < 16; ii++ ) {
+    dst[ii] = receive_byte ();
+  }
+
   receive_byte ();  // Get first CRC byte
   receive_byte ();  // Get second CRC byte
+
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return TRUE;
 
@@ -327,9 +333,9 @@ sd_card_erase_blocks (uint32_t first_block, uint32_t last_block)
     last_block <<= 9;
   }
 
-  if ( card_command (CMD32, first_block) ||
-       card_command (CMD33, last_block) ||
-       card_command (CMD38, 0)) {
+  if ( card_command (SD_CARD_CMD32, first_block) ||
+       card_command (SD_CARD_CMD33, last_block) ||
+       card_command (SD_CARD_CMD38, 0)) {
       error (SD_CARD_ERROR_ERASE);
       goto fail;
   }
@@ -353,7 +359,7 @@ card_application_command (uint8_t cmd, uint32_t arg)
   // There is a class of so-call "application commands" that apparently
   // require an escape command to be sent first.
 
-  card_command (CMD55, 0);
+  card_command (SD_CARD_CMD55, 0);
   return card_command (cmd, arg);
 }
 
@@ -388,7 +394,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
 
   // Command to go idle in SPI mode
-  while ( (status = card_command (CMD0, 0)) != R1_IDLE_STATE ) {
+  while ( (status = card_command (SD_CARD_CMD0, 0)) != SD_CARD_R1_IDLE_STATE ) {
     if ( EMILLIS () > SD_INIT_TIMEOUT ) {
       error (SD_CARD_ERROR_CMD0);
       goto fail;
@@ -396,7 +402,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   }
 
   // Check SD version
-  if ( (card_command (CMD8, 0x1AA) & R1_ILLEGAL_COMMAND) ) {
+  if ( (card_command (SD_CARD_CMD8, 0x1AA) & SD_CARD_R1_ILLEGAL_COMMAND) ) {
     set_type (SD_CARD_TYPE_SD1);
   } else {
     // Only need last byte of r7 response
@@ -413,8 +419,8 @@ sd_card_init (sd_card_spi_speed_t speed)
   // Initialize card and send host supports SDHC if SD2
   arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0x40000000 : 0;
 
-  while ( (status = card_application_command (ACMD41, arg))
-          != R1_READY_STATE ) {
+  while ( (status = card_application_command (SD_CARD_ACMD41, arg))
+          != SD_CARD_R1_READY_STATE ) {
     if ( EMILLIS () > SD_INIT_TIMEOUT ) {
       error (SD_CARD_ERROR_ACMD41);
       goto fail;
@@ -422,7 +428,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   }
   // If SD2, read OCR register to check for SDHC card
   if ( sd_card_type () == SD_CARD_TYPE_SD2 ) {
-    if ( card_command (CMD58, 0) ) {
+    if ( card_command (SD_CARD_CMD58, 0) ) {
       error (SD_CARD_ERROR_CMD58);
       goto fail;
     }
@@ -487,7 +493,7 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
     if ( sd_card_type () != SD_CARD_TYPE_SDHC ) {
       block <<= 9;
     }
-    if ( card_command (CMD17, block) ) {
+    if ( card_command (SD_CARD_CMD17, block) ) {
       error (SD_CARD_ERROR_CMD17);
       goto fail;
     }
@@ -569,11 +575,11 @@ sd_card_write_block (uint32_t block, uint8_t const *src)
   if ( sd_card_type () != SD_CARD_TYPE_SDHC ) {
     block <<= 9;
   }
-  if ( card_command (CMD24, block) ) {
+  if ( card_command (SD_CARD_CMD24, block) ) {
     error (SD_CARD_ERROR_CMD24);
     goto fail;
   }
-  if ( ! write_data_private (DATA_START_BLOCK, src) ) {
+  if ( ! write_data_private (SD_CARD_DATA_START_BLOCK, src) ) {
     goto fail;
   }
 
@@ -584,7 +590,7 @@ sd_card_write_block (uint32_t block, uint8_t const *src)
   }
 
   // Response is r2, so get and check two bytes for nonzero
-  if ( card_command (CMD13, 0) || receive_byte () ) {
+  if ( card_command (SD_CARD_CMD13, 0) || receive_byte () ) {
     error (SD_CARD_ERROR_WRITE_PROGRAMMING);
     goto fail;
   }
@@ -603,7 +609,7 @@ sd_card_read_cid (cid_t *cid)
   // Read the SD card CID register into *cid.  Return TRUE on success,
   // FALSE otherwise.
 
-  return read_register (CMD10, cid);
+  return read_register (SD_CARD_CMD10, cid);
 }
 
 uint8_t
@@ -612,5 +618,5 @@ sd_card_read_csd (csd_t *csd)
   // Read the SD card CSD register into *cid.  Return TRUE on success,
   // FALSE otherwise.
 
-  return read_register (CMD9, csd);
+  return read_register (SD_CARD_CMD9, csd);
 }

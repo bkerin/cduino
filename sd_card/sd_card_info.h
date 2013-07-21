@@ -42,61 +42,61 @@
 // SD card commands {{{1
 
 // GO_IDLE_STATE - Init card in spi mode if CS low
-#define CMD0 0x00
+#define SD_CARD_CMD0 0x00
 // SEND_IF_COND - Verify SD Memory Card interface operating condition
-#define CMD8 0x08
+#define SD_CARD_CMD8 0x08
 // SEND_CSD - Read the Card Specific Data (CSD register)
-#define CMD9 0x09
+#define SD_CARD_CMD9 0x09
 // SEND_CID - Read the card identification information (CID register)
-#define CMD10 0x0A
+#define SD_CARD_CMD10 0x0A
 // SEND_STATUS - Read the card status register
-#define CMD13 0x0D
+#define SD_CARD_CMD13 0x0D
 // READ_BLOCK - Read a single data block from the card
-#define CMD17 0x11
+#define SD_CARD_CMD17 0x11
 // WRITE_BLOCK - Write a single data block to the card
-#define CMD24 0x18
+#define SD_CARD_CMD24 0x18
 // WRITE_MULTIPLE_BLOCK - Write blocks of data until a STOP_TRANSMISSION
-#define CMD25 0x19
+#define SD_CARD_CMD25 0x19
 // ERASE_WR_BLK_START - Sets the address of the first block to be erased
-#define CMD32 0x20
+#define SD_CARD_CMD32 0x20
 // ERASE_WR_BLK_END - Sets the address of the last block of the continuous
 // range to be erased
-#define CMD33 0x21
+#define SD_CARD_CMD33 0x21
 // ERASE - Erase all previously selected blocks
-#define CMD38 0x26
-// APP_CMD - Escape for application specific command
-#define CMD55 0x37
+#define SD_CARD_CMD38 0x26
+// APP_SD_CARD_CMD - Escape for application specific command
+#define SD_CARD_CMD55 0x37
 // READ_OCR - Read the OCR register of a card
-#define CMD58 0x3A
+#define SD_CARD_CMD58 0x3A
 // SET_WR_BLK_ERASE_COUNT - Set the number of write blocks to be pre-erased
 // before writing
-#define ACMD23 0x17
+#define SD_CARD_ACMD23 0x17
 // SD_SEND_OP_COMD - Sends host capacity support information and activates the
 // card's initialization process
-#define ACMD41 0x29
+#define SD_CARD_ACMD41 0x29
 
 // }}}1
 
-// FIXME: all these codes need namespace prefixes
+// WORK POINT: FIXME: all these codes need namespace prefixes
 
 // Card status codes and masks {{{1
 
 // Status for card in the ready state
-#define R1_READY_STATE 0x00
+#define SD_CARD_R1_READY_STATE 0x00
 // Status for card in the idle state
-#define R1_IDLE_STATE 0x01
+#define SD_CARD_R1_IDLE_STATE 0x01
 // Status bit for illegal command
-#define R1_ILLEGAL_COMMAND 0x04
+#define SD_CARD_R1_ILLEGAL_COMMAND 0x04
 // Start data token for read or write single bloc
-#define DATA_START_BLOCK 0xFE
+#define SD_CARD_DATA_START_BLOCK 0xFE
 // Stop token for write multiple block
-#define STOP_TRAN_TOKEN 0xFD
+#define SD_CARD_STOP_TRAN_TOKEN 0xFD
 // Start data token for write multiple block
-#define WRITE_MULTIPLE_TOKEN 0xFC
+#define SD_CARD_WRITE_MULTIPLE_TOKEN 0xFC
 // Mask for data response tokens after a write block operation
-#define DATA_RES_MASK 0x1F
+#define SD_CARD_DATA_RES_MASK 0x1F
 // Write data accepted token
-#define DATA_RES_ACCEPTED 0x05
+#define SD_CARD_DATA_RES_ACCEPTED 0x05
 
 // }}}1
 
