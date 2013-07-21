@@ -42,12 +42,6 @@ static uint8_t partial_block_read_mode;   // Mode supporting partai block reads
 static uint8_t status;   // SD controller status
 static sd_card_type_t card_type;   // Type of installed SD card
 
-static void
-set_type (sd_card_type_t type)
-{
-  card_type = type;
-}
-
 static
 void send_byte (uint8_t b)
 {
@@ -328,7 +322,7 @@ sd_card_erase_blocks (uint32_t first_block, uint32_t last_block)
     goto fail;
   }
 
-  if (card_type != SD_CARD_TYPE_SDHC) {
+  if ( card_type != SD_CARD_TYPE_SDHC ) {
     first_block <<= 9;
     last_block <<= 9;
   }
@@ -403,7 +397,7 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   // Check SD version
   if ( (card_command (SD_CARD_CMD8, 0x1AA) & SD_CARD_R1_ILLEGAL_COMMAND) ) {
-    set_type (SD_CARD_TYPE_SD1);
+    card_type = SD_CARD_TYPE_SD1;
   } else {
     // Only need last byte of r7 response
     for ( uint8_t ii = 0; ii < 4; ii++ ) {
@@ -413,7 +407,7 @@ sd_card_init (sd_card_spi_speed_t speed)
       error (SD_CARD_ERROR_CMD8);
       goto fail;
     }
-    set_type (SD_CARD_TYPE_SD2);
+    card_type = SD_CARD_TYPE_SD2;
   }
 
   // Initialize card and send host supports SDHC if SD2
@@ -433,7 +427,7 @@ sd_card_init (sd_card_spi_speed_t speed)
       goto fail;
     }
     if ( (receive_byte () & 0xC0) == 0xC0 ) {
-      set_type (SD_CARD_TYPE_SDHC);
+      card_type = SD_CARD_TYPE_SDHC;
     }
     // Discard rest of ocr - contains allowed voltage range
     for ( uint8_t ii = 0; ii < 3; ii++ ) {

@@ -72,51 +72,51 @@
 // Errors that can occur when trying to talk to the SD card.
 typedef enum {
   // No error.
-  SD_CARD_ERROR_NONE = 0x0,
+  SD_CARD_ERROR_NONE = 0x00,
   // Timeout error for command CMD0
-  SD_CARD_ERROR_CMD0 = 0X1,
+  SD_CARD_ERROR_CMD0 = 0x01,
   // CMD8 was not accepted - not a valid SD card
-  SD_CARD_ERROR_CMD8 = 0X2,
+  SD_CARD_ERROR_CMD8 = 0x02,
   // Card returned an error response for CMD17 (read block) 
-  SD_CARD_ERROR_CMD17 = 0X3,
+  SD_CARD_ERROR_CMD17 = 0x03,
   // Card returned an error response for CMD24 (write block) 
-  SD_CARD_ERROR_CMD24 = 0X4,
+  SD_CARD_ERROR_CMD24 = 0x04,
   // WRITE_MULTIPLE_BLOCKS command failed 
-  SD_CARD_ERROR_CMD25 = 0X05,
+  SD_CARD_ERROR_CMD25 = 0x05,
   // Card returned an error response for CMD58 (read OCR) 
-  SD_CARD_ERROR_CMD58 = 0X06,
+  SD_CARD_ERROR_CMD58 = 0x06,
   // SET_WR_BLK_ERASE_COUNT failed 
-  SD_CARD_ERROR_ACMD23 = 0X07,
+  SD_CARD_ERROR_ACMD23 = 0x07,
   // Card's ACMD41 initialization process timeout 
-  SD_CARD_ERROR_ACMD41 = 0X08,
+  SD_CARD_ERROR_ACMD41 = 0x08,
   // Card returned a bad CSR version field 
-  SD_CARD_ERROR_BAD_CSD = 0X09,
+  SD_CARD_ERROR_BAD_CSD = 0x09,
   // Erase block group command failed 
-  SD_CARD_ERROR_ERASE = 0X0A,
+  SD_CARD_ERROR_ERASE = 0x0A,
   // Card not capable of single block erase 
-  SD_CARD_ERROR_ERASE_SINGLE_BLOCK = 0X0B,
+  SD_CARD_ERROR_ERASE_SINGLE_BLOCK = 0x0B,
   // Erase sequence timed out 
-  SD_CARD_ERROR_ERASE_TIMEOUT = 0X0C,
+  SD_CARD_ERROR_ERASE_TIMEOUT = 0x0C,
   // Card returned an error token instead of read data 
-  SD_CARD_ERROR_READ = 0X0D,
+  SD_CARD_ERROR_READ = 0x0D,
   // Read CID or CSD failed 
-  SD_CARD_ERROR_READ_REG = 0X0E,
+  SD_CARD_ERROR_READ_REG = 0x0E,
   // Timeout while waiting for start of read data 
-  SD_CARD_ERROR_READ_TIMEOUT = 0X0F,
+  SD_CARD_ERROR_READ_TIMEOUT = 0x0F,
   // Card did not accept STOP_TRAN_TOKEN 
-  SD_CARD_ERROR_STOP_TRAN = 0X10,
+  SD_CARD_ERROR_STOP_TRAN = 0x10,
   // Card returned an error token as a response to a write operation 
-  SD_CARD_ERROR_WRITE = 0X11,
+  SD_CARD_ERROR_WRITE = 0x11,
   // Attempt to write protected block zero 
-  SD_CARD_ERROR_WRITE_BLOCK_ZERO = 0X12,
+  SD_CARD_ERROR_WRITE_BLOCK_ZERO = 0x12,
   // Card did not go ready for a multiple block write 
-  SD_CARD_ERROR_WRITE_MULTIPLE = 0X13,
+  SD_CARD_ERROR_WRITE_MULTIPLE = 0x13,
   // Card returned an error to a CMD13 status check after a write 
-  SD_CARD_ERROR_WRITE_PROGRAMMING = 0X14,
+  SD_CARD_ERROR_WRITE_PROGRAMMING = 0x14,
   // Timeout occurred during write programming 
-  SD_CARD_ERROR_WRITE_TIMEOUT = 0X15,
+  SD_CARD_ERROR_WRITE_TIMEOUT = 0x15,
   // Incorrect rate selected 
-  SD_CARD_ERROR_SCK_RATE = 0X16
+  SD_CARD_ERROR_SCK_RATE = 0x16
 } sd_card_error_t;
 
 // Return error code for last error.  Many other functions in this interface
