@@ -2,9 +2,15 @@
 //
 // This test driver requires an Arduino SD Card/Ethernet shield
 // (http://arduino.cc/en/Main/ArduinoEthernetShield) with an SD card that
-// supports all the tested features to be connected.
+// supports all the tested features to be connected.  The author has tested
+// things only with the Rev. 3 version of the above shield and an SDHC type
+// SD card (as opposed to SD1 or SD2 type).
 //
-// Its 
+// WARNING: despite being ubiquitous, many SD cards are utter junk.
+// They lack any underlying wear leveling for the flash memory and are
+// horribly intolerant of asynchronous shutdown (power cuts).  If you're
+// doing anything remotely serious you must invest in an "industrial"
+// SD card.  I've used the Apacer AP-MSD04GCS4P-1TM with good results.
 
 #include <assert.h>
 #include <stdlib.h>
@@ -97,9 +103,19 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
       break;
     case SD_CARD_TYPE_SD1:
       printf ("SD1.\n");
+      printf (
+          "SD1 type cards haven't been tested.  Disable this warning  and try\n"
+          "it :)  Other tests that don't work for this card type might also\n"
+          "need to be disabled.\n" );
+      assert (0);   // SD1 type cards haven't been tested
       break;
     case SD_CARD_TYPE_SD2:
       printf ("SD2.\n");
+      printf (
+          "SD2 type cards haven't been tested.  Disable this warning  and try\n"
+          "it :)  Other tests that don't work for this card type might also\n"
+          "need to be disabled.\n" );
+      assert (0);   // SD2 type cards haven't been tested
       break;
     case SD_CARD_TYPE_SDHC:
       printf ("SDHC.\n");

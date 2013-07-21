@@ -34,7 +34,7 @@
 // Version 2.00
 // September 25, 2006
 //
-// www.sdcard.org/developers/tech/sdcard/pls/Simplified_Physical_Layer_Spec.pdf
+// https://www.sdcard.org/downloads/pls/simplified_specs/part1_410.pdf
 //
 // NOTE: it may be easier to use one of the interface functions in sd_card.h,
 // rather than using sd_card_read_csd() and interpreting its results.

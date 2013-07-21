@@ -9,14 +9,14 @@
 
 #include "sd_card_info.h"
 
-// WARNING: many SD cards are utter junk.  They lack any wear leveling for
-// the flash memory and are horribly intolerant of asynchronous shutdown
-// (power cuts).  If you're doing anything remotely serious you must invest
-// in an "industrial" SD card.  I've used the Apacer AP-MSD04GCS4P-1TM with
-// good results.
+// WARNING: despite being ubiquitous, many SD cards are utter junk.
+// They lack any underlying wear leveling for the flash memory and are
+// horribly intolerant of asynchronous shutdown (power cuts).  If you're
+// doing anything remotely serious you must invest in an "industrial"
+// SD card.  I've used the Apacer AP-MSD04GCS4P-1TM with good results.
 //
 // This interface has been tested with the SD card
-// hardware on the official Arduino Ethernet/SD Card shield
+// hardware on the official Arduino Ethernet/SD Card shield, Rev. 3
 // (http://arduino.cc/en/Main/ArduinoEthernetShield).
 //
 // This interface supports using the card simply as a large memory.
