@@ -23,7 +23,7 @@
 static void
 write_read_42s_at_block_42 (void)
 {
-  // Fill block 42 with 42s.
+  // Fill block 42 with 42s, then read them back out.
 
   uint32_t bn = 42;
   uint8_t data_block[SD_CARD_BLOCK_SIZE];
@@ -177,11 +177,11 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
 int
 main (void)
 {
-  printf ("\n");
-
   // This isn't what we're testing exactly, but we need to know if its
   // working or not to interpret other results.
   term_io_init ();
+  printf ("\n");
+  printf ("\n");
   printf ("term_io_init() worked.\n");
   printf ("\n");
 
