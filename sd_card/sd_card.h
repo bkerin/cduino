@@ -170,14 +170,14 @@ sd_card_type (void);
 // and manufacturing date.  Returns TRUE on success, and FALSE on failure
 // (in which case sd_card_last_error() can be called).
 uint8_t
-sd_card_read_cid (cid_t *cid);
+sd_card_read_cid (sd_card_cid_t *cid);
 
 // Read a cards CSD register. The CSD contains card-specific data that
 // provides information regarding access to the card's contents.  Returne TRUE
 // on success, and FALSE on failure (in which case sd_card_last_error()
 // can be called).
 uint8_t
-sd_card_read_csd (csd_t *csd);
+sd_card_read_csd (sd_card_csd_t *csd);
 
 // Read a block of data.  The block argument is the logical block to read, and
 // the data read is stores at dst.  On success, TRUE is returned, otherwise

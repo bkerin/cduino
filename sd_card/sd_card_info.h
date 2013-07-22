@@ -101,7 +101,7 @@
 // }}}1
 
 // Im not sure what CID stands for exactly.  But everyone calls it that :)
-typedef struct CID {
+typedef struct sd_card_cid {
   // Byte 0
   uint8_t mid;  // Manufacturer ID
   // Byte 1-2
@@ -122,12 +122,12 @@ typedef struct CID {
   // Byte 15
   unsigned always1 : 1;
   unsigned crc : 7;
-} cid_t;
+} sd_card_cid_t;
 
-// I'm not sure what CSD stands for exactly.  But everyone calls it that:)
-// See also the interface functions in sd_card.h.  There are two version
-// of this structure depending on the SD card version.
-typedef struct CSDV1 {
+// I'm not sure what CSD stands for exactly.  But everyone calls it that:) See
+// also the interface functions in sd_card.h.  There are two version of this
+// structure depending on the SD card version, this is the version 1 form.
+typedef struct sd_card_csd1 {
   // Byte 0
   unsigned reserved1 : 6;
   unsigned csd_ver : 2;
@@ -185,12 +185,12 @@ typedef struct CSDV1 {
   // Byte 15
   unsigned always1 : 1;
   unsigned crc : 7;
-} csd1_t;
+} sd_card_csd1_t;
 
-// I'm not sure what CSD stands for exactly.  But everyone calls it that:)
-// See also the interface functions in sd_card.h.  There are two version
-// of this structure depending on the SD card version.  
-typedef struct CSDV2 {
+// I'm not sure what CSD stands for exactly.  But everyone calls it that:) See
+// also the interface functions in sd_card.h.  There are two version of this
+// structure depending on the SD card version, this is the version 2 form.
+typedef struct sd_card_csd2 {
   // Byte 0
   unsigned reserved1 : 6;
   unsigned csd_ver : 2;
@@ -244,12 +244,12 @@ typedef struct CSDV2 {
   // Byte 15
   unsigned always1 : 1;
   unsigned crc : 7;
-} csd2_t;
+} sd_card_csd2_t;
 
 // Union of old and new style CSD register types.
 typedef union {
-  csd1_t v1;
-  csd2_t v2;
-} csd_t;
+  sd_card_csd1_t v1;
+  sd_card_csd2_t v2;
+} sd_card_csd_t;
 
 #endif  // SD_CARD_INFO_H

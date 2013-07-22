@@ -126,7 +126,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
   }
 
   printf ("Trying sd_card_read_cid()... ");
-  cid_t ccid;   // Card CID
+  sd_card_cid_t ccid;   // Card CID
   uint8_t return_code = sd_card_read_cid (&ccid);
   if ( return_code ) {
     printf ("returned TRUE, so presumably it worked.\n");
@@ -137,7 +137,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
   }
 
   printf ("Trying sd_card_read_csd()... ");
-  csd_t ccsd;   // Card CSD
+  sd_card_csd_t ccsd;   // Card CSD
   return_code = sd_card_read_csd (&ccsd);
   if ( return_code ) {
     printf ("returned TRUE, so presumably it worked.\n");

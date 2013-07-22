@@ -38,6 +38,8 @@ static uint8_t in_block;   // True iff we are in the process of reading a block
 static uint16_t cur_offset;   // Offset within current block
 // FIXXME: the interface fctn to enable this mode currently doesn't exist,
 // could be included from model easily enough.  I don't need it though.
+// Also, I'm not sure it's even supported by SDHC cards, it may be an SD1
+// and SD2 only thing.
 static uint8_t partial_block_read_mode;   // Mode supporting partai block reads
 static uint8_t status;   // SD controller status
 static sd_card_type_t card_type;   // Type of installed SD card
@@ -278,7 +280,7 @@ sd_card_type (void)
 uint32_t
 sd_card_size (void)
 {
-  csd_t csd;
+  sd_card_csd_t csd;
 
   if ( ! sd_card_read_csd (&csd) ) {
     return 0;
@@ -310,7 +312,7 @@ sd_card_size (void)
 uint8_t
 sd_card_single_block_erase_supported (void)
 {
-  csd_t csd;
+  sd_card_csd_t csd;
   return sd_card_read_csd (&csd) ? csd.v1.erase_blk_en : FALSE;
 }
 
@@ -598,7 +600,7 @@ sd_card_write_block (uint32_t block, uint8_t const *src)
 }
 
 uint8_t
-sd_card_read_cid (cid_t *cid)
+sd_card_read_cid (sd_card_cid_t *cid)
 {
   // Read the SD card CID register into *cid.  Return TRUE on success,
   // FALSE otherwise.
@@ -607,7 +609,7 @@ sd_card_read_cid (cid_t *cid)
 }
 
 uint8_t
-sd_card_read_csd (csd_t *csd)
+sd_card_read_csd (sd_card_csd_t *csd)
 {
   // Read the SD card CSD register into *cid.  Return TRUE on success,
   // FALSE otherwise.
