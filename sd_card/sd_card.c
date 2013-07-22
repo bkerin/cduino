@@ -480,9 +480,11 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
   if (count == 0) {
     return TRUE;
   }
+
   if ( (count + offset) > 512 ) {
     goto fail;
   }
+
   if ( ! in_block || block != cur_block || offset < cur_offset ) {
     cur_block = block;
     // Use address if not SDHC card
@@ -497,7 +499,7 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
       goto fail;
     }
     cur_offset = 0;
-    in_block = 1;
+    in_block = TRUE;
   }
 
 #ifdef OPTIMIZE_HARDWARE_SPI
@@ -533,16 +535,20 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
   for ( ; cur_offset < offset ; cur_offset++ ) {
     receive_byte ();
   }
+
   // Transfer data
   for ( uint16_t ii = 0; ii < count; ii++ ) {
     dst[ii] = receive_byte ();
   }
+
 #endif  // OPTIMIZE_HARDWARE_SPI
 
   cur_offset += count;
+
   if ( ! partial_block_read_mode || cur_offset >= 512 ) {
     read_end ();
   }
+
   return TRUE;
 
   fail:
