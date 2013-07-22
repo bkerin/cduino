@@ -15,9 +15,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include <sd_card.h>
-
-#include <term_io.h>
+#include "sd_card.h"
+#include "term_io.h"
 
 #define SD_CARD_BLOCK_SIZE 512
 
