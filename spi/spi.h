@@ -88,6 +88,7 @@
 // mode, and/or clock rate settings between different slaves (which should
 // be possible).
 //
+
 /*
  * Copyright (c) 2010 by Cristian Maglie <c.maglie@bug.st>
  * SPI Master library for arduino.
@@ -97,14 +98,6 @@
  * or the GNU Lesser General Public License version 2.1, both as
  * published by the Free Software Foundation.
  */
-
-#ifndef SPI_UNTESTEDNESS_ACKNOWLEDGED
-#  error This module not fully tested.  I have tested output with \
-         SPI_BIT_ORDER_MSB_FIRST and SPI_DATA_MODE_0 with all \
-         SPI_CLOCK_DIVIDER_* settings.  The other data orders and modes are \
-         only trivially different and should work fine, but I have not \
-         personally tried them. Remove this warning trap and try it!
-#endif
 
 // Bit order expected by the connected device
 typedef enum {
