@@ -1,6 +1,6 @@
 // Interface to hardware SPI controller (master mode only).
 //
-// Test Driver: spi_test.c    Implementation: spi.c
+// Test driver: spi_test.c    Implementation: spi.c
 
 #ifndef SPI_H
 #define SPI_H

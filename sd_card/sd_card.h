@@ -1,6 +1,6 @@
 // Interface to SD card (via SPI controller).
 //
-// Test Driver: sd_card_test.c    Implementation: sd_card.c
+// Test driver: sd_card_test.c    Implementation: sd_card.c
 
 #ifndef SD_CARD_H
 #define SD_CARD_H

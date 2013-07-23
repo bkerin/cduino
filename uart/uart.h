@@ -1,5 +1,10 @@
-// FIXME: WORK POINT: put fixme for weakness of this uart interface and
-// give it the standard form header bits
+// Interface to hardware serial port (UART) controller.
+//
+// Test driver: uart_test.c    Implementation: uart.c
+
+// FIXME: this interface is not really a generial uart interface, it needs
+// to copy from arduino libs instead of avr libc, get less maried to term_io
+// functionality, etc.
 
 /*
  * ----------------------------------------------------------------------------
