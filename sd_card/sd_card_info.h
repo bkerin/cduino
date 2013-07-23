@@ -41,6 +41,9 @@
 
 // SD card commands {{{1
 
+// FIXXME: we don't actually use all of these ourselves.  The unused ones
+// are untested.
+
 // GO_IDLE_STATE - Init card in spi mode if CS low
 #define SD_CARD_CMD0 0x00
 // SEND_IF_COND - Verify SD Memory Card interface operating condition
