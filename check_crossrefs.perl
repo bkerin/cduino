@@ -20,6 +20,9 @@ $sf !~ m/\/lesson.+\./ or exit 0;
 # The blink.c file is an exceptional intro/demo file.
 $sf !~ m/\/blink\.c/ or exit 0;
 
+# The util.h file is an exceptional interface file.
+$sf !~ m/\/util\.h/ or exit 0;
+
 # }}}1
 
 open(SF, "<$sf") or die "couldn't open $sf for reading";
@@ -63,8 +66,7 @@ foreach ( @sfl ) {
     }
 
     if ( $st eq 'implementation' ) {
-        #if ( m/ Implementation\s+of\s+the\s+interface\s+described\s+
-        if ( m/\sImplementation\sof\sthe\sinterface\sdescribed\sin\s
+        if ( m/\sImplementation\sof\sthe\sinterface\sdescribed\sin\s+
                .*
                href="$mrn\.h\.html"/x ) {
             exit 0;
