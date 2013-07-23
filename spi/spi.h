@@ -188,14 +188,6 @@ spi_set_data_mode (spi_data_mode_t data_mode);
 void
 spi_set_clock_divider (spi_clock_divider_t divider);
 
-// FIXME: lose this guy?
-void
-spi_attach_interrupt (void);
-
-// FIXME: lose this guy?
-void
-spi_detach_interrupt (void);
-
 // Transfer data (in both directions, either of which might be meaningless).
 uint8_t
 spi_transfer (uint8_t data);

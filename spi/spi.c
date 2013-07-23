@@ -93,18 +93,6 @@ spi_set_clock_divider (spi_clock_divider_t divider)
          ((((uint8_t) divider) >> 2) & SPI_2XCLOCK_MASK);
 }
 
-void
-spi_attach_interrupt (void)
-{
-  SPCR |= _BV (SPIE);
-}
-
-void
-spi_detach_interrupt (void)
-{
-  SPCR &= ~_BV (SPIE);
-}
-
 uint8_t
 spi_transfer (uint8_t data)
 {
