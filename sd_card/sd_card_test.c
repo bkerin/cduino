@@ -6,6 +6,9 @@
 // things only with the Rev. 3 version of the above shield and an SDHC type
 // SD card (as opposed to SD1 or SD2 type).
 //
+// Diagnostic output is produced on an attached terminal using the term_io.h
+// interface.
+//
 // WARNING: despite being ubiquitous, many SD cards are utter junk.
 // They lack any underlying wear leveling for the flash memory and are
 // horribly intolerant of asynchronous shutdown (power cuts).  If you're
@@ -29,26 +32,50 @@
 #define PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
 
 static void
-write_read_42s_at_block_42 (void)
+test_write_read (void)
 {
   // Fill block 42 with 42s, then read them back out.
 
   uint32_t bn = 42;
   uint8_t data_block[SD_CARD_BLOCK_SIZE];
-  int ii;
+  uint16_t ii;
   for ( ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
     data_block[ii] = 42;
   }
+
+  PFP ("Trying sd_card_write_block()... ");
   uint8_t return_code = sd_card_write_block (bn, data_block);
   assert (return_code);
+  PFP ("ok.\n");
 
   uint8_t reread_data[SD_CARD_BLOCK_SIZE];
+  PFP ("Trying sd_card_read_block()... ");
   return_code = sd_card_read_block (bn, reread_data);
   assert (return_code);
-
   for ( ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
     assert (reread_data[ii] == 42);
   }
+  PFP ("ok.\n");
+ 
+  // Re-zero the reread data buffer to give the next tests a better chance
+  // of catching problems.
+  for ( ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
+    reread_data[ii] = 0;
+  }
+
+  PFP ("Trying sd_card_write_partial_block()... ");
+  uint16_t const pbbc = 42;   // Partial block byte count
+  return_code = sd_card_write_partial_block (bn, pbbc, data_block);
+  assert (return_code);
+  PFP ("ok.\n");
+
+  PFP ("Trying sd_card_read_partial_block()... ");
+  return_code = sd_card_read_partial_block (bn, pbbc, reread_data);
+  assert (return_code);
+  for ( ii = 0 ; ii < pbbc ; ii++ ) {
+    assert (reread_data[ii] == 42);
+  }
+  PFP ("ok.\n");
 }
 
 static void
@@ -110,10 +137,6 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
       break;
     case SD_CARD_TYPE_SD1:
       PFP ("SD1.\n");
-      // FIXME: WORK POINT: using non PGRMSPACE strings here results in halt
-      // elsewhere and other weird reset-like effects, doesn't seem like we
-      // should be oom, WTF??  Strings of XXXXs have the same effect if long
-      // enough.
       PFP ( 
           "SD1 type cards haven't been tested.  Disable this warning  and try\n"
           "it :)  Other tests that don't work for this card type might also\n"
@@ -158,9 +181,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     assert (0);
   }
 
-  PFP ("Trying writing/reading... ");
-  write_read_42s_at_block_42 ();
-  PFP ("ok.\n");
+  test_write_read ();
 
   PFP ("Trying sd_card_single_block_erase_supported()... ");
   uint8_t result = sd_card_single_block_erase_supported ();

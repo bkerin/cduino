@@ -21,6 +21,33 @@
 //
 // This interface supports using the card simply as a large memory.
 // FAT filesystem support is (FIXME) not done yet.
+//
+// Basic use looks about like this:
+//
+//   // Specify the IO pin which is being used for SD card SPI slave selection
+//   #define SD_CARD_SPI_SLAVE_SELEC_PIN DIO_PIN_DIGITAL_4 
+//
+//   #define SAMPLE_COUNT 42
+//   uint8_t buf[SAMPLE_COUNT];
+//
+//   get_samples_from_somewhere (buf);
+//
+//   uint8_t sentinel = sd_card_init (SD_CARD_FULL_SPEED);
+//   assert (sentinel);
+//
+//   uint32_t some_block = 42;
+//
+//   sentinel = sd_card_write_partial_block (some_block, SAMPLE_COUNT, buf);
+//   assert (sentinel);
+//
+//   // Time passes...
+//
+//   sentinel = sd_card_read_partial_block (some_block, SAMPLE_COUNT, buf);
+//   assert (sentinel);
+//
+// For more details see the rest of this reader and the test/demo driver
+// in sd_cart_test.c.
+
 
 /* Arduino Sd2Card Library
  * Copyright (C) 2009 by William Greiman
@@ -147,8 +174,13 @@ typedef enum {
 
 // Initialize an SD flash card and this interface.  The speed argument sets
 // the SPI communcation rate between card and microcontroller.  Returns TRUE
-// on success and zero on error (in which case sd_card_last_error() can
-// be called).  This calls time0_stopwatch_init() and spi_init().
+// on success and zero on error (in which case sd_card_last_error() can be
+// called).  This calls time0_stopwatch_init() from the timer0_stopwatch.h
+// interface, which uses an interrupt.  It also call spi_init() from the
+// spi.h interface, with the SPI settings required for communicating with
+// an SD card.  If you're talking to multiple SPI devices, you may need to
+// change the SPI settings to talk to them, then call this function again when
+// you want to talk to the SD card more.  This should work fine.  Hopefully :)
 uint8_t
 sd_card_init (sd_card_spi_speed_t speed);
 
