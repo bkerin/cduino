@@ -80,8 +80,6 @@
 
 // }}}1
 
-// WORK POINT: FIXME: all these codes need namespace prefixes
-
 // Card status codes and masks {{{1
 
 // Status for card in the ready state
