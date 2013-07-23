@@ -13,12 +13,20 @@
 // SD card.  I've used the Apacer AP-MSD04GCS4P-1TM with good results.
 
 #include <assert.h>
+#include <avr/pgmspace.h>
 #include <stdlib.h>
 
 #include "sd_card.h"
 #include "term_io.h"
 
-#define SD_CARD_BLOCK_SIZE 512
+// This test program can actually run the ATMega328P out of RAM (at least
+// I think that's whats going on), so we need to store our output strings
+// in program space to have enough memory.  This macro makes that a little
+// more graceful.
+#ifndef __GNUC__
+#  error GNU C is required by the comma-swallowing macro
+#endif
+#define PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
 
 static void
 write_read_42s_at_block_42 (void)
@@ -53,14 +61,14 @@ speed_test_1000_blocks (void)
     data_block[ii] = 42;
   }
 
-  printf ("Speed test: writing 1000 blocks... ");
+  PFP ("Speed test: writing 1000 blocks... ");
   for ( uint32_t ii = 0 ; ii < 1000 ; ii++ ) {
     uint8_t return_code = sd_card_write_block (ii + 1, data_block);
     assert (return_code);
   }
-  printf ("done.\n");
+  PFP ("done.\n");
 
-  printf ("Speed test: reading 1000 blocks... ");
+  PFP ("Speed test: reading 1000 blocks... ");
   for ( uint32_t ii = 0 ; ii < 1000 ; ii++ ) {
     uint8_t return_code = sd_card_read_block (ii + 1, data_block);
     assert (return_code);
@@ -71,7 +79,7 @@ speed_test_1000_blocks (void)
       assert (data_block[ii] == 42);
     }
   }
-  printf ("done.\n");
+  PFP ("done.\n");
 }
 
 static void
@@ -79,99 +87,103 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
 {
   // Perform the various tests that we try for each speed setting.
 
-  printf ("Trying sd_card_init (%s)... ", speed_string);
+  PFP ("Trying sd_card_init (%s)... ", speed_string);
   sd_card_init (speed);
-  printf ("ok.\n");
+  PFP ("ok.\n");
 
-  printf ("Trying sd_card_size ()... ");
+  PFP ("Trying sd_card_size ()... ");
   uint32_t card_size = sd_card_size ();
   if ( card_size != 0 ) {
-    printf ("ok, card_size: %lu\n", card_size);
+    PFP ("ok, card_size: %lu\n", card_size);
   }
   else {
-    printf ("failed.\n");
+    PFP ("failed.\n");
     assert (0);
   }
 
-  printf ("Trying sd_card_type()... ");
+  PFP ("Trying sd_card_type()... ");
   sd_card_type_t card_type = sd_card_type ();
-  printf ("got card type ");
+  PFP ("got card type ");
   switch ( card_type ) {
     case SD_CARD_TYPE_INDETERMINATE:
-      printf ("indeterminate.\n");
+      PFP ("indeterminate.\n");
       break;
     case SD_CARD_TYPE_SD1:
-      printf ("SD1.\n");
-      printf (
+      PFP ("SD1.\n");
+      // FIXME: WORK POINT: using non PGRMSPACE strings here results in halt
+      // elsewhere and other weird reset-like effects, doesn't seem like we
+      // should be oom, WTF??  Strings of XXXXs have the same effect if long
+      // enough.
+      PFP ( 
           "SD1 type cards haven't been tested.  Disable this warning  and try\n"
           "it :)  Other tests that don't work for this card type might also\n"
           "need to be disabled.\n" );
       assert (0);   // SD1 type cards haven't been tested
       break;
     case SD_CARD_TYPE_SD2:
-      printf ("SD2.\n");
-      printf (
+      PFP ("SD2.\n");
+      PFP (
           "SD2 type cards haven't been tested.  Disable this warning  and try\n"
           "it :)  Other tests that don't work for this card type might also\n"
           "need to be disabled.\n" );
       assert (0);   // SD2 type cards haven't been tested
       break;
     case SD_CARD_TYPE_SDHC:
-      printf ("SDHC.\n");
+      PFP ("SDHC.\n");
       break;
     default:
       assert (0);   // Shouldn't be here
       break;
   }
 
-  printf ("Trying sd_card_read_cid()... ");
+  PFP ("Trying sd_card_read_cid()... ");
   sd_card_cid_t ccid;   // Card CID
   uint8_t return_code = sd_card_read_cid (&ccid);
   if ( return_code ) {
-    printf ("returned TRUE, so presumably it worked.\n");
+    PFP ("returned TRUE, so presumably it worked.\n");
   }
   else {
-    printf ("returned FALSE (failed).\n");
+    PFP ("returned FALSE (failed).\n");
     assert (0);
   }
 
-  printf ("Trying sd_card_read_csd()... ");
+  PFP ("Trying sd_card_read_csd()... ");
   sd_card_csd_t ccsd;   // Card CSD
   return_code = sd_card_read_csd (&ccsd);
   if ( return_code ) {
-    printf ("returned TRUE, so presumably it worked.\n");
+    PFP ("returned TRUE, so presumably it worked.\n");
   }
   else {
-    printf ("returned FALSE (failed).\n");
+    PFP ("returned FALSE (failed).\n");
     assert (0);
   }
 
-  printf ("Trying writing/reading... ");
+  PFP ("Trying writing/reading... ");
   write_read_42s_at_block_42 ();
-  printf ("ok.\n");
+  PFP ("ok.\n");
 
-  printf ("Trying sd_card_single_block_erase_supported()... ");
+  PFP ("Trying sd_card_single_block_erase_supported()... ");
   uint8_t result = sd_card_single_block_erase_supported ();
   if ( result ) {
-    printf ("ok, it's supported.\n");
-    printf ("Trying sd_card_erase_blocks (42, 43)... ");
+    PFP ("ok, it's supported.\n");
+    PFP ("Trying sd_card_erase_blocks (42, 43)... ");
     return_code = sd_card_erase_blocks (42, 43);
     if ( return_code ) {
-      printf ("ok.\n");
+      PFP ("ok.\n");
     }
     else {
-      printf ("failed.\n");
+      PFP ("failed.\n");
       assert (0);
     }
   }
   else {
-    printf ("it's not supported.\n");
+    PFP ("it's not supported.\n");
     assert (0);
   }
 
   speed_test_1000_blocks ();
 
-  printf ("Everything worked with %s\n", speed_string);
+  PFP ("Everything worked with %s\n", speed_string);
 }
 
 int
@@ -180,26 +192,26 @@ main (void)
   // This isn't what we're testing exactly, but we need to know if its
   // working or not to interpret other results.
   term_io_init ();
-  printf ("\n");
-  printf ("\n");
-  printf ("term_io_init() worked.\n");
-  printf ("\n");
+  PFP ("\n");
+  PFP ("\n");
+  PFP ("term_io_init() worked.\n");
+  PFP ("\n");
 
-  printf (
+  PFP (
       "NOTE: these tests don't bother to call sd_card_last_error() when\n"
       "things go wrong.  You might be able to get information about the\n"
       "nature of a failure by doing that.\n" );
-  printf ("\n");
+  PFP ("\n");
 
   per_speed_tests (SD_CARD_SPI_FULL_SPEED, "SD_CARD_SPI_FULL_SPEED");
-  printf ("\n");
+  PFP ("\n");
 
   per_speed_tests (SD_CARD_SPI_FULL_SPEED, "SD_CARD_SPI_HALF_SPEED");
-  printf ("\n");
+  PFP ("\n");
 
   per_speed_tests (SD_CARD_SPI_FULL_SPEED, "SD_CARD_SPI_QUARTER_SPEED");
-  printf ("\n");
+  PFP ("\n");
 
-  printf ("Everything worked!\n"); 
-  printf ("\n");
+  PFP ("Everything worked!\n"); 
+  PFP ("\n");
 }

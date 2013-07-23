@@ -51,6 +51,10 @@
          See the example in the Makefile in the sd_card module directory.
 #endif
 
+// All SDHC cards at least (I don't know about SD1 or SD2 types) always
+// write blocks or this size at a time.
+#define SD_CARD_BLOCK_SIZE 512
+
 // FIXXME: Optimized hardware SPI isn't currently supported.  The point
 // of this in the origianl Arduino libs was to make the SD card interface
 // go fast enough to keep up with audio data rates, but I don't need that
@@ -179,18 +183,40 @@ sd_card_read_cid (sd_card_cid_t *cid);
 uint8_t
 sd_card_read_csd (sd_card_csd_t *csd);
 
-// Read a block of data.  The block argument is the logical block to read, and
-// the data read is stores at dst.  On success, TRUE is returned, otherwise
+// Read a block of data.  The block argument is the logical block to
+// read, and the data read is stores at dst (which must be at least
+// SD_CARD_BLOCK_SIZE bytes long).  On success, TRUE is returned, otherwise
 // FALSE is returned (in which case sd_card_last_error() may be called.
+// See also sd_card_read_partial_block().
 uint8_t
 sd_card_read_block (uint32_t block, uint8_t *dst);
 
-// Write a block of data (but see SD_PROTECT_BLOCK_ZERO).  The block
-// argument is the logical block to write, and the data to write is taken
-// from location src.  On success, TRUE is returned, otherwise FALSE is
-// returned and sd_card_last_error() may be called.
+// Write a block of data (but see SD_PROTECT_BLOCK_ZERO).  The block argument
+// is the logical block to write, and the data to write is taken from location
+// src (which must be at least SD_CARD_BLOCK_SIZE bytes long FIXME: make a
+// different version of fctn that uses less RAM but only writes the first
+// part of a block, trading FLASH storage efficiency for RAM).  On success,
+// TRUE is returned, otherwise FALSE is returned and sd_card_last_error()
+// may be called.  See also sd_card_write_partial_block().
 uint8_t
-sd_card_write_block (uint32_t block, const uint8_t *src);
+sd_card_write_block (uint32_t block, uint8_t const *src);
+
+// Like sd_card_read_block(), but src only needs to be cnt bytes long,
+// and the remainder of the data read from the SD card is thrown away.
+// This function lets you trade storage efficiency on the SD card for RAM
+// on the AVR (because the memory space pointed to by src can be smaller).
+// NOTE: because SDHC cards *always* read/write (and send via SPI) full
+// blocks, it will take just as long to retrieve a partial block as it does
+// to retrieve a full one.
+uint8_t
+sd_card_read_partial_block (uint32_t block, uint16_t cnt, uint8_t *dst);
+
+// Analagous to sd_card_read_partial_block().  Garbage data is written for
+// (0-indexed) bytes cnt through SD_CARD_BLOCK_SIZE - 1.  NOTE: because SDHC
+// cards *always* read/write (and send via SPI) full blocks, it will take
+// just as long to retrieve a partial block as it does to retrieve a full one.
+uint8_t
+sd_card_write_partial_block (uint32_t block, uint16_t cnt, uint8_t const *src);
 
 // Returns TRUE iff the SD card provides an erase operation for individual
 // blocks.  Note that its always possible to simply overwrite blocks.

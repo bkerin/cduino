@@ -114,6 +114,7 @@ read_end (void) {
       receive_byte ();
     }
 #endif  // OPTIMIZE_HARDWARE_SPI
+
     SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
     in_block = FALSE;
   }
@@ -158,7 +159,7 @@ card_command (uint8_t cmd, uint32_t arg) {
 }
 
 static uint8_t
-write_data_private (uint8_t token, const uint8_t* src)
+write_data_private (uint8_t token, uint8_t const *src)
 {
   // Send one block of data for write block or write multiple blocks.
 
@@ -513,7 +514,7 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
     }
     SPDR = 0xFF;
   }
-  // transfer data
+  // Transfer data
   uint16_t n = count - 1;
   for ( uint16_t ii = 0; ii < n; ii++ ) {
     // FIXXME: can these all be replaced with loop_until_bit_set() calls?
@@ -545,7 +546,7 @@ read_data (uint32_t block, uint16_t offset, uint16_t count, uint8_t *dst)
 
   cur_offset += count;
 
-  if ( ! partial_block_read_mode || cur_offset >= 512 ) {
+  if ( ! partial_block_read_mode || cur_offset >= SD_CARD_BLOCK_SIZE ) {
     read_end ();
   }
 
@@ -603,6 +604,26 @@ sd_card_write_block (uint32_t block, uint8_t const *src)
   fail:
   SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
   return FALSE;
+}
+
+uint8_t
+sd_card_read_partial_block (uint32_t block, uint16_t cnt, uint8_t *dst)
+{
+  // FIXME:  Implement
+  block = block; cnt = cnt; dst = dst;
+  return 0;
+}
+
+// Analagous to sd_card_read_partial_block().  Garbage data is written for
+// (0-indexed) bytes cnt through SD_CARD_BLOCK_SIZE - 1.NOTE: because SDHC
+// cards *always* read/write (and send via SPI) full blocks, it will take
+// just as long to retrieve a partial block as it does to retrieve a full one.
+uint8_t
+sd_card_write_partial_block (uint32_t block, uint16_t cnt, uint8_t const *src)
+{
+  // FIXME: implement
+  block = block; cnt = cnt; src = src;
+  return 0;
 }
 
 uint8_t
