@@ -38,10 +38,11 @@ static uint32_t cur_block;   // Current block
 static sd_card_error_t cur_error;   // Current error (might be none)
 static uint8_t in_block;   // True iff we are in the process of reading a block
 static uint16_t cur_offset;   // Offset within current block
-// FIXXME: the interface fctn to enable this mode currently doesn't exist,
-// could be included from model easily enough.  I don't need it though.
-// Also, I'm not sure it's even supported by SDHC cards, it may be an SD1
-// and SD2 only thing.
+// FIXXME: the interface fctn to enable this mode currently doesn't
+// exist, could be included from model easily enough.  I don't need
+// it though.  Also, I'm not sure it's even supported by SDHC cards, it
+// may be an SD1 and SD2 only thing.  NOTE: this it *not* related to the
+// sd_card_read/write_partial_block() functions.
 static uint8_t partial_block_read_mode;   // Mode supporting partai block reads
 static uint8_t status;   // SD controller status
 static sd_card_type_t card_type;   // Type of installed SD card
@@ -92,30 +93,16 @@ wait_not_busy (uint16_t timeout_ms)
 }
 
 static void
-read_end (void) {
-    // Read any remaining block data and checksum, set chip select high,
-    // and clear the in_block flag.
+read_end (void)
+{
+  // Read any remaining block data and checksum, set chip select high,
+  // and clear the in_block flag.
 
   if ( in_block ) {
-      // Skip data and CRC
-#ifdef OPTIMIZE_HARDWARE_SPI
-    // optimize skip for hardware
-    SPDR = 0xFF;
-    while ( cur_offset++ < 513 ) {
-      while ( ! (SPSR & (1 << SPIF)) ) {
-        ;
-      }
-      SPDR = 0xFF;
-    }
-    // Wait for last CRC byte
-    while ( ! (SPSR & (1 << SPIF)) ) {
-      ;
-    }
-#else  // OPTIMIZE_HARDWARE_SPI
-    while ( cur_offset++ < 514 ) {
+    // Skip data (hence +1) and CRC (hence other +1) bytes
+    while ( cur_offset++ < SD_CARD_BLOCK_SIZE + 1 + 1 ) {
       receive_byte ();
     }
-#endif  // OPTIMIZE_HARDWARE_SPI
 
     SD_CARD_SPI_SLAVE_SELECT_SET_HIGH ();
     in_block = FALSE;
@@ -124,7 +111,8 @@ read_end (void) {
 
 //------------------------------------------------------------------------------
 static uint8_t
-card_command (uint8_t cmd, uint32_t arg) {
+card_command (uint8_t cmd, uint32_t arg)
+{
   // Send command and return error code, or zero for OK.
 
   // Ensure read is done (in case we're in partial_block_read_mode mode)
@@ -165,33 +153,6 @@ write_data_private (uint8_t token, uint16_t cnt, uint8_t const *src)
 {
   // Send one block of data for write block or write multiple blocks.
 
-#ifdef OPTIMIZE_HARDWARE_SPI
-
-  // Send data - optimized loop
-  SPDR = token;
-
-  // FIXME: BROKEN: cnt would have to be multiple of two for this loop to
-  // work, I think its better if we just nuke OPTIMIZE_HARDWARE_SPY
-
-  // Send two byte per iteration
-  for ( uint16_t ii = 0; ii < 512; ii += 2 ) {
-    while ( ! (SPSR & (1 << SPIF)) ) {
-      ;
-    }
-    SPDR = src[ii];
-    while ( ! (SPSR & (1 << SPIF)) ) {
-      ;
-    }
-    SPDR = src[ii + 1];
-  }
-
-  // wait for last data byte
-  while ( ! (SPSR & (1 << SPIF)) ) {
-    ;
-  }
-
-#else  // ! OPTIMIZE_HARDWARE_SPI
-
   send_byte (token);
 
   // Send the real data
@@ -202,13 +163,10 @@ write_data_private (uint8_t token, uint16_t cnt, uint8_t const *src)
   // Send dummy data for the remainder of the block.  FIXXME: is there really
   // no way with SDHC SPI to specify that the we don't want to send the rest
   // of the block?
-  for ( ; ii < SD_CARD_BLOCK_SIZE ; ii++ )
-  {
+  for ( ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
     uint8_t const dummy_data = 0xFF;
     send_byte (dummy_data);
   }
-
-#endif  // end of if-else on OPTIMIZE_HARDWARE_SPI
 
   send_byte (0xFF);  // Dummy CRC
   send_byte (0xFF);  // Dummy CRC
@@ -519,35 +477,6 @@ read_data (uint32_t block, uint16_t offset, uint16_t cnt, uint8_t *dst)
     in_block = TRUE;
   }
 
-#ifdef OPTIMIZE_HARDWARE_SPI
-  // start first spi transfer
-  SPDR = 0xFF;
-
-  // skip data before offset
-  for ( ; cur_offset < offset ; cur_offset++ ) {
-    while ( ! (SPSR & (1 << SPIF)) ) {
-      ;
-    }
-    SPDR = 0xFF;
-  }
-  // Transfer data
-  uint16_t n = cnt - 1;
-  for ( uint16_t ii = 0; ii < n; ii++ ) {
-    // FIXXME: can these all be replaced with loop_until_bit_set() calls?
-    while ( ! (SPSR & (1 << SPIF)) ) {
-      ;
-    }
-    dst[i] = SPDR;
-    SPDR = 0xFF;
-  }
-  // wait for last byte
-  while ( ! (SPSR & (1 << SPIF)) ) {
-    ;
-  }
-  dst[n] = SPDR;
-
-#else  // OPTIMIZE_HARDWARE_SPI
-
   // Skip data before offset
   for ( ; cur_offset < offset ; cur_offset++ ) {
     receive_byte ();
@@ -557,8 +486,6 @@ read_data (uint32_t block, uint16_t offset, uint16_t cnt, uint8_t *dst)
   for ( uint16_t ii = 0; ii < cnt; ii++ ) {
     dst[ii] = receive_byte ();
   }
-
-#endif  // OPTIMIZE_HARDWARE_SPI
 
   cur_offset += cnt;
 

@@ -82,16 +82,6 @@
 // write blocks or this size at a time.
 #define SD_CARD_BLOCK_SIZE 512
 
-// FIXXME: Optimized hardware SPI isn't currently supported.  The point
-// of this in the origianl Arduino libs was to make the SD card interface
-// go fast enough to keep up with audio data rates, but I don't need that
-// and have never tested it.  Also, modern SDHC cards seem to support write
-// rates fast enough for audio support with out it (depending on the audio
-// buffering I guess).  I think all the code enabled by this should work
-// as it is, and it would probably be pretty easy to tidy it up and put it
-// in the spi.h interface.
-//#define OPTIMIZE_HARDWARE_SPI
-
 // Protect block zero from write if nonzero
 #define SD_PROTECT_BLOCK_ZERO 1
 
