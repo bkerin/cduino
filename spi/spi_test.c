@@ -29,16 +29,11 @@
          in the spi module directory.
 #endif
 
-// If users care enough to run the tests, we should make sure they know that
-// the tests don't cover everything.
-#ifndef SPI_UNTESTEDNESS_ACKNOWLEDGED
-#  error This module not fully tested.  These tests test output with \
-         SPI_BIT_ORDER_MSB_FIRST and SPI_DATA_MODE_0 with all \
-         SPI_CLOCK_DIVIDER_* settings.  The sd_card.h interface exercises \
-         input.  The other data orders and modes are only trivially different \
-         and should work fine, but I have not personally tried them. Remove \
-         this warning trap and try it!
-#endif
+// WARNING: This module not fully tested.  These tests test output with
+// SPI_BIT_ORDER_MSB_FIRST and SPI_DATA_MODE_0 with all SPI_CLOCK_DIVIDER_*
+// settings.  The sd_card.h interface exercises input.  The other data
+// orders and modes are only trivially different and should work fine,
+// but I have not personally tried them. Remove this warning trap and try it!
 
 int
 main (void)
