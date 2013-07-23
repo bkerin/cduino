@@ -16,7 +16,7 @@
 //
 // You have to ensure that the slave select line for the device you want to
 // talk to is brought low before you talk to it (of course this line should
-// normally be high.  It may be convenient to define macros like this:
+// normally be high).  It may be convenient to define macros like this:
 /*
 //   #define MY_SPI_SLAVE_1_SELECT_INIT() \
 //     SPI_SS_INIT(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
@@ -28,11 +28,13 @@
 //   spi_set_data_order (SPI_BIT_ORDER_LSB_FIRST);
 //   spi_set_data_mode (SPI_DATA_MODE_0);
 //   spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
+//
 //   MY_SPI_SLAVE_1_SELECT_SET_LOW ();
 //   uint8_t input_byte1 = spi_transfer (output_byte1);
 //   uint8_t input_byte2 = spi_transfer (output_byte2);
 //   //...
 //   MY_SPI_SLAVE_1_SELECT_SET_HIGH ();
+//
 //   spi_shutdown ();   // Possibly
 //
 // See spi_test.c for a complete example using a single slave.
@@ -63,7 +65,6 @@
 //   SPI_SLAVE_2_SELECT_INIT ();
 //
 //   spi_init ();
-//
 //   spi_set_data_order (SPI_BIT_ORDER_LSB_FIRST);
 //   spi_set_data_mode (SPI_DATA_MODE_0);
 //   spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
@@ -87,7 +88,6 @@
 // Of course, it might also be necessary to change SPI data order, data
 // mode, and/or clock rate settings between different slaves (which should
 // be possible).
-//
 
 /*
  * Copyright (c) 2010 by Cristian Maglie <c.maglie@bug.st>
