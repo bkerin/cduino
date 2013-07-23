@@ -215,9 +215,7 @@ sd_card_read_block (uint32_t block, uint8_t *dst);
 
 // Write a block of data (but see SD_PROTECT_BLOCK_ZERO).  The block argument
 // is the logical block to write, and the data to write is taken from location
-// src (which must be at least SD_CARD_BLOCK_SIZE bytes long FIXME: make a
-// different version of fctn that uses less RAM but only writes the first
-// part of a block, trading FLASH storage efficiency for RAM).  On success,
+// src (which must be at least SD_CARD_BLOCK_SIZE bytes long.  On success,
 // TRUE is returned, otherwise FALSE is returned and sd_card_last_error()
 // may be called.  See also sd_card_write_partial_block().
 uint8_t
