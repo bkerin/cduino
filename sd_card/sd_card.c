@@ -81,6 +81,8 @@ wait_not_busy (uint16_t timeout_ms)
 
   timer0_stopwatch_reset ();
   do {
+    // FIXME: is this effectively responding to Format R1b?  All that format
+    // says is that zero indicates busy, non-zero ready.  But maybe this works?
     if ( receive_byte () == 0xFF ) {
       return TRUE;
     }
@@ -125,22 +127,32 @@ card_command (uint8_t cmd, uint32_t arg)
   wait_not_busy (300);
 
   // Send command
-  send_byte (cmd | 0x40);
+  send_byte (SD_CARD_COMMAND_PREFIX_MASK | cmd);
 
-  // Send argument
-  for ( int8_t s = 24 ; s >= 0 ; s -= 8 ) {
+  // Send argument bytes
+  uint8_t const bpp = 8;   // Bits per byte
+  for ( int8_t s = (SD_CARD_COMMAND_ARGUMENT_BYTES - 1) * bpp ;
+        s >= 0 ;
+        s -= bpp ) {
     send_byte (arg >> s);
   }
 
   // Send CRC
   uint8_t crc = 0xFF;
-  if (cmd == SD_CARD_CMD0) crc = 0x95;  // Correct CRC for CMD0 with arg 0
-  if (cmd == SD_CARD_CMD8) crc = 0x87;  // Correct CRC for CMD8 with arg 0x1AA
+  if ( cmd == SD_CARD_CMD0 ) {
+    crc = 0x95;  // Correct CRC for CMD0 with arg 0
+  }
+  if ( cmd == SD_CARD_CMD8 ) {
+    crc = 0x87;  // Correct CRC for CMD8 with arg 0x1AA
+  }
   send_byte (crc);
 
-  // Wait for response
+  // Wait for response (checking a maximum of Maximum Response Checks times)
+  // FIXME: where does this 0x80 come from, it doesnt agree with the busy
+  // response in format R1b, so what the heck is it?
+  uint8_t const mrc = UINT8_MAX;
   for ( uint8_t ii = 0 ;
-        ((status = receive_byte ()) & 0x80) && ii != 0xFF ;
+        ((status = receive_byte ()) & 0x80) && ii != mrc ;
         ii++ ) {
     ;
   }
@@ -186,16 +198,19 @@ wait_start_block (void)
   // Wait for start block token.
 
   timer0_stopwatch_reset ();
+
   while ( (status = receive_byte ()) == 0xFF ) {
     if ( EMILLIS () > SD_READ_TIMEOUT ) {
       error (SD_CARD_ERROR_READ_TIMEOUT);
       goto fail;
     }
   }
+
   if ( status != SD_CARD_DATA_START_BLOCK ) {
     error (SD_CARD_ERROR_READ);
     goto fail;
   }
+
   return TRUE;
 
   fail:
@@ -364,7 +379,9 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
 
-  // Command to go idle in SPI mode
+  // Command to go idle in SPI mode.  SD cards go into SPI mode when their
+  // CS line is low while CMD0 is performed, and remain in SPI mode until
+  // power cycled.
   while ( (status = card_command (SD_CARD_CMD0, 0)) != SD_CARD_R1_IDLE_STATE ) {
     if ( EMILLIS () > SD_INIT_TIMEOUT ) {
       error (SD_CARD_ERROR_CMD0);
@@ -390,6 +407,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   // Initialize card and send host supports SDHC if SD2
   arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0x40000000 : 0;
 
+  // Wait for card to say its ready
   while ( (status = card_application_command (SD_CARD_ACMD41, arg))
           != SD_CARD_R1_READY_STATE ) {
     if ( EMILLIS () > SD_INIT_TIMEOUT ) {
@@ -397,6 +415,7 @@ sd_card_init (sd_card_spi_speed_t speed)
       goto fail;
     }
   }
+
   // If SD2, read OCR register to check for SDHC card
   if ( sd_card_type () == SD_CARD_TYPE_SD2 ) {
     if ( card_command (SD_CARD_CMD58, 0) ) {
@@ -406,7 +425,7 @@ sd_card_init (sd_card_spi_speed_t speed)
     if ( (receive_byte () & 0xC0) == 0xC0 ) {
       card_type = SD_CARD_TYPE_SDHC;
     }
-    // Discard rest of ocr - contains allowed voltage range
+    // Discard rest of OCR - contains allowed voltage range
     for ( uint8_t ii = 0; ii < 3; ii++ ) {
       receive_byte ();
     }
@@ -549,7 +568,8 @@ sd_card_write_partial_block (uint32_t block, uint16_t cnt, uint8_t const *src)
     goto fail;
   }
 
-  // Response is r2, so get and check two bytes for nonzero
+  // Read the status register to verify that the write worked.  The response
+  // to this command is in format R2, so get and check two bytes for nonzero.
   if ( card_command (SD_CARD_CMD13, 0) || receive_byte () ) {
     error (SD_CARD_ERROR_WRITE_PROGRAMMING);
     goto fail;

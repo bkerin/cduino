@@ -46,11 +46,11 @@
 
 // GO_IDLE_STATE - Init card in spi mode if CS low
 #define SD_CARD_CMD0 0x00
-// SEND_IF_COND - Verify SD Memory Card interface operating condition
+// SEND_IF_COND - Verify SD card interface operating condition
 #define SD_CARD_CMD8 0x08
 // SEND_CSD - Read the Card Specific Data (CSD register)
 #define SD_CARD_CMD9 0x09
-// SEND_CID - Read the card identification information (CID register)
+// SEND_CID - Read the Card Identification Data (CID register)
 #define SD_CARD_CMD10 0x0A
 // SEND_STATUS - Read the card status register
 #define SD_CARD_CMD13 0x0D
@@ -98,6 +98,17 @@
 #define SD_CARD_DATA_RES_MASK 0x1F
 // Write data accepted token
 #define SD_CARD_DATA_RES_ACCEPTED 0x05
+
+// }}}1
+
+// Card command attributes {{{1
+
+// These constants describe the format and operation of sd card commands.
+
+// All commands begin with bit values 0 followed by 1.
+#define SD_CARD_COMMAND_PREFIX_MASK B01000000
+// Lengh of the argument part of commands
+#define SD_CARD_COMMAND_ARGUMENT_BYTES 4
 
 // }}}1
 
