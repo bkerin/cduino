@@ -115,8 +115,14 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
   // Perform the various tests that we try for each speed setting.
 
   PFP ("Trying sd_card_init (%s)... ", speed_string);
-  sd_card_init (speed);
-  PFP ("ok.\n");
+  uint8_t return_code = sd_card_init (speed);
+  if ( return_code ) {
+    PFP ("ok.\n");
+  }
+  else {
+    PFP ("failed.\n");
+    assert (0);
+  }
 
   PFP ("Trying sd_card_size ()... ");
   uint32_t card_size = sd_card_size ();
@@ -161,7 +167,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
 
   PFP ("Trying sd_card_read_cid()... ");
   sd_card_cid_t ccid;   // Card CID
-  uint8_t return_code = sd_card_read_cid (&ccid);
+  return_code = sd_card_read_cid (&ccid);
   if ( return_code ) {
     PFP ("returned TRUE, so presumably it worked.\n");
   }
