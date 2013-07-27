@@ -19,7 +19,9 @@
  * along with the Arduino Sd2Card Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-//#include <Arduino.h>
+
+#include <assert.h>
+
 #include "sd_card.h"
 
 #include "dio.h"
@@ -115,7 +117,9 @@ read_end (void)
 static uint8_t
 card_command (uint8_t cmd, uint32_t arg)
 {
-  // Send command and return error code, or zero for OK.
+  // WARNING: CMD8 is a special case.  Send command and argument and return
+  // error code, or zero for OK.  If cmd is SD_CARD_CMD8, then arg is required
+  // to by SD_CARD_CMD8_SUPPORTED_ARGUMENT_VALUE.
 
   // Ensure read is done (in case we're in partial_block_read_mode mode)
   read_end ();
@@ -131,19 +135,32 @@ card_command (uint8_t cmd, uint32_t arg)
 
   // Send argument bytes
   uint8_t const bpp = 8;   // Bits per byte
-  for ( int8_t s = (SD_CARD_COMMAND_ARGUMENT_BYTES - 1) * bpp ;
-        s >= 0 ;
-        s -= bpp ) {
-    send_byte (arg >> s);
+  for ( int8_t shift = (SD_CARD_COMMAND_ARGUMENT_BYTES - 1) * bpp ;
+        shift >= 0 ;
+        shift -= bpp ) {
+    send_byte (arg >> shift);
   }
 
-  // Send CRC
-  uint8_t crc = 0xFF;
+  // Due to CRC requirements and the fact that CMD8 is a funny beast that
+  // only needs a single particular argument, this function requires exactly
+  // that argument to be supplied.
+  if ( cmd == SD_CARD_CMD8 ) {
+    assert (arg == SD_CARD_CMD8_SUPPORTED_ARGUMENT_VALUE);
+  }
+
+  // Send CRC bytes.  Normally we don't bother to send real
+  // CRC values (we assume reliable SPI bus operation).
+  // However the SD card physical layer specification
+  // https://www.sdcard.org/downloads/pls/simplified_specs/part1_410.pdf
+  // Section 7.2.2 says that correct CRC values must always be sent for CMD0
+  // and CMD8.
+  uint8_t const dummy_byte = 0xFF;
+  uint8_t crc = dummy_byte;
   if ( cmd == SD_CARD_CMD0 ) {
-    crc = 0x95;  // Correct CRC for CMD0 with arg 0
+    crc = SD_CARD_CMD0_CRC;  // Correct CRC for CMD0 with arg 0
   }
   if ( cmd == SD_CARD_CMD8 ) {
-    crc = 0x87;  // Correct CRC for CMD8 with arg 0x1AA
+    crc = SD_CARD_CMD8_CRC_FOR_SUPPORTED_ARGUMENT_VALUE;
   }
   send_byte (crc);
 
@@ -390,16 +407,29 @@ sd_card_init (sd_card_spi_speed_t speed)
   }
 
   // Check SD version
-  if ( (card_command (SD_CARD_CMD8, 0x1AA) & SD_CARD_R1_ILLEGAL_COMMAND) ) {
+  if ( (card_command (SD_CARD_CMD8, SD_CARD_CMD8_SUPPORTED_ARGUMENT_VALUE)
+        & SD_CARD_R1_ILLEGAL_COMMAND) ) {
     card_type = SD_CARD_TYPE_SD1;
   } else {
-    // Only need last byte of r7 response
-    for ( uint8_t ii = 0; ii < 4; ii++ ) {
+    // We only need the last byte of the 5 byte R7 response.  The first byte
+    // of the response is identical to response type R1 and is consumed by
+    // the card_command() function, so we start at byte 1 here.  See table
+    // 7.3.1.4 and section 7.3.2.6 fromthe Physical Layer Specification
+    // mentioned in sd_card_info.h for details.
+    for ( uint8_t ii = 1; ii < SD_CARD_R7_BYTES; ii++ ) {
       status = receive_byte ();
-    }
-    if ( status != 0xAA ) {
-      error (SD_CARD_ERROR_CMD8);
-      goto fail;
+      if ( ii == SD_CARD_CMD8_VOLTAGE_OK_BYTE ) {
+        if ( ! (status && SD_CARD_SUPPLIED_VOLTAGE_OK_MASK) ) {
+          error (SD_CARD_ERROR_CMD8);
+          goto fail;
+        }
+      }
+      if ( ii == SD_CARD_CMD8_PATTERN_ECHO_BACK_BYTE ) {
+        if ( status != SD_CARD_CMD8_ECHOED_PATTERN ) {
+          error (SD_CARD_ERROR_CMD8);
+          goto fail;
+        }
+      }
     }
     card_type = SD_CARD_TYPE_SD2;
   }
@@ -407,7 +437,11 @@ sd_card_init (sd_card_spi_speed_t speed)
   // Initialize card and send host supports SDHC if SD2
   arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0x40000000 : 0;
 
-  // Wait for card to say its ready
+  // Wait for card to say its ready FIXME: section 7.2.2 of the physical
+  // layer spec says we should ensure that CRC is on (using CMD59 CRC_ON_OFF)
+  // before issuing ACMD41.  why? and why don't we?  I assume we have CRC
+  // off normally since I don't see any CRC computations going on anywhere,
+  // this needs confirmed and documented in the interface.
   while ( (status = card_application_command (SD_CARD_ACMD41, arg))
           != SD_CARD_R1_READY_STATE ) {
     if ( EMILLIS () > SD_INIT_TIMEOUT ) {

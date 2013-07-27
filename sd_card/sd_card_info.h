@@ -80,7 +80,36 @@
 
 // }}}1
 
-// Card status codes and masks {{{1
+// Card status codes, masks, and other attributes {{{1
+
+// All commands begin with bit values 0 followed by 1.
+#define SD_CARD_COMMAND_PREFIX_MASK B01000000
+
+// Lengh of the argument part of commands
+#define SD_CARD_COMMAND_ARGUMENT_BYTES 4
+
+// The correct CRC value for CMD0 (a constant since CMD0 has no arguments)
+#define SD_CARD_CMD0_CRC 0x95
+// We only support one particular argument value for CMD8 (others aren't
+// needed; see Physical Layer Specification section 7.3.1.4 for details).
+#define SD_CARD_CMD8_SUPPORTED_ARGUMENT_VALUE 0x000001AA
+// The correct CRC value for CMD8 with the argument we always use with it
+#define SD_CARD_CMD8_CRC_FOR_SUPPORTED_ARGUMENT_VALUE 0x87
+
+// The response to CMD8 is of format R7, which is this many bytes long
+#define SD_CARD_R7_BYTES 5
+// This (zero-indexed ) byte of the CMD8 response contains a field which
+// if not all zeros indicates that the supplied voltage is ok
+#define SD_CARD_CMD8_VOLTAGE_OK_BYTE 3
+// Mask for the bits which must not all be zero if card supports supplied
+// voltage
+#define SD_CARD_SUPPLIED_VOLTAGE_OK_MASK 0x0F
+// The responst to CMD8 is R7, which is 5 bytes long.  This (zero-indexed)
+// byte contains the bit pattern we supplied in the last byte of the CMD8
+// argument, echoed back
+#define SD_CARD_CMD8_PATTERN_ECHO_BACK_BYTE 4
+// This is the actual pattern that we supplied which should be echoed back
+#define SD_CARD_CMD8_ECHOED_PATTERN 0xAA
 
 // Status for card in the ready state
 #define SD_CARD_R1_READY_STATE 0x00
@@ -88,6 +117,7 @@
 #define SD_CARD_R1_IDLE_STATE 0x01
 // Status bit for illegal command
 #define SD_CARD_R1_ILLEGAL_COMMAND 0x04
+
 // Start data token for read or write single bloc
 #define SD_CARD_DATA_START_BLOCK 0xFE
 // Stop token for write multiple block
@@ -105,10 +135,6 @@
 
 // These constants describe the format and operation of sd card commands.
 
-// All commands begin with bit values 0 followed by 1.
-#define SD_CARD_COMMAND_PREFIX_MASK B01000000
-// Lengh of the argument part of commands
-#define SD_CARD_COMMAND_ARGUMENT_BYTES 4
 
 // }}}1
 
