@@ -15,9 +15,19 @@
 // doing anything remotely serious you must invest in an "industrial"
 // SD card.  I've used the Apacer AP-MSD04GCS4P-1TM with good results.
 //
-// This interface has been tested with the SD card
+// This module assumes that communication with the SD card is reliable, and
+// doesn't use the CRC functionality that may be available on the SD card.
+// If this is not the case, perhaps you would like to use the hardware
+// watchdog on the ATMega or perhaps add CRC support to this module :)
+//
+// This module has been tested with the SD card
 // hardware on the official Arduino Ethernet/SD Card shield, Rev. 3
 // (http://arduino.cc/en/Main/ArduinoEthernetShield).
+//
+// This module always checks for card support of supply voltages in the 2.7V
+// - 3.6V range.  Its possible that incorrect support for a lower voltage
+// might be indicated (though for the test hardware mentioned above this
+// isn't an issue of course).
 //
 // This interface supports using the card simply as a large memory.
 // FAT filesystem support is (FIXME) not done yet.
@@ -96,7 +106,7 @@ typedef enum {
   SD_CARD_ERROR_NONE = 0x00,
   // Timeout error for command CMD0
   SD_CARD_ERROR_CMD0 = 0x01,
-  // CMD8 was not accepted - not a valid SD card
+  // CMD8 was not accepted - not valid SD card or supplied voltage unsupported
   SD_CARD_ERROR_CMD8 = 0x02,
   // Card returned an error response for CMD17 (read block) 
   SD_CARD_ERROR_CMD17 = 0x03,

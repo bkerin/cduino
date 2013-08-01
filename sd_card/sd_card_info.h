@@ -1,3 +1,5 @@
+// This header contains details of SD Card commands, responses, and registers.
+
 /* Arduino Sd2Card Library
  * Copyright (C) 2009 by William Greiman
  *
@@ -25,14 +27,19 @@
 
 #include <stdint.h>
 
+#include "util.h"
+
 // Based on the document:
 //
 // SD Specifications
 // Part 1
 // Physical Layer
 // Simplified Specification
-// Version 2.00
-// September 25, 2006
+// Version 4.10
+// January 22, 2013
+//
+// Sections of the above document are referenced as SD Physical Layer
+// Simplified Specification Version 4.10
 //
 // https://www.sdcard.org/downloads/pls/simplified_specs/part1_410.pdf
 //
@@ -90,15 +97,17 @@
 
 // The correct CRC value for CMD0 (a constant since CMD0 has no arguments)
 #define SD_CARD_CMD0_CRC 0x95
-// We only support one particular argument value for CMD8 (others aren't
-// needed; see Physical Layer Specification section 7.3.1.4 for details).
+// We only support one particular argument value for CMD8.  Other argument
+// values aren't needed.  See Physical Layer Specification sections 7.3.1.4
+// and 4.3.13 for details.  The 0x01 byte indicates 2.7V to 3.6V range,
+// and the AA byte is our check pattern.
 #define SD_CARD_CMD8_SUPPORTED_ARGUMENT_VALUE 0x000001AA
 // The correct CRC value for CMD8 with the argument we always use with it
 #define SD_CARD_CMD8_CRC_FOR_SUPPORTED_ARGUMENT_VALUE 0x87
 
 // The response to CMD8 is of format R7, which is this many bytes long
 #define SD_CARD_R7_BYTES 5
-// This (zero-indexed ) byte of the CMD8 response contains a field which
+// This (zero-indexed) byte of the CMD8 response contains a field which
 // if not all zeros indicates that the supplied voltage is ok
 #define SD_CARD_CMD8_VOLTAGE_OK_BYTE 3
 // Mask for the bits which must not all be zero if card supports supplied
@@ -110,6 +119,21 @@
 #define SD_CARD_CMD8_PATTERN_ECHO_BACK_BYTE 4
 // This is the actual pattern that we supplied which should be echoed back
 #define SD_CARD_CMD8_ECHOED_PATTERN 0xAA
+
+// The HCS bit of the CMD41 argument is included to query for an SDHC type
+// card All other bits of the CMD41 argument are currently reserved (and
+// must be set to zero).  See Physical Layer Specification Table 7-3.
+#define SD_CARD_ACMD41_HCS_MASK 0x40000000
+#define SD_CARD_ACMD41_NOTHING_MASK 0x00000000
+
+// The response to CMD58 is of format R3, which is this many bytes long
+#define SD_CARD_R3_BYTES 5
+// This (zero-indexed) byte or R3 is the first byte of the OCR.
+#define SD_CARD_R3_OCR_START_BYTE 1
+// These bits of the first byte of the card OCR indicate conditions we care
+// about, see SD Physical Layer Simplified Specification Section 5.1.
+#define SD_CARD_OCR_POWERED_UP_BIT B10000000
+#define SD_CARD_OCR_CCS_BIT B01000000
 
 // Status for card in the ready state
 #define SD_CARD_R1_READY_STATE 0x00
@@ -128,13 +152,6 @@
 #define SD_CARD_DATA_RES_MASK 0x1F
 // Write data accepted token
 #define SD_CARD_DATA_RES_ACCEPTED 0x05
-
-// }}}1
-
-// Card command attributes {{{1
-
-// These constants describe the format and operation of sd card commands.
-
 
 // }}}1
 

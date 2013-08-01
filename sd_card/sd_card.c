@@ -84,7 +84,12 @@ wait_not_busy (uint16_t timeout_ms)
   timer0_stopwatch_reset ();
   do {
     // FIXME: is this effectively responding to Format R1b?  All that format
-    // says is that zero indicates busy, non-zero ready.  But maybe this works?
+    // says is that zero indicates busy, non-zero ready, and this agrees
+    // with section 7.2.4 as well.  And checking for ! 0x00 works (if the
+    // below line is put in place of the line with 0xFF).  Could this have
+    // changed between spec versions?  The version cited in the code was
+    // 2.00, Sept. 25th.  Or did it perhaps always just work by luck?
+    //if ( receive_byte () != 0x00 ) {
     if ( receive_byte () == 0xFF ) {
       return TRUE;
     }
@@ -148,12 +153,10 @@ card_command (uint8_t cmd, uint32_t arg)
     assert (arg == SD_CARD_CMD8_SUPPORTED_ARGUMENT_VALUE);
   }
 
-  // Send CRC bytes.  Normally we don't bother to send real
-  // CRC values (we assume reliable SPI bus operation).
-  // However the SD card physical layer specification
-  // https://www.sdcard.org/downloads/pls/simplified_specs/part1_410.pdf
-  // Section 7.2.2 says that correct CRC values must always be sent for CMD0
-  // and CMD8.
+  // Send CRC bytes.  Normally we don't bother to send real CRC values (we
+  // assume reliable SPI bus operation).  However the SD Physical Layer
+  // Simplified Specification section 7.2.2 says that correct CRC values
+  // must always be sent for CMD0 and CMD8.
   uint8_t const dummy_byte = 0xFF;
   uint8_t crc = dummy_byte;
   if ( cmd == SD_CARD_CMD0 ) {
@@ -164,15 +167,25 @@ card_command (uint8_t cmd, uint32_t arg)
   }
   send_byte (crc);
 
+  // FIXME: According to Table 7-3, only commands 12, 28, and 38 respond
+  // with R1b.  So fix all places where we say or imply that other things
+  // might return that.
+
   // Wait for response (checking a maximum of Maximum Response Checks times)
   // FIXME: where does this 0x80 come from, it doesnt agree with the busy
-  // response in format R1b, so what the heck is it?
+  // response in format R1b, so what the heck is it? AH HA: its a big fat bug.
+  // and a pretty expensive one.  This loop always runs UINT8_MAX times,
+  // see the assert below
   uint8_t const mrc = UINT8_MAX;
   for ( uint8_t ii = 0 ;
         ((status = receive_byte ()) & 0x80) && ii != mrc ;
         ii++ ) {
     ;
   }
+  // FIXME: this shows whats going on with the above loop.  It always runs
+  // UINT8_MAX times.  Change this to != and nothing works, with it like
+  // this it always does.  The 0x80 above is utterly bogus.
+  assert (mrc == UINT8_MAX);
 
   return status;
 }
@@ -389,9 +402,12 @@ sd_card_init (sd_card_spi_speed_t speed)
   // but thats what the Arduino libs do and it seems like a safe choice.
   spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV128);
 
-  // Must supply min of 74 clock cycles with CS high
-  for ( uint8_t ii = 0; ii < 10; ii++ ) {
-    send_byte (0xFF);
+  // We must supply a minimum of 74 clock cycles with CS high as per SD
+  // Physical Layer Simplified Specification Version 4.10 section 6.4.1.1.
+  uint8_t const dcb = 0xFF;   // Don't Care Byte
+  uint8_t const dbts = 10;   // Dummy Bytes To Send (for >74 cycles, see above)
+  for ( uint8_t ii = 0 ; ii < dbts ; ii++ ) {
+    send_byte (dcb);
   }
 
   SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
@@ -407,15 +423,21 @@ sd_card_init (sd_card_spi_speed_t speed)
   }
 
   // Check SD version
-  if ( (card_command (SD_CARD_CMD8, SD_CARD_CMD8_SUPPORTED_ARGUMENT_VALUE)
-        & SD_CARD_R1_ILLEGAL_COMMAND) ) {
+  status = card_command (SD_CARD_CMD8, SD_CARD_CMD8_SUPPORTED_ARGUMENT_VALUE);
+  if ( status & SD_CARD_R1_ILLEGAL_COMMAND ) {
     card_type = SD_CARD_TYPE_SD1;
   } else {
-    // We only need the last byte of the 5 byte R7 response.  The first byte
-    // of the response is identical to response type R1 and is consumed by
-    // the card_command() function, so we start at byte 1 here.  See table
-    // 7.3.1.4 and section 7.3.2.6 fromthe Physical Layer Specification
-    // mentioned in sd_card_info.h for details.
+    // FIXXME: I think we could get only R1 back if we get a CRC error after
+    // CMD8, but since we generally assume those don't happen, and the bit
+    // pattern below would probably blow up anyway we probably dont care.
+    // And the client should use the watchdog if they are scared of
+    // lock-ups :)
+    //
+    // CMD8 results in a 5 byte R7 response.  The first byte of the response
+    // is identical to response type R1 and is consumed by the card_command()
+    // function, so we start at byte 1 here.  See table 7.3.1.4 and section
+    // 7.3.2.6 from the SD Physical Layer Simplified Specification Version
+    // 4.10 for details.
     for ( uint8_t ii = 1; ii < SD_CARD_R7_BYTES; ii++ ) {
       status = receive_byte ();
       if ( ii == SD_CARD_CMD8_VOLTAGE_OK_BYTE ) {
@@ -434,14 +456,24 @@ sd_card_init (sd_card_spi_speed_t speed)
     card_type = SD_CARD_TYPE_SD2;
   }
 
-  // Initialize card and send host supports SDHC if SD2
-  arg = sd_card_type () == SD_CARD_TYPE_SD2 ? 0x40000000 : 0;
+  // We will initialize the card with ACMD41.  If we have an SD2 card, we want
+  // to set a bit in the ACMD41 argument to determine if we have SDHC support.
+  if ( sd_card_type () == SD_CARD_TYPE_SD2 ) {
+    arg = SD_CARD_ACMD41_HCS_MASK;
+  }
+  else {
+    arg = SD_CARD_ACMD41_NOTHING_MASK;
+  }
 
-  // Wait for card to say its ready FIXME: section 7.2.2 of the physical
-  // layer spec says we should ensure that CRC is on (using CMD59 CRC_ON_OFF)
-  // before issuing ACMD41.  why? and why don't we?  I assume we have CRC
-  // off normally since I don't see any CRC computations going on anywhere,
-  // this needs confirmed and documented in the interface.
+  // Wait for card to say its ready FIXXME: section 7.2.2 of the SD Physical
+  // Layer Simplified Specification Version 4.10 says we should ensure that
+  // CRC is on (using CMD59 CRC_ON_OFF) before issuing ACMD41.  We don't.
+  // I suppose this makes it possible or more likely that we get an early
+  // false ready which somehow ends up locking up the card.  But if we're
+  // getting noise on the line we're going to have problems anyway, since
+  // there isn't any other error checking going on anywhere (unless the
+  // client is doing it themselves, in which case they should also be using
+  // the hardware watchdog :).
   while ( (status = card_application_command (SD_CARD_ACMD41, arg))
           != SD_CARD_R1_READY_STATE ) {
     if ( EMILLIS () > SD_INIT_TIMEOUT ) {
@@ -456,11 +488,21 @@ sd_card_init (sd_card_spi_speed_t speed)
       error (SD_CARD_ERROR_CMD58);
       goto fail;
     }
-    if ( (receive_byte () & 0xC0) == 0xC0 ) {
+    // NOTE: The card_command() functions consumes the first byte
+    // of the R3 response, so the next byte recieved will be the
+    // SD_CARD_R3_OCR_START_BYTE.
+    uint8_t const expected_high_bits
+      = SD_CARD_OCR_POWERED_UP_BIT | SD_CARD_OCR_CCS_BIT;
+    if ( (receive_byte () & expected_high_bits) == expected_high_bits ) {
       card_type = SD_CARD_TYPE_SDHC;
     }
-    // Discard rest of OCR - contains allowed voltage range
-    for ( uint8_t ii = 0; ii < 3; ii++ ) {
+    // Discard rest of OCR - contains allowed voltage range.  Either we've
+    // already checked this in the CMD8 response, or we've got a legacy card
+    // and we don't support checking it.  We don't support switching to 1.8
+    // volt operation.
+    for ( uint8_t ii = SD_CARD_R3_OCR_START_BYTE + 1 ;
+          ii < SD_CARD_R3_BYTES ;
+          ii++ ) {
       receive_byte ();
     }
   }
