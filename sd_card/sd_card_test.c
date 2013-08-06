@@ -31,6 +31,21 @@
 #endif
 #define PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
 
+// FIXME: debug storage get rid of these and calls when response codes sorted
+extern uint8_t sp;
+extern uint8_t byte_stream[UINT8_MAX];
+extern uint8_t lc;
+static void
+print_last_command_and_byte_stream (uint8_t cmd, uint8_t *bs)
+{
+  printf ("Last command: %#.2X\n", cmd);
+  printf ("Bytes received by card_command(): %d\n", sp);
+  uint8_t ii;
+  for ( ii = 0 ; ii < sp ; ii++ ) {
+    printf ("byte %d: %#.2X\n", ii, bs[ii]);
+  }
+}
+
 static void
 test_write_read (void)
 {
@@ -124,6 +139,8 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     assert (0);
   }
 
+  print_last_command_and_byte_stream (lc, byte_stream);
+
   PFP ("Trying sd_card_size ()... ");
   uint32_t card_size = sd_card_size ();
   if ( card_size != 0 ) {
@@ -133,6 +150,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     PFP ("failed.\n");
     assert (0);
   }
+  print_last_command_and_byte_stream (lc, byte_stream);
 
   PFP ("Trying sd_card_type()... ");
   sd_card_type_t card_type = sd_card_type ();
@@ -164,6 +182,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
       assert (0);   // Shouldn't be here
       break;
   }
+  print_last_command_and_byte_stream (lc, byte_stream);
 
   PFP ("Trying sd_card_read_cid()... ");
   sd_card_cid_t ccid;   // Card CID
@@ -175,6 +194,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     PFP ("returned FALSE (failed).\n");
     assert (0);
   }
+  print_last_command_and_byte_stream (lc, byte_stream);
 
   PFP ("Trying sd_card_read_csd()... ");
   sd_card_csd_t ccsd;   // Card CSD
@@ -186,6 +206,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     PFP ("returned FALSE (failed).\n");
     assert (0);
   }
+  print_last_command_and_byte_stream (lc, byte_stream);
 
   test_write_read ();
 
@@ -207,6 +228,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     PFP ("it's not supported.\n");
     assert (0);
   }
+  print_last_command_and_byte_stream (lc, byte_stream);
 
   speed_test_1000_blocks ();
 

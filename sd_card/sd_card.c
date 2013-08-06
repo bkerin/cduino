@@ -118,6 +118,10 @@ read_end (void)
   }
 }
 
+uint8_t sp = 0;
+uint8_t byte_stream[UINT8_MAX];
+uint8_t lc;
+
 //------------------------------------------------------------------------------
 static uint8_t
 card_command (uint8_t cmd, uint32_t arg)
@@ -173,19 +177,21 @@ card_command (uint8_t cmd, uint32_t arg)
 
   // Wait for response (checking a maximum of Maximum Response Checks times)
   // FIXME: where does this 0x80 come from, it doesnt agree with the busy
-  // response in format R1b, so what the heck is it? AH HA: its a big fat bug.
-  // and a pretty expensive one.  This loop always runs UINT8_MAX times,
-  // see the assert below
+  // response in format R1b, so what the heck is it? We've got some debug
+  // instrumentation here to help see what the card is actually giving back
+  // for a response, it should go when its sorted.  I'm really started to
+  // suspect that the R1 code descirbed in section 7.3.2.1 considers 1 to
+  // be low or something, since it seems like we always get 0xFF back
+  // FIXME: use 0XFF style instead of 0xFF since thats what printf does?
+  sp = 0;
+  lc = cmd;
   uint8_t const mrc = UINT8_MAX;
   for ( uint8_t ii = 0 ;
         ((status = receive_byte ()) & 0x80) && ii != mrc ;
         ii++ ) {
+    byte_stream[sp++] = status;
     ;
   }
-  // FIXME: this shows whats going on with the above loop.  It always runs
-  // UINT8_MAX times.  Change this to != and nothing works, with it like
-  // this it always does.  The 0x80 above is utterly bogus.
-  assert (mrc == UINT8_MAX);
 
   return status;
 }
