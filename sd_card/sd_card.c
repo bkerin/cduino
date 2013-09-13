@@ -62,7 +62,7 @@ uint8_t receive_byte (void)
 {
   // Receive a byte from the SD controller
 
-  return spi_transfer (0xFF);
+  return spi_transfer (SD_CARD_DUMMY_BYTE_VALUE);
 }
 
 static void
@@ -73,7 +73,12 @@ error (sd_card_error_t code)
   cur_error = code;
 }
 
-// Elapsed milliseconds since most recent timer0_stopwatch_reset().
+// Elapsed milliseconds since most recent timer0_stopwatch_reset().  FIXME:
+// I see so real reason to use timer0 in this module.  All we're doing with
+// it is trackign some timeouts that we could probably conservatively track
+// by knowing F_CPU instead, unless SD cards do something really strange
+// like eating an error signal if it doesn't get absorbed in a certain
+// amount of time.
 #define EMILLIS() (timer0_stopwatch_microseconds () / 1000)
 
 static uint8_t
@@ -83,14 +88,8 @@ wait_not_busy (uint16_t timeout_ms)
 
   timer0_stopwatch_reset ();
   do {
-    // FIXME: is this effectively responding to Format R1b?  All that format
-    // says is that zero indicates busy, non-zero ready, and this agrees
-    // with section 7.2.4 as well.  And checking for ! 0x00 works (if the
-    // below line is put in place of the line with 0xFF).  Could this have
-    // changed between spec versions?  The version cited in the code was
-    // 2.00, Sept. 25th.  Or did it perhaps always just work by luck?
-    //if ( receive_byte () != 0x00 ) {
-    if ( receive_byte () == 0xFF ) {
+    // Wait for card to go non-busy (to get done programming).
+    if ( receive_byte () != SD_CARD_BUSY_SIGNAL_BYTE_VALUE ) {
       return TRUE;
     }
     else {
@@ -118,6 +117,8 @@ read_end (void)
   }
 }
 
+// FIXME: get rid of this debug storage (and use of it) when all response
+// codes are sorted (we might just have got there already, I think).
 uint8_t sp = 0;
 uint8_t byte_stream[UINT8_MAX];
 uint8_t lc;
@@ -136,7 +137,7 @@ card_command (uint8_t cmd, uint32_t arg)
   // Select card
   SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
 
-  // Wait up to 300 ms if busy
+  // Wait up to 300 ms if busy  // FIXME: why 300 ms?, make this a constant
   wait_not_busy (300);
 
   // Send command
@@ -161,8 +162,7 @@ card_command (uint8_t cmd, uint32_t arg)
   // assume reliable SPI bus operation).  However the SD Physical Layer
   // Simplified Specification section 7.2.2 says that correct CRC values
   // must always be sent for CMD0 and CMD8.
-  uint8_t const dummy_byte = 0xFF;
-  uint8_t crc = dummy_byte;
+  uint8_t crc = SD_CARD_DUMMY_BYTE_VALUE;
   if ( cmd == SD_CARD_CMD0 ) {
     crc = SD_CARD_CMD0_CRC;  // Correct CRC for CMD0 with arg 0
   }
@@ -171,27 +171,18 @@ card_command (uint8_t cmd, uint32_t arg)
   }
   send_byte (crc);
 
-  // FIXME: According to Table 7-3, only commands 12, 28, and 38 respond
-  // with R1b.  So fix all places where we say or imply that other things
-  // might return that.
-
   // Wait for response (checking a maximum of Maximum Response Checks times)
-  // FIXME: where does this 0x80 come from, it doesnt agree with the busy
-  // response in format R1b, so what the heck is it? We've got some debug
-  // instrumentation here to help see what the card is actually giving back
-  // for a response, it should go when its sorted.  I'm really started to
-  // suspect that the R1 code descirbed in section 7.3.2.1 considers 1 to
-  // be low or something, since it seems like we always get 0xFF back
-  // FIXME: use 0XFF style instead of 0xFF since thats what printf does?
   sp = 0;
   lc = cmd;
-  uint8_t const mrc = UINT8_MAX;
+  uint8_t const mrc = UINT8_MAX;   // Maximum Response Checks
   for ( uint8_t ii = 0 ;
-        ((status = receive_byte ()) & 0x80) && ii != mrc ;
+        ((status = receive_byte ()) & SD_CARD_NOT_R1_RESPONSE_MASK) &&
+        ii != mrc ;
         ii++ ) {
     byte_stream[sp++] = status;
     ;
   }
+  byte_stream[sp++] = status;
 
   return status;
 }
@@ -212,12 +203,11 @@ write_data_private (uint8_t token, uint16_t cnt, uint8_t const *src)
   // no way with SDHC SPI to specify that the we don't want to send the rest
   // of the block?
   for ( ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
-    uint8_t const dummy_data = 0xFF;
-    send_byte (dummy_data);
+    send_byte (SD_CARD_DUMMY_BYTE_VALUE);
   }
 
-  send_byte (0xFF);  // Dummy CRC
-  send_byte (0xFF);  // Dummy CRC
+  send_byte (SD_CARD_DUMMY_BYTE_VALUE);  // Dummy CRC
+  send_byte (SD_CARD_DUMMY_BYTE_VALUE);  // Dummy CRC
 
   status = receive_byte ();
   if ( (status & SD_CARD_DATA_RES_MASK) != SD_CARD_DATA_RES_ACCEPTED ) {
@@ -235,7 +225,7 @@ wait_start_block (void)
 
   timer0_stopwatch_reset ();
 
-  while ( (status = receive_byte ()) == 0xFF ) {
+  while ( (status = receive_byte ()) == SD_CARD_NO_TRANSMISSION_BYTE_VALUE ) {
     if ( EMILLIS () > SD_READ_TIMEOUT ) {
       error (SD_CARD_ERROR_READ_TIMEOUT);
       goto fail;
@@ -378,8 +368,8 @@ sd_card_erase_blocks (uint32_t first_block, uint32_t last_block)
 static uint8_t
 card_application_command (uint8_t cmd, uint32_t arg)
 {
-  // There is a class of so-call "application commands" that apparently
-  // require an escape command to be sent first.
+  // There is a class of so-call "application commands" that require an
+  // escape command to be sent first.
 
   card_command (SD_CARD_CMD55, 0);
   return card_command (cmd, arg);
@@ -410,10 +400,9 @@ sd_card_init (sd_card_spi_speed_t speed)
 
   // We must supply a minimum of 74 clock cycles with CS high as per SD
   // Physical Layer Simplified Specification Version 4.10 section 6.4.1.1.
-  uint8_t const dcb = 0xFF;   // Don't Care Byte
   uint8_t const dbts = 10;   // Dummy Bytes To Send (for >74 cycles, see above)
   for ( uint8_t ii = 0 ; ii < dbts ; ii++ ) {
-    send_byte (dcb);
+    send_byte (SD_CARD_DUMMY_BYTE_VALUE);
   }
 
   SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
@@ -498,7 +487,7 @@ sd_card_init (sd_card_spi_speed_t speed)
     // of the R3 response, so the next byte recieved will be the
     // SD_CARD_R3_OCR_START_BYTE.
     uint8_t const expected_high_bits
-      = SD_CARD_OCR_POWERED_UP_BIT | SD_CARD_OCR_CCS_BIT;
+      = SD_CARD_OCR_POWERED_UP_MASK | SD_CARD_OCR_CCS_MASK;
     if ( (receive_byte () & expected_high_bits) == expected_high_bits ) {
       card_type = SD_CARD_TYPE_SDHC;
     }

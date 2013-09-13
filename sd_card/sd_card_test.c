@@ -38,11 +38,11 @@ extern uint8_t lc;
 static void
 print_last_command_and_byte_stream (uint8_t cmd, uint8_t *bs)
 {
-  printf ("Last command: %#.2X\n", cmd);
-  printf ("Bytes received by card_command(): %d\n", sp);
+  printf ("  Last command: %#.2X\n", cmd);
+  printf ("  Bytes received by card_command(): %d\n", sp);
   uint8_t ii;
   for ( ii = 0 ; ii < sp ; ii++ ) {
-    printf ("byte %d: %#.2X\n", ii, bs[ii]);
+    printf ("    byte %d: %#.2X\n", ii, bs[ii]);
   }
 }
 

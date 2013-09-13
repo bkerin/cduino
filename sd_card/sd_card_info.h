@@ -22,6 +22,8 @@
 
 // vim:foldmethod=marker 
 
+// FIXME: rename this header to sd_card_private.h or so?
+
 #ifndef SD_CARD_INFO_H
 #define SD_CARD_INFO_H
 
@@ -38,8 +40,8 @@
 // Version 4.10
 // January 22, 2013
 //
-// Sections of the above document are referenced as SD Physical Layer
-// Simplified Specification Version 4.10
+// References to document sections (e.g. "section 7.42.42") in this source
+// file refer to this document.
 //
 // https://www.sdcard.org/downloads/pls/simplified_specs/part1_410.pdf
 //
@@ -87,15 +89,30 @@
 
 // }}}1
 
-// Card status codes, masks, and other attributes {{{1
+// Card constants, status codes, masks, and other attributes {{{1
 
-// All commands begin with bit values 0 followed by 1.
+// All commands begin with bit values 0 followed by 1 (section 7.3.1.1).
 #define SD_CARD_COMMAND_PREFIX_MASK B01000000
 
-// Lengh of the argument part of commands
+// Lengh of the argument part of commands (section 7.3.1.1).
 #define SD_CARD_COMMAND_ARGUMENT_BYTES 4
 
-// The correct CRC value for CMD0 (a constant since CMD0 has no arguments)
+// The SD card will hold its data out line low when busy programming
+// (section 7.2.4).
+#define SD_CARD_BUSY_SIGNAL_BYTE_VALUE 0x00
+
+// The SD card will hold its data bus line high when no data is transmitted
+// (section 4.3.3).
+#define SD_CARD_NO_TRANSMISSION_BYTE_VALUE 0xFF
+
+// What we send when we aren't sending actual commands or data.  We often
+// don't care what the actual data is when this is used, but sometimes we
+// might actually need to be sending this value to make it clear that we
+// don't care :)
+#define SD_CARD_DUMMY_BYTE_VALUE 0xFF
+
+// The correct CRC value for CMD0 (a constant since CMD0 has no arguments,
+// see section 7.2.2).
 #define SD_CARD_CMD0_CRC 0x95
 // We only support one particular argument value for CMD8.  Other argument
 // values aren't needed.  See Physical Layer Specification sections 7.3.1.4
@@ -106,16 +123,18 @@
 #define SD_CARD_CMD8_CRC_FOR_SUPPORTED_ARGUMENT_VALUE 0x87
 
 // The response to CMD8 is of format R7, which is this many bytes long
+// (section 7.3.2.6).
 #define SD_CARD_R7_BYTES 5
-// This (zero-indexed) byte of the CMD8 response contains a field which
-// if not all zeros indicates that the supplied voltage is ok
+// This (zero-indexed) byte of the CMD8 response contains a field which if
+// not all zeros indicates that the supplied voltage is ok (sections 7.3.2.6,
+// 7.3.1.4, 4.9.6).
 #define SD_CARD_CMD8_VOLTAGE_OK_BYTE 3
 // Mask for the bits which must not all be zero if card supports supplied
-// voltage
+// voltage (sections 7.3.2.6, 7.3.1.4).
 #define SD_CARD_SUPPLIED_VOLTAGE_OK_MASK 0x0F
 // The responst to CMD8 is R7, which is 5 bytes long.  This (zero-indexed)
 // byte contains the bit pattern we supplied in the last byte of the CMD8
-// argument, echoed back
+// argument, echoed back (sections 7.3.2.6, 7.3.1.4).
 #define SD_CARD_CMD8_PATTERN_ECHO_BACK_BYTE 4
 // This is the actual pattern that we supplied which should be echoed back
 #define SD_CARD_CMD8_ECHOED_PATTERN 0xAA
@@ -127,35 +146,38 @@
 #define SD_CARD_ACMD41_NOTHING_MASK 0x00000000
 
 // The response to CMD58 is of format R3, which is this many bytes long
+// (section 7.3.2.4).
 #define SD_CARD_R3_BYTES 5
-// This (zero-indexed) byte or R3 is the first byte of the OCR.
+// This (zero-indexed) byte of R3 is the first byte of the OCR (section
+// 7.3.2.4).
 #define SD_CARD_R3_OCR_START_BYTE 1
 // These bits of the first byte of the card OCR indicate conditions we care
-// about, see SD Physical Layer Simplified Specification Section 5.1.
-#define SD_CARD_OCR_POWERED_UP_BIT B10000000
-#define SD_CARD_OCR_CCS_BIT B01000000
+// about (section 5.1).
+#define SD_CARD_OCR_POWERED_UP_MASK B10000000
+#define SD_CARD_OCR_CCS_MASK B01000000
 
-// Status for card in the ready state
+// A valid R1 response token byte always has a 0 MSB (see the SD Physical
+// Layer Simplified Specification Version 4.10, section 7.3.2.1).
+#define SD_CARD_NOT_R1_RESPONSE_MASK B1000000
+
+// Status for card in the ready state (section 7.3.2.1).
 #define SD_CARD_R1_READY_STATE 0x00
-// Status for card in the idle state
+// Status for card in the idle state (section 7.3.2.1).
 #define SD_CARD_R1_IDLE_STATE 0x01
-// Status bit for illegal command
+// Status bit for illegal command (section 7.3.2.1).
 #define SD_CARD_R1_ILLEGAL_COMMAND 0x04
 
-// Start data token for read or write single bloc
+// Start data token for read or write single bloc (section 7.3.3.2).
 #define SD_CARD_DATA_START_BLOCK 0xFE
-// Stop token for write multiple block
-#define SD_CARD_STOP_TRAN_TOKEN 0xFD
-// Start data token for write multiple block
-#define SD_CARD_WRITE_MULTIPLE_TOKEN 0xFC
-// Mask for data response tokens after a write block operation
+// Mask for data response tokens after a write block operation (section
+// 7.3.3.1).
 #define SD_CARD_DATA_RES_MASK 0x1F
-// Write data accepted token
+// Write data accepted token (section 7.3.3.1).
 #define SD_CARD_DATA_RES_ACCEPTED 0x05
 
 // }}}1
 
-// Im not sure what CID stands for exactly.  But everyone calls it that :)
+// Card Identification (CID) register (section 5.2).
 typedef struct sd_card_cid {
   // Byte 0
   uint8_t mid;  // Manufacturer ID
@@ -179,9 +201,10 @@ typedef struct sd_card_cid {
   unsigned crc : 7;
 } sd_card_cid_t;
 
-// I'm not sure what CSD stands for exactly.  But everyone calls it that:) See
-// also the interface functions in sd_card.h.  There are two version of this
-// structure depending on the SD card version, this is the version 1 form.
+// Card-Specific Data (CSD) register (section 5.3).  see also the higher-level
+// inter (partial) interface functions in sd_card.h.  Note that there are
+// two version of this structure depending on the SD card version, this is
+// the version 1 form.
 typedef struct sd_card_csd1 {
   // Byte 0
   unsigned reserved1 : 6;
@@ -242,9 +265,10 @@ typedef struct sd_card_csd1 {
   unsigned crc : 7;
 } sd_card_csd1_t;
 
-// I'm not sure what CSD stands for exactly.  But everyone calls it that:) See
-// also the interface functions in sd_card.h.  There are two version of this
-// structure depending on the SD card version, this is the version 2 form.
+// Card-Specific Data (CSD) register (section 5.3).  see also the higher-level
+// inter (partial) interface functions in sd_card.h.  Note that there are
+// two version of this structure depending on the SD card version, this is
+// the version 2 form.
 typedef struct sd_card_csd2 {
   // Byte 0
   unsigned reserved1 : 6;
