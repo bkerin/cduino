@@ -50,11 +50,11 @@ static uint8_t status;   // SD controller status
 static sd_card_type_t card_type;   // Type of installed SD card
 
 static
-void send_byte (uint8_t b)
+void send_byte (uint8_t bts)
 {
-  // Send a byte to the SD controller
+  // Send byte bts (Byte To Send) to the SD controller
 
-  spi_transfer (b);
+  spi_transfer (bts);
 }
 
 static
@@ -129,7 +129,7 @@ card_command (uint8_t cmd, uint32_t arg)
 {
   // WARNING: CMD8 is a special case.  Send command and argument and return
   // error code, or zero for OK.  If cmd is SD_CARD_CMD8, then arg is required
-  // to by SD_CARD_CMD8_SUPPORTED_ARGUMENT_VALUE.
+  // to be SD_CARD_CMD8_SUPPORTED_ARGUMENT_VALUE.
 
   // Ensure read is done (in case we're in partial_block_read_mode mode)
   read_end ();

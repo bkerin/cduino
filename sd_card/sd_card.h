@@ -95,6 +95,9 @@
 // Protect block zero from write if nonzero
 #define SD_PROTECT_BLOCK_ZERO 1
 
+// Very approximate timeouts for various SD card operations.  The actual
+// time required for these operations to complete could actually be several
+// times these values.
 #define SD_INIT_TIMEOUT  ((uint16_t const) 2000)    // Init timeout ms
 #define SD_ERASE_TIMEOUT ((uint16_t const) 10000)   // Erase timeout ms
 #define SD_READ_TIMEOUT  ((uint16_t const) 300)     // Read timeout ms
