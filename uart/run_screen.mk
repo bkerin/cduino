@@ -2,7 +2,7 @@
 # /dev/ttyUSB0, and kick it a  at startup as is often useful to get terminal
 # programs started showing something.
 
-# FIXME: it would be nice to somehow deal with the likely case where the user
+# FIXXME: it would be nice to somehow deal with the likely case where the user
 # wants to run multiple screen sessions connected to different Arduinos,
 # but this would require considerable thought and fiddle-faddle to make
 # work in a general and comprehensible way.
