@@ -49,6 +49,8 @@ static uint8_t partial_block_read_mode;   // Mode supporting partai block reads
 static uint8_t status;   // SD controller status
 static sd_card_type_t card_type;   // Type of installed SD card
 
+sd_card_spi_speed_t speed = SD_CARD_SPI_UNSET_SPEED;
+
 static
 void send_byte (uint8_t bts)
 {
@@ -137,8 +139,10 @@ card_command (uint8_t cmd, uint32_t arg)
   // Select card
   SD_CARD_SPI_SLAVE_SELECT_SET_LOW ();
 
-  // Wait up to 300 ms if busy  // FIXME: why 300 ms?, make this a constant
-  wait_not_busy (300);
+  // Wait for a bit if the card is busy.  Presumably some subsequent command
+  // will fail and we'll get an error of some sort if this wait is ever
+  // actually required and the card doesn't ever go non-buys.
+  wait_not_busy (SD_PRECMD_TIMEOUT);
 
   // Send command
   send_byte (SD_CARD_COMMAND_PREFIX_MASK | cmd);
@@ -507,12 +511,15 @@ sd_card_init (sd_card_spi_speed_t speed)
   switch ( speed ) {
     case SD_CARD_SPI_FULL_SPEED:
       spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV2);
+      speed = SPI_CLOCK_DIVIDER_DIV2;
       break;
     case SD_CARD_SPI_HALF_SPEED:
       spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
+      speed = SPI_CLOCK_DIVIDER_DIV4;
       break;
     case SD_CARD_SPI_QUARTER_SPEED:
       spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV8);
+      speed = SPI_CLOCK_DIVIDER_DIV8;
       break;
     default:
       // This is really a client error and not an SD card problem, but since
