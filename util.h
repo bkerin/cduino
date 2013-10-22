@@ -58,6 +58,13 @@
     _delay_ms (150); \
   } while ( 0 )
 
+// All symbolic constants are evil :)
+#define BITS_PER_BYTE 8
+
+// Really, all of them :)
+#define MS_PER_S 1000
+#define US_PER_S 1000000
+
 // Macros for more readable/writable binary bit patterns {{{1
 #define B0 0
 #define B00 0
