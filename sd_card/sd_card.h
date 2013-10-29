@@ -5,7 +5,13 @@
 #ifndef SD_CARD_H
 #define SD_CARD_H
 
+// FIXME: shouldn't be draggin term_io.h in here in shipping code
 #include <term_io.h>
+
+// See the description of this define in the Makefile for this module.
+#ifdef SD_CARD_USE_TIMER0_FOR_TIMEOUTS
+#  include "timer0_stopwatch.h"
+#endif // SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
 #include "sd_card_info.h"
 
@@ -93,24 +99,24 @@
 #define SD_CARD_BLOCK_SIZE 512
 
 // Protect block zero from write if nonzero
-#define SD_PROTECT_BLOCK_ZERO 1
+#define SD_CARD_PROTECT_BLOCK_ZERO 1
 
 // Very approximate timeouts for various SD card operations.  The actual
 // time required for these operations to complete could actually be several
 // times these values.  FIXXME: I'm not sure where these timeout values
 // come from originally, they are inherited from the Arduino code.
-#define SD_PRECMD_TIMEOUT ((uint16_t const) 300)     // Pre-command timeout ms
-#define SD_INIT_TIMEOUT   ((uint16_t const) 2000)    // Init timeout ms
-#define SD_ERASE_TIMEOUT  ((uint16_t const) 10000)   // Erase timeout ms
-#define SD_READ_TIMEOUT   ((uint16_t const) 300)     // Read timeout ms
-#define SD_WRITE_TIMEOUT  ((uint16_t const) 600)     // Write timeout ms
+#define SD_CARD_PRECMD_TIMEOUT ((uint16_t const) 300)     // Pre-cmd timeout ms
+#define SD_CARD_INIT_TIMEOUT   ((uint16_t const) 2000)    // Init timeout ms
+#define SD_CARD_ERASE_TIMEOUT  ((uint16_t const) 10000)   // Erase timeout ms
+#define SD_CARD_READ_TIMEOUT   ((uint16_t const) 300)     // Read timeout ms
+#define SD_CARD_WRITE_TIMEOUT  ((uint16_t const) 600)     // Write timeout ms
 
 // Errors that can occur when trying to talk to the SD card.
 typedef enum {
   // No error.
   SD_CARD_ERROR_NONE = 0x00,
   // Timeout error for command CMD0
-  SD_CARD_ERROR_CMD0 = 0x01,
+  SD_CARD_ERROR_CMD0_TIMEOUT = 0x01,
   // CMD8 was not accepted - not valid SD card or supplied voltage unsupported
   SD_CARD_ERROR_CMD8 = 0x02,
   // Card returned an error response for CMD17 (read block) 
@@ -170,46 +176,27 @@ sd_card_last_error (void);
 uint8_t
 sd_card_last_error_data (void);
 
-// FIXME: change these to e.g. *_SPEED_FULL?
-
 // Communication speed between microcontroller and SD card.
 typedef enum {
-  SD_CARD_SPI_UNSET_SPEED   = 0,   // Speed hasn't been set yet.
-  SD_CARD_SPI_FULL_SPEED    = 2,   // Maximum speed of F_CPU / 2.
-  SD_CARD_SPI_HALF_SPEED    = 4,   // F_CPU / 4.
-  SD_CARD_SPI_QUARTER_SPEED = 8    // F_CPU / 8.
+  SD_CARD_SPI_SPEED_UNSET   = 0,   // Speed hasn't been set yet.
+  SD_CARD_SPI_SPEED_FULL    = 2,   // Maximum speed of F_CPU / 2.
+  SD_CARD_SPI_SPEED_HALF    = 4,   // F_CPU / 4.
+  SD_CARD_SPI_SPEED_QUARTER = 8    // F_CPU / 8.
 } sd_card_spi_speed_t;
 
 // SPI communication speed that we set (at sd_card_init()-time).
 extern sd_card_spi_speed_t speed;
 
-// SD card Bytes Per Millisecond, Very Approximately.  Note that this
-// has nothing to do with the actual data rate the card can accept when
-// programming or reading data, but is just the bus rate at which it
-// communicates.  This is probably mostly useless for clients.  Note also
-// that the numeric interpretation of the speed enumerated type value is
-// a bit counterintuitive.
-#define SD_BPMSVA = (F_CPU / BITS_PER_BYTE * MS_PER_S * speed);
-
-// FIXME: WORK POINT: sanity check and use these values, and eliminate the
-// pointless timer use of this module.
-
-// Timeouts, expressed in terms of bytes transferred on the SPI bus.
-#define SD_PRECMD_TIMEOUT_BYTES (SD_PRECMD_TIMEOUT * SD_BPMSVA)
-#define SD_INIT_TIMEOUT_BYTES   (SD_INIT_TIMEOUT * SD_BPMSVA)
-#define SD_ERASE_TIMEOUT_BYTES  (SD_ERASE_TIEMOUT * SD_BPMSVA)
-#define SD_READ_TIMEOUT_BYTES   (SD_READ_TIMEOUT * SD_BMPSVA)
-#define SD_WRITE_TIMEOUT_BYTES  (SD_WRITE_TIMEOUT * SD_BMPSVA)
-
 // Initialize an SD flash card and this interface.  The speed argument sets
 // the SPI communcation rate between card and microcontroller.  Returns TRUE
-// on success and zero on error (in which case sd_card_last_error() can be
-// called).  This calls time0_stopwatch_init() from the timer0_stopwatch.h
-// interface, which uses an interrupt.  It also call spi_init() from the
-// spi.h interface, with the SPI settings required for communicating with
-// an SD card.  If you're talking to multiple SPI devices, you may need to
-// change the SPI settings to talk to them, then call this function again when
-// you want to talk to the SD card more.  This should work fine.  Hopefully :)
+// on success and zero on error (in which case sd_card_last_error() can
+// be called).  If SD_CARD_USE_TIMER0_FOR_TIMEOUTS is defined, this calls
+// time0_stopwatch_init() from the timer0_stopwatch.h interface, which
+// uses an interrupt.  It also call spi_init() from the spi.h interface,
+// with the SPI settings required for communicating with an SD card.
+// If you're talking to multiple SPI devices, you may need to change the
+// SPI settings to talk to them, then call this function again when you
+// want to talk to the SD card more.  This should work fine.  Hopefully :)
 uint8_t
 sd_card_init (sd_card_spi_speed_t speed);
 
@@ -252,11 +239,12 @@ sd_card_read_csd (sd_card_csd_t *csd);
 uint8_t
 sd_card_read_block (uint32_t block, uint8_t *dst);
 
-// Write a block of data (but see SD_PROTECT_BLOCK_ZERO).  The block argument
-// is the logical block to write, and the data to write is taken from location
-// src (which must be at least SD_CARD_BLOCK_SIZE bytes long.  On success,
-// TRUE is returned, otherwise FALSE is returned and sd_card_last_error()
-// may be called.  See also sd_card_write_partial_block().
+// Write a block of data (but see SD_CARD_PROTECT_BLOCK_ZERO).  The block
+// argument is the logical block to write, and the data to write is
+// taken from location src (which must be at least SD_CARD_BLOCK_SIZE
+// bytes long.  On success, TRUE is returned, otherwise FALSE
+// is returned and sd_card_last_error() may be called.  See also
+// sd_card_write_partial_block().
 uint8_t
 sd_card_write_block (uint32_t block, uint8_t const *src);
 

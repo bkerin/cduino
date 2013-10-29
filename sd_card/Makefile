@@ -13,3 +13,13 @@ CPPFLAGS += -DSD_CARD_SPI_SLAVE_SELECT_PIN=DIO_PIN_DIGITAL_4
 
 # Pull in some macros that make debugging with term_io easier.
 CPPFLAGS += -DTERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+
+# Uncommenting this will cause this module to use the timer0 hardware to
+# detect timeout failures when communicating with the SD card.  Otherwise,
+# timeouts are detected by counting bytes transferred on the SPI bus.
+# Using the timer0 hardware might be slightly safer, since it will still
+# work in the case where SPI communication slows to a crawl.  However, if
+# SPI communication locks up entirely, the timer still won't get checked
+# and a lockup will result.  So in general I think its not worth using the
+# timer0 hardware for this purpose.
+#CPPFLAGS += -DSD_CARD_USE_TIMER0_FOR_TIMEOUTS
