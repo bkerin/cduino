@@ -53,7 +53,7 @@
 #endif // F_CPU != 16000
 
 // Timeouts, expressed in terms of bytes transferred on the SPI bus.
-// FIXME: WORK POINT: sanity check and use these values
+// FIXME: WORK POINT: sanity check these values
 #define SD_CARD_PRECMD_TIMEOUT_BYTES (SD_CARD_PRECMD_TIMEOUT * SDCBPMSVA)
 #define SD_CARD_INIT_TIMEOUT_BYTES   (SD_CARD_INIT_TIMEOUT   * SDCBPMSVA)
 #define SD_CARD_ERASE_TIMEOUT_BYTES  (SD_CARD_ERASE_TIMEOUT  * SDCBPMSVA)

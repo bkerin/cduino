@@ -107,7 +107,10 @@
 // come from originally, they are inherited from the Arduino code.
 #define SD_CARD_PRECMD_TIMEOUT ((uint16_t const) 300)     // Pre-cmd timeout ms
 #define SD_CARD_INIT_TIMEOUT   ((uint16_t const) 2000)    // Init timeout ms
-#define SD_CARD_ERASE_TIMEOUT  ((uint16_t const) 10000)   // Erase timeout ms
+//#define SD_CARD_ERASE_TIMEOUT  ((uint16_t const) 10000)   // Erase timeout ms
+// FIXME: on the sanity check front, why does using this 1 instead of
+// 10000 work?  kinds surprising...
+#define SD_CARD_ERASE_TIMEOUT  ((uint16_t const) 1)   // Erase timeout ms
 #define SD_CARD_READ_TIMEOUT   ((uint16_t const) 300)     // Read timeout ms
 #define SD_CARD_WRITE_TIMEOUT  ((uint16_t const) 600)     // Write timeout ms
 
