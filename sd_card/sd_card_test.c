@@ -46,6 +46,38 @@ print_last_command_and_byte_stream (uint8_t cmd, uint8_t *bs)
   }
 }
 
+// FIXME: the text fetching part of this function should be in interface maybe
+static void
+check_maybe_print_possible_failure_reason (uint8_t code)
+{
+  // Check that code is 0, if it isn't, print a message describing the error
+  // returned by sd_card_last_error(), followed by a newline
+
+  if ( ! code ) {
+
+    sd_card_error_t last_error = sd_card_last_error ();
+
+    PFP ("failed: ");
+
+    switch ( last_error ) {
+    case SD_CARD_ERROR_WRITE_TIMEOUT:
+      PFP ("write timeout");
+      break;
+    case SD_CARD_ERROR_READ_TIMEOUT:
+      PFP ("read timeout");
+      break;
+    case SD_CARD_ERROR_CMD0_TIMEOUT:
+      PFP ("CMD0 (init-related) timeout");
+      break;
+    default:
+      PFP ("unhandled or unknown reason");
+      break;
+    }
+
+    PFP ("\n");
+  }
+}
+
 static void
 test_write_read (void)
 {
@@ -60,12 +92,14 @@ test_write_read (void)
 
   PFP ("Trying sd_card_write_block()... ");
   uint8_t return_code = sd_card_write_block (bn, data_block);
+  check_maybe_print_possible_failure_reason (return_code);
   assert (return_code);
   PFP ("ok.\n");
 
   uint8_t reread_data[SD_CARD_BLOCK_SIZE];
   PFP ("Trying sd_card_read_block()... ");
   return_code = sd_card_read_block (bn, reread_data);
+  check_maybe_print_possible_failure_reason (return_code);
   assert (return_code);
   for ( ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
     assert (reread_data[ii] == 42);
@@ -131,13 +165,8 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
 
   PFP ("Trying sd_card_init (%s)... ", speed_string);
   uint8_t return_code = sd_card_init (speed);
-  if ( return_code ) {
-    PFP ("ok.\n");
-  }
-  else {
-    PFP ("failed.\n");
-    assert (0);
-  }
+  check_maybe_print_possible_failure_reason (return_code);
+  assert (return_code);
 
   print_last_command_and_byte_stream (lc, byte_stream);
 
@@ -247,18 +276,18 @@ main (void)
   PFP ("\n");
 
   PFP (
-      "NOTE: these tests don't bother to call sd_card_last_error() when\n"
+      "NOTE: some tests don't bother to call sd_card_last_error() when\n"
       "things go wrong.  You might be able to get information about the\n"
       "nature of a failure by doing that.\n" );
   PFP ("\n");
 
-  per_speed_tests (SD_CARD_SPI_FULL_SPEED, "SD_CARD_SPI_FULL_SPEED");
+  per_speed_tests (SD_CARD_SPI_SPEED_FULL, "SD_CARD_SPI_SPEED_FULL");
   PFP ("\n");
 
-  per_speed_tests (SD_CARD_SPI_FULL_SPEED, "SD_CARD_SPI_HALF_SPEED");
+  per_speed_tests (SD_CARD_SPI_SPEED_HALF, "SD_CARD_SPI_SPEED_HALF");
   PFP ("\n");
 
-  per_speed_tests (SD_CARD_SPI_FULL_SPEED, "SD_CARD_SPI_QUARTER_SPEED");
+  per_speed_tests (SD_CARD_SPI_SPEED_QUARTER, "SD_CARD_SPI_SPEED_QUARTER");
   PFP ("\n");
 
   PFP ("Everything worked!\n"); 
