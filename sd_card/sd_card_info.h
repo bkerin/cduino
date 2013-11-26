@@ -177,6 +177,8 @@
 
 // }}}1
 
+// Card CID and CSD register descriptions {{{1
+
 // Card Identification (CID) register (section 5.2).
 typedef struct sd_card_cid {
   // Byte 0
@@ -330,5 +332,7 @@ typedef union {
   sd_card_csd1_t v1;
   sd_card_csd2_t v2;
 } sd_card_csd_t;
+
+// }}}1
 
 #endif  // SD_CARD_INFO_H
