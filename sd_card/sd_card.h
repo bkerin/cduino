@@ -20,6 +20,8 @@
 // horribly intolerant of asynchronous shutdown (power cuts).  If you're
 // doing anything remotely serious you must invest in an "industrial"
 // SD card.  I've used the Apacer AP-MSD04GCS4P-1TM with good results.
+// It is still highly advisable to use an uninterruptible power supply
+// and/or reliable internal battery backup hardware.
 //
 // This module assumes that communication with the SD card is reliable, and
 // doesn't use the CRC functionality that may be available on the SD card.
@@ -36,7 +38,7 @@
 // isn't an issue of course).
 //
 // This interface supports using the card simply as a large memory.
-// FAT filesystem support is (FIXME) not done yet.
+// FAT filesystem support belongs in a seperate module (FIXXME: not done yet).
 //
 // Basic use looks about like this:
 //
@@ -61,7 +63,7 @@
 //   sentinel = sd_card_read_partial_block (some_block, SAMPLE_COUNT, buf);
 //   assert (sentinel);
 //
-// For more details see the rest of this reader and the test/demo driver
+// For more details see the rest of this header and the test/demo driver
 // in sd_cart_test.c.
 
 
@@ -101,67 +103,52 @@
 // Protect block zero from write if nonzero
 #define SD_CARD_PROTECT_BLOCK_ZERO 1
 
-// Very approximate timeouts for various SD card operations.  The actual
-// time required for these operations to complete could actually be several
-// times these values.  FIXXME: I'm not sure where these timeout values
-// come from originally, they are inherited from the Arduino code.
-#define SD_CARD_PRECMD_TIMEOUT ((uint16_t const) 300)     // Pre-cmd timeout ms
+// Timeouts for various SD card operations.  The actual worst-case time
+// required for these operations appears to be much smaller for the 4GB
+// Class 10 Apacer Industrial SD card (part number AP-MSD04GCS4P-1TM)
+// used for testing: these values have a factor of safety of 5 or more.
+// These values are at least as large as those inherited from the original
+// Arduino code.  If SD_CARD_USE_TIMER0_FOR_TIMEOUTS isn't enabled (which
+// by default it is not) an even more conservative timeout estimation is
+// used to account for possible compiler variation in loop optimization.
+// In general, expect multi-second (maybe even 30 seconds or more) delays
+// in cases where real timeouts are happening (due essentially to a broken
+// or failing card).
+#define SD_CARD_PRECMD_TIMEOUT ((uint16_t const) 500)     // Pre-cmd timeout ms
 #define SD_CARD_INIT_TIMEOUT   ((uint16_t const) 2000)    // Init timeout ms
-//#define SD_CARD_ERASE_TIMEOUT  ((uint16_t const) 10000)   // Erase timeout ms
-// FIXME: on the sanity check front, why does using this 1 instead of
-// 10000 work?  kinds surprising...
-#define SD_CARD_ERASE_TIMEOUT  ((uint16_t const) 1)   // Erase timeout ms
-#define SD_CARD_READ_TIMEOUT   ((uint16_t const) 300)     // Read timeout ms
+#define SD_CARD_ERASE_TIMEOUT  ((uint16_t const) 10000)   // Erase timeout ms
+#define SD_CARD_READ_TIMEOUT   ((uint16_t const) 500)     // Read timeout ms
 #define SD_CARD_WRITE_TIMEOUT  ((uint16_t const) 600)     // Write timeout ms
 
-// Errors that can occur when trying to talk to the SD card.
+// Errors that can occur when trying to talk to the SD card.  See the
+// implementation of the sd_card_error_description() function in sd_card.c
+// for the meanings.  These are probably not generally recoverable or
+// indeed useful, beyond knowing that an error occurred.  But who knows,
+// maybe you can do something with them in some situations.
 typedef enum {
-  // No error.
-  SD_CARD_ERROR_NONE = 0x00,
-  // Timeout error for command CMD0
-  SD_CARD_ERROR_CMD0_TIMEOUT = 0x01,
-  // CMD8 was not accepted - not valid SD card or supplied voltage unsupported
-  SD_CARD_ERROR_CMD8 = 0x02,
-  // Card returned an error response for CMD17 (read block) 
-  SD_CARD_ERROR_CMD17 = 0x03,
-  // Card returned an error response for CMD24 (write block) 
-  SD_CARD_ERROR_CMD24 = 0x04,
-  // WRITE_MULTIPLE_BLOCKS command failed 
-  SD_CARD_ERROR_CMD25 = 0x05,
-  // Card returned an error response for CMD58 (read OCR) 
-  SD_CARD_ERROR_CMD58 = 0x06,
-  // SET_WR_BLK_ERASE_COUNT failed 
-  SD_CARD_ERROR_ACMD23 = 0x07,
-  // Card's ACMD41 initialization process timeout 
-  SD_CARD_ERROR_ACMD41 = 0x08,
-  // Card returned a bad CSR version field 
-  SD_CARD_ERROR_BAD_CSD = 0x09,
-  // Erase block group command failed 
-  SD_CARD_ERROR_ERASE = 0x0A,
-  // Card not capable of single block erase 
+  SD_CARD_ERROR_NONE               = 0x00,
+  SD_CARD_ERROR_CMD0_TIMEOUT       = 0x01,
+  SD_CARD_ERROR_CMD8               = 0x02,
+  SD_CARD_ERROR_CMD17              = 0x03,
+  SD_CARD_ERROR_CMD24              = 0x04,
+  SD_CARD_ERROR_CMD25              = 0x05,
+  SD_CARD_ERROR_CMD58              = 0x06,
+  SD_CARD_ERROR_ACMD23             = 0x07,
+  SD_CARD_ERROR_ACMD41             = 0x08,
+  SD_CARD_ERROR_BAD_CSD            = 0x09,
+  SD_CARD_ERROR_ERASE              = 0x0A,
   SD_CARD_ERROR_ERASE_SINGLE_BLOCK = 0x0B,
-  // Erase sequence timed out 
-  SD_CARD_ERROR_ERASE_TIMEOUT = 0x0C,
-  // Card returned an error token instead of read data 
-  SD_CARD_ERROR_READ = 0x0D,
-  // Read CID or CSD failed 
-  SD_CARD_ERROR_READ_REG = 0x0E,
-  // Timeout while waiting for start of read data 
-  SD_CARD_ERROR_READ_TIMEOUT = 0x0F,
-  // Card did not accept STOP_TRAN_TOKEN 
-  SD_CARD_ERROR_STOP_TRAN = 0x10,
-  // Card returned an error token as a response to a write operation 
-  SD_CARD_ERROR_WRITE = 0x11,
-  // Attempt to write protected block zero 
-  SD_CARD_ERROR_WRITE_BLOCK_ZERO = 0x12,
-  // Card did not go ready for a multiple block write 
-  SD_CARD_ERROR_WRITE_MULTIPLE = 0x13,
-  // Card returned an error to a CMD13 status check after a write 
-  SD_CARD_ERROR_WRITE_PROGRAMMING = 0x14,
-  // Timeout occurred during write programming 
-  SD_CARD_ERROR_WRITE_TIMEOUT = 0x15,
-  // Incorrect rate selected 
-  SD_CARD_ERROR_SCK_RATE = 0x16
+  SD_CARD_ERROR_ERASE_TIMEOUT      = 0x0C,
+  SD_CARD_ERROR_READ               = 0x0D,
+  SD_CARD_ERROR_READ_REG           = 0x0E,
+  SD_CARD_ERROR_READ_TIMEOUT       = 0x0F,
+  SD_CARD_ERROR_STOP_TRAN          = 0x10,
+  SD_CARD_ERROR_WRITE              = 0x11,
+  SD_CARD_ERROR_WRITE_BLOCK_ZERO   = 0x12,
+  SD_CARD_ERROR_WRITE_MULTIPLE     = 0x13,
+  SD_CARD_ERROR_WRITE_PROGRAMMING  = 0x14,
+  SD_CARD_ERROR_WRITE_TIMEOUT      = 0x15,
+  SD_CARD_ERROR_SCK_RATE           = 0x16
 } sd_card_error_t;
 
 // Return error code for last error.  Many other functions in this interface
@@ -178,6 +165,24 @@ sd_card_last_error (void);
 // interpret usefully.  The status codes are defined in sd_card_info.h.
 uint8_t
 sd_card_last_error_data (void);
+
+// Its potentially convenient to be able to retrieve a textual description
+// of an error, but it burns about 1k or program memory space so we don't
+// build it unless requested.
+#ifdef SD_CARD_BUILD_ERROR_DESCRIPTION_FUNCTION
+
+// Maximum string length of error description returned by
+// sd_card_error_description, not including trailing '\0'.
+#  define SD_CARD_ERROR_DESCRIPTION_MAX_LENGTH 47
+
+// Put a textual description of the error in buf.  The buf argument must point
+// to a memory space large enough to hold SD_CARD_ERROR_DESCRIPTION_MAX_LENGTH
+// + 1 bytes.  Using this function will make your program quite a bit bigger.
+// As a convenience, buf is returned.
+char *
+sd_card_error_description (sd_card_error_t error, char *buf);
+
+#endif // #ifdef SD_CARD_BUILD_ERROR_DESCRIPTION_FUNCTION
 
 // Communication speed between microcontroller and SD card.
 typedef enum {
@@ -198,8 +203,11 @@ extern sd_card_spi_speed_t speed;
 // uses an interrupt.  It also call spi_init() from the spi.h interface,
 // with the SPI settings required for communicating with an SD card.
 // If you're talking to multiple SPI devices, you may need to change the
-// SPI settings to talk to them, then call this function again when you
-// want to talk to the SD card more.  This should work fine.  Hopefully :)
+// SPI settings to talk to them, then call this function again when you want
+// to talk to the SD card more.  This should work fine.  Hopefully :) Note
+// also that the choice of speed here seems to not make much difference to
+// how fast reads/writes go (I guess the underlying flash read/write time
+// requirements dominate, rather than SPI bus communication).
 uint8_t
 sd_card_init (sd_card_spi_speed_t speed);
 
@@ -210,7 +218,7 @@ sd_card_size (void);
 
 // Card types. 
 typedef enum {
-  SD_CARD_TYPE_INDETERMINATE = 0,   // Car type not known (yet).
+  SD_CARD_TYPE_INDETERMINATE = 0,   // Card type not known (yet).
   SD_CARD_TYPE_SD1           = 1,   // SD V1
   SD_CARD_TYPE_SD2           = 2,   // SD V2
   SD_CARD_TYPE_SDHC          = 3,   // SDHC

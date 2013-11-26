@@ -21,6 +21,8 @@
  */
 
 #include <assert.h>
+#include <avr/pgmspace.h>
+#include <string.h>
 
 #include "sd_card.h"
 
@@ -35,30 +37,43 @@
 #define SD_CARD_SPI_SLAVE_SELECT_SET_HIGH() \
   DIO_SET_HIGH (SD_CARD_SPI_SLAVE_SELECT_PIN)
 
-// SD Card Bytes Per Millisecond, Very Approximately.  Note that this
-// has nothing to do with the actual data rate the card can accept when
-// programming or reading data, but is just the bus rate at which it
-// communicates.  Note also that the numeric interpretation of the speed
-// enumerated type value is a bit counterintuitive.  We need the fairly
-// wide uint32_t here because some of timeouts (erase for example) are
-// quite long).  There is some untested support for the low-poer on-chip
-// 16 kHz oscillator here as well.
-#if F_CPU == 16000
-#  error This situation is untested.  Should work, but needs testing
-#  define SDCBPMSVA \
-  ((float) F_CPU / ((uint16_t) BITS_PER_BYTE * MS_PER_S * speed))
-#else // This is the branch where F_CPU != 16000
-#  define SDCBPMSVA \
-  (F_CPU / ((uint32_t) BITS_PER_BYTE * MS_PER_S * speed))
-#endif // F_CPU != 16000
+#if ! SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
-// Timeouts, expressed in terms of bytes transferred on the SPI bus.
-// FIXME: WORK POINT: sanity check these values
-#define SD_CARD_PRECMD_TIMEOUT_BYTES (SD_CARD_PRECMD_TIMEOUT * SDCBPMSVA)
-#define SD_CARD_INIT_TIMEOUT_BYTES   (SD_CARD_INIT_TIMEOUT   * SDCBPMSVA)
-#define SD_CARD_ERASE_TIMEOUT_BYTES  (SD_CARD_ERASE_TIMEOUT  * SDCBPMSVA)
-#define SD_CARD_READ_TIMEOUT_BYTES   (SD_CARD_READ_TIMEOUT   * SDCBPMSVA)
-#define SD_CARD_WRITE_TIMEOUT_BYTES  (SD_CARD_WRITE_TIMEOUT  * SDCBPMSVA)
+#  if F_CPU != 16000000
+#    error This situation is untested
+#  endif  // F_CPU != 16000000
+
+   // When using an iteration count to determine when we get a timeout,
+   // a lower F_CPU will probably mean fewer iterations per unit time.
+   // BUT maybe the SPI bus dominates the iteration time (though I don't
+   // think so, since quarter speed SPI seems to end up working with the same
+   // timeouts).  As the the above trap notes the non-16MHz case is untested.
+#  define TIMEOUT_FREQ_FACTOR ((F_CPU / 1000) / 16000)
+
+   // We use a large factor of safety when uing iteration counts to determine
+   // timeouts.  Using 16 here should make us ok down to 1 MHz, even if the
+   // freq. factor isn't good enough somehow :)
+#  define TIMEOUT_FS 16
+
+   // The Total Approximation Factor by which we multiply the approximate
+   // observed worst case timeout iteration counts :)
+#  define TIMEOUT_TAF (TIMEOUT_FREQ_FACTOR * TIMEOUT_FS)
+
+  // Timeouts, expressed in terms of iterations transferring data in from the
+  // SPI bus.  The constants in these values are sort of a joke: I got them
+  // by measung the worst case behavior in iterations for write timeouts,
+  // then extrapolating for the other constants from that measurement and
+  // the millisecond timeout values in sd_card.h.  We then multiply by a
+  // big factor of safety and a factor to compensate for slower frequencies.
+  // As the interface says, when not using timer0 to measure real timeouts,
+  // expect multi-second delays in cases where real timeouts happen :)
+#  define SD_CARD_PRECMD_TIMEOUT_ITERATIONS (TIMEOUT_TAF * 33000)
+#  define SD_CARD_INIT_TIMEOUT_ITERATIONS   (TIMEOUT_TAF * 133332)
+#  define SD_CARD_ERASE_TIMEOUT_ITERATIONS  (TIMEOUT_TAF * 666666)
+#  define SD_CARD_READ_TIMEOUT_ITERATIONS   (TIMEOUT_TAF * 33333)
+#  define SD_CARD_WRITE_TIMEOUT_ITERATIONS  (TIMEOUT_TAF * 40000)
+
+#endif // ! SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
 static uint32_t cur_block;   // Current block
 static sd_card_error_t cur_error;   // Current error (might be none)
@@ -100,10 +115,17 @@ error (sd_card_error_t code)
 }
 
 // Elapsed milliseconds since most recent timer0_stopwatch_reset().
+// Note that this result can end up truncated to zero, which in our use
+// cases is fine since that means the operation being times was easily fast
+// enough to be within spec.
 #define EMILLIS() (timer0_stopwatch_microseconds () / 1000)
 
 static uint8_t
+#if SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 wait_not_busy (uint16_t timeout_ms)
+#else 
+wait_not_busy (uint32_t timeout_iterations)
+#endif
 {
   // Wait timeout_ms milliseconds for card to go not busy.
 
@@ -119,16 +141,16 @@ wait_not_busy (uint16_t timeout_ms)
     }
   } while ( EMILLIS () < timeout_ms );
 #else // The case where SD_CARD_USE_TIMER0_FOR_TIMEOUTS isn't defined
-  uint32_t byte_count = 0;
+  uint32_t iteration_count = 0;
   do {
     // Wait for card to go non-busy (to get done programming).
     if ( receive_byte () != SD_CARD_BUSY_SIGNAL_BYTE_VALUE ) {
       return TRUE;
     }
     else {
-      byte_count++;
+      iteration_count++;
     }
-  } while ( byte_count < timeout_ms * SDCBPMSVA );
+  } while ( iteration_count < timeout_iterations );
 #endif // SD_CARD_USE_TIMER0_FOR_TIMEOUTS
   
   return FALSE;
@@ -151,12 +173,6 @@ read_end (void)
   }
 }
 
-// FIXME: get rid of this debug storage (and use of it) when all response
-// codes are sorted (we might just have got there already, I think).
-uint8_t sp = 0;
-uint8_t byte_stream[UINT8_MAX];
-uint8_t lc;
-
 //------------------------------------------------------------------------------
 static uint8_t
 card_command (uint8_t cmd, uint32_t arg)
@@ -173,8 +189,12 @@ card_command (uint8_t cmd, uint32_t arg)
 
   // Wait for a bit if the card is busy.  Presumably some subsequent command
   // will fail and we'll get an error of some sort if this wait is ever
-  // actually required and the card doesn't ever go non-buys.
+  // actually required and the card doesn't ever go non-busy.
+#ifdef SD_CARD_USE_TIMER0_FOR_TIMEOUTS
   wait_not_busy (SD_CARD_PRECMD_TIMEOUT);
+#else
+  wait_not_busy (SD_CARD_PRECMD_TIMEOUT_ITERATIONS);
+#endif
 
   // Send command
   send_byte (SD_CARD_COMMAND_PREFIX_MASK | cmd);
@@ -208,17 +228,13 @@ card_command (uint8_t cmd, uint32_t arg)
   send_byte (crc);
 
   // Wait for response (checking a maximum of Maximum Response Checks times)
-  sp = 0;
-  lc = cmd;
   uint8_t const mrc = UINT8_MAX;   // Maximum Response Checks
   for ( uint8_t ii = 0 ;
         ((status = receive_byte ()) & SD_CARD_NOT_R1_RESPONSE_MASK) &&
         ii != mrc ;
         ii++ ) {
-    byte_stream[sp++] = status;
     ;
   }
-  byte_stream[sp++] = status;
 
   return status;
 }
@@ -267,13 +283,13 @@ wait_start_block (void)
     }
   }
 #else // The case where SD_CARD_USE_TIMER0_FOR_TIMEOUTS isn't defined
-  uint32_t byte_count = 0;
+  uint32_t iteration_count = 0;
   while ( (status = receive_byte ()) == SD_CARD_NO_TRANSMISSION_BYTE_VALUE ) {
-    if ( byte_count >= SD_CARD_READ_TIMEOUT_BYTES ) {
+    if ( iteration_count >= SD_CARD_READ_TIMEOUT_ITERATIONS ) {
       error (SD_CARD_ERROR_READ_TIMEOUT);
       goto fail;
     }    
-    byte_count++;
+    iteration_count++;
   }
 #endif // SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
@@ -331,6 +347,91 @@ sd_card_last_error_data (void)
 {
   return status;
 }
+
+#ifdef SD_CARD_BUILD_ERROR_DESCRIPTION_FUNCTION
+
+char *
+sd_card_error_description (sd_card_error_t error, char *buf)
+{
+  switch ( error ) {
+    case SD_CARD_ERROR_NONE:
+      strcpy_P (buf, PSTR ("No error"));
+      break;
+    case SD_CARD_ERROR_CMD0_TIMEOUT:
+      strcpy_P (buf, PSTR ("CMD0 error: init-related timeout"));
+      break;
+    case SD_CARD_ERROR_CMD8:
+      strcpy_P (buf, PSTR ("CMD8 error: invalid SD card or voltage"));
+      break;
+    case SD_CARD_ERROR_CMD17:
+      strcpy_P (buf, PSTR ("CMD17 error: read block error"));
+      break;
+    case SD_CARD_ERROR_CMD24:
+      strcpy_P (buf, PSTR ("CMD24 error: write block error"));
+      break;
+    case SD_CARD_ERROR_CMD25:
+      strcpy_P (buf, PSTR ("CMD25 error: write multiple blocks error"));
+      break;
+    case SD_CARD_ERROR_CMD58:
+      strcpy_P (buf, PSTR ("CMD58 error: OCR read error"));
+      break;
+    case SD_CARD_ERROR_ACMD23:
+      strcpy_P (buf, PSTR ("ACMD23 error: block pre-erase error"));
+      break;
+    case SD_CARD_ERROR_ACMD41:
+      strcpy_P (buf, PSTR ("ACMD41 error: initialization process timeout"));
+      break;
+    case SD_CARD_ERROR_BAD_CSD:
+      strcpy_P (buf, PSTR ("bad CSR version field"));
+      break;
+    case SD_CARD_ERROR_ERASE:
+      strcpy_P (buf, PSTR ("erase block group command failed"));
+      break;
+    case SD_CARD_ERROR_ERASE_SINGLE_BLOCK:
+      strcpy_P (buf, PSTR ("card not capable of single block erase"));
+      break;
+    case SD_CARD_ERROR_ERASE_TIMEOUT:
+      strcpy_P (buf, PSTR ("erase timeout"));
+      break;
+    case SD_CARD_ERROR_READ:
+      strcpy_P (buf, PSTR ("read error (card returned error token not data)"));
+      break;
+    case SD_CARD_ERROR_READ_REG:
+      strcpy_P (buf, PSTR ("error reading CID or CSD register"));
+      break;
+    case SD_CARD_ERROR_READ_TIMEOUT:
+      strcpy_P (buf, PSTR ("read timeout"));
+      break;
+    case SD_CARD_ERROR_STOP_TRAN:
+      strcpy_P (buf, PSTR ("card did not accept STOP_TRAN token"));
+      break;
+    case SD_CARD_ERROR_WRITE:
+      strcpy_P (buf, PSTR ("write error (card returned error token)"));
+      break;
+    case SD_CARD_ERROR_WRITE_BLOCK_ZERO:
+      strcpy_P (buf, PSTR ("attempt to write protected block zero"));
+      break;
+    case SD_CARD_ERROR_WRITE_MULTIPLE:
+      strcpy_P (buf, PSTR ("card did not go ready for multiple block write"));
+      break;
+    case SD_CARD_ERROR_WRITE_PROGRAMMING:
+      strcpy_P (buf, PSTR ("CMD13 (status check) returned error after write"));
+      break;
+    case SD_CARD_ERROR_WRITE_TIMEOUT:
+      strcpy_P (buf, PSTR ("write timeout"));
+      break;
+    case SD_CARD_ERROR_SCK_RATE:
+      strcpy_P (buf, PSTR ("incorrect rate selected"));
+      break;
+    default:
+      strcpy_P (buf, PSTR ("unhandled or unknown error value"));
+      break;
+  }
+
+  return buf;
+}
+
+#endif // # ifdef SD_CARD_BUILD_ERROR_DESCRIPTION_FUNCTION
 
 sd_card_type_t
 sd_card_type (void)
@@ -397,7 +498,11 @@ sd_card_erase_blocks (uint32_t first_block, uint32_t last_block)
       goto fail;
   }
 
+#ifdef SD_CARD_USE_TIMER0_FOR_TIMEOUTS
   if ( ! wait_not_busy (SD_CARD_ERASE_TIMEOUT) ) {
+#else
+  if ( ! wait_not_busy (SD_CARD_ERASE_TIMEOUT_ITERATIONS) ) {
+#endif
     error (SD_CARD_ERROR_ERASE_TIMEOUT);
     goto fail;
   }
@@ -461,13 +566,13 @@ sd_card_init (sd_card_spi_speed_t speed)
     }
   }
 #else // The case where SD_CARD_USE_TIMER0_FOR_TIMEOUTS isn't defined
-  uint32_t byte_count = 0;
+  uint32_t iteration_count = 0;
   while ( (status = card_command (SD_CARD_CMD0, 0)) != SD_CARD_R1_IDLE_STATE ) {
-    if ( byte_count >= SD_CARD_INIT_TIMEOUT_BYTES ) {
+    if ( iteration_count >= SD_CARD_INIT_TIMEOUT_ITERATIONS ) {
       error (SD_CARD_ERROR_CMD0_TIMEOUT);
       goto fail;
     }
-    byte_count++;
+    iteration_count++;
   }
 #endif // SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
@@ -534,14 +639,14 @@ sd_card_init (sd_card_spi_speed_t speed)
     }
   }
 #else // The case where SD_CARD_USE_TIMER0_FOR_TIMEOUTS isn't defined
-  byte_count = 0;
+  iteration_count = 0;
   while ( (status = card_application_command (SD_CARD_ACMD41, arg))
           != SD_CARD_R1_READY_STATE ) {
-    if ( byte_count >= SD_CARD_INIT_TIMEOUT_BYTES ) {
+    if ( iteration_count >= SD_CARD_INIT_TIMEOUT_ITERATIONS ) {
       error (SD_CARD_ERROR_ACMD41);
       goto fail;
     }
-    byte_count++;
+    iteration_count++;
   }
 #endif // SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
@@ -705,7 +810,12 @@ sd_card_write_partial_block (uint32_t block, uint16_t cnt, uint8_t const *src)
   }
 
   // Wait for flash programming to complete
+
+#ifdef SD_CARD_USE_TIMER0_FOR_TIMEOUTS
   if ( ! wait_not_busy (SD_CARD_WRITE_TIMEOUT) ) {
+#else
+  if ( ! wait_not_busy (SD_CARD_WRITE_TIMEOUT_ITERATIONS) ) {
+#endif
     error (SD_CARD_ERROR_WRITE_TIMEOUT);
     goto fail;
   }
