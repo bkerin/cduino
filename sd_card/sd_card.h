@@ -10,7 +10,8 @@
 #  include "timer0_stopwatch.h"
 #endif // SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
-#include "sd_card_info.h"
+// FIXME: rename this header
+#include "sd_card_private.h"
 
 // WARNING: despite being ubiquitous, many SD cards are utter junk.
 // They lack any underlying wear leveling for the flash memory and are
@@ -161,7 +162,7 @@ sd_card_last_error (void);
 // I believe this always means the most recent byte received from the
 // SD card controller.  This may not be anything relevant, depending on
 // the error, and will probably require inspection of the source code to
-// interpret usefully.  The status codes are defined in sd_card_info.h.
+// interpret usefully.  The status codes are defined in sd_card_private.h.
 uint8_t
 sd_card_last_error_data (void);
 
