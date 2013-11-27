@@ -17,6 +17,8 @@
 
 #include <assert.h>
 #include <avr/pgmspace.h>
+// FIXME: do we need stdlib here once we have the new avr libc which has
+// the fixed assert.h?  I doubt it but it needs checked..
 #include <stdlib.h>
 
 #include "sd_card.h"
@@ -31,50 +33,21 @@
 #endif
 #define PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
 
-// FIXME: debug storage get rid of these and calls when response codes sorted
-extern uint8_t sp;
-extern uint8_t byte_stream[UINT8_MAX];
-extern uint8_t lc;
-static void
-print_last_command_and_byte_stream (uint8_t cmd, uint8_t *bs)
-{
-  printf ("  Last command: %#.2X\n", cmd);
-  printf ("  Bytes received by card_command(): %d\n", sp);
-  uint8_t ii;
-  for ( ii = 0 ; ii < sp ; ii++ ) {
-    printf ("    byte %d: %#.2X\n", ii, bs[ii]);
-  }
-}
+#ifndef SD_CARD_BUILD_ERROR_DESCRIPTION_FUNCTION
+#  error This test program requires SD_CARD_BUILD_ERROR_DESCRIPTION_FUNCTION
+#endif
 
-// FIXME: the text fetching part of this function should be in interface maybe
 static void
-check_maybe_print_possible_failure_reason (uint8_t code)
+check_maybe_print_possible_failure_message (uint8_t code)
 {
   // Check that code is 0, if it isn't, print a message describing the error
-  // returned by sd_card_last_error(), followed by a newline
+  // returned by sd_card_last_error(), followed by a newline.
 
   if ( ! code ) {
-
     sd_card_error_t last_error = sd_card_last_error ();
-
-    PFP ("failed: ");
-
-    switch ( last_error ) {
-    case SD_CARD_ERROR_WRITE_TIMEOUT:
-      PFP ("write timeout");
-      break;
-    case SD_CARD_ERROR_READ_TIMEOUT:
-      PFP ("read timeout");
-      break;
-    case SD_CARD_ERROR_CMD0_TIMEOUT:
-      PFP ("CMD0 (init-related) timeout");
-      break;
-    default:
-      PFP ("unhandled or unknown reason");
-      break;
-    }
-
-    PFP ("\n");
+    char err_buf[SD_CARD_ERROR_DESCRIPTION_MAX_LENGTH + 1];
+    sd_card_error_description (last_error, err_buf);
+    PFP ("failed: %s\n", err_buf);
   }
 }
 
@@ -92,17 +65,20 @@ test_write_read (void)
 
   PFP ("Trying sd_card_write_block()... ");
   uint8_t return_code = sd_card_write_block (bn, data_block);
-  check_maybe_print_possible_failure_reason (return_code);
+  check_maybe_print_possible_failure_message (return_code);
   assert (return_code);
   PFP ("ok.\n");
 
   uint8_t reread_data[SD_CARD_BLOCK_SIZE];
   PFP ("Trying sd_card_read_block()... ");
   return_code = sd_card_read_block (bn, reread_data);
-  check_maybe_print_possible_failure_reason (return_code);
+  check_maybe_print_possible_failure_message (return_code);
   assert (return_code);
   for ( ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
-    assert (reread_data[ii] == 42);
+    if ( reread_data[ii] != 42 ) {
+      PFP ("failed: didn't read expected value");
+      assert (0);
+    }
   }
   PFP ("ok.\n");
  
@@ -115,14 +91,19 @@ test_write_read (void)
   PFP ("Trying sd_card_write_partial_block()... ");
   uint16_t const pbbc = 42;   // Partial block byte count
   return_code = sd_card_write_partial_block (bn, pbbc, data_block);
+  check_maybe_print_possible_failure_message (return_code);
   assert (return_code);
   PFP ("ok.\n");
 
   PFP ("Trying sd_card_read_partial_block()... ");
   return_code = sd_card_read_partial_block (bn, pbbc, reread_data);
+  check_maybe_print_possible_failure_message (return_code);
   assert (return_code);
   for ( ii = 0 ; ii < pbbc ; ii++ ) {
-    assert (reread_data[ii] == 42);
+    if ( reread_data[ii] != 42 ) {
+      PFP ("failed: didn't read expected value");
+      assert (0);
+    }
   }
   PFP ("ok.\n");
 }
@@ -140,6 +121,7 @@ speed_test_1000_blocks (void)
   PFP ("Speed test: writing 1000 blocks... ");
   for ( uint32_t ii = 0 ; ii < 1000 ; ii++ ) {
     uint8_t return_code = sd_card_write_block (ii + 1, data_block);
+    check_maybe_print_possible_failure_message (return_code);
     assert (return_code);
   }
   PFP ("done.\n");
@@ -147,12 +129,16 @@ speed_test_1000_blocks (void)
   PFP ("Speed test: reading 1000 blocks... ");
   for ( uint32_t ii = 0 ; ii < 1000 ; ii++ ) {
     uint8_t return_code = sd_card_read_block (ii + 1, data_block);
+    check_maybe_print_possible_failure_message (return_code);
     assert (return_code);
     // Here we double check that we're getting back the correct values,
     // which makes the speed test take slightly longer, but its not going
     // to be much compared to the read itself at hight F_CPU at least.
     for ( int ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
-      assert (data_block[ii] == 42);
+      if ( data_block[ii] != 42 ) {
+        PFP ("failed: didn't read expected value");
+        assert (0);
+      }
     }
   }
   PFP ("done.\n");
@@ -165,21 +151,19 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
 
   PFP ("Trying sd_card_init (%s)... ", speed_string);
   uint8_t return_code = sd_card_init (speed);
-  check_maybe_print_possible_failure_reason (return_code);
+  check_maybe_print_possible_failure_message (return_code);
   assert (return_code);
-
-  print_last_command_and_byte_stream (lc, byte_stream);
+  PFP ("ok.\n");
 
   PFP ("Trying sd_card_size ()... ");
   uint32_t card_size = sd_card_size ();
-  if ( card_size != 0 ) {
-    PFP ("ok, card_size: %lu\n", card_size);
-  }
-  else {
-    PFP ("failed.\n");
+  if ( card_size == 0 ) {
+    check_maybe_print_possible_failure_message (return_code);
     assert (0);
   }
-  print_last_command_and_byte_stream (lc, byte_stream);
+  else {
+    PFP ("ok, card_size: %lu\n", card_size);
+  }
 
   PFP ("Trying sd_card_type()... ");
   sd_card_type_t card_type = sd_card_type ();
@@ -191,17 +175,17 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     case SD_CARD_TYPE_SD1:
       PFP ("SD1.\n");
       PFP ( 
-          "SD1 type cards haven't been tested.  Disable this warning  and try\n"
-          "it :)  Other tests that don't work for this card type might also\n"
-          "need to be disabled.\n" );
+          "SD1 type cards haven't been tested (only SDHC cards have).\n"
+          "Disable this trap and try it :)  Other tests that don't work\n"
+          "for this card type might also need to be disabled.\n" );
       assert (0);   // SD1 type cards haven't been tested
       break;
     case SD_CARD_TYPE_SD2:
       PFP ("SD2.\n");
       PFP (
-          "SD2 type cards haven't been tested.  Disable this warning  and try\n"
-          "it :)  Other tests that don't work for this card type might also\n"
-          "need to be disabled.\n" );
+          "SD2 type cards haven't been tested (only SDHC cards have).\n"
+          "Disable this trap and try it :)  Other tests that don't work\n"
+          "for this card type might also need to be disabled.\n" );
       assert (0);   // SD2 type cards haven't been tested
       break;
     case SD_CARD_TYPE_SDHC:
@@ -211,7 +195,6 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
       assert (0);   // Shouldn't be here
       break;
   }
-  print_last_command_and_byte_stream (lc, byte_stream);
 
   PFP ("Trying sd_card_read_cid()... ");
   sd_card_cid_t ccid;   // Card CID
@@ -220,10 +203,9 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     PFP ("returned TRUE, so presumably it worked.\n");
   }
   else {
-    PFP ("returned FALSE (failed).\n");
+    check_maybe_print_possible_failure_message (return_code);
     assert (0);
   }
-  print_last_command_and_byte_stream (lc, byte_stream);
 
   PFP ("Trying sd_card_read_csd()... ");
   sd_card_csd_t ccsd;   // Card CSD
@@ -232,10 +214,9 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     PFP ("returned TRUE, so presumably it worked.\n");
   }
   else {
-    PFP ("returned FALSE (failed).\n");
+    check_maybe_print_possible_failure_message (return_code);
     assert (0);
   }
-  print_last_command_and_byte_stream (lc, byte_stream);
 
   test_write_read ();
 
@@ -249,7 +230,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
       PFP ("ok.\n");
     }
     else {
-      PFP ("failed.\n");
+      check_maybe_print_possible_failure_message (return_code);
       assert (0);
     }
   }
@@ -257,7 +238,6 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
     PFP ("it's not supported.\n");
     assert (0);
   }
-  print_last_command_and_byte_stream (lc, byte_stream);
 
   speed_test_1000_blocks ();
 

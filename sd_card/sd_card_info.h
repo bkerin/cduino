@@ -204,9 +204,9 @@ typedef struct sd_card_cid {
 } sd_card_cid_t;
 
 // Card-Specific Data (CSD) register (section 5.3).  see also the higher-level
-// inter (partial) interface functions in sd_card.h.  Note that there are
-// two version of this structure depending on the SD card version, this is
-// the version 1 form.
+// (partial) interface functions in sd_card.h.  Note that there are two
+// versions of this structure each used by a different SD card version,
+// this is the version 1 form.
 typedef struct sd_card_csd1 {
   // Byte 0
   unsigned reserved1 : 6;
@@ -268,9 +268,9 @@ typedef struct sd_card_csd1 {
 } sd_card_csd1_t;
 
 // Card-Specific Data (CSD) register (section 5.3).  see also the higher-level
-// inter (partial) interface functions in sd_card.h.  Note that there are
-// two version of this structure depending on the SD card version, this is
-// the version 2 form.
+// (partial) interface functions in sd_card.h.  Note that there are two
+// versions of this structure each used by a different SD card version,
+// this is the version 2 form.
 typedef struct sd_card_csd2 {
   // Byte 0
   unsigned reserved1 : 6;

@@ -22,6 +22,9 @@
 
 #include <assert.h>
 #include <avr/pgmspace.h>
+// FIXME: here only cause assert.h wrongly needs it, remove when that bug
+// is fixed (which it is in more recent upstream AVR libc)
+#include <stdlib.h>
 #include <string.h>
 
 #include "sd_card.h"
@@ -40,7 +43,8 @@
 #if ! SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
 #  if F_CPU != 16000000
-#    error This situation is untested
+#    error This interface is not tested with F_CPU != 16000000, though it \
+           should work down to 1 MHz at least.  Disable this trap and try it :)
 #  endif  // F_CPU != 16000000
 
    // When using an iteration count to determine when we get a timeout,
@@ -354,8 +358,8 @@ char *
 sd_card_error_description (sd_card_error_t error, char *buf)
 {
   switch ( error ) {
-    case SD_CARD_ERROR_NONE:
-      strcpy_P (buf, PSTR ("No error"));
+    case SD_CARD_ERROR_NONE_OR_UNSET:
+      strcpy_P (buf, PSTR ("No error or error value not set"));
       break;
     case SD_CARD_ERROR_CMD0_TIMEOUT:
       strcpy_P (buf, PSTR ("CMD0 error: init-related timeout"));
@@ -449,6 +453,9 @@ sd_card_size (void)
   }
 
   if (csd.v1.csd_ver == 0) {
+    // See the sd_card_private.h header and/or the bit field description
+    // and SD Physical Layer Simplified Specification Version 4.10 Section
+    // 5.3.2 for the meanings of the numeric constants in this section.
     uint8_t read_bl_len = csd.v1.read_bl_len;
     uint16_t c_size =
       (csd.v1.c_size_high << 10) |
@@ -460,6 +467,9 @@ sd_card_size (void)
     return (uint32_t) (c_size + 1) << (c_size_mult + read_bl_len - 7);
   }
   else if ( csd.v2.csd_ver == 1 ) {
+    // See the sd_card_private.h header and/or the bit field description
+    // and SD Physical Layer Simplified Specification Version 4.10 Section
+    // 5.3.3 for the meanings of the numeric constants in this section.
     uint32_t c_size =
       ((uint32_t) csd.v2.c_size_high << 16) |
       (csd.v2.c_size_mid << 8) | csd.v2.c_size_low;
@@ -532,7 +542,7 @@ sd_card_init (sd_card_spi_speed_t speed)
   timer0_stopwatch_init ();
 #endif // SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
-  cur_error = SD_CARD_ERROR_NONE;
+  cur_error = SD_CARD_ERROR_NONE_OR_UNSET;
   card_type = SD_CARD_TYPE_INDETERMINATE;
   in_block = FALSE;
   partial_block_read_mode = FALSE;
@@ -810,7 +820,6 @@ sd_card_write_partial_block (uint32_t block, uint16_t cnt, uint8_t const *src)
   }
 
   // Wait for flash programming to complete
-
 #ifdef SD_CARD_USE_TIMER0_FOR_TIMEOUTS
   if ( ! wait_not_busy (SD_CARD_WRITE_TIMEOUT) ) {
 #else

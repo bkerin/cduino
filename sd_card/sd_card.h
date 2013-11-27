@@ -5,9 +5,6 @@
 #ifndef SD_CARD_H
 #define SD_CARD_H
 
-// FIXME: shouldn't be draggin term_io.h in here in shipping code
-#include <term_io.h>
-
 // See the description of this define in the Makefile for this module.
 #ifdef SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 #  include "timer0_stopwatch.h"
@@ -126,7 +123,7 @@
 // indeed useful, beyond knowing that an error occurred.  But who knows,
 // maybe you can do something with them in some situations.
 typedef enum {
-  SD_CARD_ERROR_NONE               = 0x00,
+  SD_CARD_ERROR_NONE_OR_UNSET      = 0x00,
   SD_CARD_ERROR_CMD0_TIMEOUT       = 0x01,
   SD_CARD_ERROR_CMD8               = 0x02,
   SD_CARD_ERROR_CMD17              = 0x03,
@@ -154,7 +151,9 @@ typedef enum {
 // Return error code for last error.  Many other functions in this interface
 // set an internal error code but only return a generic "failure" sentinel
 // value on error.  This method will return a code that describes the most
-// recent error more precisely.
+// recent error more precisely.  NOTE: not all functions set this value
+// even on failure, so once a call into this interface fails, subsequent
+// failures might leave this method returing a misleading value.
 sd_card_error_t
 sd_card_last_error (void);
 
