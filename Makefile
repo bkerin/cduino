@@ -80,12 +80,12 @@ git_push: build_all_test_programs clean_all_modules
 	! (git status | grep 'Changes to be committed:')
 	git push origin master
 
-# Verify that all the source html files except the lessons and the somewhat
-# anomolous but useful blink.c and some other junk that creeps in from
-# Arduino lib in the crosslinked sources directory appear to be linked to
-# from somewhere in the top level API document.  NOTE: FNP below is the
-# "File No Path".  NOTE: the check for the text of the link depends on
-# finding that text on a line with nothing else but white space.
+# Verify that all the source html files except the lessons, private headers,
+# and the somewhat anomolous but useful blink.c and some other junk that
+# creeps in from Arduino lib in the crosslinked sources directory appear
+# to be linked to from somewhere in the top level API document.  NOTE: FNP
+# below is the "File No Path".  NOTE: the check for the text of the link
+# depends on finding that text on a line with nothing else but white space.
 check_api_doc_completeness: apis_and_sources.html \
                             xlinked_source_html \
                             build_all_test_programs
@@ -93,6 +93,8 @@ check_api_doc_completeness: apis_and_sources.html \
           FNP=`echo $$SF | perl -p -e 's/.*\/(.*)\.html/$$1/'`; \
           echo $$SF | perl -n -e 'not m/\/lesson.*/ or exit 1' || continue; \
           echo $$SF | perl -n -e 'not m/\/blink\.c/ or exit 1' || continue; \
+          echo $$SF | perl -n -e 'not m/\/\w+_private\.h/ or exit 1' || \
+            continue; \
           grep -q -P "\Q\"$$SF\"\E" $< || \
             ERROR="probably no link to $$SF in $<"; \
           grep -q -P "^\s*\Q$$FNP\E\s*$$" $< || \
