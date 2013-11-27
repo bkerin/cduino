@@ -48,16 +48,20 @@ build_all_test_programs: MODULE_DIRS = \
                     dirname $$gmk; \
                   done))
 build_all_test_programs:
-	(for md in $(MODULE_DIRS); do \
-           echo "$$md" | grep --silent 'dio$$' || \
-           echo "$$md" | grep --silent 'lesson12$$' || \
-           ( \
-             $(MAKE) -rR -C $$md clean && \
-             $(MAKE) -rR -C $$md program_to_upload.out && \
-             $(MAKE) -rR -C $$md clean \
-           ) || \
-           exit 1; \
-         done)
+	# Because many targets normally do a full rebuild of all the tests, we
+	# support this envirnoment variable which can be used to circumvent our
+	# own careful checking.  When appropriate :)
+	test -n "$$SKIP_TEST_PROGRAMS_BUILD" || ( \
+          for md in $(MODULE_DIRS); do \
+            echo "$$md" | grep --silent 'dio$$' || \
+            echo "$$md" | grep --silent 'lesson12$$' || ( \
+              $(MAKE) -rR -C $$md clean && \
+              $(MAKE) -rR -C $$md program_to_upload.out && \
+              $(MAKE) -rR -C $$md clean \
+            ) || \
+            exit 1; \
+          done \
+        )
 
 # Clean up all the modules.
 .PHONY: clean_all_modules
