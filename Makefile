@@ -34,12 +34,13 @@ new_module:
           echo 'include generic.mk' >Makefile
 
 # Do a clean, then a full program build, then another clean in each module
-# directory.  The idea is to try to catch interface changes.  This isn't a
-# complete test of course, but it helps catch obvious stuff at least.  FIXME:
-# At the moment we don't test dio because it comes with some fatal warning
-# thingies, or lesson12 because it requires the AVRISPmkII programming method
-# (though with the Uno it supposedly doesn't anymore :).  We should require a
-# manually placed stamp to represent that these modules have been checked out.
+# directory.  The idea is to try to catch interface changes.  This isn't
+# a complete test of course, but it helps catch obvious stuff at least.
+# FIXME: At the moment we don't test dio because it comes with some
+# fatal warning thingies, or lesson12 because it requires the AVRISPmkII
+# programming method (though with the Uno it supposedly doesn't anymore :).
+# We should perhaps require a manually placed stamp to represent that these
+# modules have been checked out.
 .PHONY: build_all_programs
 build_all_test_programs: MODULE_DIRS = \
   $(shell echo $$(for gmk in $$(find . -name "generic.mk" -print | \
