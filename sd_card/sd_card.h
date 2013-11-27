@@ -10,7 +10,6 @@
 #  include "timer0_stopwatch.h"
 #endif // SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
-// FIXME: rename this header
 #include "sd_card_private.h"
 
 // WARNING: despite being ubiquitous, many SD cards are utter junk.
