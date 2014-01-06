@@ -36,13 +36,11 @@
 static void
 initialize_adc (void)
 {
-  // Internal pull-ups interfere with the ADC. We need to disable the pull-up
-  // on the pin if it's being used for ADC. either writing 0 to the port
-  // register or setting it to output should be enough to disable pull-ups.
-  DDRC = 0x00;
+  PORTC = 0x00;   // Disable pull-ups on all ADC pins (when inputs)
+  DDRC = 0x00;    // Set all ADC pins as inputs
   
-  // Restore the default settings for ADMUX.
-  ADMUX = 0x00;
+  
+  ADMUX = 0x00;   // Restore the default settings for ADMUX.
 
   // Unless otherwise configured, arduinos use the internal Vcc reference.
   // Thats what we're going to do as well, so we set bit REFS0 to specify
