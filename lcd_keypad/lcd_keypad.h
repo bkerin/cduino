@@ -14,12 +14,10 @@
 
 // Initialize the LCD and ADC devices.  The ADC reference is always
 // initialized to ADC_REFERENCE_AVCC.  Note that all ADC channels use the
-// same reference source.  FIXME: is it possible to temporarily reset ADC
-// to use another reference source without damaging things (see warnings
-// in ADC header)?  After this routine is called, routines from lcd.h can
-// be called freely (without calling lcd_init), though of course many of
-// the routines in this interface manipulate the LCD contents themselves.
-// The interactions are simple and hopefully obvious.
+// After this routine is called, routines from lcd.h can be called freely
+// (without calling lcd_init), though of course many of the routines in this
+// interface manipulate the LCD contents themselves.  The interactions are
+// simple and hopefully obvious.
 void
 lcd_keypad_init (void);
 
@@ -52,9 +50,9 @@ lcd_keypad_button_name (lcd_keypad_button_t button, char *name);
 // Check to see if a button is currently pressed, and return the
 // button, or LCD_KEYPAD_BUTTON_NONE if no button is currently pressed,
 // or LCD_KEYPAD_BUTTON_INDETERMINATE if it seems that the buttons are
-// changing state.  Note that if multiple buttons are pressed simultaneously,
-// the one nearest the top of the lcd_keypad_button_t enumeration is returned.
-// FIXME: explain why not 'Note'
+// changing state.  Due to the way the hardware resistors/ADC input are
+// connected, if multiple buttons are pressed simultaneously, the one
+// nearest the top of the lcd_keypad_button_t enumeration is returned.
 lcd_keypad_button_t
 lcd_keypad_check_buttons (void);
 
@@ -95,7 +93,7 @@ lcd_keypad_show_value (const char *name, double *value);
 lcd_keypad_button_t
 lcd_keypad_set_value (const char *name, double *value, double step);
 
-// FIXME: should have method to get strings and maybe some specialized
+// FIXXME: should have method to get strings and maybe some specialized
 // methods to get things like email addresses, IP addresses, etc.
 
 #endif // LCD_KEYPAD_H
