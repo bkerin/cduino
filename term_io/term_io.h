@@ -6,6 +6,8 @@
 #ifndef TERM_IO_H
 #define TERM_IO_H
 
+#include <avr/pgmspace.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "uart.h"
@@ -45,17 +47,30 @@ term_io_init (void);
 int
 term_io_getline (char *linebuf);
 
-// Print trace point message.  Useful for debugging.
-#define TERM_IO_PTP \
-  printf ("hit file %s, line %d, function %s()\n", \
-          __FILE__, __LINE__, __func__)
+// PrintF using Program memory.  This macro makes it easier to store the
+// format arguments to printf_P calls in program space.
+#ifndef __GNUC__
+#  error GNU C is required by a nearby comma-swallowing macro
+#endif
+#define TERM_IO_PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
 
-// Print halt point message and call exit(1).  Note that exit will disable
+// Print Trace Point message.  Useful for debugging.
+// FIXME: replace these printfs with TERM_IO_PFPs?  Probably a good idea since
+// adding one of them could easily run outa RAM and cause weirdness.
+#define TERM_IO_PTP() \
+  TERM_IO_PFP ( \
+      "trace point: file %s, line %d, function %s()\n", \
+      __FILE__, __LINE__, __func__ )
+
+// Print Halt Point message and call exit(1).  Note that exit will disable
 // all interrupts before entering an infinite loop.
-#define TERM_IO_PHP \
+// FIXME: replace these printfs with TERM_IO_PFPs?  Probably a good idea since
+// adding one of them could easily run outa RAM and cause weirdness.
+#define TERM_IO_PHP() \
   do { \
-    printf ("hit halt point: file %s, line %d, function %s()\n", \
-            __FILE__, __LINE__, __func__); \
+    TERM_IO_PFP ( \
+        "halt point: file %s, line %d, function %s()\n", \
+        __FILE__, __LINE__, __func__); \
     exit (1); \
   } while ( 0 );
 
@@ -64,11 +79,15 @@ term_io_getline (char *linebuf);
 // 'CPPFLAGS += -DTERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP' at the
 // bottom of the Makefile for your module to make things even easier :)
 #ifdef TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
-#  define PTP TERM_IO_PTP
-#  define PHP TERM_IO_PHP
+// FIXME: reactivate once debugged
+//#  define PFP TERM_IO_PFP
+#  define PTP TERM_IO_PTP()
+#  define PHP TERM_IO_PHP()
 // Perhaps you even like to use lower case :)
-#  define ptp TERM_IO_PTP
-#  define php TERM_IO_PHP
+// FIXME: reactivate once debugged
+//#  define pfp TERM_IO_PFP
+#  define ptp TERM_IO_PTP()
+#  define php TERM_IO_PHP()
 #endif
 
 #endif // TERM_IO_H
