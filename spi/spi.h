@@ -17,12 +17,12 @@
 // You have to ensure that the slave select line for the device you want to
 // talk to is brought low before you talk to it (of course this line should
 // normally be high).  It may be convenient to define macros like this:
-/*
+//
 //   #define MY_SPI_SLAVE_1_SELECT_INIT() \
 //     SPI_SS_INIT(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
 //   #define MY_SPI_SLAVE_1_SELECT_SET_LOW SPI_SS_SET_LOW
 //   #define MY_SPI_SLAVE_1_SELECT_SET_HIGH SPI_SS_SET_HIGH
-*/
+//
 //   MY_SPI_SLAVE_1_SELECT_INIT ();
 //   spi_init ();
 //   spi_set_data_order (SPI_BIT_ORDER_LSB_FIRST);
@@ -39,18 +39,21 @@
 //
 // See spi_test.c for a complete example using a single slave.
 //
-// The spi_init() function will automatically initialize the SS pin (aka
-// PB2, aka DIGITAL_10) for output.  The ATMega requires this for correct
-// SPI master mode operation.  The SS pin is also usually a logical choice
-// to use to control the first SPI slave device, and is the only one you'll
-// need to use if you're talking to just one slave.  It's possible to use
-// another digital output to control a SPI slave, however.  If there are
-// multiple slaves, you'll need to use a different output pin for each
-// of them.  All that is required is that the output pin to be used be
-// initialized for output, and that you take the pin for the device you
-// want to talk to low before talking.  The example given at the top of
-// this file could change to look like this:
-/*
+// The spi_init() function will automatically initialize the SS pin (aka PB2,
+// aka DIGITAL_10) for output.  The ATMega requires this for correct SPI
+// master mode operation.  The SS pin is also usually a logical choice to
+// use to control the first SPI slave device, and is the only one you'll need
+// to use if you're talking to just one slave.  This is all I've tested myself.
+//
+// UNTESTEDNESS WARNING: I haven't tried this multiple slave approach:
+//
+// It's possible to use another digital output to control a SPI slave,
+// however.  If there are multiple slaves, you'll need to use a different
+// output pin for each of them.  All that is required is that the output
+// pin to be used be initialized for output, and that you take the pin for
+// the device you want to talk to low before talking.  The example given
+// at the top of this file could change to look like this:
+//
 //   #define MY_SPI_SLAVE_1_SELECT_INIT() \
 //     SPI_SS_INIT(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
 //   #define MY_SPI_SLAVE_1_SELECT_SET_LOW SPI_SS_SET_LOW
@@ -60,7 +63,7 @@
 //     DIO_INIT_DIGITAL_4(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
 //   #define MY_SPI_SLAVE_2_SELECT_SET_LOW DIO_SET_DIGITAL_4_LOW
 //   #define MY_SPI_SLAVE_2_SELECT_SET_HIGH DIO_SET_DIGITAL_4_HIGH
-*/
+//
 //   SPI_SLAVE_1_SELECT_INIT ();
 //   SPI_SLAVE_2_SELECT_INIT ();
 //
@@ -87,7 +90,7 @@
 //
 // Of course, it might also be necessary to change SPI data order, data
 // mode, and/or clock rate settings between different slaves (which should
-// be possible).
+// be possible using the functions in this interface).
 
 /*
  * Copyright (c) 2010 by Cristian Maglie <c.maglie@bug.st>
