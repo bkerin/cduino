@@ -39,6 +39,7 @@
 // to anticipate everything a client might have done to put PB5 in a state
 // where it can't be properly initialized/blinked.  Test this test function
 // first :) FIXME: What about adding trap-point version of this routine?
+// Could just change while ( 0 ) to while ( 1 ) :)
 #define CHKP() \
   do { \
     \
