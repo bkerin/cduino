@@ -19,72 +19,80 @@
 #include <stdio.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
+#ifndef F_CPU
+#  error F_CPU is not defined, but the util_setbaud.h header requires it to be
+#endif
+#define BAUD 9600
+#include <util/setbaud.h>
 
 /* let the compiler do some of this, to avoid malloc */
 static int cput(char c, FILE *f);
 static int cget(FILE *f);
-static FILE O = FDEV_SETUP_STREAM(cput, NULL, _FDEV_SETUP_WRITE);
-static FILE I = FDEV_SETUP_STREAM(NULL, cget, _FDEV_SETUP_READ );
+static FILE OUTFP = FDEV_SETUP_STREAM(cput, NULL, _FDEV_SETUP_WRITE);
+static FILE INFP  = FDEV_SETUP_STREAM(NULL, cget, _FDEV_SETUP_READ );
 
-static int cput(char c, FILE *f)
+static int
+cput (char c, FILE *f)
 {
-        f = f;   // Compiler reassurance (we don't need to use f in this case).
+  f = f;   // Compiler reassurance (we don't need to use f in this case).
 
-	loop_until_bit_is_set(UCSR0A, UDRE0);
-	UDR0 = c;
-	return 0;
+  loop_until_bit_is_set(UCSR0A, UDRE0);
+  UDR0 = c;
+  return 0;
 }
 
-static int cget(FILE *f)
+static int
+cget (FILE *f)
 {
-        f = f;   // Compiler reassurance (we don't need to use f in this case).
+  f = f;   // Compiler reassurance (we don't need to use f in this case).
 
-	loop_until_bit_is_set(UCSR0A, RXC0);
-	return UDR0;
+  loop_until_bit_is_set(UCSR0A, RXC0);
+  return UDR0;
 }
 
-int main (void)
+int
+main (void)
 {
-	uint8_t c = 0;
-        // FIXME: this array should get a better name than 's'
-	char s[80];
-	int n;
-	/* use program space (flash) to store these. don't waste RAM */
-	PGM_P pn = "please enter (blind type) a number: ";
-	PGM_P ps = "please enter (blind type) a string: ";
-	PGM_P rn = "twice %d is %d\r\n";
-	PGM_P rs = "changed case: %s\r\n";
+  uint8_t cidx = 0;   // Character index
+  char str[80];       // String
+  int sn;             // Some Number
 
-	/* set up stdio */
-#define BAUD 9600
-#include <util/setbaud.h>
-	UBRR0H = UBRRH_VALUE;
-	UBRR0L = UBRRL_VALUE;
-	UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);
-	UCSR0B = _BV(RXEN0) | _BV(TXEN0);
-	stdout = &O;
-	stdin  = &I;
+  // Use program space (flash) to store these, to avoid wasting RAM
+  PGM_P pn = "please enter (blind type) a number: ";
+  PGM_P ps = "please enter (blind type) a string: ";
+  PGM_P rn = "twice %d is %d\r\n";
+  PGM_P rs = "changed case: %s\r\n";
+  
+  // Set up stdio 
+  UBRR0H = UBRRH_VALUE;   // This value is computed in util/setbaud.h
+  UBRR0L = UBRRL_VALUE;   // This value is computed in util/setbaud.h
+  UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);
+  UCSR0B = _BV(RXEN0) | _BV(TXEN0);
+  stdout = &OUTFP;
+  stdin  = &INFP;
 
-	while (1) {
-		/* prompt for a number, double it and print it back */
-		printf(pn);
-                scanf("%d", &n);
-                printf(rn, n, 2*n);
+  while ( 1 ) {
 
-		/* prompt for a string, and swap the case of the letters */
-		printf(ps);
-		scanf("%s", s); /* yeah, unbounded string ops suck */
-		c = 0;
-		/* change the case of the input string */
-		while(s[c] != '\0'){
-			if (s[c] >= 'a' && s[c] <= 'z')
-				s[c] -= 0x20;
-			else if (s[c] >= 'A' && s[c] <= 'Z')
-				s[c] += 0x20;
-			c++;
-		}
-		printf(rs, s);
-	}
-	return 0;
+    // Prompt for a number, double it and print it back out
+    printf (pn);
+    scanf ("%d", &sn);
+    printf (rn, sn, 2 * sn);
+  
+    // Prompt for a string, and swap the case of the letters
+    printf (ps);
+    scanf ("%s", str);
+    cidx = 0;
+    // Change the case of the input string
+    while ( str[cidx] != '\0' ) {
+      if ( str[cidx] >= 'a' && str[cidx] <= 'z')
+        str[cidx] -= 0x20;
+      else if (str[cidx] >= 'A' && str[cidx] <= 'Z')
+        str[cidx] += 0x20;
+        cidx++;
+      }
+      printf (rs, str);
+  }
+
+  return 0;
 }
 
