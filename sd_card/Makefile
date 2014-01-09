@@ -12,9 +12,6 @@ include generic.mk
 # SD card controller SPI slave.
 CPPFLAGS += -DSD_CARD_SPI_SLAVE_SELECT_PIN=DIO_PIN_DIGITAL_4
 
-# Pull in some macros that make debugging with term_io easier.
-CPPFLAGS += -DTERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
-
 # Uncommenting this will cause this module to use the timer0 hardware to
 # detect timeout failures when communicating with the SD card.  Otherwise,
 # timeouts are detected by counting iterations transferring bytes on the

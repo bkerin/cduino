@@ -55,8 +55,6 @@ term_io_getline (char *linebuf);
 #define TERM_IO_PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
 
 // Print Trace Point message.  Useful for debugging.
-// FIXME: replace these printfs with TERM_IO_PFPs?  Probably a good idea since
-// adding one of them could easily run outa RAM and cause weirdness.
 #define TERM_IO_PTP() \
   TERM_IO_PFP ( \
       "trace point: file %s, line %d, function %s()\n", \
@@ -64,8 +62,6 @@ term_io_getline (char *linebuf);
 
 // Print Halt Point message and call exit(1).  Note that exit will disable
 // all interrupts before entering an infinite loop.
-// FIXME: replace these printfs with TERM_IO_PFPs?  Probably a good idea since
-// adding one of them could easily run outa RAM and cause weirdness.
 #define TERM_IO_PHP() \
   do { \
     TERM_IO_PFP ( \
@@ -79,15 +75,13 @@ term_io_getline (char *linebuf);
 // 'CPPFLAGS += -DTERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP' at the
 // bottom of the Makefile for your module to make things even easier :)
 #ifdef TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
-// FIXME: reactivate once debugged
-//#  define PFP TERM_IO_PFP
-#  define PTP TERM_IO_PTP()
-#  define PHP TERM_IO_PHP()
+#  define PFP TERM_IO_PFP
+#  define PTP TERM_IO_PTP
+#  define PHP TERM_IO_PHP
 // Perhaps you even like to use lower case :)
-// FIXME: reactivate once debugged
-//#  define pfp TERM_IO_PFP
-#  define ptp TERM_IO_PTP()
-#  define php TERM_IO_PHP()
+#  define pfp TERM_IO_PFP
+#  define ptp TERM_IO_PTP
+#  define php TERM_IO_PHP
 #endif
 
 #endif // TERM_IO_H

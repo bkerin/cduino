@@ -3,13 +3,9 @@
 #include <util/delay.h>
 
 #include "dc_motor.h"
+#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 #include "util.h"
-
-// Convenience alias for easy printf_P output.
-#ifndef PFP
-#  define PFP TERM_IO_PFP
-#endif
 
 // FIXME: document what this test requires/does in the usual spots
 
@@ -53,6 +49,8 @@ main (void)
           (int) (mapa * dc_motor_load_current (DC_MOTOR_CHANNEL_B)) );
       _delay_ms (tps / 2.0);
 
+      PFP ("\n");
+
       // Calculate motor speed to set on next iteration
       spd += ssgn * ss;
       if ( spd > max_spd ) {
@@ -63,8 +61,6 @@ main (void)
         spd = min_spd + ss;
         ssgn = 1;
       }
-
-      PFP ("\n");
     }
   }
 }

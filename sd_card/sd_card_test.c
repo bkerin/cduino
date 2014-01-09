@@ -22,22 +22,8 @@
 #include <stdlib.h>
 
 #include "sd_card.h"
+#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
-
-// This test program can actually run the ATMega328P out of RAM (at least
-// I think that's whats going on), so we need to store our output strings
-// in program space to have enough memory.  This macro makes that a little
-// more graceful.
-// FIXME: this is defined in term_io.h now, verify that it works ok form there
-// and then remove this commented out block
-//#ifndef __GNUC__
-//#  error GNU C is required by the comma-swallowing macro
-//#endif
-//#define PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
-// Convenience alias for easy printf_P output.
-#ifndef PFP
-#  define PFP TERM_IO_PFP
-#endif
 
 // An option exists to not build the function that generates the string
 // descriptions of error values, since its kind of large.  But this test
