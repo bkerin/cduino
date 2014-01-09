@@ -1,3 +1,4 @@
+// Implementation of the interface described in dc_motor.h.
 
 #include <avr/io.h>
 #include <assert.h>
@@ -53,8 +54,8 @@ dc_motor_init (void)
   // Configure the ADC and ADC input pins
   {
     adc_init (DC_MOTOR_ADC_REFERENCE);
-    adc_pin_init (DC_MOTOR_CHANNEL_A_CURRENT_SENSE_ADC_PIN)
-    adc_pin_init (DC_MOTOR_CHANNEL_B_CURRENT_SENSE_ADC_PIN)
+    adc_pin_init (DC_MOTOR_CHANNEL_A_CURRENT_SENSE_ADC_PIN);
+    adc_pin_init (DC_MOTOR_CHANNEL_B_CURRENT_SENSE_ADC_PIN);
   }
 
   // Configure timer/counter2 hardware, with clocking stopped
