@@ -2,15 +2,16 @@
 
 // Assumptions:
 //
-// FIXME: ensure that these comments end up agreeing with the code as to
-// which pin number for led and which for A2D
-// 	- 10 kohm (or so) potentiometer connected between 5V supply and ground,
-// 	  with potentionmeter tap connected to pin A1 (aka PC1).
+//      - 10 kohm (or so) potentiometer connected between 5V supply
+//        and ground, with potentionmeter tap connected to pin A0 (aka PC0
+//        aka ADC0).  Alternately, a simple voltage divider can be used
+//        (but then of course the ADC behavior can only be verified at a
+//        single point).
 //
-//	- LED connected from pin A0 (aka PC0) to ground.  With a current
-//	  limiting resistor in series if you like to be prim and proper :).
-//	  This is only required in order to test that we can use the
-//	  individual ADC pins independently for different purposes.
+//      - LED connected from pin A1 (aka PC1) to ground.  With a current
+//        limiting resistor in series if you like to be prim and proper :).
+//        This is only required in order to test that we can use the
+//        individual ADC pins independently for different purposes.
 //
 //	  FIXME: audit item: in shield modules at least, we refer to
 //	  pins by Arduino names first, with "(aka major-datasheet-name
@@ -23,6 +24,7 @@
 #include <avr/pgmspace.h>
 #include <util/delay.h>
 
+#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 #include "adc.h"
 
@@ -47,28 +49,36 @@ toggle_pc1 (void)
 int
 main (void)
 {
-  //PGM_P pot_fmtstr = "Potentiometer tap voltage: %f (%d raw)\r\n";
-  //char * pot_fmtstr = "Potentiometer tap voltage: %f (%d raw)\r\n";
-
-  term_io_init ();   // Set up terminal communications.
+  // This isn't what we're testing exactly, but we need to know if its
+  // working or not to interpret other results.
+  term_io_init ();
+  PFP ("\n");
+  PFP ("\n");
+  PFP ("term_io_init() worked.\n");
+  PFP ("\n");
 
   // FIXME: audit item: I like to put const after type as Dan Saks advises
   uint8_t const aip = 0;   // Analog Input Pin (from 0 for ADC0 to 5 for ADC5)
 
   adc_init (ADC_REFERENCE_AVCC);
+  PFP ("Finished adc_init().\n");
   adc_pin_init (aip);
-
-  // This register bit is hardwired to match the chosen aip value.
+  // This register bit test is hardwired to match the chosen aip value.
+  // The initialization should have done this, but we can't tell just by
+  // observing that the ADC reads voltages correctly, so we check here.
   if ( ! (DIDR0 & _BV (ADC0D)) ) {
-    printf (
-        "failure: Digital input disable bit ADC1D of register DIDR0 not "
+    PFP (
+        "failure: Digital input disable bit ADC0D of register DIDR0 not "
         "set\n" );
     assert (0);
   }
+  PFP ("Finished adc_pin_init().\n");
+
+  PFP ("\n");
   
   // Configure pin A1 (aka PC1) as an output, starting out low.
   PORTC &= ~(_BV (PORTC1));
-  //FIXXME: could be a no-op, once we have avr libc that has that
+  //FIXXME: could be a no-op, which recent avr libc have a macro for
   loop_until_bit_is_clear (PORTC, PORTC1);
   DDRC |= _BV (DDC1);
 
@@ -79,10 +89,7 @@ main (void)
     uint16_t raw = adc_read_raw (aip);
     float tap_voltage = adc_read_voltage (aip, supply_voltage);
 
-    printf_P (
-        PSTR ("Potentiometer tap voltage: %f (%d raw)\r\n"),
-        tap_voltage,
-        raw );
+    PFP ("ADC input voltage: %f (%d raw)\r\n", tap_voltage, raw);
 
     toggle_pc1 ();
 
