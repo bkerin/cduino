@@ -52,7 +52,7 @@
 #   BODLEVEL2=1
 
 use strict;
-# FIXME: test that fatal warnings work ok when we next program fuses and
+# FIXXME: test that fatal warnings work ok when we next program fuses and
 # enable it
 #use warnings FATAL => 'all';
 use warnings;
