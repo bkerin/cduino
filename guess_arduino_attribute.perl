@@ -82,9 +82,6 @@ sub find_usb_tty_devices # {{{1
                 and next);
      
         # We expect to find exactly one directory called 'tty' under $dpd
-        # (FIXME: does this work when we have both an UNO and a duemilanove
-        # or other USB devices plugged in? it should as we've already looked
-        # for idVendor higher up the call stack).
         my $ttydfc = "find $dpd -name tty -type d";   # TTY dir finder command
         my $ttyd = `$ttydfc`;
         $? == 0 or die "command '$ttydfc' failed";
