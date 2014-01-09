@@ -41,7 +41,7 @@ ISR (TIMER0_OVF_vect)
   timer0_stopwatch_oc++;
 }
 
-// Default values of the timer/counter0 control registers (for the ATMega328p
+// Default values of the timer/counter0 control registers (for the ATmega328P
 // at least), according to the datasheet.
 #define TCCR0A_DEFAULT_VALUE 0x00
 #define TCCR0B_DEFAULT_VALUE 0x00
@@ -64,13 +64,20 @@ timer0_stopwatch_init (void)
   TCCR0B &= ~(_BV (WGM02) | _BV (WGM01) | _BV (WGM00));
 
   // Ensure that the clock source for timer/counter is set to the
-  // TIMER0_STOPWATCH_PRESCALER_DIVIDER prescaler tap.
+  // TIMER0_STOPWATCH_PRESCALER_DIVIDER prescaler tap.  Note that connecting
+  // the clock source here probably allows the timer to run for a few
+  // cycles before we reset everything and start handling interrupts, but
+  // it shouldn't matter.
   TCCR0B &= ~(_BV (CS02));
   TCCR0B |= _BV (CS01) | _BV (CS00); 
 
   TIMSK0 |= _BV (TOIE0);   // Enable overflow interrupts for timer/counter0.
 
   timer0_stopwatch_oc = 0;
+
+  // FIXME: Its possible that we should be using the TSM bit of GTCCR here
+  // to truly sync up the counter and the prescaler, I dunno if its worth
+  // dealing with though.
 
   TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
   GTCCR |= _BV (PSRSYNC);   // Reset the prescaler (affects timer1 also)
@@ -112,7 +119,7 @@ timer0_stopwatch_ticks (void)
     if ( TIFR0 & _BV (TOV0) ) {
       // ...then we have one extra overflow that the interrup handler hasn't
       // had a chance to count yet, and it might even have happend since we
-      // saved hte value of TCNT0 a few instructions ago, so we don't add
+      // saved the value of TCNT0 a few instructions ago, so we don't add
       // tcv in.
       result = (timer0_stopwatch_oc + 1) * TIMER0_VALUE_COUNT;
     }

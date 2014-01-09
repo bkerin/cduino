@@ -47,9 +47,11 @@
 #define TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK \
   CLOCK_CYCLES_TO_MICROSECONDS (TIMER0_STOPWATCH_PRESCALER_DIVIDER)
 
-// WARNING: this function manipulates the prescaler and thereby affects timer1
-// (which used the same prescaler).  Do everything required to prepare the
-// timer for use as an interrupt-driven stopwatch, in this order:
+// WARNING: this function manipulates the prescaler and thereby affects
+// timer1 (which uses the same prescaler).
+//
+// Do everything required to prepare the timer for use as an interrupt-driven
+// stopwatch, in this order:
 //
 //   * Ensure that the timer/counter0 hardware isn't shut down to save power.
 //
@@ -103,7 +105,7 @@ extern volatile uint32_t timer0_stopwatch_oc;
 // little bit less time overhead than the timer0_stopwatch_ticks() function
 // (at least when the compiler is set to optimize for small code size).
 // For explanations of how this macro works, see the implementation of
-// that function.
+// that function in timer0_stopwatch.c.
 #define TIMER0_STOPWATCH_TICKS(OUTVAR) \
   do { \
     ATOMIC_BLOCK (ATOMIC_RESTORESTATE) \
