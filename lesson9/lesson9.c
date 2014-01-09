@@ -19,9 +19,7 @@
 // Assumptions:
 //
 // 	- 10 kohm (or so) potentiometer connected between 5V supply and ground,
-// 	  with potentionmeter tap connected to pin PC0 (ADC0).
-// 	  // FIXME: do we want to refer to pins by arduino names or ATmega
-// 	  // names or both in the lessons?  (right above here for example)
+// 	  with potentionmeter tap connected to pin A0 (aka PC0 aka ADC0).
 //
 // 	- Note that there are a variety of hardware techniques that can be used
 // 	  to improve the resolution and noise resistance of the ADC; the
@@ -125,4 +123,3 @@ main (void)
     _delay_ms (mspr);
   }
 }
-
