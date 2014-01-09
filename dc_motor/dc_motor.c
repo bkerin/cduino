@@ -64,25 +64,19 @@ dc_motor_init (void)
     // Clear OC2A/B on compare match when up-counting, set OC2A/B on
     // compare match when down-counting.  Count to TOP before reversing.
     // See ATmega328P datasheet Table 17-4.
-    TCCR2A = (uint8_t) 0x00;
+    TCCR2A =  0x00;
     TCCR2A |= _BV (COM2A1) | _BV (COM2B1) | _BV (WGM20);
     TCCR2A &= ~(_BV (COM2A0) | _BV (COM2B0));
     // This assignment sets WMG22 as desired to specify phase-correct
     // operation with the direction change at TOP, and also set bits CS22:0
     // all to zero which disconnects the clock and stops the timer (as
     // desired at this point).
-    TCCR2B = (uint8_t) 0x00;
+    TCCR2B =  0x00;
 
     // We don't use timer interrupts in this application, or
-    // asynchronout clocking.  FIXME: C99 says these literal
-    // hex values are integers, according to stack overflow
-    // http://stackoverflow.com/questions/12499592/c-hex-constant-type It
-    // would be nice to somehow check if the compiler is doing something
-    // dumb here, and if the casts help, or not.  I think they maybe should,
-    // or at any rate I doubt there is any guarantee that the long literals
-    // aren't formed just because they are immediately assigned to registers.
-    TIMSK2 = (uint8_t) 0x00;
-    ASSR = (uint8_t) 0x00;
+    // asynchronout clocking. 
+    TIMSK2 = 0x00;
+    ASSR = 0x00;
   
     // FIXXME: The ATmega328P datasheet Section 17.5.3 contains some
     // mumbo-jumbo about how OC2x setup should be performed using a FOC2X

@@ -49,13 +49,10 @@ typedef enum {
 #define DC_MOTOR_ADC_REFERENCE ADC_REFERENCE_AVCC
 
 // Initialize the direction control pins, brake pins, PWM pins and their
-// associated timer hardware, and current sensing pins (FIXME: WORK POINT:
-// check that we can now use ADC pins other than the channel 0 pin for other
-// purposes, this might be easier to check from the lcd_keypad interface).
-// currntly this module monopolized ALL the adc pins because that's what
-// the adc module does (it needs fixed), and set the motor speeds to 0.
-// If the timer/counter0 hardward is shut down to save power, this routine
-// wakes it up.
+// associated timer hardware, and current sensing pins, and set the motor
+// speeds to 0.  If the timer/counter0 hardward is shut down to save power,
+// this routine wakes it up.  FIXME: should wake up the ADC hardware too
+// if required, or else adc interface should do it (probably the latter).
 void
 dc_motor_init (void);
 
