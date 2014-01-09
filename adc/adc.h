@@ -33,7 +33,7 @@ typedef enum {
 void
 adc_init (adc_reference_source_t reference_source);
 
-// ADC pins available. 
+// ADC pins available (corresponding to ADC0 .. ADC5).
 #define ADC_LOWEST_PIN 0
 #define ADC_HIGHEST_PIN 5
 

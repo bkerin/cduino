@@ -86,7 +86,7 @@ main (void)
 
     toggle_pc1 ();
 
-    float mspr = 500.0;   // Milliseconds per reading (and per LED toggle)
+    float mspr = 500.0;   // Milliseconds Per Reading (and per LED toggle)
     _delay_ms (mspr);
   }
   return 0;
