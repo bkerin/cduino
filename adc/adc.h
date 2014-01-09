@@ -2,13 +2,12 @@
 //
 // Test driver: adc_test.c    Implementation: adc.c
 //
-// WARNING: this interface is currently not very generic.  In particular,
-// it always:
-//
-//   * monopolizes port C pins (sets DDRC to 0x00)
-//   * uses a 125 kHz ADC clock
+// This interface This interface always uses a 125 kHz ADC clock.
 //
 // See the ATMega328P datasheet for details of other options.
+
+#ifndef ADC_H
+#define ADC_H
 
 #include <stdint.h>
 
@@ -24,11 +23,29 @@ typedef enum {
   ADC_REFERENCE_INTERNAL
 } adc_reference_source_t;
 
-// WARNING: using ADC_REFERENCE_INTERNAL when the AREF pin is connected
-// to an external DC voltage can destroy the ADC.  Prepare port C pins for
-// use by the ADC, and ready the ADC.  See the warning above for more details.
+// WARNING: using ADC_REFERENCE_INTERNAL when the AREF pin is connected to
+// an external DC voltage can destroy the ADC.  Prepare port C pins for use
+// by the ADC, and ready the ADC.  See the warning above for more details.
+//
+// Initialize the ADC hardware for simple polling operation with a 125
+// kHz ADC clock using reference_source.  Note that after this function is
+// called, adc_pin_init() must still be called on the pin to be read.
 void
 adc_init (adc_reference_source_t reference_source);
+
+// ADC pins available. 
+#define ADC_LOWEST_PIN 0
+#define ADC_HIGHEST_PIN 5
+
+// Initialize a single pin for use as an ADC input.  Note that the pin
+// argument must be an integer in the range [ADC_LOWEST_PIN, ADC_HIGHEST_PIN]
+// (NOT a bit field specifying multiple pins at once).  The internal pull-up
+// on the pin is disabled, the pin is set as an input, and the appropriate bit
+// of the DIDR0 register is set to disable the digital input buffer on the pin
+// (saving power).  Note that if you're trying to do something odd and use
+// the pin for both analog and digital input, this might cause you trouble.
+void
+adc_pin_init (uint8_t pin);
 
 // The adc_read_raw() function returns values between 0 and
 // ADC_RAW_READING_STEPS - 1.
@@ -44,3 +61,5 @@ adc_read_raw (uint8_t pin);
 // microcontrollers.
 float
 adc_read_voltage (uint8_t pin, float reference_voltage);
+
+#endif // ADC_H

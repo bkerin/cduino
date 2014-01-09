@@ -18,6 +18,7 @@ lcd_keypad_init ()
 {
   lcd_init ();
   adc_init (ADC_REFERENCE_AVCC);
+  adc_pin_init (LCD_KEYPAD_ADC_PIN);
 }
 
 void
@@ -51,7 +52,9 @@ lcd_keypad_button_name (lcd_keypad_button_t button, char *name)
     }
 }
 
-// NOTE: this poll interval is probably on the paranoid side.
+// NOTE: this poll interval is probably on the paranoid side.  I don't know
+// of any good source of information for guidance on this, so this value
+// is a combination of trial and paranoia.
 static const double poll_interval_us = 100; 
  
 #define BUTTON_COUNT 5
@@ -90,9 +93,7 @@ lcd_keypad_button_t
 lcd_keypad_check_buttons (void)
 {
   // We require two ADC readings in the same band before we consider that we
-  // have a definite button press at that value.  FIXME: this requires more
-  // thought and a bit of research to determine how best to avoid picking
-  // up spurious readings.
+  // have a definite button press at that value.
   uint16_t reading1, reading2;
   lcd_keypad_button_t band1, band2;
   reading1 = adc_read_raw (0);
@@ -121,8 +122,8 @@ lcd_keypad_wait_for_button (void)
 {
   lcd_keypad_button_t result_button = LCD_KEYPAD_BUTTON_NONE;
 
-  while ( result_button == LCD_KEYPAD_BUTTON_NONE 
-       || result_button == LCD_KEYPAD_BUTTON_INDETERMINATE) {
+  while ( result_button == LCD_KEYPAD_BUTTON_NONE ||
+          result_button == LCD_KEYPAD_BUTTON_INDETERMINATE ) {
     result_button = lcd_keypad_check_buttons ();
     _delay_us (poll_interval_us);
   }

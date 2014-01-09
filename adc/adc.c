@@ -1,16 +1,16 @@
 // Implementation of the interface described in adc.h.
 
+#include <assert.h>
 #include <avr/io.h>
+#include <stdlib.h>   // FIXME: remove when have latest avr libc
 
 #include "adc.h"
 
 void
 adc_init (adc_reference_source_t reference_source)
 {
-  // Internal pull-ups interfere with the ADC. We need to disable the pull-up
-  // on the pin if it's being used for ADC. either writing 0 to the port
-  // register or setting it to output should be enough to disable pull-ups.
-  DDRC = 0x00;
+  // FIXME: disable PRADC to disable power management as we do for other
+  // modules?
 
   // Restore the default settings for ADMUX.
   ADMUX = 0x00;
@@ -19,7 +19,6 @@ adc_init (adc_reference_source_t reference_source)
     case ADC_REFERENCE_AREF:
       // Nothing to set since ADMUX bits default to 0.
       // FIXME: this path hasn't been tested.
-      ADMUX &= ~(_BV (REFS0) | _BV (REFS1));
       break;
     case ADC_REFERENCE_AVCC:
       ADMUX |= _BV (REFS0);
@@ -41,34 +40,44 @@ adc_init (adc_reference_source_t reference_source)
   // Restore the default settings for ADC status register B.
   ADCSRB = 0x00;
 
-  // FIXME: we should really disable the digital input buffers by setting
-  // bits in DIDR0.  St least once we have the per-pin interface that we
-  // want we should do this.
-
   // Enable the ADC system, use 128 as the clock divider on a 16MHz arduino
-  // (ADC needs a 50 - 200kHz clock) and start a sample.  The AVR needs to
-  // do some set-up the first time the ADC is used; this first, discarded,
-  // sample primes the system for later use.
+  // (ADC needs a 50 - 200kHz clock) and start a sample.  The ATmega328P
+  // datasheet specifies that the first sample taken after the voltage
+  // reference is changed should be discarded.
   ADCSRA |= _BV (ADEN) | _BV (ADPS2) | _BV (ADPS1) | _BV (ADPS0) | _BV (ADSC);
 
-  // Wait for the ADC to return a sample.
+  // Wait for the ADC to return a sample (and discard it).
   loop_until_bit_is_clear (ADCSRA, ADSC);
+}
+
+void
+adc_pin_init (uint8_t pin)
+{
+  // Conceptual assertion (unsigned datatype prevents it actually happening :)
+  // assert (pin >= ADC_LOWEST_PIN);
+  assert (pin <= ADC_HIGHEST_PIN);
+
+  PORTC &= ~(0x01 << pin);   // Disable pull-up on pin
+  DDRC &= ~(0x01 << pin);    // Ensure pin is set as an input
+  DIDR0 |= 0x01 << pin;      // Disable digital input buffer on pin
 }
 
 uint16_t
 adc_read_raw (uint8_t pin)
 {
-  uint8_t low_byte, high_byte, channel_select_byte;
+  // Select the input channel.  Table 23-4 of the ATmega328P datasheet
+  // effectively specifies that the pin selection bits in the lower nibble
+  // of ADMUX are interpreted as an integer specifying the channel.
+  uint8_t admux_byte = (ADMUX & 0xf0) | (pin & 0x0f);
+  ADMUX = admux_byte;
 
-  // Select the input channel.
-  channel_select_byte = (ADMUX & 0xf0) | (pin & 0x0f);
-  ADMUX = channel_select_byte;
+  // Start a sample and wait until its done.
   ADCSRA |= _BV (ADSC);
   loop_until_bit_is_clear (ADCSRA, ADSC);
 
   // It is required to read the low ADC byte before the high byte.
-  low_byte = ADCL;
-  high_byte = ADCH;
+  uint8_t low_byte = ADCL;
+  uint8_t high_byte = ADCH;
 
   return (((uint16_t) high_byte) << 8) | low_byte;
 }

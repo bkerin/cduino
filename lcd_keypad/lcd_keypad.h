@@ -12,12 +12,15 @@
 
 #include "lcd.h"
 
+// The keypad uses a string resistor ladder network connected to this ADC
+// pin to detect button presses.
+#define LCD_KEYPAD_ADC_PIN 0
+
 // Initialize the LCD and ADC devices.  The ADC reference is always
-// initialized to ADC_REFERENCE_AVCC.  Note that all ADC channels use the
-// After this routine is called, routines from lcd.h can be called freely
-// (without calling lcd_init), though of course many of the routines in this
-// interface manipulate the LCD contents themselves.  The interactions are
-// simple and hopefully obvious.
+// initialized to ADC_REFERENCE_AVCC.  After this routine is called,
+// routines from lcd.h can be called freely (without calling lcd_init),
+// though of course many of the routines in this interface manipulate the LCD
+// contents themselves.  The interactions are simple and hopefully obvious.
 void
 lcd_keypad_init (void);
 
