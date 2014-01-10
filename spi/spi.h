@@ -18,11 +18,11 @@
 // talk to is brought low before you talk to it (of course this line should
 // normally be high).  It may be convenient to define macros like this:
 //
-//   #define MY_SPI_SLAVE_1_SELECT_INIT() \
+/*   #define MY_SPI_SLAVE_1_SELECT_INIT() \
 //     SPI_SS_INIT(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
 //   #define MY_SPI_SLAVE_1_SELECT_SET_LOW SPI_SS_SET_LOW
 //   #define MY_SPI_SLAVE_1_SELECT_SET_HIGH SPI_SS_SET_HIGH
-//
+*/
 //   MY_SPI_SLAVE_1_SELECT_INIT ();
 //   spi_init ();
 //   spi_set_data_order (SPI_BIT_ORDER_LSB_FIRST);
@@ -54,7 +54,7 @@
 // the device you want to talk to low before talking.  The example given
 // at the top of this file could change to look like this:
 //
-//   #define MY_SPI_SLAVE_1_SELECT_INIT() \
+/*   #define MY_SPI_SLAVE_1_SELECT_INIT() \
 //     SPI_SS_INIT(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
 //   #define MY_SPI_SLAVE_1_SELECT_SET_LOW SPI_SS_SET_LOW
 //   #define MY_SPI_SLAVE_1_SELECT_SET_HIGH SPI_SS_SET_HIGH
@@ -63,7 +63,7 @@
 //     DIO_INIT_DIGITAL_4(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
 //   #define MY_SPI_SLAVE_2_SELECT_SET_LOW DIO_SET_DIGITAL_4_LOW
 //   #define MY_SPI_SLAVE_2_SELECT_SET_HIGH DIO_SET_DIGITAL_4_HIGH
-//
+*/
 //   SPI_SLAVE_1_SELECT_INIT ();
 //   SPI_SLAVE_2_SELECT_INIT ();
 //
