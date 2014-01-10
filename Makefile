@@ -165,16 +165,17 @@ upload_html: git_push xlinked_source_html check_api_doc_completeness
 
 # Make a release targzball.  The make variable VERSION must be set (probably
 # from the command line, e.g. make targzball VERSION=0.42.42').
-# FIXME: get rid of these hard coded cduino distribution names and replace
-# with refs to the dir as we do the first time below (make shell var for long
-# command).
 .PHONY: targzball
 targzball: build_all_test_programs clean_all_modules xlinked_source_html
 	[ -n "$(VERSION)" ] || (echo VERSION not set 1>&2 && false)
 	cd /tmp ; cp -r $(shell pwd) .
-	cd /tmp/cduino && rm -rf .git .gitignore ; cd .. ; \
-          mv cduino cduino-$(VERSION) ; \
-          tar czvf cduino-$(VERSION).tgz cduino-$(VERSION)
+	# We determine the Distribution Name (DN) from the source dir
+	DN=$(shell basename `pwd`) && \
+        cd /tmp/$$DN && \
+        rm -rf .git .gitignore && \
+        cd .. && \
+        mv $$DN $$DN-$(VERSION) && \
+        tar czvf $$DN-$(VERSION).tgz $$DN-$(VERSION)
 
 # Check for Consistency of Certain Files Across Projects {{{1
 
@@ -246,23 +247,25 @@ samesys:
 # Upload the targzball and documentation to the web site.  The unstable
 # snapshot that we provide is uploaded first, since it should never be
 # behind the stable version.
-# FIXME: might want to generalize away from hardcoded cduino name as was
-# done in beaglebone_symbols project.
 .PHONY: upload
 upload: targzball upload_html update_unstable git_push
-	scp /tmp/cduino-$(VERSION).tgz $(WEB_SSH):$(WEB_ROOT)/releases/
-	ssh $(WEB_SSH) rm -f '$(WEB_ROOT)/releases/LATEST_IS_*'
-	ssh $(WEB_SSH) ln -s --force cduino-$(VERSION).tgz \
-            $(WEB_ROOT)/releases/LATEST_IS_cduino-$(VERSION).tgz
+	# We determine the Distribution Name (DN) from the source dir
+	DN=$(shell basename `pwd`) && \
+        scp /tmp/$$DN-$(VERSION).tgz $(WEB_SSH):$(WEB_ROOT)/releases/ && \
+        ssh $(WEB_SSH) rm -f '$(WEB_ROOT)/releases/LATEST_IS_*' && \
+        ssh $(WEB_SSH) ln -s --force $$DN-$(VERSION).tgz \
+                       $(WEB_ROOT)/releases/LATEST_IS_$$DN-$(VERSION).tgz
 
 # Update the unstable snapshot by building and uploading an unstable targzball.
 .PHONY: update_unstable
 update_unstable: build_all_test_programs clean_all_modules
 	ssh $(WEB_SSH) mkdir -p $(WEB_ROOT)/unstable/
-	ssh $(WEB_SSH) rm -f '$(WEB_ROOT)/unstable/cduino_unstable*'
-	cd /tmp ; cp -r $(shell pwd) . && \
-          UNSTABLE_NAME=cduino_unstable_`date +%Y-%m-%d-%H-%M-%S` && \
-          mv cduino $$UNSTABLE_NAME && \
+	# We determine the Distribution Name (DN) from the source dir
+	DN=$(shell basename `pwd`) && \
+        ssh $(WEB_SSH) rm -f '$(WEB_ROOT)/unstable/$${DN}_unstable*' && \
+        cd /tmp ; cp -r $(shell pwd) . && \
+          UNSTABLE_NAME=$${DN}_unstable_`date +%Y-%m-%d-%H-%M-%S` && \
+          mv $$DN $$UNSTABLE_NAME && \
           tar czvf $$UNSTABLE_NAME.tgz $$UNSTABLE_NAME && \
           scp $$UNSTABLE_NAME.tgz $(WEB_SSH):$(WEB_ROOT)/unstable/
 
