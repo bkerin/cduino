@@ -154,13 +154,6 @@ xlinked_source_html:
 	rm $@/*.[ch]
 	rm $@/tags
 
-# FIXME: could add Make compile timish checks that the proper vars are
-# defined on the command line when one of the convenience targets like
-# upload_html are used as was done in beaglebone_symbols project (currently
-# VERSION must be given on command line in this project, other symbols like
-# WEB_SSH and WEB_ROOT are defined in this Makefile but not in the one for
-# the beaglebone_symbol project).
-
 # FIXME: this should run checklink script after install
 # Note this doesn't nuke old pages with different names.
 .PHONY: upload_html
