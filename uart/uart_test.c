@@ -31,15 +31,6 @@
 
 #include "uart.h"
 
-/*
- * Do all the startup-time peripheral initializations.
- */
-static void
-ioinit (void)
-{
-  uart_init ();
-}
-
 FILE uart_str = FDEV_SETUP_STREAM (uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 
 int
@@ -47,7 +38,7 @@ main (void)
 {
   char buf[20], s[20];
 
-  ioinit ();
+  uart_init ();
 
   stdout = stdin = &uart_str;
 
