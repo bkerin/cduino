@@ -22,6 +22,7 @@
 #ifndef UART_H
 #define UART_H
 
+#include <avr/io.h>
 #include <stdio.h>
 
 // F_CPU is supposed to be defined in the Makefile (because that's where
@@ -32,13 +33,38 @@
 
 #define UART_BAUD 9600
 
+// Wait until the transmit buffer is ready to receive new data (i.e. until
+// bit UDRE0 of register UCSR0A set) , then transmit the given byte.
+void
+uart_put_byte (uint8_t byte);
+
+// This macro evaluates to true iff there is a receiver error flag set.
+// This should be called immediately before uart_get_byte().  FIXXME:
+// if we supported parity mode, we would need to check for UPE0 bit as well.
+#define UART_RX_ERROR() (UCSR0A & (_BV (FE0) | _BV (DOR0)))
+
+// These macros evaluate to true iff particular receiver error flags are set.
+// They can be used if UART_RX_ERROR() evaluate to true to determine the
+// cause of the error.
+#define UART_RX_FRAME_ERROR() (UCSR0A & _BV (FE0))
+#define UART_RX_DATA_OVERRUN_ERROR() (UCSR0A & _BV (DOR0))
+
+// Wait until the receive buffer has unread data (i.e. until RXC0 bit of
+// register (UCSR0A is set), then read and return the received byte.
+// FIXME: wouldn't we want a timeout-or-trial-equipped version of this?
+uint8_t
+uart_get_byte (void);
+
 // Initialize the USART0 to 9600 Bd, TX/RX, 8N1.  Note that this sets up
 // the PD0 (RXD) and PD1 (TXD) pins such that they cannot be used for normal
 // digital IO.
 void
 uart_init (void);
 
-// Send character c down the UART Tx, wait until tx holding register is empty.
+// First, if c is newline ('\n'), turn our copy of it it into a carriage
+// return ('\r').  Then wait until the UART goes ready (UDRE0 bit of UCSR0A
+// register set.  Then send the new character down the UART Tx.
+// FIXME: the putchar-type stuff should go in term_io.h, not here.
 int
 uart_putchar (char c, FILE *stream);
 

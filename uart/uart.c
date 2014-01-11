@@ -38,6 +38,20 @@ uart_init (void)
   UCSR0B = _BV(TXEN0) | _BV(RXEN0);   // Enable TX/RX.
 }
 
+void
+uart_put_byte (uint8_t byte)
+{
+  loop_until_bit_is_set (UCSR0A, UDRE0);
+  UDR0 = byte;
+}
+
+uint8_t
+uart_get_byte (void)
+{
+  loop_until_bit_is_set (UCSR0A, RXC0);
+  return UDR0;
+}
+
 int
 uart_putchar (char c, FILE *stream)
 {
