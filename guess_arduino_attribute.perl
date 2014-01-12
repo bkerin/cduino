@@ -223,14 +223,15 @@ this chip (e.g. the Duemilanove).
 Its also possible that you're a gadget-happy nut who connects and programs
 multiple Arduinos at the same time :)
 
-Either way, the thing to do is to set the Make variables ARDUINO_PORT
-and ARDUINO_BAUD to the correct values.  You can do this by adding lines
-something like this to the Makefile for the module you are working on:
+Either way, the thing to do is to set the Make variables ARDUINO_PORT,
+ARDUINO_BAUD, and ARDUINO_BOOTLOADER to the correct values.  You can do this by adding lines something like this to the Makefile for the module you are working on.  If you'retrying to program an Arduino Uno Rev. 3, you likely want these
+values:
 
    ARDUINO_PORT = /dev/ttyACM0
    ARDUINO_BAUD = $uno_rev3_baud
+   ARDUINO_BOOTLOADER = $uno_rev3_bootloader
 
-The ARDUINO_PORT should be the one from the above list that corresponds
+But the ARDUINO_PORT should be the one from the above list that corresponds
 to the Arduino device you want to program.  If you aren't sure which you
 want, try unplugging the device and re-running the command that produced
 this message to see which one dissapears from the list :).
@@ -238,9 +239,17 @@ this message to see which one dissapears from the list :).
 The ARDUINO_BAUD should probably be $uno_rev3_baud for an Uno rev.3,
 or $duemilanove_baud for a Duemilanove.
 
+The ARDUINO_BOOTLOADER should probably be $uno_rev3_bootloader for an
+Uno rev.3, or $duemilanove_bootloader for a Duemilanove.  Note that the
+bootloader file is not used for most Make targets, but this build system
+likes to know about it anyway.  Sorry.
+
 These Make variables can be set from the command line as well, e.g.:
 
-   make -rR writeflash ARDUINO_PORT=/dev/ttyACM0 ARDUINO_BAUD=$uno_rev3_baud
+   make -rR writeflash \\
+     ARDUINO_PORT=/dev/ttyACM0 \\
+     ARDUINO_BAUD=$uno_rev3_baud \\
+     ARDUINO_BOOTLOADER=$uno_rev3_bootloader
 
 In case you want to use custom shell commands to quickly flip back and
 forth between programming two different Arduinos.
