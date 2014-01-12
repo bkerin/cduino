@@ -2,28 +2,27 @@
 //
 // Test driver: uart_test.c    Implementation: uart.c
 
-// FIXME: this interface is not really a generial uart interface, it needs
-// to copy from arduino libs instead of avr libc, get less maried to term_io
-// functionality, etc.
-
-/*
- * ----------------------------------------------------------------------------
- * "THE BEER-WARE LICENSE" (Revision 42):
- * <joerg@FreeBSD.ORG> wrote this file.  As long as you retain this notice you
- * can do whatever you want with this stuff. If we meet some day, and you think
- * this stuff is worth it, you can buy me a beer in return.        Joerg Wunsch
- * ----------------------------------------------------------------------------
- *
- * Stdio demo, UART declarations
- *
- * $Id: uart.h 1008 2005-12-28 21:38:59Z joerg_wunsch $
- */
-
 #ifndef UART_H
 #define UART_H
 
 #include <avr/io.h>
 #include <stdio.h>
+
+// The normal use pattern for this module looks something like this:
+//
+// uart_init ();
+// uint8_t some_byte;
+// UART_PUT_BYTE (some_byte);
+// UART_WAIT_FOR_BYTE ();
+// if ( UART_RX_ERROR () ) {
+//   if ( UART_RX_FRAME_ERROR () ) {
+//     // Do something?
+//   } 
+//   if ( UART_RX_DATA_OVERRUN_ERROR () ) {
+//     // Do something?
+//   }
+// }
+// some_byte = UART_GET_BYTE ();
 
 // F_CPU is supposed to be defined in the Makefile (because that's where
 // the other part and programmer specs go).
@@ -33,14 +32,26 @@
 
 #define UART_BAUD 9600
 
-// Wait until the transmit buffer is ready to receive new data (i.e. until
-// bit UDRE0 of register UCSR0A set) , then transmit the given byte.
+// Initialize the USART0 to 9600 Bd, TX/RX, 8N1.  Note that this sets up
+// the PD0 (RXD) and PD1 (TXD) pins such that they cannot be used for normal
+// digital IO.
 void
-uart_put_byte (uint8_t byte);
+uart_init (void);
+
+#define UART_PUT_BYTE(byte) \
+  do { \
+    loop_until_bit_is_set (UCSR0A, UDRE0); \
+    UDR0 = byte; \
+  } while ( 0 );
+
+// Block until a byte comes in from the serial port.  FIXME: would a
+// timeout-or-iteration-limmited version of this be useful?
+#define UART_WAIT_FOR_BYTE() loop_until_bit_is_set (UCSR0A, RXC0)
 
 // This macro evaluates to true iff there is a receiver error flag set.
-// This should be called immediately before uart_get_byte().  FIXXME:
-// if we supported parity mode, we would need to check for UPE0 bit as well.
+// This should be called immediately after UART_WIAT_FOR_BYTE() and before
+// UART_GET_BYTE().  FIXXME: if we supported parity mode, we would need to
+// check for UPE0 bit as well.
 #define UART_RX_ERROR() (UCSR0A & (_BV (FE0) | _BV (DOR0)))
 
 // These macros evaluate to true iff particular receiver error flags are set.
@@ -49,17 +60,10 @@ uart_put_byte (uint8_t byte);
 #define UART_RX_FRAME_ERROR() (UCSR0A & _BV (FE0))
 #define UART_RX_DATA_OVERRUN_ERROR() (UCSR0A & _BV (DOR0))
 
-// Wait until the receive buffer has unread data (i.e. until RXC0 bit of
-// register (UCSR0A is set), then read and return the received byte.
-// FIXME: wouldn't we want a timeout-or-trial-equipped version of this?
-uint8_t
-uart_get_byte (void);
-
-// Initialize the USART0 to 9600 Bd, TX/RX, 8N1.  Note that this sets up
-// the PD0 (RXD) and PD1 (TXD) pins such that they cannot be used for normal
-// digital IO.
-void
-uart_init (void);
+// Get the byte that is ready to be recieved.  This should only be used
+// after UART_WAIT_FOR_BYTE().  Using this macro clears the error flags
+// underlying the UART_RX_ERROR_*() macros.
+#define UART_GET_BYTE() UDR0
 
 // First, if c is newline ('\n'), turn our copy of it it into a carriage
 // return ('\r').  Then wait until the UART goes ready (UDRE0 bit of UCSR0A
@@ -102,6 +106,7 @@ uart_putchar (char c, FILE *stream);
 //
 // Successive calls to uart_getchar() will be satisfied from the internal
 // buffer until that buffer is emptied again.
+// FIXME: the putchar-type stuff should go in term_io.h, not here.
 int
 uart_getchar (FILE *stream);
 

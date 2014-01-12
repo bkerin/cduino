@@ -84,4 +84,24 @@ term_io_getline (char *linebuf);
 #  define php TERM_IO_PHP
 #endif
 
+// Character-at-a-time interface.  Use the higher level printf() and
+// term_io_getline() functions instead of this.  This is really only
+// exposed so we can test it easily.  This routine first substitutes any
+// given newline with a carriage return (i.e changes '\n' to '\r') then
+// puts the resulting character out on the serial port using UART_PUT_BYTE().
+int
+term_io_putchar (char ch, FILE *stream);
+
+// Character-at-a-time interface, sort of (see below).  Use the higher-level
+// printf() and term_io_getline() instead of this.  This is really only
+// exposed so we cat test it easily.  This routine first tries to get a
+// single character from the serial port, possibly returning _FDEV_EOF if
+// it fails due to a frame error or _FDEV_ERR if it fails due to a data
+// overrun error.  It then performs a series of strange magical actions,
+// which can include outputting multiple characters to the serial port, in
+// order to get behavior similar to Unix stty.  The actual implementation
+// is line-buffered.  See the implementation in term_io.c for more details.
+int
+term_io_getchar (FILE *stream);
+
 #endif // TERM_IO_H
