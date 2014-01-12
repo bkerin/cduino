@@ -5,23 +5,18 @@
 #include "term_io.h"
 #include "uart.h"
 
-static FILE term_io_str
-  = FDEV_SETUP_STREAM (term_io_putchar, term_io_getchar, _FDEV_SETUP_RW);
-
-void
-term_io_init (void)
-{
-  uart_init ();
-
-  stdout = stdin = &term_io_str;
-}
-
-int
+static int
 term_io_putchar (char ch, FILE *stream)
 {
-  // FIXME: this fctn should dissapear from the interface
+  // Wierdo routine.  Use the higher level printf() and term_io_getline()
+  // functions instead of this.  This is really only exposed so we can test
+  // it easily.  This routine first substitutes any given newline with a
+  // carriage return (i.e changes '\n' to '\r') then puts the resulting
+  // character out on the serial port using UART_PUT_BYTE().
 
   if ( ch == '\n' ) {
+    // FIXME: shouldn't this just be a PUT_BYTE, and we dont' need a stream
+    // argument really?
     term_io_putchar ('\r', stream);
   }
   UART_PUT_BYTE (ch);
@@ -29,14 +24,48 @@ term_io_putchar (char ch, FILE *stream)
   return 0;
 }
 
-int
+static int
 term_io_getchar (FILE *stream)
 {
-  // FIXME: this fctn should dissapear from the interface
+  // Wierdo routine.  Its actually line buffered, might propagate errors
+  // upwards when trying to receive bytes from the serial port, and might
+  // term_io_putchar() bytes in response to the byte it reads.  Its doing
+  // all this crazy stuff in order to help us get somewhat terminal-like
+  // command line editing.  In more detail:
+  //
+  // This features a simple line-editor that allows to delete and re-edit the
+  // characters entered, until either CR or NL is entered.  Printable characters
+  // entered will be echoed using uart_putchar().
+  //
+  // Editing characters:
+  //
+  //   \b (BS) or \177 (DEL)    delete the previous character
+  //   ^u                       kills the entire input buffer
+  //   ^w                       deletes the previous word
+  //   ^r                       sends a CR, and then reprints the buffer
+  //   \t                       will be replaced by a single space
+  //
+  // All other control characters will be ignored.
+  //
+  //
+  // The internal line buffer is TERM_IO_RX_BUFSIZE characters long, which
+  // includes the terminating \n (but no terminating \0).  If the buffer
+  // is full (i. e., at TERM_IO_RX_BUFSIZE - 1 characters in order to keep
+  // space for the trailing \n), any further input attempts will send a \a to
+  // uart_putchar() (BEL character), although line editing is still allowed.
+  //
+  // Input errors while talking to the UART will cause an immediate return of
+  // -1 (error indication).  Notably, this will be caused by a framing error
+  // (e. g.  serial line "break" condition), by an input overrun, and by a
+  // parity error (if parity was enabled and automatic parity recognition
+  // is supported by hardware).
+  //
+  // Successive calls to uart_getchar() will be satisfied from the internal
+  // buffer until that buffer is emptied again.
 
   uint8_t ch;
   char *cp, *cp2;
-  static char buf[RX_BUFSIZE];
+  static char buf[TERM_IO_RX_BUFSIZE];
   static char *rxp;
 
   if ( rxp == 0 ) {
@@ -66,7 +95,7 @@ term_io_getchar (FILE *stream)
 
       if ( (ch >= (uint8_t)' ' && ch <= (uint8_t)'\x7e') ||
            ch >= (uint8_t)'\xa0') {
-        if ( cp == buf + RX_BUFSIZE - 1 ) {
+        if ( cp == buf + TERM_IO_RX_BUFSIZE - 1 ) {
           term_io_putchar ('\a', stream);
         }
         else {
@@ -127,6 +156,16 @@ term_io_getchar (FILE *stream)
   return ch;
 }
 
+static FILE term_io_str
+  = FDEV_SETUP_STREAM (term_io_putchar, term_io_getchar, _FDEV_SETUP_RW);
+
+void
+term_io_init (void)
+{
+  uart_init ();
+
+  stdout = stdin = &term_io_str;
+}
 
 int
 term_io_getline (char *linebuf)

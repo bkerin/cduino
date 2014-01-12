@@ -7,7 +7,7 @@ main (void)
 {
   term_io_init ();
 
-  char buffer[LINEBUFSIZE];
+  char buffer[TERM_IO_LINE_BUFFER_MIN_SIZE];
 
   for ( ; ; ) {
     printf ("Enter something: ");

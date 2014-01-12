@@ -20,21 +20,13 @@
 // There are no external hardware requirements other than an arduino and
 // a USB cable to connect it to the computer.
 
-// FIXME: we don't need all these headers now
 #include <assert.h>
-#include <ctype.h>
-#include <errno.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdlib.h>   // FIXXME: PROBABLY only need do to bad assert.h header
 
 #include <avr/io.h>
-#include <avr/pgmspace.h>
-
-#include <util/delay.h>
 
 #include "uart.h"
-
 
 int
 main (void)
@@ -44,6 +36,9 @@ main (void)
   assert (sizeof (char) == 1);   // Hey, I like probably correct programs :)
 
 #define CHARS_TO_READ 5
+
+  // FIXXME: we could probably change things around to use program space
+  // strings here
 
   char ptec[] = "\n\rType some characters now\n\r";   // Prompt To Enter Chars
   char ce[CHARS_TO_READ];   // Characters entered
@@ -59,6 +54,12 @@ main (void)
     for ( uint8_t ii = 0 ; ii < CHARS_TO_READ ; ii++ ) {
       UART_WAIT_FOR_BYTE ();
       if ( UART_RX_ERROR () ) {
+        if ( UART_RX_FRAME_ERROR () ) {
+          // Do something?
+        } 
+        if ( UART_RX_DATA_OVERRUN_ERROR () ) {
+          // Do something?
+        }
         // Hope we aren't here.  We could try to print an error...
         assert (0);
       }

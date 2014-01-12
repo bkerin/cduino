@@ -13,12 +13,6 @@
  * $Id: uart.c 1008 2005-12-28 21:38:59Z joerg_wunsch $
  */
 
-// See the interface description in uart.h for details of otherwise uncommented
-// functions.
-
-#include <stdint.h>
-#include <stdio.h>
-
 #include <avr/io.h>
 
 #include "uart.h"
