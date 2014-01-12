@@ -2,6 +2,16 @@
 
 #include "term_io.h"
 
+// This program repeatedly prompts for a line of input, then prints it
+// back out.
+//
+// There are no external hardware requirements other than an arduino and a USB
+// cable to connect it to the computer.  It should be possible to run
+//
+//   make -rR run_screen
+//
+// or so from the module directory to see it do its thing.
+
 int
 main (void)
 {

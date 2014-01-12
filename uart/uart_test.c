@@ -17,8 +17,12 @@
 // from the serial port, then sends the read characters back out on the
 // serial port.
 //
-// There are no external hardware requirements other than an arduino and
-// a USB cable to connect it to the computer.
+// There are no external hardware requirements other than an arduino and a USB
+// cable to connect it to the computer.  It should be possible to run
+//
+//   make -rR run_screen
+//
+// or so from the module directory to see it do its thing.
 
 #include <assert.h>
 #include <stdint.h>

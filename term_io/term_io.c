@@ -8,17 +8,17 @@
 static int
 term_io_putchar (char ch, FILE *stream)
 {
-  // Wierdo routine.  Use the higher level printf() and term_io_getline()
-  // functions instead of this.  This is really only exposed so we can test
-  // it easily.  This routine first substitutes any given newline with a
-  // carriage return (i.e changes '\n' to '\r') then puts the resulting
-  // character out on the serial port using UART_PUT_BYTE().
+  // Wierdo routine.  Satisfies avrlibc's requirements for a stream
+  // implementation function.  This routine first substitutes any given
+  // newline with a carriage return (i.e changes '\n' to '\r') then puts
+  // the resulting character out on the serial port using UART_PUT_BYTE().
 
   if ( ch == '\n' ) {
-    // FIXME: shouldn't this just be a PUT_BYTE, and we dont' need a stream
-    // argument really?
+    // I think we could just be putting this byte out directly (our steam
+    // in this case is tied inevitably to the serial port).
     term_io_putchar ('\r', stream);
   }
+
   UART_PUT_BYTE (ch);
 
   return 0;
@@ -27,11 +27,12 @@ term_io_putchar (char ch, FILE *stream)
 static int
 term_io_getchar (FILE *stream)
 {
-  // Wierdo routine.  Its actually line buffered, might propagate errors
-  // upwards when trying to receive bytes from the serial port, and might
-  // term_io_putchar() bytes in response to the byte it reads.  Its doing
-  // all this crazy stuff in order to help us get somewhat terminal-like
-  // command line editing.  In more detail:
+  // Wierdo routine.  // Satisfies avrlibc's requirements for a stream
+  // implementation function.  Its actually line buffered, might propagate
+  // errors upwards when trying to receive bytes from the serial port,
+  // and might term_io_putchar() bytes in response to the byte it reads.
+  // Its doing all this crazy stuff in order to help us get somewhat
+  // terminal-like command line editing.  In more detail:
   //
   // This features a simple line-editor that allows to delete and re-edit the
   // characters entered, until either CR or NL is entered.  Printable characters
@@ -46,7 +47,6 @@ term_io_getchar (FILE *stream)
   //   \t                       will be replaced by a single space
   //
   // All other control characters will be ignored.
-  //
   //
   // The internal line buffer is TERM_IO_RX_BUFSIZE characters long, which
   // includes the terminating \n (but no terminating \0).  If the buffer
@@ -108,6 +108,9 @@ term_io_getchar (FILE *stream)
       switch ( ch ) {
         case 'c' & 0x1f:
           return -1;
+
+        // FIXXME: it would be nice to say a few words about these magic
+        // values (e.g. '\x7f').
 
         case '\b':
         case '\x7f':
