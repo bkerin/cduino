@@ -24,14 +24,20 @@
 void
 uart_init (void);
 
+// Send a byte to the serial port
 #define UART_PUT_BYTE(byte) \
   do { \
     loop_until_bit_is_set (UCSR0A, UDRE0); \
     UDR0 = byte; \
   } while ( 0 );
 
-// Block until a byte comes in from the serial port.  FIXXME: would a
-// timeout-or-iteration-limited version of this be useful?
+// Evaluate to true iff an incoming byte is ready to be read (you might
+// want to check for errors before reading it though, since you can't do
+// so afterwords).
+#define UART_BYTE_AVAILABLE() (UCSR0A & _BV (RXC0))
+
+// Block until a byte comes in from the serial port.  Note that this could
+// block forever.
 #define UART_WAIT_FOR_BYTE() loop_until_bit_is_set (UCSR0A, RXC0)
 
 // This macro evaluates to true iff there is a receiver error flag set.
@@ -41,14 +47,15 @@ uart_init (void);
 #define UART_RX_ERROR() (UCSR0A & (_BV (FE0) | _BV (DOR0)))
 
 // These macros evaluate to true iff particular receiver error flags are set.
-// They can be used if UART_RX_ERROR() evaluate to true to determine the
-// cause of the error.
+// They can be used after or instead of UART_RX_ERROR() to determine the
+// detailed cause of the error.
 #define UART_RX_FRAME_ERROR() (UCSR0A & _BV (FE0))
 #define UART_RX_DATA_OVERRUN_ERROR() (UCSR0A & _BV (DOR0))
 
-// Get the byte that is ready to be recieved.  This should only be used
-// after UART_WAIT_FOR_BYTE().  Using this macro clears the error flags
-// underlying the UART_RX_ERROR_*() macros.
+// Get the byte that is ready to be recieved.  This should only be used after
+// UART_BYTE_AVAILABLE() evaluate to true or UART_WAIT_FOR_BYTE() completes.
+// Using this macro clears the error flags underlying the UART_RX_ERROR_*()
+// macros.
 #define UART_GET_BYTE() UDR0
 
 #endif // UART_H

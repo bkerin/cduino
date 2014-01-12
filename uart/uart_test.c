@@ -45,7 +45,7 @@ main (void)
   // strings here
 
   char ptec[] = "\n\rType some characters now\n\r";   // Prompt To Enter Chars
-  char ce[CHARS_TO_READ];   // Characters entered
+  char ce[CHARS_TO_READ];   // Characters Entered
 
   for ( ; ; ) {
 
@@ -55,8 +55,18 @@ main (void)
     }
 
     // Read the characters entered
+    //
     for ( uint8_t ii = 0 ; ii < CHARS_TO_READ ; ii++ ) {
+
+      // NOTE: this could block forever
       UART_WAIT_FOR_BYTE ();
+
+      // If you don't want to risk blocking forever, you could do this:
+      //while ( ! UART_BYTE_AVAILABLE () ) {
+        // Count iteration, perhaps call _delay_us(), eventually timeout
+      //} 
+
+      // Handle receiver errors
       if ( UART_RX_ERROR () ) {
         if ( UART_RX_FRAME_ERROR () ) {
           // Do something?
@@ -67,6 +77,8 @@ main (void)
         // Hope we aren't here.  We could try to print an error...
         assert (0);
       }
+
+      // Actually retrieve the byte
       ce[ii] = UART_GET_BYTE ();
     }
 

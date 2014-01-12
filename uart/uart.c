@@ -22,13 +22,30 @@ uart_init (void)
 {
   // FIXME: is there some hardware that we should be waking from sleep here?
 
-  // Set up clocking.
-#if F_CPU < 2000000UL && defined(U2X)
-  UCSR0A = _BV(U2X0);   // Improve baud rate error by using 2x clk
-  UBRR0L = (F_CPU / (8UL * UART_BAUD)) - 1;
-#else
-  UBRR0L = (F_CPU / (16UL * UART_BAUD)) - 1;
+#ifndef F_CPU
+#  error the AVR libc util/setbaud.h header will require F_CPU to be defined
 #endif
 
-  UCSR0B = _BV(TXEN0) | _BV(RXEN0);   // Enable TX/RX.
+  // The magical AVR libc util/setbaud.h header requires BAUD to be defined,
+  // so we first ensure it isn't already defined then set it.
+#ifdef BAUD
+#  error We need to set BAUD, but it's already defined, so we're too scared
+#endif
+#define BAUD UART_BAUD
+
+// This is a special calculation-only header that can be included anywhere.
+// Its going to give us back some macros that help set up the serial port
+// control registers: UBRRH_VALUE, UBRRL_VALUE, and USE_2X.
+#include <util/setbaud.h>
+
+  // Set up clocking
+  UBRR0L = UBRRL_VALUE;
+  UBRR0H = UBRRH_VALUE;
+#if USE_2X
+  UCSR0A |= _BV (U2X0);
+#else
+  UCSR0A &= ~(_BV (U2X0));
+#endif
+
+  UCSR0B = _BV (TXEN0) | _BV (RXEN0);   // Enable TX/RX
 }
