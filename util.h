@@ -6,6 +6,7 @@
 #define UTIL_H
 
 #include <avr/io.h>
+#include <util/delay.h>
 
 #define HIGH 0x01
 #define LOW  0x00
