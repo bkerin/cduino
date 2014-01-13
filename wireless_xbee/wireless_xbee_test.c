@@ -1,13 +1,33 @@
 #include <assert.h>
 #include <stdlib.h>  // FIXME: probably only needed for broken assert.h 
+#include <string.h>
 #include <util/delay.h>
 
 #include "uart.h"
 #include "util.h"
+#include "wireless_xbee.h"
   
 int
 main (void)
 {
+
+  // FIXME: I don't think this interface version is working yet
+  wx_init ();
+
+  char cmdo[42];   // FIXME: symbolic lenght, better name, blah blah
+
+  uint8_t sentinel = wx_com ("ATBD\r", cmdo);
+
+  if ( sentinel && (! strcmp (cmdo, "3\r")) ) {
+    // FIXME: WORK POINT: OK, we get the right answer back now
+    for ( ; ; ) { CHKP (); }
+  }
+  else {
+    for ( ; ; ) { ; }
+  }
+
+  /*
+
   uart_init ();
 
   // Sequence to go into command mode
@@ -34,4 +54,5 @@ main (void)
     for ( ; ; ) { CHKP (); }
   }
 
+  */
 }
