@@ -22,12 +22,6 @@ get_char (void)
   return UART_GET_BYTE ();
 }
 
-// Maximum length of response expected for commands, including the trailing
-// carriage return ('\r').  Note that some function automatically add a
-// NUL byte to results, and so may require an additional character of storage.
-// FIXME: we should trim this down to what is actually needed
-#define WX_MAX_COMMAND_RESPONSE_LENGTH 42
-
 static uint8_t
 get_line (uint8_t bufsize, char *buf)
 {
@@ -68,11 +62,11 @@ enter_at_command_mode (void)
   _delay_ms (dwmms);
   
   // This probably goes without saying, but we have to assert it somewhere
-  assert (WX_MAX_COMMAND_RESPONSE_LENGTH < UINT8_MAX); 
+  assert (WX_MCOSL < UINT8_MAX); 
     
-  char response[WX_MAX_COMMAND_RESPONSE_LENGTH + 1];
+  char response[WX_MCOSL];
 
-  uint8_t sentinel = get_line (WX_MAX_COMMAND_RESPONSE_LENGTH + 1, response);
+  uint8_t sentinel = get_line (WX_MCOSL, response);
   assert (sentinel);
   
   // FIXME: should propagate
@@ -81,59 +75,58 @@ enter_at_command_mode (void)
   return TRUE;
 }
 
-uint8_t
-wx_com (char *command, char *output)
+static uint8_t
+at_command (char *command, char *output)
 {
-  // FIXME: have to do the auto-addition still
-  // Enter command mode, execute the given AT command with an "AT" prefix
-  // and "\r" postfix implicitly added (e.g. "BD9600" becomes "ATBD9600"),
-  // place the command output in output, stip the trailing carriage return
-  // ("\r") from output, and finally return TRUE if all that succeeded.
+  // Require the XBee module to be in AT command mode (see
+  // enter_at_command_mode()).  Execute the given AT command, and return
+  // its output.  The command should ommit the "AT" prefix and "\r" postfix:
+  // this routine will add them.  The trailing "\r" that is returned is
+  // removed from output.  Return true on success.
 
-  /*
+  UART_PUT_BYTE ('A');
+  UART_PUT_BYTE ('T');
 
-  // This magic sequence should send us into AT command mode
-  float const dwmms = 1142;   // Delay With Margin (in ms) -- AT requires 1 s
-  _delay_ms (dwmms);
-  UART_PUT_BYTE ('+');
-  UART_PUT_BYTE ('+');
-  UART_PUT_BYTE ('+');
-  _delay_ms (dwmms);
-  
-  assert (WX_MAX_COMMAND_RESPONSE_LENGTH < UINT8_MAX); 
-    
-  char response[WX_MAX_COMMAND_RESPONSE_LENGTH + 1];
-
-  uint8_t sentinel = get_line (WX_MAX_COMMAND_RESPONSE_LENGTH + 1, response);
-  assert (sentinel);
-  
-  // FIXME: should propagate
-  assert (! strcmp (response, "OK\r"));
-
-  */
-  
-  uint8_t sentinel = enter_at_command_mode ();
-
-  uint8_t ii;   // Index
-
-  for ( ii = 0 ; ii < strlen (command) ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < strlen (command) ; ii++ ) {
     UART_PUT_BYTE (command[ii]);
   }
 
-  sentinel = get_line (42, output);
-  assert (sentinel);
+  UART_PUT_BYTE ('\r');
+ 
+  uint8_t sentinel = get_line (WX_MCOSL, output);
+  assert (sentinel);  // FIXME: propagate
+
+  return TRUE;
+}
+
+static uint8_t
+exit_at_command_mode (void)
+{
+  // Require the XBee module to be in AT command mode (see
+  // enter_at_command_mode()).  Leave AT command mode.
   
-  /*
-  ii = 0;
+  char response[WX_MCOSL];
 
-  do {
-    UART_WAIT_FOR_BYTE ();
-    // FIXME: needs timeouts/error checking/prop
-    assert (! UART_RX_ERROR ());
-    output[ii] = UART_GET_BYTE ();
-  } while ( output[ii++] != '\r' );
-  */
+  uint8_t sentinel = at_command ("CN", response);
+  assert (sentinel);   // FIXME: propagate
+  
+  assert (! strcmp (response, "OK\r"));  // FIXME: propagate
 
+  return TRUE;
+}
 
-  return TRUE;  // FIXME: Meaning command worked I guess
+uint8_t
+wx_com (char *command, char *output)
+{
+
+  uint8_t sentinel = enter_at_command_mode ();
+  assert (sentinel);   // FIXME: propagate
+
+  sentinel = at_command (command, output);
+  assert (sentinel);   // FIXME: propagate
+
+  sentinel = exit_at_command_mode ();
+  assert (sentinel);   // FIXME: propagate
+
+  return TRUE;
 }

@@ -10,49 +10,17 @@
 int
 main (void)
 {
-
-  // FIXME: I don't think this interface version is working yet
   wx_init ();
 
-  char cmdo[42];   // FIXME: symbolic lenght, better name, blah blah
+  char co[WX_MCOSL];   // Command Output
 
-  uint8_t sentinel = wx_com ("ATBD\r", cmdo);
+  uint8_t sentinel = wx_com ("BD", co);
 
-  if ( sentinel && (! strcmp (cmdo, "3\r")) ) {
-    // FIXME: WORK POINT: OK, we get the right answer back now
-    for ( ; ; ) { CHKP (); }
+  // FIXME: explain that the magic "3" means 9600
+  if ( sentinel && (! strcmp (co, "3\r")) ) {
+    for ( ; ; ) { CHKP (); }   // Blinking means it worked!
   }
   else {
     for ( ; ; ) { ; }
   }
-
-  /*
-
-  uart_init ();
-
-  // Sequence to go into command mode
-  _delay_ms (1200);
-  UART_PUT_BYTE ('+');
-  UART_PUT_BYTE ('+');
-  UART_PUT_BYTE ('+');
-  _delay_ms (1200);
-    
-  // Get a byte
-  UART_WAIT_FOR_BYTE ();
-  assert (! UART_RX_ERROR ());
-  assert (sizeof (char) == 1);
-  char b1 = UART_GET_BYTE ();
-
-  // Get another byte
-  UART_WAIT_FOR_BYTE ();
-  assert (! UART_RX_ERROR ());
-  assert (sizeof (char) == 1);
-  char b2 = UART_GET_BYTE ();
-
-  // See if we got OK indicating command mode
-  if ( b1 == 'O' && b2 == 'K' ) {
-    for ( ; ; ) { CHKP (); }
-  }
-
-  */
 }
