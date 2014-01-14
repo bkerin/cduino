@@ -67,8 +67,11 @@ wx_restore_defaults (void);
 // and "\r" postfix implicitly added (e.g. "BD9600" becomes "ATBD9600"),
 // place the command output in output, stip the trailing carriage return
 // ("\r") from output, and finally return TRUE if all that succeeded.
-// NOTE: the command string should be NUL-terminated, and the output will
-// be NUL-terminated.
+// Both command and output should be pointers to at least WX_MCOSL bytes
+// of storage.  Its ok to pass the same pointer for both command and output,
+// in which case the command string is overwritten with the command output
+// (saving a few bytes of RAM).  The command string should be NUL-terminated,
+// and the output will be NUL-terminated.
 uint8_t
 wx_com (char *command, char *output);
 
@@ -76,4 +79,4 @@ wx_com (char *command, char *output);
 // to ouput "OK\r" (note that wx_com() would strip the trailing "\r").
 // Return true iff everything wx_com() would do works and we get an OK back.
 uint8_t
-wx_com_expect_ok (char *command);
+wx_com_expect_ok (char const *command);
