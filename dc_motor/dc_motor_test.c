@@ -45,7 +45,7 @@ main (void)
   PFP ("\n");
 
   // Ramp motor speeds up and down continually, measuring load at each step.
-  // Motors A and B will be run in opposite directions.
+  // To be cute, motors A and B will be run in opposite directions :)
   {
     int8_t spd = 0;          // Speed setting (for motor A)
     int8_t ss = 20;          // Step size (in % duty cycle)
