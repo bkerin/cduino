@@ -27,8 +27,8 @@
 #define DC_MOTOR_CHANNEL_B_CURRENT_SENSE_ADC_PIN 1
 
 // NOTE: In addition to the above pins, the motor shield uses pins Digital
-// 3 and Digital 11 (aka PD3 and PB3 in ATmeaga-speak, respectively) as
-// PWM outputs to control the motor speed.
+// 3 and Digital 11 (aka PD3 and PB3 respectively in ATmega328P-speak)
+// as PWM outputs to control the motor speed.
 
 // NOTE: For some reason, the Arduino motor shield uses the OC2B pin (which
 // is in turn affected by the OCR2B register) to control what it calls
