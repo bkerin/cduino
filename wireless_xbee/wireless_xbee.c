@@ -78,6 +78,24 @@ enter_at_command_mode (void)
   return TRUE;
 }
 
+static void
+put_command (char const *command)
+{
+  // Put a command out on the serial port.  The "AT" prefix and "\r" postfix
+  // are automatically added to the supplied command.  This resulting bytes
+  // are sent.  This routine doesn't wait for a response.
+
+  UART_PUT_BYTE ('A');
+  UART_PUT_BYTE ('T');
+
+  uint8_t csl = strlen (command);   // Command String Length
+  for ( uint8_t ii = 0 ; ii < csl ; ii++ ) {
+    UART_PUT_BYTE (command[ii]);
+  }
+
+  UART_PUT_BYTE ('\r');
+}
+
 static uint8_t
 at_command (char *command, char *output)
 {
@@ -90,14 +108,7 @@ at_command (char *command, char *output)
   // pointer for both command and output, in which case the command string
   // is overwritten with the command output (saving a few bytes of RAM).
 
-  UART_PUT_BYTE ('A');
-  UART_PUT_BYTE ('T');
-
-  for ( uint8_t ii = 0 ; ii < strlen (command) ; ii++ ) {
-    UART_PUT_BYTE (command[ii]);
-  }
-
-  UART_PUT_BYTE ('\r');
+  put_command (command);
  
   uint8_t sentinel = get_line (WX_MCOSL, output);
   assert (sentinel);  // FIXME: propagate
@@ -117,9 +128,7 @@ at_command_expect_ok (char const *command)
   // Like at_command(), but simply checks that the result is "OK\r" and
   // returns TRUE iff it is.
 
-  // FIXME: WORK POINT: fill in
-  command = command;
-  //put_command (command);
+  put_command (command);
 
   // FIXME: propagate
   assert (get_char () == 'O');
