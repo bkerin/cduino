@@ -1,3 +1,43 @@
+// MaxStream XBee Series 1 (aka XBee 802.15.4) Wireless Module Interface
+//
+// Test driver: wireless_xbee_test.c    Implementation: wireless_xbee.c
+//
+// This module uses the ATmega328P hardware serial port to communicate
+// with the XBee.  It features high-level support for a few configuration
+// parameters that people are most likely to desire to change, some low-level
+// functions for people who need to do more extensive XBee reconfiguration,
+// and some data Tx and Rx functions.
+//
+// FIXME: minimal use info here?
+//
+// Though this module should not be dependent on any particular shield,
+// the Sparkfun XBee Shield (Sparkfun part number WRL-10854) was used
+// for development.  Its available on its own, or as part of the Sparkfun
+// "XBee Wireless Kit Retail" (Sparkfun part number RTL-11445), which also
+// includes the actual XBee modules and a stand-alone miniature USB XBee
+// board that's extremely handy to have (FIXME: ref our perl script that
+// uses it if it does).
+//
+// Sparkfun has IMO the best information page for XBee modules as well:
+//
+//   https://www.sparkfun.com/pages/xbee_guide
+//
+// There are a couple pages on the Arduino site that are worth reading,
+// particularly if you need to do more extensive XBee configuration than
+// what this interface provides directly:
+//
+//   http://arduino.cc/en/Main/ArduinoWirelessShield
+//   http://arduino.cc/en/Guide/ArduinoWirelessShield
+//
+// Because this module uses the hardware serial port to communicate with
+// the XBee, the edit-compile-debug process is easier if you use in-system
+// programming for upload, rather than the serial port.  There are some clues
+// about how to do this near the CHKP_PD4() macro in wireless_xbee_test.c
+// Otherwise, make sure to take not of the tiny switch on the WRL-10854:
+// it needs to be in the DLINE position for serial programming to work,
+// and the UART position for communication between the Arduino and the
+// XBee to work.  So you'll end up toggling the switch twice and pushing
+// the reset button once per edit-compile-debug cycle.
 
 // Initialize the interface to the XBee.  Currently this interface only
 // supports talking to XBee devices over the hardware serial port at 9600
@@ -7,25 +47,28 @@
 void
 wx_init (void);
 
-// Check if the XBee network ID (ID parameter) is set to id, and if not,
-// set it to id and save the settings.  Valid id values are 0x00 - 0xffff.
-// NOTE: this command may permanently alter the XBee configuration (it can
-// be restored using wx_restore_defaults().
+// Enter AT command mode and check if the XBee network ID (ID parameter)
+// is set to id, and if not, set it to id, save the settings, and exit
+// command mode.  Valid id values are 0x00 - 0xffff.  NOTE: this command
+// may permanently alter the XBee configuration (it can be restored using
+// wx_restore_defaults().
 uint8_t
 wx_ensure_network_id_set_to (uint16_t id);
 
-// Check if the XBee channel (CH parameter) is set to channel, and if not,
-// set it to channel and save the settings.  Valid channel values are 0x0b
-// - 0x1a.  NOTE: this command may permanently alter the XBee configuration
-// (it can be restored using wx_restore_defaults()).
+// Enter AT command mode and check if the XBee channel (CH parameter)
+// is set to channel, and if not, set it to channel, save the settings,
+// and exit command mode.  Valid channel values are 0x0b - 0x1a.  NOTE:
+// this command may permanently alter the XBee configuration (it can be
+// restored using wx_restore_defaults()).
 uint8_t
 wx_ensure_channel_set_to (uint8_t channel);
 
-// Restore the XBee factory default configuration and save the settings.
+// Enter AT command mode, restore the XBee factory default configuration,
+// save the settings, and exit command mode.
 uint8_t
 wx_restore_defaults (void);
 
-// I don't think the (FIXME: shield name) gives us any connection to the
+// I don't think the Sparkfun WRL-10854 gives us any connection to the
 // SLEEP_RQ pin of the XBee module, so FIXXME: this is unimplemented.
 // However, hibernating is probably the first thing you'll want to do for
 // a battery operated device, so its too bad we can't easily prototype it
@@ -43,7 +86,7 @@ wx_restore_defaults (void);
 //   * An all-software solution which reduces power consumption to about 50 uA
 //     is also possible, but it requires significantly more module
 //     confiruation in order to establish a coordinator node, end devices
-//     nodes, etc. 
+//     nodes, etc.
 //
 //   * The XBee Product manual version v1.xEx (a copy is in this module's
 //     directory) has a description of the sleep mode options on page 23.

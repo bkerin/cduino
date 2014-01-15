@@ -204,16 +204,12 @@ wx_ensure_network_id_set_to (uint16_t id)
   tmp = at_command (buf, buf);
   assert (tmp);   // FIXME: propagate
 
-  // FIXME: WORK POINT: moving this above return TRUE doesn't work (when we
-  // feed in the default from the test driver),
-  for ( ; ; ) { CHKP_PD4 (); }
-
   int const base_16 = 16;   // Base to use to convert retrieved string
   char *endptr;   //  Pointer to be set to end of converted string
   long int eidv = strtol (buf, &endptr, base_16);   // Existing ID value
   if ( *buf != '\0' && *endptr == '\0' ) {
     if ( eidv == id ) {
-      return TRUE;   // ID is alreayd set as requested, so we're done
+      return TRUE;   // ID is already set as requested, so we're done
     }
   }
   else {
@@ -221,22 +217,92 @@ wx_ensure_network_id_set_to (uint16_t id)
     assert (0);   // Didn't get a convertible string back from command
   }
 
-  // Print the id into a command string (in the form expected by wx_com()).
-  // The argument itself must be upper case, without any leading "0x" or "0X".
-  // FIXME ug something better to use than h for "short int"?
+  // Print the id into a command string (in the form expected by
+  // at_command_expect_ok()).  The argument itself must be upper case,
+  // without any leading "0x" or "0X".
   uint8_t const escsl = 6;   // Expected Setting Command String Length
-  uint8_t cp = sprintf_P (buf, PSTR ("ID%0.4hX"), id);
+  uint8_t cp = sprintf_P (buf, PSTR ("ID%.4" PRIX16), id);
   assert (cp == escsl);   // FIXME: propagate
 
   tmp = at_command_expect_ok (buf);
   assert (tmp);   // FIXME: propagate
 
-  // FIXME: still need to save here
   tmp = at_command_expect_ok ("WR");
   assert (tmp);   // FIXME: propagate
 
   tmp = exit_at_command_mode ();
   assert (tmp);
+
+  return TRUE;
+}
+
+uint8_t
+wx_ensure_channel_set_to (uint8_t channel)
+{
+  // The channel argument must fall in the valid range.  FIXME: propagate?
+  assert (channel >= 0x0b);
+  assert (channel <= 0x1a);
+
+  char buf[WX_MCOSL];   // Buffer for command/output string storage
+  uint8_t tmp;          // For various things (char counts, sentinels, etc.)
+
+  tmp = enter_at_command_mode (); 
+  assert (tmp);   // FIXME: propagate
+   
+  tmp = sprintf_P (buf, PSTR ("CH"));
+  assert (tmp == 2);  // sprintf_P gives a return value, so we check it
+
+  tmp = at_command (buf, buf);
+  assert (tmp);   // FIXME: propagate
+
+  int const base_16 = 16;   // Base to use to convert retrieved string
+  char *endptr;   //  Pointer to be set to end of converted string
+  long int echv = strtol (buf, &endptr, base_16);   // Existing CH value
+  if ( *buf != '\0' && *endptr == '\0' ) {
+    if ( echv == channel ) {
+      return TRUE;   // CH is already set as requested, so we're done
+    }
+  }
+  else {
+    // FIXME: propagate
+    assert (0);   // Didn't get a convertible string back from command
+  }
+
+  // Print the channel into a command string (in the form expected by
+  // at_command_expect_ok()).  The argument itself must be upper case,
+  // without any leading "0x" or "0X".
+  uint8_t const escsl = 6;   // Expected Setting Command String Length
+  uint8_t cp = sprintf_P (buf, PSTR ("CH%.4" PRIX16), channel);
+  assert (cp == escsl);   // FIXME: propagate
+
+  tmp = at_command_expect_ok (buf);
+  assert (tmp);   // FIXME: propagate
+
+  tmp = at_command_expect_ok ("WR");
+  assert (tmp);   // FIXME: propagate
+
+  tmp = exit_at_command_mode ();
+  assert (tmp);
+
+  return TRUE;
+}
+
+uint8_t
+wx_restore_defaults (void)
+{
+  uint8_t sentinel;
+
+  sentinel = enter_at_command_mode (); 
+  assert (sentinel);   // FIXME: propagate
+
+  sentinel = at_command_expect_ok ("RE");
+  assert (sentinel);   // FIXME: propagate
+
+  sentinel = at_command_expect_ok ("WR");
+  assert (sentinel);   // FIXME: propagate
+  
+  sentinel = exit_at_command_mode (); 
+  assert (sentinel);   // FIXME: propagate
 
   return TRUE;
 }

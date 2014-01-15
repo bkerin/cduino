@@ -1,3 +1,5 @@
+
+
 #include <assert.h>
 #include <stdlib.h>  // FIXME: probably only needed for broken assert.h 
 #include <string.h>
@@ -34,11 +36,12 @@
 //
 //   I found that my Official Arduino Motor Shield R3 has long tails and
 //   leaves the ISP header unconnected, so I just plugged that in under the
-//   (FIXME: shield ref).  But it uses PB5 for its own purposes and I didn't
-//   want to confuse it, hence this macro.  If you remember to add a LED from
-//   PD4 to ground (with a current-limiting resistor if you're feeling prim
-//   and proper) you'll have a nice working test setup that doesn't require
-//   you to twiddle the tiny switch and button every edit-compile-debug :)
+//   (FIXME: shield ref).  But the motor shield uses PB5 for its own purposes
+//   and I didn't want to confuse it, hence this macro.  If you remember
+//   to add a LED from PD4 to ground (with a current-limiting resistor if
+//   you're feeling prim and proper) you'll have a nice working test setup
+//   that doesn't require you to twiddle the tiny switch and button every
+//   edit-compile-debug :)
 //
 #define CHKP_PD4() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 300.0, 3)
 
@@ -61,8 +64,46 @@ main (void)
   assert (sentinel);
   assert (! strcmp (co, STRING_MEANING_9600_BAUD));
 
-  wx_ensure_network_id_set_to (0x3332);
-  exit (0);
+  // The default settings for the XBee module for a couple parameter we
+  // can tweak.
+#define DEFAULT_NETWORK_ID 0x3332
+#define DEFAULT_CHANNEL 0x0c
 
-  //for ( ; ; ) { CHKP (); }   // Blinking means everything worked :)
+  // Some non-default setting that we're going to try out
+#define NON_DEFAULT_NETWORK_ID 0x3342
+#define NON_DEFAULT_CHANNEL 0x14
+
+  // Equivalent values in the string forms used by the AT command set
+#define DEFAULT_NETWORK_ID_STRING "3332"
+#define DEFAULT_CHANNEL_STRING "0C"
+#define NON_DEFAULT_NETWORK_ID_STRING "3342"
+#define NON_DEFAULT_CHANNEL_STRING "14"
+  
+  // Test wx_ensure_network_id_set_to()
+  sentinel = wx_ensure_network_id_set_to (NON_DEFAULT_NETWORK_ID);
+  assert (sentinel);
+  sentinel = wx_com ("ID", co);
+  assert (sentinel);
+  assert (! strcmp (co, NON_DEFAULT_NETWORK_ID_STRING));
+
+  // Test wx_ensure_channel_set_to()
+  sentinel = wx_ensure_channel_set_to (NON_DEFAULT_CHANNEL);
+  assert (sentinel);
+  sentinel = wx_com ("CH", co);
+  assert (sentinel);
+  assert (! strcmp (co, NON_DEFAULT_CHANNEL_STRING));
+
+
+  // Test wx_restore_defaults()
+  sentinel = wx_restore_defaults ();
+  sentinel = wx_com ("ID", co);
+  assert (sentinel);
+  assert (! strcmp (co, DEFAULT_NETWORK_ID_STRING));
+  // FIXME: WORK POINT: works to here, but CH no
+  CHKP_PD4 ();
+  sentinel = wx_com ("CH", co);
+  assert (sentinel);
+  assert (! strcmp (co, DEFAULT_CHANNEL_STRING));
+
+  CHKP_PD4 ();   // Checkpoint blinks mean everything worked :)
 }
