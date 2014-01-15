@@ -31,38 +31,37 @@
 #  define MICROSECONDS_TO_CLOCK_CYCLES(a) (((a) * (F_CPU / 1000L)) / 1000L)
 #endif
 
-// WARNING: some shields (e.g. the motor shield) use the pint PB5 (AKA
-// Digital 13 in Arduino-speak) for their own purposes, hence using this
-// function will have unfortunate effects.
+// Set pin for output low and toggle it high-low bc times, mspb ms per cycle.
+// Useful for making LEDs blink See CHKP() for an example of how to call
+// this macro.  WARNING: no effort has been made to anticipate everything a
+// client might have done to put a pin in a state where it can't be properly
+// initialized/blinked.  Test this test function first :)
+#define CHKP_USING(ddr, ddrb, portr, portrb, mspb, bc) \
+  do { \
+    \
+    ddr |= _BV (ddrb); \
+    loop_until_bit_is_set (ddr, ddrb); \
+    portr &= ~(_BV (portrb)); \
+    \
+    for ( uint8_t XxX_ii = 0 ; XxX_ii < bc ; XxX_ii++ ) { \
+      portr |= _BV (portrb); \
+      _delay_ms (mspb / 2.0); \
+      portr &= ~(_BV (portrb)); \
+      _delay_ms (mspb / 2.0); \
+    } \
+  } while ( 0 )
+
+// WARNING: some shields (e.g. the official Arduino motor shield, version R3)
+// use the pin PB5 (AKA Digital 13 in Arduino-speak) for their own purposes,
+// hence using this function will have unfortunate effects.  It can easily
+// be redefined to toggle a different pin.
 //
 // Initialize and blink the on-board LED on PB5 three quick times to
 // indicate that we've hit a checkpoint.  WARNING: no effort has been made
 // to anticipate everything a client might have done to put PB5 in a state
 // where it can't be properly initialized/blinked.  Test this test function
-// first :) FIXME: What about adding trap-point version of this routine?
-// Could just change while ( 0 ) to while ( 1 ) :)
-#define CHKP() \
-  do { \
-    \
-    DDRB |= _BV (DDB5); \
-    loop_until_bit_is_set (DDRB, DDB5); \
-    PORTB &= ~(_BV (PORTB5)); \
-    \
-    PORTB |= _BV (PORTB5); \
-    _delay_ms (150); \
-    PORTB &= ~(_BV (PORTB5)); \
-    _delay_ms (150); \
-    \
-    PORTB |= _BV (PORTB5); \
-    _delay_ms (150); \
-    PORTB &= ~(_BV (PORTB5)); \
-    _delay_ms (150); \
-    \
-    PORTB |= _BV (PORTB5); \
-    _delay_ms (150); \
-    PORTB &= ~(_BV (PORTB5)); \
-    _delay_ms (150); \
-  } while ( 0 )
+// first :)
+#define CHKP() CHKP_USING(DDRB, DDB5, PORTB, PORTB5, 300.0, 3)
 
 // All symbolic constants are evil :)
 #define BITS_PER_BYTE 8
