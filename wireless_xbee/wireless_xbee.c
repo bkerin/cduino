@@ -10,6 +10,10 @@
 #include "wireless_xbee.h"
 #include "util.h"
 
+// FIXME: for final testing we don't need this hack to allow motor shield
+// use here at any rate (in _test.c only).
+#define CHKP_PD4() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 300.0, 3)
+
 void
 wx_init (void)
 {
@@ -200,7 +204,9 @@ wx_ensure_network_id_set_to (uint16_t id)
   tmp = at_command (buf, buf);
   assert (tmp);   // FIXME: propagate
 
-  for ( ; ; ) { CHKP (); }
+  // FIXME: WORK POINT: moving this above return TRUE doesn't work (when we
+  // feed in the default from the test driver),
+  for ( ; ; ) { CHKP_PD4 (); }
 
   int const base_16 = 16;   // Base to use to convert retrieved string
   char *endptr;   //  Pointer to be set to end of converted string
