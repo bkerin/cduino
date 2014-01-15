@@ -12,7 +12,17 @@ include run_screen.mk
 # dissapears/reapears is a good way to start :).
 ARDUINO_PORT = /dev/ttyACM0
 ARDUINO_BAUD = 115200
-ARDUINO_BOOTLOADER=optiboot_atmega328.hex
+ARDUINO_BOOTLOADER = optiboot_atmega328.hex
+
+# Uncomment this to use an AVRISPmkII for upload instead of the serial port,
+# in order to avoid having to flip the switch on the (FIXME: shield ref)
+# and push the reset button every time.  See the notes above the CHKP_PD4()
+# macro definition in wireless_sbee_test.c for details.
+#
+# WARNING: using this will make normal serial Arduino programming impossible
+# until the Arduino bootloader is reloaded, see the discussion in hte Upload
+# Method of generik.mk for details.
+#UPLOAD_METHOD = AVRISPmkII
 
 include generic.mk
 
