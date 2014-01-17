@@ -1,0 +1,236 @@
+#!/usr/bin/perl -w
+
+# Find the (FIXME: sparkfun part description here) XBee USB dongle and send stuff to it FIXME: what?  listen for anything? how?
+
+# This program lets you easily talk to an XBee using a Sparkfun XBee
+# Explorer USB (WRL-08687) or Sparkfun XBee Explorer Dongle (WRL-09819).
+# FIXME: check with the XBee pro, talk about others
+#
+# See the POD documentation for details
+
+# vim:foldmethod=marker
+
+use strict;
+use warnings FATAL => 'all';
+
+use Getopt::Long qw( GetOptions );
+use IO::Handle;
+use Pod::Usage qw( pod2usage );
+
+=head1 NAME
+
+usb_xbee - configure and transmit data via a USB XBee device
+
+=head1 SYNOPSIS
+
+B<usb_xbee> --device=I<DEVICE> --command-mode
+
+B<usb_xbee> --device=I<DEVICE> --raw-mode
+
+=head1 DESCRIPTION
+
+This program has been tested with (FIXME: devices), but has a good chance of
+working with other similar hardware, especially if it uses (FIXME: FT chip ref).
+It lets you send and receive AT commands (for configuration) or data with the
+XBee module.  
+
+// FIXME: maybe add examples section showing pipe usage
+
+=head1 OPTIONS AND ARGUMENTS
+
+=over 4
+
+=item B<-d> I<DEVICE>, B<-device>=I<DEVICE>
+
+Specify the device file corresponding to the connected XBee module (e.g.
+"/dev/ttyUSB0").  It may be easist to find the correct device file in /dev by
+watching for it to appear when the device is plugged in.  Try this command:
+
+  ls -1 /dev >/tmp/oe; \
+  echo -n Plug in or unplug device then hit enter; \
+  read; \
+  sleep 1; \
+  ls -1 /dev >/tmp/ne; diff /tmp/oe /tmp/ne \
+    | grep -E '(\+|\-)[[:alpha:]]' \
+  || ( echo error: did not detect and change in /dev contents 1>&2 \
+       && false )
+
+=item B<-c>, B<--command-mode>
+
+Enter command mode on startup by sending the sleep-bracketed '+++' AT command
+initiation sequence.  Then enable a few convenient tranformations on input and
+output:
+
+=over 4
+
+=item * Input lines first have leading or trailing white space removed, then
+"AT" added as a prefix, and "\r" added as a suffix.
+
+=item * Output lines have "\r" characters replaced with "\n" characters.
+
+=back
+
+Note that if no commands are issues for a few seconds (perhaps as long as 10
+seconds -- this timeout may be an XBee configuration parameter), the XBee 
+module will automatically exit command mode, and any subsequent command will
+fail.  You can just hit enter on an empty line every few seconds to keep
+command mode active.
+
+Note also that unless an explicit command is issued to exit command mode ("CN"
+command), the module will remain in command mode for up to 10 seconds after the
+last command is issued, even if this program is terminated.
+
+=item B<-r>, B<--raw-mode>
+
+Raw mode.  In this mode, bytes from the standard input are line-buffered but
+then sent unmodified to the XBee, and data sent to us from the XBee is passed
+unmodified to our standard output.
+
+=back
+
+=head1 AUTHOR
+
+Britton Kerin (britton.kerin@gmail.com)
+
+=cut
+
+my $help;   # True iff we should just print usage information and exit
+my $df;     # Device File
+my $cm;     # Command Mode
+my $rm;     # Raw Mode
+
+# FIXME: upcate input automagically?  It works without for my XBee at least...
+
+GetOptions(
+    "help|?"          => \$help,
+    "device-file|d=s" => \$df,
+    "command-mode|c"  => \$cm,
+    "raw-mode|r"      => \$rm )
+    or die "usb_xbee: GetOptions failed, try usb_xbee --help\n";
+
+if ( $help ) {
+    pod2usage(-verbose => 1, -exitval => 0);
+}
+
+$df or die "--device-file option must be given";
+
+$cm xor $rm
+    or die "exactly one of --command-mode or --raw-mode options must be given";
+
+open(UD, "+<$df") or die "couldn't open device file '$df'";
+
+UD->autoflush(1);
+
+#sleep 1;
+#print UD '+++';
+#sleep 1;
+#my $trl;
+#read UD, $trl, 3 or die "read failed: $!";
+#die "cp: trl: $trl";
+
+
+sub get_response # {{{1
+{
+    # Get a response to an AT command (which we assume was previously sent),
+    # or die if we get nothing for too long or too much garbage.  The trailing
+    # '\r' character which signals the end of the response is returned with
+    # the rest of the response.
+
+    my $rt = '';   # Response Text 
+
+    # Maximum Response Length.  If we don't see the "\r" within this many
+    # characters, something is wrong.
+    my $mrl = 20;
+
+    # Timeout Time.  If we don't see the "\r" within this many seconds,
+    # something is wrong.
+    my $tt  = 10; 
+
+    # Set an alarm so we'll die instead of hanging forever if we don't get
+    # a response.
+alarm($tt);
+$SIG{ALRM}
+    = sub
+      {
+          die "invalid command response: no \"\\r\" within $tt seconds.  ".
+              "Command mode times out on inactivity.  Maybe type faster? :)";
+      };
+
+    for ( my $ii = 0 ; $ii < $mrl ; $ii++ ) {
+
+        read UD, $rt, 1, $ii;
+
+        if ( substr($rt, $ii, 1) eq "\r" ) {
+
+            # Cancel the alarm
+            alarm(0);
+            $SIG{ALRM} = 'DEFAULT';
+
+            return $rt;
+        }
+    }
+
+    # Cancel the alarm
+    alarm(0);
+    $SIG{ALRM} = 'DEFAULT';
+
+    die "didn't get command response with trailing '\r' within $mrl bytes";
+} # }}}1
+
+sub enter_command_mode # {{{1
+{
+    # Perform the wait-one-second, send-+++, wait-1-second sequence required
+    # to go into command mode, and wait for the result indicating it worked
+    # (dying if we don't get it).
+
+    sleep 1;
+    print UD '+++';
+    sleep 1;
+
+    get_response() eq "OK\r" or die "failed to enter command mode";
+} # }}}1
+
+if ( $cm ) {
+
+    enter_command_mode();
+
+    while ( <STDIN> ) {
+
+        # Transform input line as promised
+        s/\s*(.*)\s*/$1/;
+        $_ = "AT".$_."\r";
+
+        # Send it to the XBee
+        print UD;
+
+        my $rl = get_response();   # Response Line (from XBee)
+
+        # Transform output line as promised
+        $rl =~ s/\r$/\n/;
+
+        # Display the output
+        print $rl;
+    }
+
+}
+
+elsif ( $rm ) {
+    die "unimplemented";
+}
+
+else {
+    die "shouldn't be here";
+}
+
+#read UD, $rl, 3 or die "read failed: $!";
+#
+#$rl eq "OK\r" or die "didn't get OK response";
+#
+#print UD "ATCH\r";
+##read UD, $rl, 2 or die "read failed: $!";
+#
+#my $ch = get_response();
+#
+#print "ch: $ch\n";
+
+exit 0;
