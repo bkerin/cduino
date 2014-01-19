@@ -1,21 +1,27 @@
 #!/usr/bin/perl -w
 
-# Find the (FIXME: sparkfun part description here) XBee USB dongle and send stuff to it FIXME: what?  listen for anything? how?
-
 # This program lets you easily talk to an XBee using a Sparkfun XBee
-# Explorer USB (WRL-08687) or Sparkfun XBee Explorer Dongle (WRL-09819).
-# FIXME: check with the XBee pro, talk about others
+# Explorer USB (WRL-08687, but make sure you also get a USB Type A to
+# USB Mini-B cable) or Sparkfun XBee Explorer Dongle (WRL-09819).  FIXME:
+# check with the XBee pro, talk about others
 #
 # See the POD documentation for details
 
 # vim:foldmethod=marker
 
+# Pragmas and Modules {{{1
+
 use strict;
 use warnings FATAL => 'all';
 
+use Fcntl;
 use Getopt::Long qw( GetOptions );
 use IO::Handle;
 use Pod::Usage qw( pod2usage );
+
+# }}}1
+
+# POD (Plain Old Documentation) {{{1
 
 =head1 NAME
 
@@ -52,8 +58,13 @@ watching for it to appear when the device is plugged in.  Try this command:
   sleep 1; \
   ls -1 /dev >/tmp/ne; diff /tmp/oe /tmp/ne \
     | grep -E '(\+|\-)[[:alpha:]]' \
+    | cut --bytes=2-
   || ( echo error: did not detect and change in /dev contents 1>&2 \
        && false )
+
+Note that the device file name is probably dynamically assigned and might
+change depending on what hardware you have plugged in and possibly also on the
+order in which you plugged it in.
 
 =item B<-c>, B<--command-mode>
 
@@ -66,6 +77,9 @@ output:
 =item * Input lines first have leading or trailing white space removed, then
 "AT" added as a prefix, and "\r" added as a suffix.
 
+=item * All input characters are translated to upper case (even though most
+if not all XBees are not case sensitive).
+
 =item * Output lines have "\r" characters replaced with "\n" characters.
 
 =back
@@ -74,7 +88,8 @@ Note that if no commands are issues for a few seconds (perhaps as long as 10
 seconds -- this timeout may be an XBee configuration parameter), the XBee 
 module will automatically exit command mode, and any subsequent command will
 fail.  You can just hit enter on an empty line every few seconds to keep
-command mode active.
+command mode active.  If this is inconvenient or the command is too long to get
+it typed, just use piped input or file redirection from the command line.
 
 Note also that unless an explicit command is issued to exit command mode ("CN"
 command), the module will remain in command mode for up to 10 seconds after the
@@ -82,9 +97,10 @@ last command is issued, even if this program is terminated.
 
 =item B<-r>, B<--raw-mode>
 
-Raw mode.  In this mode, bytes from the standard input are line-buffered but
-then sent unmodified to the XBee, and data sent to us from the XBee is passed
-unmodified to our standard output.
+Raw mode.  In this mode, bytes from the standard input may be line-buffered (if
+stdin is connection to a terminal) but are otherwise sent unmodified to the
+XBee, and data sent to us from the XBee is passed unmodified to our standard
+output.
 
 =back
 
@@ -94,12 +110,12 @@ Britton Kerin (britton.kerin@gmail.com)
 
 =cut
 
+# }}}1
+
 my $help;   # True iff we should just print usage information and exit
 my $df;     # Device File
 my $cm;     # Command Mode
 my $rm;     # Raw Mode
-
-# FIXME: upcate input automagically?  It works without for my XBee at least...
 
 GetOptions(
     "help|?"          => \$help,
@@ -114,20 +130,38 @@ if ( $help ) {
 
 $df or die "--device-file option must be given";
 
-$cm xor $rm
+($cm xor $rm)
     or die "exactly one of --command-mode or --raw-mode options must be given";
 
-open(UD, "+<$df") or die "couldn't open device file '$df'";
+#open(UD, "+<$df") or die "couldn't open device file '$df'";
+sysopen(UD, "$df", O_RDWR | O_SYNC)
+    or die "couldn't sysopen device file '$df': $!";
 
-UD->autoflush(1);
+# We don't want to line buffer the output to the XBee serial connection.
+# Note however that if this program's input is coming from a terminal,
+# it will still probably be line buffered on its way in.
+#UD->autoflush(1);
 
-#sleep 1;
-#print UD '+++';
-#sleep 1;
-#my $trl;
-#read UD, $trl, 3 or die "read failed: $!";
-#die "cp: trl: $trl";
+sub configure_tty # {{{1
+{
+    # Use the stty program to configure the serial device given as an
+    # argument st we can send it raw data and it will get through to the
+    # XBee unmolested.
+    #
+    # Its important to undertand that when the stdin and/or stdout of this
+    # program are connected to a terminal, the existing settings for that
+    # terminal still apply.  We're configuring the settings for the serial
+    # connection to the XBee, NOT the ones for the terminal you type into.
+    # Thus backspace and such still work.  All your input is resolved into
+    # a single line then sent off to the XBee serial port.
 
+    @_ == 1 or die "wrong number of arguments";
+    my $df = shift;
+
+    # I *think* this consolidated raw setting is what we want.  Serial port
+    # configuration counts as a black art these days IMO.
+    not system ("stty -F $df 9600 raw") or die "stty failed";
+} # }}}1
 
 sub get_response # {{{1
 {
@@ -144,21 +178,27 @@ sub get_response # {{{1
 
     # Timeout Time.  If we don't see the "\r" within this many seconds,
     # something is wrong.
-    my $tt  = 10; 
+    my $tt  = 5; 
 
     # Set an alarm so we'll die instead of hanging forever if we don't get
     # a response.
-alarm($tt);
-$SIG{ALRM}
-    = sub
-      {
-          die "invalid command response: no \"\\r\" within $tt seconds.  ".
-              "Command mode times out on inactivity.  Maybe type faster? :)";
-      };
+    $SIG{ALRM}
+        = sub
+          {
+              die "invalid command response: no \"\\r\" within $tt seconds.  ".
+                  "Perhaps command mode timed out?  Consider piped stdin. ";
+          };
+    alarm($tt);
 
     for ( my $ii = 0 ; $ii < $mrl ; $ii++ ) {
 
-        read UD, $rt, 1, $ii;
+        my $rr = sysread(UD, $rt, 1, $ii);
+        defined($rr)
+            or die "read error: $!, perhaps command mode timed out?  ".
+                   "Consider piped stdin.";
+        $rr == 1
+            or die "failed to read exactly one character, perhaps command ".
+                   "mode timed out?  Consider piped stdin.";
 
         if ( substr($rt, $ii, 1) eq "\r" ) {
 
@@ -184,53 +224,57 @@ sub enter_command_mode # {{{1
     # (dying if we don't get it).
 
     sleep 1;
-    print UD '+++';
+    my $swr = syswrite(UD, '+++', 3);   # SysWrite Return
+    defined($swr)
+        or die "syswrite to $df failed: $!";
+    $swr == 3
+        or die "syswrite didn't write the expected number of bytes to $df";
     sleep 1;
 
     get_response() eq "OK\r" or die "failed to enter command mode";
 } # }}}1
 
-if ( $cm ) {
+if ( $cm ) {   # Command Mode {{{1
+
+    configure_tty($df);
 
     enter_command_mode();
 
     while ( <STDIN> ) {
 
         # Transform input line as promised
-        s/\s*(.*)\s*/$1/;
-        $_ = "AT".$_."\r";
+        s/\s*(.*)\s*/$1/;    # Strip leading and trailing white space
+        tr/a-z/A-Z/;         # Translate to upper case
+        $_ = "AT".$_."\r";   # Add leadint "AT" and trailing "\r"
 
         # Send it to the XBee
-        print UD;
+        my $swr = syswrite(UD, $_);
+        defined($swr) or die "syswrite failed: $!";
+        $swr == length($_)
+            or die "syswrite didn't write the expected number of bytes";
 
         my $rl = get_response();   # Response Line (from XBee)
 
         # Transform output line as promised
-        $rl =~ s/\r$/\n/;
+        $rl =~ s/\r$/\n/
+            or die "command response didn't end with a carriage return";
 
         # Display the output
         print $rl;
     }
 
-}
+} # }}}1
 
-elsif ( $rm ) {
-    die "unimplemented";
-}
+elsif ( $rm ) {   # Raw Mode {{{1
+
+    while ( <STDIN> ) {
+        print UD;
+    }
+
+} # }}}1
 
 else {
     die "shouldn't be here";
 }
-
-#read UD, $rl, 3 or die "read failed: $!";
-#
-#$rl eq "OK\r" or die "didn't get OK response";
-#
-#print UD "ATCH\r";
-##read UD, $rl, 2 or die "read failed: $!";
-#
-#my $ch = get_response();
-#
-#print "ch: $ch\n";
 
 exit 0;
