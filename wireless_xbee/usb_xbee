@@ -52,16 +52,16 @@ to get a USB Type A to USB Mini-B cable as well, it isn't included.
 
 =back
 
-I've succesfully tried the following modules:
+I've succesfully tried this program with the following modules:
 
 =over 4
 
 =item * Series 1 XBee 1mW Chip Antenna Module (Sparkfun part number WRL-08664),
-firmware version 10E6 (the version that ships with the module, at least
-recently).
+firmware version 10E6 (the version that ships with the module, at least for
+me).
 
 =item * Series 1 XBee 1mW Trace Antenna Module (Spartfun part number WRL-11215),
-firmware version (FIXME: fill in).
+firmware version 10EC (the version that came on the module, at least for me).
 
 =back
 
@@ -72,6 +72,10 @@ know on the 900 MHz, XSC or XSC S3B modules.  See this page for more
 information of the different module families:
 
 https://www.sparkfun.com/pages/xbee_guide
+
+On my system at least, it takes a surprisingly long time (10 - 20 seconds) for
+the module device file to become usable the first time the module is plugged
+in.  I assume there's a kernel module that gets loaded or something.
 
 =head1 OPTIONS AND ARGUMENTS
 
@@ -168,14 +172,11 @@ $df or die "--device-file option must be given";
 # }}}1
 
 # We probably don't really need O_SYNC here, but it shouldn't hurt.
-sysopen(UD, "$df", O_RDWR | O_SYNC)
+sysopen(UD, "$df", O_RDWR | O_SYNC)   # USB Device
     or die "couldn't sysopen device file '$df': $!";
 
 sub configure_tty # {{{1
 {
-    # FIXME: document this weird stty setting persistence?, and the fact
-    # that I have to wait a while before things start workin on first plug in.
-    #
     # Use the stty program to configure the serial device given as an
     # argument st we can send it raw data and it will get through to the
     # XBee unmolested.
@@ -308,9 +309,10 @@ sub timed_wait_for_stdin # {{{1
     }
 } # }}}1
 
+configure_tty($df);
+
 if ( $cm ) {   # Command Mode {{{1
 
-    configure_tty($df);
 
     enter_command_mode();
 
@@ -363,6 +365,16 @@ if ( $cm ) {   # Command Mode {{{1
 
 elsif ( $rm ) {   # Raw Mode {{{1
 
+    my $rin = '';
+    my $rout = '';
+    my $sifn = fileno(STDIN);
+    my $udfn = fileno(UD);
+    vec($rin, $sifn, 1) = 1;
+    vec($rin, $udfn, 1) = 1;
+
+    #($nfound,$timeleft) =
+    #select($rout=$rin, $wout=$win, $eout=$ein, $timeout);
+
     # FIXME: do we really want line buffering here?  I think we do and its
     # ok: if its coming from the terminal we want it buffered line-by-line,
     # if its not coming from the terminal than stdio is smart enought to
@@ -373,6 +385,15 @@ elsif ( $rm ) {   # Raw Mode {{{1
             or die "syswrite to $df failed: $!";
         $swr == length($_)
             or die "syswrite didn't write the expected number of bytes to $df";
+
+        # FIXME: WORK POINT: well we have to read in raw mode too to be
+        # interesting :) But how exactly and how to integrate with STDIN
+        # line buffering?
+        my $rt;
+        my $srr = sysread(UD, $rt, 1);
+        defined($srr) or die;
+        $srr == 1 or die;
+        print "rt: $rt\n";
     }
 
 } # }}}1
