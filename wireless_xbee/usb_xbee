@@ -1,11 +1,9 @@
 #!/usr/bin/perl -w
 
-# This program lets you easily talk to an XBee using a Sparkfun XBee
-# Explorer USB (WRL-08687, but make sure you also get a USB Type A to
-# USB Mini-B cable) or Sparkfun XBee Explorer Dongle (WRL-09819).  FIXME:
-# check with the XBee pro, talk about others
+# This program lets you easily talk to an XBee module using a serial-over-USB
+# adapter.  See the POD documentation for more hardware details:
 #
-# See the POD documentation for details
+#   pod2text usb_xbee
 
 # vim:foldmethod=marker
 
@@ -35,14 +33,45 @@ B<usb_xbee> --device=I<DEVICE> --raw-mode
 
 =head1 DESCRIPTION
 
-This program has been tested with (FIXME: devices), but has a good chance of
-working with other similar hardware, especially if it uses (FIXME: FT chip ref).
-It lets you send and receive AT commands (for configuration) or data with the
-XBee module.  
-
 Usage is simple: start the program and start typing commands without their "AT"
 prefixes (if --command-mode) or data (if --raw-mode).  Of course you can also
-use pipes or shell redirects to supply data and store output.
+use pipes or shell redirects to supply data and store output.  However...
+
+You need both an XBee module and an adapter to talk to it over USB.
+
+I've successfully tried this program with the following adapters:
+
+=over 4
+
+=item * Sparkfun XBee Explorer USB (Sparkfun part number WRL-08687).  Make sure
+to get a USB Type A to USB Mini-B cable as well, it isn't included.
+
+=item * Sparkfun XBee Explorer Dongle (Sparkfun part number WRL-09819).
+
+=item * A random older USB dongle from Smiley Micros.
+
+=back
+
+I've succesfully tried the following modules:
+
+=over 4
+
+=item * Series 1 XBee 1mW Chip Antenna Module (Sparkfun part number WRL-08664),
+firmware version 10E6 (the version that ships with the module, at least
+recently).
+
+=item * Series 1 XBee 1mW Trace Antenna Module (Spartfun part number WRL-11215),
+firmware version (FIXME: fill in).
+
+=back
+
+Some Other modules will likely work as well, though I tried an old XBee Pro
+from 2006 and it didn't work.  Series 2.5, ZB, and 2B modules probably won't
+work outof the box, but might with appropriate firmware installed.  I don't
+know on the 900 MHz, XSC or XSC S3B modules.  See this page for more
+information of the different module families:
+
+https://www.sparkfun.com/pages/xbee_guide
 
 =head1 OPTIONS AND ARGUMENTS
 
@@ -144,12 +173,8 @@ sysopen(UD, "$df", O_RDWR | O_SYNC)
 
 sub configure_tty # {{{1
 {
-    # FIXME: I don't think these stty settings work, apparently raw isn't
-    # raw enough.  It doesn't break things, becuase we do it after screen.
-    # But by itself it isn't enough.  Because stty setting seem to persist
-    # accross device plug/unplug events, you have to reboot or stty back to
-    # original setting to investigate this.  # FIXME: document this weird
-    # stty setting persistence.
+    # FIXME: document this weird stty setting persistence?, and the fact
+    # that I have to wait a while before things start workin on first plug in.
     #
     # Use the stty program to configure the serial device given as an
     # argument st we can send it raw data and it will get through to the
