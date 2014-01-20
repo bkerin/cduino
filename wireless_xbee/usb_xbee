@@ -40,7 +40,9 @@ working with other similar hardware, especially if it uses (FIXME: FT chip ref).
 It lets you send and receive AT commands (for configuration) or data with the
 XBee module.  
 
-// FIXME: maybe add examples section showing pipe usage
+Usage is simple: start the program and start typing commands without their "AT"
+prefixes (if --command-mode) or data (if --raw-mode).  Of course you can also
+use pipes or shell redirects to supply data and store output.
 
 =head1 OPTIONS AND ARGUMENTS
 
@@ -69,10 +71,15 @@ order in which you plugged it in.
 =item B<-c>, B<--command-mode>
 
 Enter command mode on startup by sending the sleep-bracketed '+++' AT command
-initiation sequence.  Then enable a few convenient tranformations on input and
-output:
+initiation sequence.  Then enable a convenient keep-alive feature and few
+tranformations on input and output:
 
 =over 4
+
+=item * If there is no input for a few seconds, sent an "AT\r" string to the
+XBee module to prevent it from automatically dropping out of command mode.
+Neither this command nor the corresponding returned string are shown on this
+program's stdin/stdout.
 
 =item * Input lines first have leading or trailing white space removed, then
 "AT" added as a prefix, and "\r" added as a suffix.
@@ -84,16 +91,10 @@ if not all XBees are not case sensitive).
 
 =back
 
-Note that if no commands are issues for a few seconds (perhaps as long as 10
-seconds -- this timeout may be an XBee configuration parameter), the XBee 
-module will automatically exit command mode, and any subsequent command will
-fail.  You can just hit enter on an empty line every few seconds to keep
-command mode active.  If this is inconvenient or the command is too long to get
-it typed, just use piped input or file redirection from the command line.
-
-Note also that unless an explicit command is issued to exit command mode ("CN"
-command), the module will remain in command mode for up to 10 seconds after the
-last command is issued, even if this program is terminated.
+Note that if this program exits abnormally (i.e. other than by getting EOF on
+its stdin due to Cntrl-D being pressed), the XBee module will remain in command
+mode for up to 10 seconds after the last command is issued (unless an explicit
+exit-command-mode command ("CN") is issued).
 
 =item B<-r>, B<--raw-mode>
 
@@ -111,6 +112,8 @@ Britton Kerin (britton.kerin@gmail.com)
 =cut
 
 # }}}1
+
+# Process Command Line Options/Arguments {{{1
 
 my $help;   # True iff we should just print usage information and exit
 my $df;     # Device File
@@ -133,17 +136,21 @@ $df or die "--device-file option must be given";
 ($cm xor $rm)
     or die "exactly one of --command-mode or --raw-mode options must be given";
 
-#open(UD, "+<$df") or die "couldn't open device file '$df'";
+# }}}1
+
+# We probably don't really need O_SYNC here, but it shouldn't hurt.
 sysopen(UD, "$df", O_RDWR | O_SYNC)
     or die "couldn't sysopen device file '$df': $!";
 
-# We don't want to line buffer the output to the XBee serial connection.
-# Note however that if this program's input is coming from a terminal,
-# it will still probably be line buffered on its way in.
-#UD->autoflush(1);
-
 sub configure_tty # {{{1
 {
+    # FIXME: I don't think these stty settings work, apparently raw isn't
+    # raw enough.  It doesn't break things, becuase we do it after screen.
+    # But by itself it isn't enough.  Because stty setting seem to persist
+    # accross device plug/unplug events, you have to reboot or stty back to
+    # original setting to investigate this.  # FIXME: document this weird
+    # stty setting persistence.
+    #
     # Use the stty program to configure the serial device given as an
     # argument st we can send it raw data and it will get through to the
     # XBee unmolested.
@@ -185,8 +192,8 @@ sub get_response # {{{1
     $SIG{ALRM}
         = sub
           {
-              die "invalid command response: no \"\\r\" within $tt seconds.  ".
-                  "Perhaps command mode timed out?  Consider piped stdin. ";
+              die "invalid command response: no \"\\r\" within $tt ".
+                  "seconds.  Perhaps we exited command mode somehow?";
           };
     alarm($tt);
 
@@ -194,11 +201,11 @@ sub get_response # {{{1
 
         my $rr = sysread(UD, $rt, 1, $ii);
         defined($rr)
-            or die "read error: $!, perhaps command mode timed out?  ".
-                   "Consider piped stdin.";
+            or die "sysread failed on $df: $!.  Perhaps we exited command ".
+                   "mode somehow?";
         $rr == 1
-            or die "failed to read exactly one character, perhaps command ".
-                   "mode timed out?  Consider piped stdin.";
+            or die "failed to read exactly one character from $df.  Perhaps ".
+                   "we exited command mode somehow?";
 
         if ( substr($rt, $ii, 1) eq "\r" ) {
 
@@ -214,7 +221,8 @@ sub get_response # {{{1
     alarm(0);
     $SIG{ALRM} = 'DEFAULT';
 
-    die "didn't get command response with trailing '\r' within $mrl bytes";
+    die "didn't get command response with trailing '\r' within $mrl bytes.  ".
+        "Perhaps we exited command mode somehow?";
 } # }}}1
 
 sub enter_command_mode # {{{1
@@ -224,14 +232,55 @@ sub enter_command_mode # {{{1
     # (dying if we don't get it).
 
     sleep 1;
-    my $swr = syswrite(UD, '+++', 3);   # SysWrite Return
+    my $swr = syswrite(UD, '+++');   # SysWrite Return
     defined($swr)
         or die "syswrite to $df failed: $!";
-    $swr == 3
+    $swr == length('+++')
         or die "syswrite didn't write the expected number of bytes to $df";
     sleep 1;
 
     get_response() eq "OK\r" or die "failed to enter command mode";
+} # }}}1
+
+sub leave_command_mode # {{{1
+{
+    # Leave command mode by issuing the AT command that leaves command mode.
+
+    my $ecmcs = "ATCN\r";   # Exit Command Mode Command String
+
+    my $swr = syswrite(UD, $ecmcs);   # SysWrite Return
+    defined($swr)
+        or die "syswrite to $df failed: $!";
+    $swr == length($ecmcs)
+        or die "syswrite didn't write the expected number of bytes to $df";
+
+    get_response() eq "OK\r" or die "failed to leave command mode";
+} # }}}1
+
+sub timed_wait_for_stdin # {{{1
+{
+    # Wait up to the given number of seconds for STDIN to have something we
+    # can read.  Return true iff it does.
+
+    @_ == 1 or die "wrong number of arguments";
+    my $to = shift;   # Timout, in seconds
+
+    my $rin = '';
+    my $rout = '';
+    my $sifn = fileno(STDIN);
+    vec($rin, $sifn, 1) = 1;
+    my $rfc = select($rout = $rin, undef, undef, 2);   # Ready File Count
+    $rfc != -1 or die "select failed: $!";
+    $rfc == 0 or $rfc == 1
+        or die "select indicated an unexpected number of ready files";
+    if ( $rfc == 1 ) {
+        vec($rout, $sifn, 1) == 1
+            or die "select doesn't indicate the expected ready file set";
+        return 1;
+    }
+    else {
+        return 0;
+    }
 } # }}}1
 
 if ( $cm ) {   # Command Mode {{{1
@@ -240,35 +289,65 @@ if ( $cm ) {   # Command Mode {{{1
 
     enter_command_mode();
 
-    while ( <STDIN> ) {
+    my $ki = 4;   # Keepalive Interval (seconds)
+
+    for ( ; ; ) {
+
+        my $gsi = timed_wait_for_stdin($ki);   # Got Standard Input?
+        my $cts;   # Command To Send
+
+        if ( $gsi ) {
+            # Get the line of input
+            $cts = STDIN->getline();
+            not STDIN->error() or die "error reading line from STDIN";
+            # Must have got EOF (Cntrl-D), so we're done
+            defined($cts) or (leave_command_mode() and exit(0));
+        }
+        else {
+            # Note that we'll add the AT and "\r" as for normal commands
+            $cts = '';
+        }
 
         # Transform input line as promised
-        s/\s*(.*)\s*/$1/;    # Strip leading and trailing white space
-        tr/a-z/A-Z/;         # Translate to upper case
-        $_ = "AT".$_."\r";   # Add leadint "AT" and trailing "\r"
+        $cts =~ s/\s*(.*)\s*/$1/;    # Strip leading/trailing white space
+        $cts =~ tr/a-z/A-Z/;         # Translate to upper case
+        $cts = "AT".$cts."\r";       # Add leading "AT" and trailing "\r"
 
-        # Send it to the XBee
-        my $swr = syswrite(UD, $_);
+        # Send stuff to the XBee
+        my $swr = syswrite(UD, $cts);
         defined($swr) or die "syswrite failed: $!";
-        $swr == length($_)
+        $swr == length($cts)
             or die "syswrite didn't write the expected number of bytes";
 
         my $rl = get_response();   # Response Line (from XBee)
 
-        # Transform output line as promised
-        $rl =~ s/\r$/\n/
-            or die "command response didn't end with a carriage return";
+        if ( $gsi ) {
+            # Transform output line as promised
+            $rl =~ s/\r$/\n/
+                or die "command response didn't end with a carriage return";
 
-        # Display the output
-        print $rl;
+            # Display the output
+            print $rl;
+        }
+        else {
+            $rl eq "OK\r"
+                or die "didn't get OK response to empty keep-alive commmand";
+        }
     }
-
 } # }}}1
 
 elsif ( $rm ) {   # Raw Mode {{{1
 
+    # FIXME: do we really want line buffering here?  I think we do and its
+    # ok: if its coming from the terminal we want it buffered line-by-line,
+    # if its not coming from the terminal than stdio is smart enought to
+    # figure that out and not buffer it.
     while ( <STDIN> ) {
-        print UD;
+        my $swr = syswrite(UD, $_);   # SysWrite Return
+        defined($swr)
+            or die "syswrite to $df failed: $!";
+        $swr == length($_)
+            or die "syswrite didn't write the expected number of bytes to $df";
     }
 
 } # }}}1
