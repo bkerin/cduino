@@ -31,9 +31,9 @@ uart_init (void);
     UDR0 = byte; \
   } while ( 0 );
 
-// Evaluate to true iff an incoming byte is ready to be read (you might
-// want to check for errors before reading it though, since you can't do
-// so afterwords).
+// Evaluate to true iff an incoming byte is ready to be read.  You should
+// check for errors before actually reading it, since you can't do so
+// afterwords.
 #define UART_BYTE_AVAILABLE() (UCSR0A & _BV (RXC0))
 
 // Block until a byte comes in from the serial port.  Note that this could
