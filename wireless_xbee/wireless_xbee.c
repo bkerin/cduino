@@ -1,4 +1,9 @@
+// Implementation of the interface described in wireless_xbee.h.
 
+// We're using assert() to handle errors, we can't let clients turn it off.
+#ifdef NDEBUG
+#  error The HANDLE_ERRORS() macro in this file requires assert()
+#endif
 #include <assert.h>
 #include <avr/pgmspace.h>
 #include <stdio.h>
@@ -127,8 +132,7 @@ at_command (char *command, char *output)
 
   put_command (command);
  
-  uint8_t sentinel = get_line (WX_MCOSL, output);
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (get_line (WX_MCOSL, output));
 
   // Verify that the output string ends with '\r'
   uint8_t osl = strnlen (output, WX_MCOSL);   // Output String Length
@@ -147,8 +151,7 @@ wx_exit_at_command_mode (void)
 
   char response[WX_MCOSL];
 
-  uint8_t sentinel = at_command ("CN", response);
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (at_command ("CN", response));
 
   HANDLE_ERRORS (! strcmp (response, "OK"));
 
@@ -173,14 +176,11 @@ at_command_expect_ok (char const *command)
 uint8_t
 wx_com (char *command, char *output)
 {
-  uint8_t sentinel = wx_enter_at_command_mode ();
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (wx_enter_at_command_mode ());
 
-  sentinel = at_command (command, output);
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (at_command (command, output));
 
-  sentinel = wx_exit_at_command_mode ();
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (wx_exit_at_command_mode ());
 
   return TRUE;
 }
@@ -188,14 +188,11 @@ wx_com (char *command, char *output)
 uint8_t
 wx_com_expect_ok (char const *command)
 {
-  uint8_t sentinel = wx_enter_at_command_mode ();
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (wx_enter_at_command_mode ());
 
-  sentinel = at_command_expect_ok (command);
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (at_command_expect_ok (command));
 
-  sentinel = wx_exit_at_command_mode ();
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (wx_exit_at_command_mode ());
   
   return TRUE;
 }
@@ -204,16 +201,13 @@ uint8_t
 wx_ensure_network_id_set_to (uint16_t id)
 {
   char buf[WX_MCOSL];   // Buffer for command/output string storage
-  uint8_t tmp;          // For various things (char counts, sentinels, etc.)
 
-  tmp = wx_enter_at_command_mode (); 
-  HANDLE_ERRORS (tmp);
+  HANDLE_ERRORS (wx_enter_at_command_mode ());
    
-  tmp = sprintf_P (buf, PSTR ("ID"));
-  HANDLE_ERRORS (tmp == 2);  // sprintf_P gives a return value, so we check it
+  uint8_t cp = sprintf_P (buf, PSTR ("ID"));   // Chars Printed
+  HANDLE_ERRORS (cp == 2);  // sprintf_P gives a return value, so we check it
 
-  tmp = at_command (buf, buf);
-  HANDLE_ERRORS (tmp);
+  HANDLE_ERRORS (at_command (buf, buf));
 
   int const base_16 = 16;   // Base to use to convert retrieved string
   char *endptr;   //  Pointer to be set to end of converted string
@@ -231,17 +225,14 @@ wx_ensure_network_id_set_to (uint16_t id)
   // at_command_expect_ok()).  The argument itself must be upper case,
   // without any leading "0x" or "0X".
   uint8_t const escsl = 6;   // Expected Setting Command String Length
-  uint8_t cp = sprintf_P (buf, PSTR ("ID%.4" PRIX16), id);
+  cp = sprintf_P (buf, PSTR ("ID%.4" PRIX16), id);
   HANDLE_ERRORS (cp == escsl);
 
-  tmp = at_command_expect_ok (buf);
-  HANDLE_ERRORS (tmp);
+  HANDLE_ERRORS (at_command_expect_ok (buf));
 
-  tmp = at_command_expect_ok ("WR");
-  HANDLE_ERRORS (tmp);
+  HANDLE_ERRORS (at_command_expect_ok ("WR"));
 
-  tmp = wx_exit_at_command_mode ();
-  HANDLE_ERRORS (tmp);
+  HANDLE_ERRORS (wx_exit_at_command_mode ());
 
   return TRUE;
 }
@@ -253,19 +244,14 @@ wx_ensure_channel_set_to (uint8_t channel)
   HANDLE_ERRORS (channel >= 0x0b);
   HANDLE_ERRORS (channel <= 0x1a);
   
-  //CHKP_PD4 ();
-
   char buf[WX_MCOSL];   // Buffer for command/output string storage
-  uint8_t tmp;          // For various things (char counts, sentinels, etc.)
 
-  tmp = wx_enter_at_command_mode (); 
-  HANDLE_ERRORS (tmp);
+  HANDLE_ERRORS (wx_enter_at_command_mode ());
    
-  tmp = sprintf_P (buf, PSTR ("CH"));
-  HANDLE_ERRORS (tmp == 2);  // sprintf_P gives a return value, so we check it
+  uint8_t cp = sprintf_P (buf, PSTR ("CH"));   // Chars Printed
+  HANDLE_ERRORS (cp == 2);  // sprintf_P gives a return value, so we check it
 
-  tmp = at_command (buf, buf);
-  HANDLE_ERRORS (tmp);
+  HANDLE_ERRORS (at_command (buf, buf));
 
   int const base_16 = 16;   // Base to use to convert retrieved string
   char *endptr;   //  Pointer to be set to end of converted string
@@ -283,17 +269,14 @@ wx_ensure_channel_set_to (uint8_t channel)
   // at_command_expect_ok()).  The argument itself must be upper case,
   // without any leading "0x" or "0X".
   uint8_t const escsl = 6;   // Expected Setting Command String Length
-  uint8_t cp = sprintf_P (buf, PSTR ("CH%.4" PRIX16), channel);
+  cp = sprintf_P (buf, PSTR ("CH%.4" PRIX16), channel);
   HANDLE_ERRORS (cp == escsl);
 
-  tmp = at_command_expect_ok (buf);
-  HANDLE_ERRORS (tmp);
+  HANDLE_ERRORS (at_command_expect_ok (buf));
 
-  tmp = at_command_expect_ok ("WR");
-  HANDLE_ERRORS (tmp);
+  HANDLE_ERRORS (at_command_expect_ok ("WR"));
 
-  tmp = wx_exit_at_command_mode ();
-  HANDLE_ERRORS (tmp);
+  HANDLE_ERRORS (wx_exit_at_command_mode ());
 
   return TRUE;
 }
@@ -301,19 +284,13 @@ wx_ensure_channel_set_to (uint8_t channel)
 uint8_t
 wx_restore_defaults (void)
 {
-  uint8_t sentinel;
+  HANDLE_ERRORS (wx_enter_at_command_mode ());
 
-  sentinel = wx_enter_at_command_mode (); 
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (at_command_expect_ok ("RE"));
 
-  sentinel = at_command_expect_ok ("RE");
-  HANDLE_ERRORS (sentinel);
-
-  sentinel = at_command_expect_ok ("WR");
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (at_command_expect_ok ("WR"));
   
-  sentinel = wx_exit_at_command_mode (); 
-  HANDLE_ERRORS (sentinel);
+  HANDLE_ERRORS (wx_exit_at_command_mode ());
 
   return TRUE;
 }
