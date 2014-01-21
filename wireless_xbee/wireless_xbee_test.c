@@ -51,6 +51,7 @@ main (void)
   wx_init ();
 
   char co[WX_MCOSL];   // Command Output
+  uint8_t sentinel;    // For sentinel values returned by functions
 
   // The AT command which queries the current baud setting returns a string
   // containing a particular number followed by a carriage return ('\r')
@@ -60,7 +61,7 @@ main (void)
   // Check that the current baud setting is 9600.  This is the default setting
   // for the XBee modules, and is the only setting this interface supports,
   // so that's what we should see if we see anything.
-  uint8_t sentinel = wx_com ("BD", co);
+  sentinel = wx_com ("BD", co);
   assert (sentinel);
   assert (! strcmp (co, STRING_MEANING_9600_BAUD));
 
@@ -75,7 +76,16 @@ main (void)
 
   // Equivalent values in the string forms used by the AT command set
 #define DEFAULT_NETWORK_ID_STRING "3332"
+  // WARNING: it appears that the XBee doesn't print the leading zeros
+  // when responding to queries (it still accepts leading zeros when
+  // values are being set, and for all I know they may be required in
+  // that context).  Therefore we have both DEFAULT_CHANNEL_STRING and
+  // OTHER_POSSIBLE_DEFAULT_CHANNEL_STRING for the channel case.  Presumably
+  // this is an example of a general behavior that's worth being aware of
+  // if you need to query configuration settings.
 #define DEFAULT_CHANNEL_STRING "0C"
+  // See comment above near the DEFAULT_CHANNEL_STRING define.
+#define OTHER_POSSIBLE_DEFAULT_CHANNEL_STRING "C"
 #define NON_DEFAULT_NETWORK_ID_STRING "3342"
 #define NON_DEFAULT_CHANNEL_STRING "14"
   
@@ -93,17 +103,21 @@ main (void)
   assert (sentinel);
   assert (! strcmp (co, NON_DEFAULT_CHANNEL_STRING));
 
-
   // Test wx_restore_defaults()
   sentinel = wx_restore_defaults ();
   sentinel = wx_com ("ID", co);
   assert (sentinel);
   assert (! strcmp (co, DEFAULT_NETWORK_ID_STRING));
-  // FIXME: WORK POINT: works to here, but CH no
-  CHKP_PD4 ();
   sentinel = wx_com ("CH", co);
   assert (sentinel);
-  assert (! strcmp (co, DEFAULT_CHANNEL_STRING));
+  assert (
+      (! strcmp (co, DEFAULT_CHANNEL_STRING)) ||
+      (! strcmp (co, OTHER_POSSIBLE_DEFAULT_CHANNEL_STRING)) );
 
-  CHKP_PD4 ();   // Checkpoint blinks mean everything worked :)
+  // This first batch of checkpoint blinks mean all the setup stuff worked :)
+  CHKP_PD4 ();
+
+  // FIXME: test over-the-air here, and explain somewhere how to set up
+  // transmit from USB thingy to test other half of it.  Also explain blinky
+  // test conditions at top of this file probably.
 }

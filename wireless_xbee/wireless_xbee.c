@@ -10,8 +10,7 @@
 #include "wireless_xbee.h"
 #include "util.h"
 
-// FIXME: for final testing we don't need this hack to allow motor shield
-// use here at any rate (in _test.c only).
+// For development: signal a check point by blinking something attached to PD4
 #define CHKP_PD4() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 300.0, 3)
 
 void
@@ -20,11 +19,26 @@ wx_init (void)
   uart_init ();
 }
 
+// Define a HANDLE_ERRORS macro that either asserts the given condition,
+// or simple returns depending on a compile-time setting.  We guarantee
+// that this macro will evaluate its argument only once, so its safe to
+// use around a function that has other effects.
+#ifdef WX_ASSERT_SUCCESS
+#  define HANDLE_ERRORS(condition) assert (condition)
+#else
+#  define HANDLE_ERRORS(condition) \
+  do { \
+    if ( UNLIKELY (! (condition)) ) { \
+      return FALSE; \
+    } \
+  } while ( 0 )
+#endif
+
 static char
 get_char (void)
 {
   UART_WAIT_FOR_BYTE ();
-  assert (! UART_RX_ERROR ());   // FIXME: should propagate somehow
+  HANDLE_ERRORS (! UART_RX_ERROR ());
   return UART_GET_BYTE ();
 }
 
@@ -50,8 +64,8 @@ get_line (uint8_t bufsize, char *buf)
   return TRUE;
 }
 
-static uint8_t
-enter_at_command_mode (void)
+uint8_t
+wx_enter_at_command_mode (void)
 {
   // Send the sequence which initiates AT command mode, returning true on
   // success.  After this function returns, the XBee will remain in command
@@ -74,10 +88,9 @@ enter_at_command_mode (void)
   char response[WX_MCOSL];
 
   uint8_t sentinel = get_line (WX_MCOSL, response);
-  assert (sentinel);
+  HANDLE_ERRORS (sentinel);
   
-  // FIXME: should propagate
-  assert (! strcmp (response, "OK\r"));
+  HANDLE_ERRORS (! strcmp (response, "OK\r"));
 
   return TRUE;
 }
@@ -115,13 +128,29 @@ at_command (char *command, char *output)
   put_command (command);
  
   uint8_t sentinel = get_line (WX_MCOSL, output);
-  assert (sentinel);  // FIXME: propagate
+  HANDLE_ERRORS (sentinel);
 
   // Verify that the output string ends with '\r'
   uint8_t osl = strnlen (output, WX_MCOSL);   // Output String Length
-  assert (output[osl - 1] == '\r');   // FIXME: propagate
+  HANDLE_ERRORS (output[osl - 1] == '\r');
 
   output[osl - 1] = '\0';   // Snip the trailing "\r" as promised
+
+  return TRUE;
+}
+
+uint8_t
+wx_exit_at_command_mode (void)
+{
+  // Require the XBee module to be in AT command mode (see
+  // enter_at_command_mode()).  Leave AT command mode.
+
+  char response[WX_MCOSL];
+
+  uint8_t sentinel = at_command ("CN", response);
+  HANDLE_ERRORS (sentinel);
+
+  HANDLE_ERRORS (! strcmp (response, "OK"));
 
   return TRUE;
 }
@@ -134,26 +163,9 @@ at_command_expect_ok (char const *command)
 
   put_command (command);
 
-  // FIXME: propagate
-  assert (get_char () == 'O');
-  assert (get_char () == 'K');
-  assert (get_char () == '\r');
-
-  return TRUE;
-}
-
-static uint8_t
-exit_at_command_mode (void)
-{
-  // Require the XBee module to be in AT command mode (see
-  // enter_at_command_mode()).  Leave AT command mode.
-  
-  char response[WX_MCOSL];
-
-  uint8_t sentinel = at_command ("CN", response);
-  assert (sentinel);   // FIXME: propagate
-  
-  assert (! strcmp (response, "OK"));  // FIXME: propagate
+  HANDLE_ERRORS (get_char () == 'O');
+  HANDLE_ERRORS (get_char () == 'K');
+  HANDLE_ERRORS (get_char () == '\r');
 
   return TRUE;
 }
@@ -161,15 +173,14 @@ exit_at_command_mode (void)
 uint8_t
 wx_com (char *command, char *output)
 {
-
-  uint8_t sentinel = enter_at_command_mode ();
-  assert (sentinel);   // FIXME: propagate
+  uint8_t sentinel = wx_enter_at_command_mode ();
+  HANDLE_ERRORS (sentinel);
 
   sentinel = at_command (command, output);
-  assert (sentinel);   // FIXME: propagate
+  HANDLE_ERRORS (sentinel);
 
-  sentinel = exit_at_command_mode ();
-  assert (sentinel);   // FIXME: propagate
+  sentinel = wx_exit_at_command_mode ();
+  HANDLE_ERRORS (sentinel);
 
   return TRUE;
 }
@@ -177,14 +188,14 @@ wx_com (char *command, char *output)
 uint8_t
 wx_com_expect_ok (char const *command)
 {
-  uint8_t sentinel = enter_at_command_mode ();
-  assert (sentinel);   // FIXME: propagate
+  uint8_t sentinel = wx_enter_at_command_mode ();
+  HANDLE_ERRORS (sentinel);
 
   sentinel = at_command_expect_ok (command);
-  assert (sentinel);   // FIXME: propagate
+  HANDLE_ERRORS (sentinel);
 
-  sentinel = exit_at_command_mode ();
-  assert (sentinel);   // FIXME: propagate
+  sentinel = wx_exit_at_command_mode ();
+  HANDLE_ERRORS (sentinel);
   
   return TRUE;
 }
@@ -195,14 +206,14 @@ wx_ensure_network_id_set_to (uint16_t id)
   char buf[WX_MCOSL];   // Buffer for command/output string storage
   uint8_t tmp;          // For various things (char counts, sentinels, etc.)
 
-  tmp = enter_at_command_mode (); 
-  assert (tmp);   // FIXME: propagate
+  tmp = wx_enter_at_command_mode (); 
+  HANDLE_ERRORS (tmp);
    
   tmp = sprintf_P (buf, PSTR ("ID"));
-  assert (tmp == 2);  // sprintf_P gives a return value, so we check it
+  HANDLE_ERRORS (tmp == 2);  // sprintf_P gives a return value, so we check it
 
   tmp = at_command (buf, buf);
-  assert (tmp);   // FIXME: propagate
+  HANDLE_ERRORS (tmp);
 
   int const base_16 = 16;   // Base to use to convert retrieved string
   char *endptr;   //  Pointer to be set to end of converted string
@@ -213,8 +224,7 @@ wx_ensure_network_id_set_to (uint16_t id)
     }
   }
   else {
-    // FIXME: propagate
-    assert (0);   // Didn't get a convertible string back from command
+    HANDLE_ERRORS (0);   // Didn't get a convertible string back from command
   }
 
   // Print the id into a command string (in the form expected by
@@ -222,16 +232,16 @@ wx_ensure_network_id_set_to (uint16_t id)
   // without any leading "0x" or "0X".
   uint8_t const escsl = 6;   // Expected Setting Command String Length
   uint8_t cp = sprintf_P (buf, PSTR ("ID%.4" PRIX16), id);
-  assert (cp == escsl);   // FIXME: propagate
+  HANDLE_ERRORS (cp == escsl);
 
   tmp = at_command_expect_ok (buf);
-  assert (tmp);   // FIXME: propagate
+  HANDLE_ERRORS (tmp);
 
   tmp = at_command_expect_ok ("WR");
-  assert (tmp);   // FIXME: propagate
+  HANDLE_ERRORS (tmp);
 
-  tmp = exit_at_command_mode ();
-  assert (tmp);
+  tmp = wx_exit_at_command_mode ();
+  HANDLE_ERRORS (tmp);
 
   return TRUE;
 }
@@ -239,21 +249,23 @@ wx_ensure_network_id_set_to (uint16_t id)
 uint8_t
 wx_ensure_channel_set_to (uint8_t channel)
 {
-  // The channel argument must fall in the valid range.  FIXME: propagate?
-  assert (channel >= 0x0b);
-  assert (channel <= 0x1a);
+  // The channel argument must fall in the valid range.
+  HANDLE_ERRORS (channel >= 0x0b);
+  HANDLE_ERRORS (channel <= 0x1a);
+  
+  //CHKP_PD4 ();
 
   char buf[WX_MCOSL];   // Buffer for command/output string storage
   uint8_t tmp;          // For various things (char counts, sentinels, etc.)
 
-  tmp = enter_at_command_mode (); 
-  assert (tmp);   // FIXME: propagate
+  tmp = wx_enter_at_command_mode (); 
+  HANDLE_ERRORS (tmp);
    
   tmp = sprintf_P (buf, PSTR ("CH"));
-  assert (tmp == 2);  // sprintf_P gives a return value, so we check it
+  HANDLE_ERRORS (tmp == 2);  // sprintf_P gives a return value, so we check it
 
   tmp = at_command (buf, buf);
-  assert (tmp);   // FIXME: propagate
+  HANDLE_ERRORS (tmp);
 
   int const base_16 = 16;   // Base to use to convert retrieved string
   char *endptr;   //  Pointer to be set to end of converted string
@@ -264,8 +276,7 @@ wx_ensure_channel_set_to (uint8_t channel)
     }
   }
   else {
-    // FIXME: propagate
-    assert (0);   // Didn't get a convertible string back from command
+    HANDLE_ERRORS (0);   // Didn't get a convertible string back from command
   }
 
   // Print the channel into a command string (in the form expected by
@@ -273,16 +284,16 @@ wx_ensure_channel_set_to (uint8_t channel)
   // without any leading "0x" or "0X".
   uint8_t const escsl = 6;   // Expected Setting Command String Length
   uint8_t cp = sprintf_P (buf, PSTR ("CH%.4" PRIX16), channel);
-  assert (cp == escsl);   // FIXME: propagate
+  HANDLE_ERRORS (cp == escsl);
 
   tmp = at_command_expect_ok (buf);
-  assert (tmp);   // FIXME: propagate
+  HANDLE_ERRORS (tmp);
 
   tmp = at_command_expect_ok ("WR");
-  assert (tmp);   // FIXME: propagate
+  HANDLE_ERRORS (tmp);
 
-  tmp = exit_at_command_mode ();
-  assert (tmp);
+  tmp = wx_exit_at_command_mode ();
+  HANDLE_ERRORS (tmp);
 
   return TRUE;
 }
@@ -292,17 +303,17 @@ wx_restore_defaults (void)
 {
   uint8_t sentinel;
 
-  sentinel = enter_at_command_mode (); 
-  assert (sentinel);   // FIXME: propagate
+  sentinel = wx_enter_at_command_mode (); 
+  HANDLE_ERRORS (sentinel);
 
   sentinel = at_command_expect_ok ("RE");
-  assert (sentinel);   // FIXME: propagate
+  HANDLE_ERRORS (sentinel);
 
   sentinel = at_command_expect_ok ("WR");
-  assert (sentinel);   // FIXME: propagate
+  HANDLE_ERRORS (sentinel);
   
-  sentinel = exit_at_command_mode (); 
-  assert (sentinel);   // FIXME: propagate
+  sentinel = wx_exit_at_command_mode (); 
+  HANDLE_ERRORS (sentinel);
 
   return TRUE;
 }

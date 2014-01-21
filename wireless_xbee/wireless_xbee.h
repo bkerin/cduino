@@ -6,9 +6,8 @@
 // with the XBee.  It features high-level support for a few configuration
 // parameters that people are most likely to desire to change, some low-level
 // functions for people who need to do more extensive XBee reconfiguration,
-// and some data Tx and Rx functions.
-//
-// FIXME: minimal use info here?
+// and some data Tx and Rx macros which just use the underlying serial
+// interface.
 //
 // Though this module should not be dependent on any particular shield,
 // the Sparkfun XBee Shield (Sparkfun part number WRL-10854) was used
@@ -18,13 +17,15 @@
 // board that's extremely handy to have (FIXME: ref our perl script that
 // uses it if it does).
 //
-// Sparkfun has IMO the best information page for XBee modules as well:
+// Sparkfun has IMO the best information page for XBee modules:
 //
 //   https://www.sparkfun.com/pages/xbee_guide
 //
 // There are a couple pages on the Arduino site that are worth reading,
 // particularly if you need to do more extensive XBee configuration than
-// what this interface provides directly:
+// what this interface provides directly.  WARNING: read the commend near
+// the DEFAULT_CHANNEL_STRING define in wireless_xbee.h for an important
+// caveat though.
 //
 //   http://arduino.cc/en/Main/ArduinoWirelessShield
 //   http://arduino.cc/en/Guide/ArduinoWirelessShield
@@ -33,11 +34,41 @@
 // the XBee, the edit-compile-debug process is easier if you use in-system
 // programming for upload, rather than the serial port.  There are some clues
 // about how to do this near the CHKP_PD4() macro in wireless_xbee_test.c
-// Otherwise, make sure to take not of the tiny switch on the WRL-10854:
+// Otherwise, make sure to take note of the tiny switch on the WRL-10854:
 // it needs to be in the DLINE position for serial programming to work,
 // and the UART position for communication between the Arduino and the
 // XBee to work.  So you'll end up toggling the switch twice and pushing
 // the reset button once per edit-compile-debug cycle.
+
+#ifndef WIRELESS_XBEE_H
+#define WIRELESS_XBEE_H
+
+#include "uart.h"
+
+// About Errror Handling
+//
+// This module really doesn't do much of it.  It just returns true on succes,
+// and false otherwise.  If the macro WX_ASSERT_SUCCES is defined it doesn't
+// even do that: it simply calls assert() internally if something fails.
+// In this case, all the function descriptions which indicate sentinel
+// return values are wrong :).
+//
+// For all the AT command mode functions, a false result almost certainly
+// means something isn't set up right and you're not talking to the XBee
+// at all, or else there's a bug.  For more details about where exactly
+// things are failing, you'll need to instrument the source code for this
+// module with CHKP() or CHKP_PD4() or something similar.
+//
+// It *might* be worth retrying some functions in some cases on account of
+// noise or traffic.  Maybe.  But I don't know when exactly.
+//
+// Note that the actual over-the-air transmission (using WX_PUT_BYTE()) does
+// not by itself result in any feedback at all about whether the transmission
+// was actually received anywhere.  In the default point-to-multipoint
+// XBee configuration, all nearby modules with the same network ID (see
+// wx_ensure_network_id_set_to()) and channel (see wx_ensure_channel_set_to())
+// will hopefully receive the byte, but its up to you to arrange for them
+// to send back something saying they have if you really want to know.
 
 // Initialize the interface to the XBee.  Currently this interface only
 // supports talking to XBee devices over the hardware serial port at 9600
@@ -46,6 +77,21 @@
 // all this routine does.
 void
 wx_init (void);
+
+// Uncomment this or otherwise arrange for this macro to be defined to
+// enable simplified error handling.  See "About Error Handling" above.
+//#define WX_ASSERT_SUCCESS
+
+// Enter AT command mode by doing the sleep-send_+++-sleep ritual.  NOTE: the
+// XBee module will automatically drop out of command mode after 10 seconds
+// (unless the AT CT command has been used to reconfigure the module with
+// a non-default timeout).  Returns true on success, false otherwise.  It 
+uint8_t
+wx_enter_at_command_mode (void);
+
+// Leave command mode (by sending the AT CN command).
+uint8_t
+wx_exit_at_command_mode (void);
 
 // Enter AT command mode and check if the XBee network ID (ID parameter)
 // is set to id, and if not, set it to id, save the settings, and exit
@@ -94,6 +140,16 @@ wx_restore_defaults (void);
 //void
 //wx_hibernate (void);
 
+// To actually send/receive data over the air, you just use the serial port.
+// See the corresponding UART_*() in uart.h for details.  FIXME: file linked?
+#define WX_PUT_BYTE(byte)               UART_PUT_BYTE (byte)
+#define WX_BYTE_AVAILABLE()             UART_BYTE_AVAILABLE()
+#define WX_WAIT_FOR_BYTE()              UART_WAIT_FOR_BYTE()
+#define WX_UART_RX_ERROR()              UART_RX_ERROR()
+#define WX_UART_RX_FRAME_ERROR()        UART_RX_FRAME_ERROR()
+#define WX_UART_RX_DATA_OVERRUN_ERROR() UART_RX_DATA_OVERRUN_ERROR()
+#define WX_GET_BYTE()                   UART_GET_BYTE()
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Low Level/Extension Interface
@@ -123,3 +179,5 @@ wx_com (char *command, char *output);
 // Return true iff everything wx_com() would do works and we get an OK back.
 uint8_t
 wx_com_expect_ok (char const *command);
+
+#endif // WIRELESS_XBEE_H
