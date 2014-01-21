@@ -63,6 +63,11 @@
 // first :)
 #define CHKP() CHKP_USING(DDRB, DDB5, PORTB, PORTB5, 300.0, 3)
 
+// Branch prediction macros.  These let you hint the compiler whether a
+// condition is likely to be true or not, so it can generate faster code.
+#define LIKELY(condition)   __builtin_expect (!!(condition), 1)
+#define UNLIKELY(condition) __builtin_expect (!!(condition), 0)
+
 // All symbolic constants are evil :)
 #define BITS_PER_BYTE 8
 
