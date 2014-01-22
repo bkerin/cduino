@@ -25,7 +25,7 @@ use Pod::Usage qw( pod2usage );
 
 =head1 NAME
 
-usb_xbee - configure and transmit data via a USB XBee device
+usb_xbee - configure and transmit/receive data via a USB XBee device
 
 =head1 SYNOPSIS
 
@@ -45,12 +45,18 @@ I've successfully tried this program with the following adapters:
 
 =over 4
 
-=item * Sparkfun XBee Explorer USB (Sparkfun part number WRL-08687).  Make sure
-to get a USB Type A to USB Mini-B cable as well, it isn't included.
+=item *
 
-=item * Sparkfun XBee Explorer Dongle (Sparkfun part number WRL-09819).
+Sparkfun XBee Explorer USB (Sparkfun part number WRL-08687).  Make sure to get
+a USB Type A to USB Mini-B cable as well, it isn't included.
 
-=item * A random older USB dongle from Smiley Micros.
+=item *
+
+Sparkfun XBee Explorer Dongle (Sparkfun part number WRL-09819).
+
+=item *
+
+A random older USB dongle from Smiley Micros.
 
 =back
 
@@ -58,16 +64,20 @@ I've succesfully tried this program with the following modules:
 
 =over 4
 
-=item * Series 1 XBee 1mW Chip Antenna Module (Sparkfun part number WRL-08664),
+=item *
+
+Series 1 XBee 1mW Chip Antenna Module (Sparkfun part number WRL-08664),
 firmware version 10E6 (the version that ships with the module, at least for
 me).
 
-=item * Series 1 XBee 1mW Trace Antenna Module (Spartfun part number WRL-11215),
+=item *
+
+Series 1 XBee 1mW Trace Antenna Module (Spartfun part number WRL-11215),
 firmware version 10EC (the version that came on the module, at least for me).
 
 =back
 
-Some Other modules will likely work as well, though I tried an old XBee Pro
+Some other modules will likely work as well, though I tried an old XBee Pro
 from 2006 and it didn't work.  Series 2.5, ZB, and 2B modules probably won't
 work outof the box, but might with appropriate firmware installed.  I don't
 know on the 900 MHz, XSC or XSC S3B modules.  See this page for more
@@ -77,7 +87,8 @@ https://www.sparkfun.com/pages/xbee_guide
 
 On my system at least, it takes a surprisingly long time (10 - 20 seconds) for
 the module device file to become usable the first time the module is plugged
-in.  I assume there's a kernel module that gets loaded or something.
+in.  This program will fail with an error during this time.  I assume there's
+a kernel module that gets loaded or something.
 
 =head1 OPTIONS AND ARGUMENTS
 
@@ -111,18 +122,26 @@ tranformations on input and output:
 
 =over 4
 
-=item * If there is no input for a few seconds, sent an "AT\r" string to the
+=item *
+
+If there is no input for a few seconds, sent an "AT\r" string to the
 XBee module to prevent it from automatically dropping out of command mode.
 Neither this command nor the corresponding returned string are shown on this
 program's stdin/stdout.
 
-=item * Input lines first have leading or trailing white space removed, then
+=item *
+
+Input lines first have leading or trailing white space removed, then
 "AT" added as a prefix, and "\r" added as a suffix.
 
-=item * All input characters are translated to upper case (even though most
+=item *
+
+All input characters are translated to upper case (even though most
 if not all XBees are not case sensitive).
 
-=item * Output lines have "\r" characters replaced with "\n" characters.
+=item *
+
+Output lines have "\r" characters replaced with "\n" characters.
 
 =back
 
@@ -138,9 +157,71 @@ stdin is connection to a terminal) but are otherwise sent unmodified to the
 XBee, and data sent to us from the XBee is passed unmodified to our standard
 output.
 
-There are some subtle caveats related to RF packetization latency in raw mode,
-see the BUGS section.
-FIXME: how does this interact with line buffereng??!?!
+There are some caveats related to RF packetization in raw mode, see the
+L<BUGS AND POTENTIAL WORK-AROUNDS> section.
+
+=back
+
+=head1 BUGS AND POTENTIAL WORK-AROUNDS
+
+XBee series 1 modules (and probably other XBees also) in their default
+"transparent" mode depend on the timing of data coming in from the serial port
+to decide when to packetize and transmit an RF packet.  They do so every time
+they get 100 bytes, or when some particular (configurable) amount of time
+passes without any additional bytes being queued for transmission.
+
+In a microcontroller context this is a reasonable approach: its easy to ensure
+that all the bytes in a short message are transmitted in quick succession,
+thereby guaranteeing that they will be grouped into a single atomic RF packet
+and make it to the receivers without being interleaved with other data.
+For an XBee connected to a computer via USB, it's more problematic because its
+more difficult to ensure that the byte stream for a packet is continuous.
+
+This program ignores the problem.  Data coming from stdin is line buffered
+(mainly for convenience when testing things out from the terminal), so its
+likely to end up packetized into individual lines, but there's no guarantee of
+this.  For simple testing with a single transmitter an no possibility of
+collisions this doesn't matter.
+
+If on the other hand you're trying to use this program for something real, you
+have a few options:
+
+=over 4
+
+=item * 
+
+Increase the XBee packetization timeout to the maximum 0xFF (using AT
+command RO, e.g. "ROFF" in command mode).  Measure the time required to send
+your entire prospective packet of up to 100 bytes using the clock_gettime()
+system call or perl's Time::Hires module.  If the entire transmission took less
+than 0xFF (256) "character times" (as the XBee Manual likes to call them), then
+its probably reasonable to assume the entire chunk of data was lumped into a
+single RF packet.  One "character time" at 9600 baud is probably at least 833
+microseconds:
+
+  (8 bits per byte) * (1 / 9600 bits per second) = 0.000833 seconds per byte
+
+Note: this is apparently one of the many contexts in which "baud" is
+incorrectly used to mean "bps".
+
+One "character time" could be a bit longer (do we include stop start/stop
+bits?), but this is the conservative interpretation.  See
+http://www.labbookpages.co.uk/electronics/serialPort.html for details.
+FIXME: WORK POINT: ask MaxStream if all this is true, particularly the bps
+thing, how long char time?
+
+FIXXME: It would be nice to add a --single-packet=file mode that would do the
+above, but I'm not set up to check if it works.
+
+=item *
+
+Use API mode rather than transparent mode on the XBee.  You're on your
+own here, though command mode can still be used to configure things :)
+
+=item *
+
+Do nothing at the tranmission end, and deal with interleaved data at
+the receivers (reinvent ethernet :)
 
 =back
 
@@ -420,8 +501,9 @@ elsif ( $rm ) {   # Raw Mode {{{1
                 # Note: using getline() means that we may end up sending
                 # binary data in funny-sized chunks (because we probably
                 # send both on newline and when the stdin buffer gets full).
-                # But who cares?  FIXME: packetization cares...  And when
-                # stdin is connected to a terminal it's convenient.
+                # When stdin is connected to a terminal it's convenient, but
+                # it could have surprising effects on packetization for binary
+                # data (see BUGS AND POTENTIAL WORK-AROUNDS in the POD).
                 my $dts = STDIN->getline();   # Data To Send
                 not STDIN->error() or die "error reading line from STDIN";
                 # Now undef means we must have got EOF (possibly from
