@@ -138,6 +138,10 @@ stdin is connection to a terminal) but are otherwise sent unmodified to the
 XBee, and data sent to us from the XBee is passed unmodified to our standard
 output.
 
+There are some subtle caveats related to RF packetization latency in raw mode,
+see the BUGS section.
+FIXME: how does this interact with line buffereng??!?!
+
 =back
 
 =head1 AUTHOR
@@ -416,8 +420,8 @@ elsif ( $rm ) {   # Raw Mode {{{1
                 # Note: using getline() means that we may end up sending
                 # binary data in funny-sized chunks (because we probably
                 # send both on newline and when the stdin buffer gets full).
-                # But who cares?  And when stdin is connected to a terminal
-                # it's convenient.
+                # But who cares?  FIXME: packetization cares...  And when
+                # stdin is connected to a terminal it's convenient.
                 my $dts = STDIN->getline();   # Data To Send
                 not STDIN->error() or die "error reading line from STDIN";
                 # Now undef means we must have got EOF (possibly from
