@@ -28,7 +28,7 @@ uart_init (void);
 #define UART_PUT_BYTE(byte) \
   do { \
     loop_until_bit_is_set (UCSR0A, UDRE0); \
-    UDR0 = byte; \
+    UDR0 = (byte); \
   } while ( 0 );
 
 // Evaluate to true iff an incoming byte is ready to be read.  You should
@@ -41,9 +41,9 @@ uart_init (void);
 #define UART_WAIT_FOR_BYTE() loop_until_bit_is_set (UCSR0A, RXC0)
 
 // This macro evaluates to true iff there is a receiver error flag set.
-// This should be called immediately after UART_WIAT_FOR_BYTE() and before
-// UART_GET_BYTE().  FIXXME: if we supported parity mode, we would need to
-// check for UPE0 bit as well.
+// This should be called immediately after UART_BYTE_AVAILABLE() or
+// UART_WIAT_FOR_BYTE() and before UART_GET_BYTE().  FIXXME: if we supported
+// parity mode, we would need to check for UPE0 bit as well.
 #define UART_RX_ERROR() (UCSR0A & (_BV (FE0) | _BV (DOR0)))
 
 // These macros evaluate to true iff particular receiver error flags are set.
