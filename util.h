@@ -75,6 +75,12 @@
 #define MS_PER_S 1000
 #define US_PER_S 1000000
 
+// Get the high or low byte of a two byte value (in a very paranoid way :)
+#define HIGH_BYTE(two_byte_value) \
+  ((((uint16_t) crc) >> BITS_PER_BYTE) & ((uint16_t) 0x00ff))
+#define LOW_BYTE(two_byte_value) \
+  (((uint16_t) crc) & ((uint16_t) 0x00ff))
+
 // Macros for more readable/writable binary bit patterns {{{1
 #define B0 0
 #define B00 0
