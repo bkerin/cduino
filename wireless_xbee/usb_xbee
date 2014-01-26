@@ -7,8 +7,6 @@
 
 # vim:foldmethod=marker
 
-# FIXME: WORK POINT: could show how to send a file in an example
-
 # Pragmas and Modules {{{1
 
 use strict;
@@ -18,6 +16,7 @@ use Fcntl;
 use Getopt::Long qw( GetOptions );
 use IO::Handle;
 use Pod::Usage qw( pod2usage );
+use Time::HiRes qw( time );
 
 # }}}1
 
@@ -33,11 +32,16 @@ B<usb_xbee> --device=I<DEVICE> --command-mode
 
 B<usb_xbee> --device=I<DEVICE> --raw-mode
 
+B<usb_xbee> --device=I<DEVICE> --raw-mode --packetize-lines
+
+B<usb_xbee> --device=I<DEVICE> --single-packet-mode
+
 =head1 DESCRIPTION
 
 Usage is simple: start the program and start typing commands without their "AT"
-prefixes (if --command-mode) or data (if --raw-mode).  Of course you can also
-use pipes or shell redirects to supply data and store output.  However...
+prefixes (if --command-mode), or data (if --raw-mode), or data that should be
+sent in a single radio packet (if --single-packet-mode).  Of course you can
+also use pipes or shell redirects to supply data and store output.
 
 You need both an XBee module and an adapter to talk to it over USB.
 
@@ -111,8 +115,8 @@ watching for it to appear when the device is plugged in.  Try this command:
        && false )
 
 Note that the device file name is probably dynamically assigned and might
-change depending on what hardware you have plugged in and possibly also on the
-order in which you plugged it in.
+change depending on what hardware you have plugged in and also on the order in
+which you plugged it in.
 
 =item B<-c>, B<--command-mode>
 
@@ -160,6 +164,53 @@ output.
 There are some caveats related to RF packetization in raw mode, see the
 L<BUGS AND POTENTIAL WORK-AROUNDS> section.
 
+=item B<-p>, B<--packetize-lines>
+
+WARNING: for this mode to perform as advertised, you must first use command
+mode to ensure that the packetization timeout configuration parameter is set to
+its maximum (0xFF), for example if your I<DEVICE> is /dev/ttyUSB0:
+
+  echo -e -n "ROFF\nWR\n" | ./usb_xbee -d /dev/ttyUSB0 -c
+
+This flag modifies raw mode by attempting to send each newline or end-of-file
+terminated line of input as a single radio packet.  If a line is too long
+(longer than 100 bytes) to transmit as a single packet, or if the timing
+requirements for single-packet transmission aren't met, a warning is printed on
+standard error.  If packetization seems to work ok, the string "line packetized
+successfully" is printed on standard error.    See
+L<BUGS AND POTENTIAL WORK-AROUNDS> for more details.
+
+Brave people should be able to use this to create message hubs using this
+option together with IPC::Open3.  I haven't done so myself however, since
+--single-packet-mode does almost as well (the only trouble being you might miss
+an incoming message while sending, buts that's probably always a possibility
+anyway).  This is getting weird enough that it might well be simpler to just
+sort out the XBee's non-transparent mode of operation.
+
+=item B<-s>, B<--single-packet-mode>
+
+Single packet mode.  WARNING: for this mode to perform as advertised, you must
+first use command mode to ensure that the packetization timeout configuration
+parameter is set to its maximum (0xFF), for example if your I<DEVICE> is
+/dev/ttyUSB0:
+
+  echo -e -n "ROFF\nWR\n" | ./usb_xbee -d /dev/ttyUSB0 -c
+
+In this mode, no input is accepted from the XBee.  This program reads up to 100
+bytes (or until it hits end of file) from its standard input and attempts to
+send them to the XBee such that they are transmitted together in a single radio
+packet.  The hope is that recievers get the entire message atomically.  This
+program exits with a zero exit code if it thinks it has met the timing
+requirements, or a non-zero exit code otherwise.  See
+L<BUGS AND POTENTIAL WORK-AROUNDS> for more details.
+
+This option can be used to implement message hubs of a sort.  The hub can
+listen for (hopefully atomic) messages from satellite sensors, and use
+--single-packet-mode to send out an atomic acknowledgement when it gets them.
+It might sometime miss an incoming message while sending an acknowledement,
+but the satellites will probably have to be prepared to retry transmissions
+anyway.
+
 =back
 
 =head1 BUGS AND POTENTIAL WORK-AROUNDS
@@ -177,11 +228,12 @@ and make it to the receivers without being interleaved with other data.
 For an XBee connected to a computer via USB, it's more problematic because its
 more difficult to ensure that the byte stream for a packet is continuous.
 
-This program ignores the problem.  Data coming from stdin is line buffered
-(mainly for convenience when testing things out from the terminal), so its
-likely to end up packetized into individual lines, but there's no guarantee of
-this.  For simple testing with a single transmitter an no possibility of
-collisions this doesn't matter.
+In raw mode, this program normally ignores the problem.  Data coming from stdin
+is line buffered (mainly for convenience when testing things out from the
+terminal), so its likely to end up packetized into individual lines, but
+there's no guarantee of this (but see the --packetize-lines option).  For
+simple testing with a single transmitter and no possibility of collisions,
+this doesn't matter.
 
 If on the other hand you're trying to use this program for something real, you
 have a few options:
@@ -190,13 +242,16 @@ have a few options:
 
 =item * 
 
-Increase the XBee packetization timeout to the maximum 0xFF (using AT
-command RO, e.g. "ROFF" in command mode).  Measure the time required to send
-your entire prospective packet of up to 100 bytes using the clock_gettime()
-system call or perl's Time::Hires module.  If the entire transmission took less
-than 0xFF (256) "character times" (as the XBee Manual likes to call them), then
-its probably reasonable to assume the entire chunk of data was lumped into a
-single RF packet.  One "character time" at 9600 baud is probably at least 833
+Increase the XBee packetization timeout to the maximum 0xFF (using AT command
+RO, e.g. "ROFF" probably followed by "WR" in command mode), and use the
+--single-packet-mode or --raw-mode and --packetize-lines options.
+
+When attempting to transmit a single packet, this program measures the time
+required to send an entire prospective packet of up to 100 bytes using perl's
+Time::Hires module.  If the entire transmission took less than 0xFF (256)
+"character times" (as the XBee Manual likes to call them), then its probably
+reasonable to assume the entire chunk of data was lumped into a single RF
+packet.  One "character time" at 9600 baud is probably at least 833
 microseconds:
 
   (8 bits per byte) * (1 / 9600 bits per second) = 0.000833 seconds per byte
@@ -207,16 +262,41 @@ incorrectly used to mean "bps".
 One "character time" could be a bit longer (do we include stop start/stop
 bits?), but this is the conservative interpretation.  See
 http://www.labbookpages.co.uk/electronics/serialPort.html for details.
-FIXME: WORK POINT: ask MaxStream if all this is true, particularly the bps
-thing, how long char time?
 
-FIXXME: It would be nice to add a --single-packet=file mode that would do the
-above, but I'm not set up to check if it works.
+I've tested these options in the presense of continuous byte-at-a-time traffic
+from a second source (a second XBee with RO set to 0x00, indicating
+send-at-once operation), and it "seems to work" (TM).  FIXME: and maxstream
+says it should?  FIXME: MaxStream bps thing?  That is, the receiver (a third
+XBee) didn't see any cases where the incoming packet was interleaved with data
+from the byte-at-a-time source.  However...
+
+The measured time to syswrite() the data to the serial port is also much
+shorter than would be possible for the actual transmission of the bytes to the
+hardware serial port on the sending XBee at 9600 baud: it typically takes less
+than 25 microseconds on my system.  This isn't really too surprising, since we
+aren't actually sending it to the serial port, but rather to the USB port which
+is connected to an FTDI FT232RL (or similar) chip that in turn sends the data
+on to the serial port.  The FT232RL is a USB 2.0 480 Mb/s device (making the
+above 25 microsecond value quite plausible as a transfer time) and presumably
+has a buffer of its own that is capable of absorbing high-speed bursts of data
+from the USB side.
+
+The FT232RL has no reason to hang onto the data, and if it makes it that far
+its probably safe to assume in gets to the XBee fast enough to meet the timing
+requirements.  
+
+Then again, perhaps the OS-side kernel squirrels the data away in a buffer of
+its own (despite the O_SYNC option having been used when the device file was
+opened).  In that case, the OS might subsequently be interrupted in such a way
+that the data doesn't make it out as a single RF packet afterall.  Our timer
+will fail to detect this failure :(
+FIXME: investigate this issue.
 
 =item *
 
-Use API mode rather than transparent mode on the XBee.  You're on your
-own here, though command mode can still be used to configure things :)
+Use API mode rather than transparent mode on the XBee.  You're on your own
+here, though command mode can still be used to configure things, and raw mode
+can be used to assemble data frames.
 
 =item *
 
@@ -239,12 +319,16 @@ my $help;   # True iff we should just print usage information and exit
 my $df;     # Device File
 my $cm;     # Command Mode
 my $rm;     # Raw Mode
+my $pl;     # Packetized Lines
+my $sm;     # Single packet Mode
 
 GetOptions(
-    "help|?"          => \$help,
-    "device-file|d=s" => \$df,
-    "command-mode|c"  => \$cm,
-    "raw-mode|r"      => \$rm )
+    "help|?"               => \$help,
+    "device-file|d=s"      => \$df,
+    "command-mode|c"       => \$cm,
+    "raw-mode|r"           => \$rm,
+    "packetize-lines|p"   => \$pl,
+    "single-packet-mode|s" => \$sm )
     or die "usb_xbee: GetOptions failed, try usb_xbee --help\n";
 
 if ( $help ) {
@@ -253,14 +337,22 @@ if ( $help ) {
 
 $df or die "--device-file option must be given";
 
-($cm xor $rm)
-    or die "exactly one of --command-mode or --raw-mode options must be given";
+($cm xor $rm xor $sm)
+    or die "exactly one of --command-mode, --raw-mode or --single-packet-mode ".
+           "options must be given";
 
 # }}}1
 
-# We probably don't really need O_SYNC here, but it shouldn't hurt.
-sysopen(UD, "$df", O_RDWR | O_SYNC)   # USB Device
-    or die "couldn't sysopen device file '$df': $!";
+if ( not $sm ) {
+  # We probably don't really need O_SYNC here, but it shouldn't hurt.
+  sysopen(UD, "$df", O_RDWR | O_SYNC)   # USB Device
+      or die "couldn't sysopen device file '$df' for read/write: $!";
+}
+else {
+  sysopen(UD, "$df", O_WRONLY | O_SYNC)   # USB Device
+      or die "couldn't sysopen device file '$df' for reading: $!";
+
+}
 
 sub configure_tty # {{{1
 {
@@ -396,6 +488,62 @@ sub timed_wait_for_stdin # {{{1
     }
 } # }}}1
 
+my $mps = 100;   # XBees (Series 1 at least) Maximum (RF) Packet Size
+
+sub send_single_packet # {{{1
+{
+    # Attempt to send data in the argument scalar to the XBee in such a
+    # way that it goes out as a single radio packet (see BUGS AND POTENTIAL
+    # WORK-AROUNDS in the POD for details).  Return "success" on success,
+    # or a string beginning with "failure: " (followed by details of the
+    # failure) on failure.  If a system call does something really unexpected,
+    # die internally.
+
+    @_ == 1 or die "wrong number of arguments";
+    my $dts = shift;   # Data To Send
+
+    # First slurp all the input data
+
+    my $mps = 100;   # XBees (Series 1 at least) Maximum (RF) Packet Size
+    my $dtsl = length($dts);   # Data To Send Length (non-utf8 handle required)
+    if ( $dtsl > $mps ) {
+        return "failure: got >$mps bytes (max radio packet size) of input";
+    }
+
+    # In theory, we could be checking the byte-to-byte times.  But that
+    # would require sending the bytes in seperate syswrite() calls, which
+    # is probably at least as likely to result in an unnaceptable delay,
+    # since the OS is probably more likely to interrupt us between syswrite()
+    # calls than during one.
+
+    # But that introduces so many measurements.  This really conservative
+    # approach seems safer to me somehow.
+
+    # Now try to send it all real quick, so the XBee puts it one packet.
+    my $st = time();   # Start Time
+    my $swr = syswrite(UD, $dts, $dtsl);   # Syswrite Return
+    defined($swr) or die "syswrite to $df failed: $!";
+    $swr == $dtsl
+        or die "syswrite didn't write the expected number of bytes to $df";
+    my $et = time();
+
+    # Timing calculations.  See BUGS AND POTENTIAL WORK-AROUNDS in the POD.
+    my $ptb = 0xFF;   # Packetization Timeout in Bytes
+    my $bpp = 8;      # Bits Per Byte
+    my $bps = 9600;   # Bits Per Second
+    my $tr = $ptb * $bpp / $bps;   # Time Requirement (minimum time to send)
+    
+    my $tmoe = 0.1;   # Time Margin Of Error
+
+    # Did we make it fast enough?
+    if ( $et - $st > $tr * (1.0 - $tmoe) ) {
+        # It really might work next time, maybe OS won't interrupt us then :)
+        return "failure: didn't get data written fast enough";
+    }
+
+    return "success";
+} # }}}1
+
 configure_tty($df);
 
 if ( $cm ) {   # Command Mode {{{1
@@ -504,19 +652,76 @@ elsif ( $rm ) {   # Raw Mode {{{1
                 # When stdin is connected to a terminal it's convenient, but
                 # it could have surprising effects on packetization for binary
                 # data (see BUGS AND POTENTIAL WORK-AROUNDS in the POD).
+                # FIXXME: this getline() seems to works slightly different
+                # than the terminal and probably other GNU readline and
+                # possibly other input functions with respect to EOF (Cntrl-D)
+                # inputs: when Cntrl-D is typed on a non-empty line, nothing
+                # whatsoever happens (rather than the existing text on the line
+                # getting returned).  On empty lines its behaves as expected.
+                # Not worth fixing.
                 my $dts = STDIN->getline();   # Data To Send
                 not STDIN->error() or die "error reading line from STDIN";
-                # Now undef means we must have got EOF (possibly from
-                # Cntrl-D), so we're done
+                # Now undef means we must have got EOF on an empty line
+                # (possibly from Cntrl-D), so we're done
                 defined($dts) or exit(0);
-
-                my $swr = syswrite(UD, $dts);   # SysWrite Return
-                defined($swr) or die "syswrite to $df failed: $!";
-                $swr == length($dts)
-                    or die "syswrite didn't write the expected number of ".
-                           "bytes to $df";
+                if ( $pl ) {
+                    my $sr = send_single_packet($dts);
+                    if ( $sr eq "failure: got >$mps bytes (max radio packet ".
+                                "size) of input" ) {
+                        warn "got more than $mps bytes in one line, can't ".
+                             "send that as a single packet, so not sending it";
+                    }
+                    elsif ( $sr eq "failure: didn't get data written fast ".
+                                   "enough" ) {
+                        warn "didn't get data written fast enough to feel ".
+                             "confident it will go out as a single RF packet, ".
+                             "maybe better luck next time :)";
+                    }
+                    elsif ( $sr eq "success" ) {
+                        print STDERR "line packetized successfully\n";
+                        ; # Do nothing on success
+                    }
+                    else {
+                        die "BUG: unrecognized send_single_packet() return ".
+                            "value";
+                    }
+                }
+                else {
+                    my $swr = syswrite(UD, $dts);   # SysWrite Return
+                    defined($swr) or die "syswrite to $df failed: $!";
+                    $swr == length($dts)
+                        or die "syswrite didn't write the expected number of ".
+                               "bytes to $df";
+                }
             }
         }
+    }
+
+} # }}}1
+
+elsif ( $sm ) {   # Single Packet Mode {{{1
+
+    # First slurp all the input data
+    my $dts = '';
+    while ( <STDIN> ) {
+      $dts .= $_; 
+    }
+
+    my $sr = send_single_packet($dts);   # Send Result
+
+    if ( $sr eq "failure: got >$mps bytes (max radio packet size) of input" ) {
+        die "got more than $mps bytes (XBee's maximum packet size) on stdin ".
+            "in single-packet-mode";
+    }
+    elsif ( $sr eq "failure: didn't get data written fast enough" ) {
+        die "didn't get data written fast enough to feel confident it will ".
+            "go out as a single RF packet, maybe better luck next time :)";
+    }
+    elsif ( $sr eq "success" ) {
+        ;   # Do nothing on success
+    }
+    else {
+        die "BUG: unrecognized send_single_packet() return value";
     }
 
 } # }}}1
