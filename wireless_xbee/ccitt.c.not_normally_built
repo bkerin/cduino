@@ -1,0 +1,53 @@
+// This silly little program just exists to help ensure that we're doint the
+// CRC calculation right.  There's a commented out block in the usb_xbee
+// perl script that is supposed to cause that script to produce the same
+// output as this program when enabled.  We got this CRC implementation from
+// the util/crc16.h header in AVR libc.  It can be compiled and run like this:
+//
+//   cp ccitt.c.not_normally_built ccitt.c
+//   gcc -Wall ccitt.c && ./a.out >/tmp/c_ccitt_test_output
+//   rm ccitt.c  # Must remove .c file to avoid confusing normal builds !
+//
+// The /tmp/c_ccitt_test_output can then be compred with the perl output
+// produced as described above.
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define lo8(arg) (0x00ff & arg)
+#define hi8(arg) (0xff00 & arg)
+
+uint16_t
+crc_ccitt_update (uint16_t crc, uint8_t data)
+{
+  data ^= lo8 (crc);
+  data ^= data << 4;
+
+  return ((((uint16_t)data << 8) | hi8 (crc)) ^ (uint8_t)(data >> 4) 
+      ^ ((uint16_t)data << 3));
+}
+
+// Of course, you really wouldn't want to use a 16 bit CRC to check this many
+// bytes, but it exercises this code more, and this code is mainly intended
+// to make sure the CRC implementation works the same here and in perl.
+#define DATA_SIZE 100000
+
+int
+main (void)
+{
+  uint16_t crc = 0xffff;
+
+  int ii;
+  uint8_t *data = malloc (DATA_SIZE);
+  for ( ii = 0 ; ii < DATA_SIZE ; ii++ ) {
+    data[ii] = (ii + 1) % ((int) UINT8_MAX + 1);
+  }
+
+  for ( ii = 0 ; ii < DATA_SIZE ; ii++ ) {
+    crc = crc_ccitt_update (crc, data[ii]);
+    printf ("New crc: %.4" PRIX16 "\n", crc);
+  }
+
+  return 0;
+}
