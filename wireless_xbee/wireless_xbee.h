@@ -2,6 +2,9 @@
 //
 // Test driver: wireless_xbee_test.c    Implementation: wireless_xbee.c
 //
+// You really want to read this entire interface file, and maybe the
+// referenced material as well.
+//
 // This module uses the ATmega328P hardware serial port to communicate
 // with the XBee.  It features high-level support for a few configuration
 // parameters that people are most likely to desire to change, some low-level
@@ -14,8 +17,18 @@
 // for development.  Its available on its own, or as part of the Sparkfun
 // "XBee Wireless Kit Retail" (Sparkfun part number RTL-11445), which also
 // includes the actual XBee modules and a stand-alone miniature USB XBee
-// board that's extremely handy to have (FIXME: ref our perl script that
-// uses it if it does).
+// interface board known as an "XBee Explorer USB" as well.  This last is
+// a must-have for development IMO.  Make sure to get a USB Type A to USB
+// Mini-B cable as well, it isn't included in the kit.
+//
+// The directory for this module contains a perl script called usb_xbee that
+// can be used to configure or send/receive data to/from an XBee Explorer or
+// XBee USB dongle.  You can view its documentation using
+//
+//    pod2text usb_xbee  | less
+//
+// or so.  The test driver in wireless_xbee_test.c depends on this script
+// for some of its testing.
 //
 // Sparkfun has IMO the best information page for XBee modules:
 //
@@ -23,7 +36,7 @@
 //
 // There are a couple pages on the Arduino site that are worth reading,
 // particularly if you need to do more extensive XBee configuration than
-// what this interface provides directly.  WARNING: read the commend near
+// what this interface provides directly.  WARNING: read the comment near
 // the DEFAULT_CHANNEL_STRING define in wireless_xbee.h for an important
 // caveat though.
 //
@@ -43,6 +56,8 @@
 #ifndef WIRELESS_XBEE_H
 #define WIRELESS_XBEE_H
 
+#include <inttypes.h>
+
 #include "uart.h"
 
 // About Errror Handling
@@ -51,7 +66,7 @@
 // and false otherwise.  If the macro WX_ASSERT_SUCCES is defined it doesn't
 // even do that: it simply calls assert() internally if something fails.
 // In this case, all the function descriptions which indicate sentinel
-// return values are wrong :).
+// return values are wrong unless otherwise noted.
 //
 // For all the AT command mode functions, a false result almost certainly
 // means something isn't set up right and you're not talking to the XBee
@@ -62,19 +77,31 @@
 // It *might* be worth retrying some functions in some cases on account of
 // noise or traffic.  Maybe.  But I don't know when exactly.
 //
-// Note that the actual over-the-air transmission (using WX_PUT_BYTE()) does
-// not by itself result in any feedback at all about whether the transmission
-// was actually received anywhere.  In the default point-to-multipoint
-// XBee configuration, all nearby modules with the same network ID (see
-// wx_ensure_network_id_set_to()) and channel (see wx_ensure_channel_set_to())
-// will hopefully receive the byte, but its up to you to arrange for them
-// to send back something saying they have if you really want to know.
+// Note that the actual over-the-air transmission (normally resulting from
+// WX_PUT_BYTE() or one of its callers) does not by itself involve any
+// feedback at all about whether the transmission was actually received
+// anywhere.  In the default point-to-multipoint XBee configuration, all
+// nearby modules with the same network ID (see wx_ensure_network_id_set_to())
+// and channel (see wx_ensure_channel_set_to()) will hopefully receive
+// the byte, but its up to you to arrange for them to send back something
+// saying they have if you really want to know.  No radio system is entirely
+// immune to noise.  Also, in the default configuration the RF data rate
+// is greater than the serial interface data rate, and all nodes recieve
+// any transmission (point-to-multipoint), so if many nodes decide to talk
+// at once the receiving buffers will likely overflow and some transmitted
+// data will silently fail to make its way via the serial port out of the
+// receiving XBee module(s).
+
+// Serial communication rate at which we talk to the XBee.  Because our
+// underlying serial module always communicates at this rate, this value isn't
+// easy to change.
+#define WX_BAUD 9600
 
 // Initialize the interface to the XBee.  Currently this interface only
-// supports talking to XBee devices over the hardware serial port at 9600
+// supports talking to XBee devices over the hardware serial port at WX_BAUD
 // Baud, with eight data bits, no parity, and one stop bit (8-N-1 format).
-// So the serial port is initialized with those parameters, and that's it
-// all this routine does.
+// So the serial port is initialized with those parameters, and that's all
+// this routine does.
 void
 wx_init (void);
 
@@ -140,8 +167,11 @@ wx_restore_defaults (void);
 //void
 //wx_hibernate (void);
 
-// To actually send/receive data over the air, you just use the serial port.
-// See the corresponding UART_*() in uart.h for details.  FIXME: file linked?
+// To actually send/receive bytes over the air with the default XBee
+// configuration, you can just send them to the serial port.  See the
+// corresponding UART_*() in uart.h for details.  If you want your
+// transmissions to arrive atomically (not interleaved with other
+// transmissions) see the wx_put_*_frame() routines.
 #define WX_PUT_BYTE(byte)               UART_PUT_BYTE (byte)
 #define WX_BYTE_AVAILABLE()             UART_BYTE_AVAILABLE()
 #define WX_WAIT_FOR_BYTE()              UART_WAIT_FOR_BYTE()
@@ -149,6 +179,127 @@ wx_restore_defaults (void);
 #define WX_UART_RX_FRAME_ERROR()        UART_RX_FRAME_ERROR()
 #define WX_UART_RX_DATA_OVERRUN_ERROR() UART_RX_DATA_OVERRUN_ERROR()
 #define WX_GET_BYTE()                   UART_GET_BYTE()
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Simple Frame Interface (NOT using XBee API mode)
+//
+// This section contains constants and routines that let you bundle data into
+// short frames which:
+//
+//   * are guaranteed to arrive at recievers not interleaved with other data
+//   * include CRC values
+//   * can be conveniently received and verified (using wx_get_frame())
+//
+// Transmission can fail for a variety of reasons and acknowledgement
+// messages, retries, etc. are still the responsibility of clients of
+// this interface.
+
+// This interface assumes the XBee is being used in transparent mode, with
+// the packetization timeout configuration parameter (R0) set to its default
+// value.  Under these circumstances, small amounts of data sent quickly
+// and continuously to the XBee will be lumped into single radio packets.
+// Complete packets shorter than WX_TRANSPARENT_MODE_MAX_PACKET_SIZE
+// bytes can be transmitted simply by not sending any bytes for at least
+// WX_TRANSPARENT_MODE_PACKETIZATION_TIMEOUT_BYTES worth of time.
+#define WX_TRANSPARENT_MODE_MAX_PACKET_SIZE 100
+#define WX_TRANSPARENT_MODE_PACKETIZATION_TIMEOUT_BYTES 0x03
+
+// The length, CRC, and payload portions of frames will have the following
+// byte values escaped: 0x7E (ASCII '~'), 0x7D (ASCII '}'), 0x11 (ASCII
+// device control 1, and 0x13 (ASCII device control 3).  If the data
+// supplied to the frame transmission function contains many values
+// that need to be escaped, the escaped frame size can end up exceeding
+// WX_TRANSPARENT_MODE_MAX_PACKET_SIZE bytes.  However, the size of escaped
+// data is at most twice its unescaped size.  We therefore have this safe
+// size for an unescaped payload.
+#define WX_FRAME_DELIMITER_LENGTH 1   // Leading frame delimiter isn't escaped
+#define WX_FRAME_MAX_PAYLOAD_EXPANSION_FACTOR 2
+#define WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH \
+  ( (WX_TRANSPARENT_MODE_MAX_PACKET_SIZE - WX_FRAME_DELIMITER_LENGTH) / \
+    WX_FRAME_MAX_PAYLOAD_ESCAPE_EXPANSION_FACTOR )
+
+// See below for details on these (you may not need to know).
+#define WX_LENGTH_BYTE_XORED     0xff
+#define WX_LENGTH_BYTE_NOT_XORED 0x00
+
+// Put count bytes of data out from buf out over the air as a single radio
+// packet containing a simple frame format.  This frame format features a
+// delimiter, length metadata, and CRC protection.
+//
+// Besides taking some care that data segments don't get too long due to
+// escaping (see comments above WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH),
+// you shouldn't need to know the gruesome details of this frame format if
+// you'll be reading it with wx_get_frame().  But in case you aren't, here
+// are the details:
+//
+// Certain byte values will need to be escaped when they occur (except
+// the delimiter when it appears as the delimiter), which usually involves
+// expanding them into two byte sequences (but see below).  The entire escaped
+// byte sequence must not be longer than WX_TRANSPARENT_MODE_MAX_PACKET_SIZE
+// bytes long.  This frame format and escaping scheme is like the one used by
+// the XBee in API mode (see the API Operation section of the XBee Product
+// Manual), with the following differences:
+//
+//   * The length field is two bytes long, but the first byte is just a flag
+//     indicating whether the second byte should be xor'ed in XBee API mode.
+//     The flag byte has value WX_LENGTH_BYTE_XORED if the next byte has
+//     been xor'ed, or WX_LENGTH_BYTE_NOT_XORED otherwise.  The purpose of
+//     this arrangement is to avoid ambiguity about payload length in the
+//     presence of noise on the length field.
+//
+//   * Immediately following the length field is a two-byte CRC computed from
+//     the frame delimiter and the length bytes (the escape flag and the
+//     possibly xor'ed length-indicating byte itself).  Corrupted lengh
+//     bytes are by far the weakest point in most implementations that
+//     use checksums or CRCs, including probably the one available
+//     in XBee API mode; see http://www.ece.cmu.edu/~koopman/pubs/
+//     01oct2013_koopman_faa_final_presentation.pdf.  Note that this CRC might
+//     itself need bytes escaped, if so this is done as described in the XBee
+//     API mode documentation (resulting in a sequence of up to four bytes
+//
+//   * The payload checksum is two bytes long, and is computed from the
+//     *escaped* payload contents using the 16 bit CRC-CCITT calculation
+//     described in the util/crc16.h header of AVR libc.  Note that this CRC
+//     might itself need its bytes escaped, resulting in a sequence of up to
+//     four bytes.
+//
+// The data is first scanned to determine its length after escape bytes
+// are added.  If the escaped data sequence is too long to go in a single
+// radio packet, nothing is transmitted and false is returned (unless
+// WX_ASSERT_SUCCESS is defined, in which case an assertion violation
+// is triggered).  Otherwise the packet is transmitted and true is returned.
+//
+// These frames are not in any way compatible with the XBee API mode frames.
+//
+uint8_t
+wx_put_data_frame (uint8_t count, void const *buf);
+
+// Convenience wrappar around wx_put_data_frame().  If NUL-terminated
+// string str is longer than UINT8_MAX - 1 (which is too long to go in
+// one of our frames anyway) an assertion violation will be triggered.
+// The str argument must be NUL-terminated.  The trailing NUL is transmitted
+// as part of the data frame (assuming the escaped frame isn't too long,
+// see wx_put_data_frame()).
+uint8_t
+wx_put_string_frame (char const *str);
+
+// Spend up to timeout milliseconds trying to receive a frame with up to mfps
+// (Maximum Frame Payload Size) unescaped payload bytes into buf.  The size of
+// the payload received is returned in *rfps (Received Frame Payload Size).
+// Regardless of the definedness of WX_ASSERT_SUCCESS, this routine returns
+// TRUE immediately if a full frame is successfully received, and false
+// otherwise.  Any partial or corrupt frame data received from the XBee is
+// effectively discarded, though some of it might end up getting written into
+// *buf. Note that retries are not only possible but probably essential in
+// this context: we start listening for asynchronous transmissions at some
+// random time, and may want to do other things occasionally, which might
+// cause us to miss other data.  Note also that leading non-frame (or partial
+// frame) data may be discarded even if a frame is successfully retrieved.
+// Its reasonable to first use WX_BYTE_AVAILABLE() from a polling loop to
+// determine when it might be worthwhile to call this routine.
+uint8_t
+wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
