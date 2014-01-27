@@ -1,5 +1,5 @@
 // This silly little program just exists to help ensure that we're doing the
-// CRC calculation right.  There's a commented out block in the usb_xbee
+// CRC calculation right.  There's a commented-out block in the usb_xbee
 // perl script that is supposed to cause that script to produce the same
 // output as this program when enabled.  We got this CRC implementation from
 // the util/crc16.h header in AVR libc.  It can be compiled and run like this:

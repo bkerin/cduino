@@ -287,9 +287,7 @@ Britton Kerin (britton.kerin@gmail.com)
 
 # }}}1
 
-# This normally commented out block is useful for verifying (at least
-# somewhat) that our CRC calculation works the same in perl as in C.
-# See the comments in the ccitt.c.not_normally_built source file.
+# CRC implementation crosscheck/verification.  See ccitt.c.not_normally_built.
 #{ # {{{1
 #    my $data_size = 100000;
 #    my @data = (1 .. $data_size);
@@ -571,33 +569,6 @@ sub crc16_ccitt_update # {{{1
         as_uint8($bv >> 4) ^
         as_uint16($bv << 3) );
 } # }}}1
-
-# FIXME: remove this junk once crc is tested
-#   uint16_t
-#    crc_ccitt_update (uint16_t crc, uint8_t data)
-#    {
-#        data ^= lo8 (crc);
-#        data ^= data << 4;
-#
-#        return ((((uint16_t)data << 8) | hi8 (crc)) ^ (uint8_t)(data >> 4) 
-#                ^ ((uint16_t)data << 3));
-#    }
-## uint16_t
-#    crc16_update(uint16_t crc, uint8_t a)
-#    {
-#        int i;
-#
-#        crc ^= a;
-#        for (i = 0; i < 8; ++i)
-#        {
-#            if (crc & 1)
-#                crc = (crc >> 1) ^ 0xA001;
-#            else
-#                crc = (crc >> 1);
-#        }
-#
-#        return crc;
-#    }
 
 configure_tty($df);
 
