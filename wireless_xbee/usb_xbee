@@ -289,7 +289,7 @@ Britton Kerin (britton.kerin@gmail.com)
 
 # This normally commented out block is useful for verifying (at least
 # somewhat) that our CRC calculation works the same in perl as in C.
-# See the comments in the ccitt.c source file.
+# See the comments in the ccitt.c.not_normally_built source file.
 #{ # {{{1
 #    my $data_size = 100000;
 #    my @data = (1 .. $data_size);
