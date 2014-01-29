@@ -12,10 +12,12 @@
 use strict;
 use warnings FATAL => 'all';
 
+use Carp;
 use Fcntl;
 use Getopt::Long qw( GetOptions );
 use IO::Handle;
 use Pod::Usage qw( pod2usage );
+use Scalar::Util qw(looks_like_number);
 use Time::HiRes qw( time );
 
 # }}}1
@@ -179,9 +181,9 @@ prints an error message and exits with a non-zero exit code.  See
 L<BUGS AND POTENTIAL WORK-AROUNDS> for more details.
 
 Received data is assumed to consist of frames in the same format (the payloads
-of which are printed to stdout as in raw mode).  Incoming data which doesn't
-cannot be interpreted as part of a frame will result in an error and exit with
-a non-zero exit code.
+of which are printed to stdout as in raw mode).  Incoming data which
+cannot be interpreted as part of a frame will result in an error message
+and exit with a non-zero exit code.
 
 =back
 
@@ -193,8 +195,6 @@ to decide when to packetize and transmit an RF packet.  They do so every time
 they get 100 bytes, or when some particular (configurable) amount of time
 passes without any additional bytes being queued for transmission.
 
-# FIXME: WORK POINT: updating for switch to frames here
-
 In a microcontroller context this is a reasonable approach: its easy to ensure
 that all the bytes in a short message are transmitted in quick succession,
 thereby guaranteeing that they will be grouped into a single atomic RF packet
@@ -205,9 +205,8 @@ more difficult to ensure that the byte stream for a packet is continuous.
 In raw mode, this program normally ignores the problem.  Data coming from stdin
 is line buffered (mainly for convenience when testing things out from the
 terminal), so its likely to end up packetized into individual lines, but
-there's no guarantee of this (but see the --packetize-lines option).  For
-simple testing with a single transmitter and no possibility of collisions,
-this doesn't matter.
+there's no guarantee of this.  For simple testing with a single transmitter and
+no possibility of collisions, this doesn't matter.
 
 If on the other hand you're trying to use this program for something real, you
 have a few options:
@@ -218,15 +217,15 @@ have a few options:
 
 Increase the XBee packetization timeout to the maximum 0xFF (using AT command
 RO, e.g. "ROFF" probably followed by "WR" in command mode), and use the
---single-packet-mode or --raw-mode and --packetize-lines options.
+--framed-lines options.
 
-When attempting to transmit a single packet, this program measures the time
-required to send an entire prospective packet of up to 100 bytes using perl's
-Time::Hires module.  If the entire transmission took less than 0xFF (256)
-"character times" (as the XBee Manual likes to call them), then its probably
-reasonable to assume the entire chunk of data was lumped into a single RF
-packet.  One "character time" at 9600 baud is probably at least 833
-microseconds:
+When attempting to transmit a frame single packet, this program measures the
+time required to send an entire prospective packet of up to 100 bytes using
+perl's Time::Hires module.  If the entire transmission took less than 0xFF
+(256) "character times" (as the XBee Manual likes to call them), then its
+probably reasonable to assume the entire chunk of data was successfully lumped
+into a single RF packet.  One "character time" at 9600 baud is probably at
+least 833 microseconds:
 
   (8 bits per byte) * (1 / 9600 bits per second) = 0.000833 seconds per byte
 
@@ -237,12 +236,16 @@ One "character time" could be a bit longer (do we include stop start/stop
 bits?), but this is the conservative interpretation.  See
 http://www.labbookpages.co.uk/electronics/serialPort.html for details.
 
-I've tested these options in the presense of continuous byte-at-a-time traffic
+# FIXME: frames vs packetized lines blah blah what are we finally supporting
+# and fix the next paragraph so it either doesn't report a test result
+# we haven't done or else do it and distinguis frames vs packetized lines
+# as needed.
+
+I've tested this option in the presense of continuous byte-at-a-time traffic
 from a second source (a second XBee with RO set to 0x00, indicating
-send-at-once operation), and it "seems to work" (TM).  FIXME: and maxstream
-says it should?  FIXME: MaxStream bps thing?  That is, the receiver (a third
-XBee) didn't see any cases where the incoming packet was interleaved with data
-from the byte-at-a-time source.  However...
+send-at-once operation), and it "seems to work" (TM).  That is, the receiver (a
+third XBee) didn't see any cases where the incoming frame was interleaved with
+data from the byte-at-a-time source.  However...
 
 The measured time to syswrite() the data to the serial port is also much
 shorter than would be possible for the actual transmission of the bytes to the
@@ -262,15 +265,14 @@ requirements.
 Then again, perhaps the OS-side kernel squirrels the data away in a buffer of
 its own (despite the O_SYNC option having been used when the device file was
 opened).  In that case, the OS might subsequently be interrupted in such a way
-that the data doesn't make it out as a single RF packet afterall.  Our timer
-will fail to detect this failure :(
-FIXME: investigate this issue.
+that the frams data doesn't make it out as a single RF packet afterall.  Our
+timer will fail to detect this failure :( FIXME: investigate this issue.
 
 =item *
 
 Use API mode rather than transparent mode on the XBee.  You're on your own
 here, though command mode can still be used to configure things, and raw mode
-can be used to assemble data frames.
+can be used to assemble data frames (of the sort understoon by the XBee API).
 
 =item *
 
@@ -287,6 +289,47 @@ Britton Kerin (britton.kerin@gmail.com)
 
 # }}}1
 
+sub as_uint8 # {{{1
+{
+    # Return the argument with all bits higher than the 8th masked to zero
+
+    @_ == 1 or die "wrong number of arguments";
+
+    return $_[0] & 0xff
+} # }}}1
+
+sub as_uint16 # {{{1
+{
+    # Return the argument with all bits higher than the 16th masked to zero
+    @_ == 1 or die "wrong number of arguments";
+
+    return $_[0] & 0xffff
+} # }}}1
+
+sub crc_ccitt_update # {{{1
+{
+    # Return a new version of the 16 bit CRC value given as the first
+    # argument, produced using the 8 bit value given (as an integer) in the
+    # second argument, in the manner described for the _crc_ccitt_update()
+    # function from the util/crc16.h header of AVR libc.
+
+    @_ == 2 or confess "wrong number of arguments";
+    my ($crc, $bv) = @_;   # CRC Value, Byte Value
+
+    ($crc & 0xffff0000) == 0 or die "initial CRC value more than 16 bits wide";
+    looks_like_number($bv)
+        or confess "bug: perl doesn't think byte value is a number here"; 
+    ($bv  & 0xffffff00) == 0 or die "byte value more than 8 bits wide";
+
+    $bv ^= (0xff & $crc);
+    $bv ^= 0x00ff & ($bv << 4);
+
+    return (
+        as_uint16(($bv << 8) | (0xff00 & $crc)) ^
+        as_uint8($bv >> 4) ^
+        as_uint16($bv << 3) );
+} # }}}1
+
 # CRC implementation crosscheck/verification.  See ccitt.c.not_normally_built.
 #{ # {{{1
 #    my $data_size = 100000;
@@ -294,7 +337,7 @@ Britton Kerin (britton.kerin@gmail.com)
 #    my $crc = 0xffff;
 #    my $uint8_max = 255;
 #    foreach ( @data ) {
-#        $crc = crc16_ccitt_update($crc, ($_ % ($uint8_max + 1)));
+#        $crc = crc_ccitt_update($crc, ($_ % ($uint8_max + 1)));
 #        printf "New crc: %.4X\n", $crc
 #    }
 #    exit (0);
@@ -307,6 +350,7 @@ my $df;     # Device File
 my $cm;     # Command Mode
 my $rm;     # Raw Mode
 my $pl;     # Packetized Lines
+my $flm;    # Framed Lines Mode
 my $sm;     # Single packet Mode
 
 GetOptions(
@@ -314,7 +358,8 @@ GetOptions(
     "device-file|d=s"      => \$df,
     "command-mode|c"       => \$cm,
     "raw-mode|r"           => \$rm,
-    "packetize-lines|p"   => \$pl,
+    "packetize-lines|p"    => \$pl,
+    "framed-lines-mode|f"  => \$flm,
     "single-packet-mode|s" => \$sm )
     or die "usb_xbee: GetOptions failed, try usb_xbee --help\n";
 
@@ -324,12 +369,13 @@ if ( $help ) {
 
 $df or die "--device-file option must be given";
 
-($cm xor $rm xor $sm)
+($cm xor $rm xor $flm xor $sm )
     or die "exactly one of --command-mode, --raw-mode or --single-packet-mode ".
            "options must be given";
 
 # }}}1
 
+# Open serial port device # {{{1
 if ( not $sm ) {
   # We probably don't really need O_SYNC here, but it shouldn't hurt.
   sysopen(UD, "$df", O_RDWR | O_SYNC)   # USB Device
@@ -340,6 +386,7 @@ else {
       or die "couldn't sysopen device file '$df' for reading: $!";
 
 }
+# }}}1
 
 sub configure_tty # {{{1
 {
@@ -531,48 +578,410 @@ sub send_single_packet # {{{1
     return "success";
 } # }}}1
 
-sub as_uint8 # {{{1
+# Frame related byte constants {{{1
+my $frame_delimiter = 0x7e;
+my $escape          = 0x7d;   # This one is used in order to escape too :)
+my $xon             = 0x11;
+my $xoff            = 0x13;
+my $xflfv           = 0xff;   # Xor'ed Frame Length Flag Value
+my $nxflfv          = 0x00;   # Not Xor'ed Frame Length Flag Value
+my $escape_modifier = 0x02;   # Escaped bytes are XOR'ed with this value
+# }}}1
+
+sub needs_escaped # {{{1
 {
-    # Return the argument with all bits higher than the 8th masked to zero
+    # Return true iff the given single character argument needs escaping in
+    # our frame scheme.
 
     @_ == 1 or die "wrong number of arguments";
+    my $bv = shift;
 
-    return $_[0] & 0xff
+    my $ubm = 255;   # Unsigned Byte Naximum
+    vec($bv, 0, 8) <= $ubm or confess "argument isn't <= $ubm";
+
+    return( 
+        vec($bv, 0, 8) == $frame_delimiter or
+        vec($bv, 0, 8) == $escape or
+        vec($bv, 0, 8) == $xon or
+        vec($bv, 0, 8) == $xoff );
 } # }}}1
-
-sub as_uint16 # {{{1
+     
+sub escaped_crc_bytes # {{{1
 {
-    # Return the argument with all bits higher than the 16th masked to zero
+    # Given a 16 bit CRC, return a pack of two to four bytes containing the
+    # escaped form of the CRC.
+
     @_ == 1 or die "wrong number of arguments";
+    my $crc = shift;
 
-    return $_[0] & 0xffff
+    my $ecrc = '';   # Escaped CRC to be returned
+
+    my $hb = (0xff00 & $crc) >> 8;   # High Byte
+    my $lb = 0xff & $crc;   # Low Byte
+    if ( needs_escaped($hb) ) {
+        $ecrc .= pack("C", $escape);
+        $ecrc .= pack("C", $hb ^ $escape_modifier);
+    } 
+    else {
+        $ecrc .= pack("C", $hb);
+    }
+    if ( needs_escaped($lb) ) {
+        $ecrc .= pack("C", $escape);
+        $ecrc .= pack("C", $lb ^ $escape_modifier);
+    } 
+    else {
+        $ecrc .= pack("C", $lb);
+    }
+
+    (length($ecrc) >= 2 and length($ecrc) <= 4)
+        or die "escaped CRC doesn't appear to be between 2 and 4 bytes long";
+
+    return $ecrc;
 } # }}}1
 
-sub crc16_ccitt_update # {{{1
+sub frame # {{{1
 {
-    # Return a new version of the 16 bit CRC value given as the first
-    # argument, produced using the 8 bit value given as the second argument,
-    # in the manner described for the _crc_ccitt_update() function from the
-    # util/crc16.h header of AVR libc.
+    # Return a frame in the format described in wireless_xbee.h from the
+    # given argument data.  Return false if the the frame comes out too big
+    # after escaping, or the frame data otherwise.
+    
+    @_ == 1 or die "wrong number of arguments";
+    my $pd = shift;   # Payload Data
+
+    my $crciv = 0xffff;   # CRC initial value for our CRC algorithm
+
+    my $lcrc = $crciv;   # CRC of the delimiter and escaped length field bytes
+    my $pcrc = $crciv;   # CRC of the escaped payload bytes
+
+    my $escape_modifier = 0x02;   # Escaped bytes are XOR'ed with this value
+
+    my $fd = '';    # Frame Data
+    my $epd = '';   # Escaped Payload Data
+    
+    # Compute escaped payload data and associated CRC {{{2
+    for ( my $ii = 0 ; $ii < length($pd) ; $ii++ ) {
+        my $cc = substr($pd, $ii, 1);   # Current Character
+        if ( needs_escaped($cc) ) {
+            $pcrc = crc_ccitt_update($pcrc, $escape);
+            $pcrc = crc_ccitt_update($pcrc, $cc ^ $escape_modifier);
+            $epd .= pack "CC", $escape, vec($cc, 0, 8);
+        }
+        else {
+            $pcrc = crc_ccitt_update($pcrc, ord($cc));
+            $epd .= pack "C", vec($cc, 0, 8);
+        }
+    }
+    # }}}2
+
+    # Add frame delimiter, begin delimiter + length CRC calculation {{{2 
+
+    $lcrc = crc_ccitt_update($lcrc, $frame_delimiter);    # Updata CRC
+    $fd .= pack "C", $frame_delimiter;
+
+    # }}}2
+    
+    my $dplbl = 3;   # Delimiter byte plus length field bytes total
+
+    # Add the length field, update delimiter + length CRC {{{2
+
+    my $xflfv  = 0xff;   # Xor'ed Frame Length Flag Value
+    my $nxflfv = 0x00;   # Not Xor'ed Frame Length Flag Value
+
+    my $epdl = length($epd);   # Escaped Payload Data Length
+
+    my $lfb = '';   # Length Field Bytes
+
+    my $efv = needs_escaped($epdl) ? $xflfv : $nxflfv;   # Escape Flag Value
+    $lcrc = crc_ccitt_update($lcrc, $efv);    # Updata CRC
+
+    $lfb .= pack("C", $efv);
+    # Possibly Xor'ed Length Value Itself
+    my $pxlvi = needs_escaped($epdl) ? $epdl ^ $escape_modifier : $epdl;
+    $lcrc = crc_ccitt_update($lcrc, $pxlvi);    # Updata CRC
+    $lfb .= pack("C", $pxlvi);
+
+    $fd .= $lfb;
+
+    length($fd) == $dplbl or die "BUG: frame length not as expected";
+
+     # }}}2
+
+     $fd .= escaped_crc_bytes($lcrc);
+
+     # Add the escaped payload data {{{2
+
+     for ( my $ii = 0 ; $ii < length($epd) ; $ii++ ) {
+         $fd .= pack("C", ord(substr($epd, $ii, 1)));
+     }
+
+     # }}}2
+
+     $fd .= escaped_crc_bytes($pcrc);
+
+     length($fd) == (
+         $dplbl +
+         length(escaped_crc_bytes($lcrc)) +
+         $epdl +
+         length(escaped_crc_bytes($pcrc)) )
+         or die "BUG: frame length not as expected";
+
+     return $fd;
+} # }}}1
+
+sub byte_available # {{{1
+{
+    # Return true iff a byte appears to be available to read from the
+    # serial device.
+
+    my ($rin, $rout, $ein, $eout) = ('', '', '', '');
+    my $udfn = fileno(UD);
+    vec($rin, $udfn, 1) = 1;
+
+    my ($rfc, $tl) = select($rout = $rin, undef, $eout = $ein, 0);
+
+    not vec($eout, $udfn, 1)
+        or die "select() reported an exception related to file '$df'";
+
+    if ( $rfc == 0 ) {
+        return 0;
+    }
+    elsif ( $rfc == 1 ) {
+        vec($rout, $udfn, 1)
+            or die "BUG: file we expected to be readalb isn't after select";
+        return 1;
+    }
+    else {
+        confess "BUG: unexpected ready file count from select()";
+    }
+} # }}}1
+
+sub get_byte # {{{1
+{
+    # Read exactly one byte from the serial device.  Its wise to call
+    # byte_available() first, to avoid potentially hanging forever.
+    # Return the read byte as an integer.
+
+    my $rd;           # Read Data
+    my $rr = sysread(UD, $rd, 1);   # Read Return value
+    defined($rr) or die "sysread failed on $df: $!";
+    $rr == 1 or die "sysread() didn't read exactly one byte as expected";
+
+    # FIXME: use ord here rather than everywhere else, as above function
+    # description says.
+    return $rd;
+}
+
+sub high_byte # {{{1
+{
+    # Return the high byte of the given 16 bit value
+    
+    @_ == 1 or die "wrong number of arguments";
+    my ($val16) = @_;
+
+    ($val16 & 0xffff0000) == 0
+        or die "BUG: supposed 16 bit argument has bits > 16 set";
+
+    return ($val16 & 0xff00) >> 8;
+}
+
+sub low_byte # {{{1
+{
+    # Return the low byte of the given 16 bit value
+    
+    @_ == 1 or die "wrong number of arguments";
+    my ($val16) = @_;
+
+    ($val16 & 0xffff0000) == 0
+        or die "BUG: supposed 16 bit argument has bits > 16 set";
+
+    return $val16 & 0x00ff;
+}
+
+sub get_frame # {{{1
+{
+    # Like wx_get_frame() from wireless_xbee.c, but with a perlesque
+    # signature.  Most of the explanatory comments are there.  Unlike that
+    # function, this one gives some feedback when things go wrong: it returns
+    # "success" on success, or a string beginning with "failure: " on failure.
+    # As arguments we require a ref to an empty string (where the payload
+    # data will be stored) and a timeout value in milliseconds.
 
     @_ == 2 or die "wrong number of arguments";
-    my ($crc, $bv) = @_;   # CRC Value, Byte Value
+    my ($pdr, $to) = @_;   # Payload Data Ref, Timeout
 
-    ($crc & 0xffff0000) == 0 or die "initial CRC value more than 16 bits wide";
-    ($bv  & 0xffffff00) == 0 or die "byte value more than 8 bits wide";
+    # We return the string into a referenced scaler which must be undef or ''.
+    not defined ($$pdr) or length($$pdr) == 0
+        or die "defined payload data ref doesn't point to empty string";
+    $$pdr = '';
+    
+    my $fs = "outside frame";   # Frame State
+    my $crciv = 0xffff;         # CRC initial value for our CRC algorithm
+    my $crc = $crciv;           # CRC value
+    my $et = 0;                 # Elapsed Time (in milliseconds)
+    my $epl;                    # Escaped Payload Length
+    my $epbr = 0;               # Escaped Payload Bytes Read (so far)
+    my $lxorfb;                 # Length XOR'ed Flag Byte
+    
+    while ( $et < $to ) {
+            
 
-    $bv ^= (0xff & $crc);
-    $bv ^= 0x00ff & ($bv << 4);
+        if ( byte_available() ) {
 
-    return (
-        as_uint16(($bv << 8) | (0xff00 & $crc)) ^
-        as_uint8($bv >> 4) ^
-        as_uint16($bv << 3) );
+            my $cb = get_byte();
+
+            if ( ord($cb) == $frame_delimiter ) {
+                if ( $fs ne "outside frame" ) {
+                    return "failure: frame delimiter while not outside frame";
+                }
+                $crc = crc_ccitt_update($crc, ord($cb));
+                $fs = "at length xored flag";
+            }
+
+            else {
+                if    ( $fs eq "at length xored flag" ) {
+                    $lxorfb = ord($cb);
+                    $lxorfb == $xflfv or $lxorfb == $nxflfv
+                        or return "failure: invalid length xor'ed flag value";
+                    $crc = crc_ccitt_update($crc, $lxorfb);
+                    $fs = "at length itself";
+                }
+
+                elsif ( $fs eq "at length itself" ) {
+                    $epl = $cb;
+                    $crc = crc_ccitt_update($crc, ord($epl));
+                    if ( $lxorfb == $xflfv ) {
+                        $epl ^= $escape_modifier;
+                    }
+                    $fs = "at length crc high byte";
+                }
+
+                elsif ( $fs eq "at length crc high byte" ) {
+                    if ( ord($cb) == $escape ) {
+                        $fs = "at length crc high byte escaped";
+                    }
+                    else {
+                        # FIXME: here we are need high_byte now, more ords()
+                        if ( ord($cb) != high_byte($crc) ) {
+                            return "failure: delimiter/length CRC error";
+                        }
+                        $fs = "at length crc low byte";
+                    }
+                }
+
+                elsif ( $fs eq "at length crc high byte escaped" ) {
+                    # FIXME: verify that these XORes work as expected
+                    # FIXME: suspect need ord around cb here
+                    if ( ($cb ^ $escape_modifier) != high_byte($crc) ) {
+                        return "failure: delimiter/length CRC error";
+                    }
+                    $fs = "at length crc low byte";
+                } 
+
+                elsif ( $fs eq "at length crc low byte" ) {
+                    if ( ord($cb) == $escape ) {
+                        $fs = "at length crc low byte escaped";
+                    }
+                    else {
+                        if ( ord($cb) != low_byte($crc) ) {
+                            return "failure: delimiter/length CRC error";
+                        }
+                        $crc = $crciv;   # Reset for later use on payload
+                        $fs = "in payload";
+                    }
+                }
+
+                elsif ( $fs eq "at length crc low byte escaped" ) {
+                    if ( ($cb ^ $escape_modifier) != low_byte($crc) ) {
+                        return "failure: delimiter/length CRC error";
+                    }
+                    $crc = $crciv;   # Reset for later use on payload
+                    $fs = "in payload";
+                }
+
+                elsif ( $fs eq "in payload" ) {
+                    if ( ord($cb) == $escape ) {
+                        $fs = "in payload escaped";
+                    }
+                    else {
+                        $crc = crc_ccitt_update($crc, ord($cb));
+                        $$pdr .= $cb;   # FIXME: will this really add any byte?
+                        $epbr++;
+                    }
+                    if ( $epbr == ord($epl) ) {
+                        $fs = "at payload crc high byte";
+                    }
+                }
+
+                elsif ( $fs eq "in payload escaped" ) {
+                    $crc = crc_ccitt_update($crc, ord($cb));
+                    $$pdr .= ($cb ^ $escape_modifier);
+                    $epbr++;
+                    if ( $epbr == ord($epl) ) {
+                        $fs = "at payload crc high byte";
+                    }
+                }
+
+                elsif ( $fs eq "at payload crc high byte" ) {
+                    if ( ord($cb) == $escape ) {
+                        $fs = "at payload crc high byte escaped";
+                    }
+                    else {
+                        if ( ord($cb) != high_byte($crc) ) {
+                            return "failure: payload CRC error";
+                        }
+                        $fs = "at payload crc low byte";
+                    }
+                }
+
+                elsif ( $fs eq "at payload crc high byte escaped" ) {
+                    if ( ($cb ^ $escape_modifier) != high_byte($crc) ) {
+                        return "failure: payload CRC error";
+                    }
+                    $fs = "at payload crc low byte";
+                } 
+
+                elsif ( $fs eq "at payload crc low byte" ) {
+                    if ( ord($cb) == $escape ) {
+                        $fs = "at payload crc low byte escaped";
+                    }
+                    else {
+                        if ( ord($cb) != low_byte($crc) ) {
+                            return "failure: payload CRC error";
+                        }
+                        return "success";
+                    }
+                }
+
+                elsif ( $fs eq "at payload crc low byte escaped" ) {
+                    if ( ($cb ^ $escape_modifier) != low_byte($crc) ) {
+                        return "failure: payload CRC error";
+                    }
+                    return "success";
+                }
+            }
+        }
+
+        else {
+            # FIXME: we are spending "about" rather than "up to" here.
+            # It actually could be quite a bit longer given all the perl.
+            my $poll_interval = 1;
+            my $msps = 1000;   # Milliseconds Per Second
+            sleep($poll_interval / $msps);
+            $et += $poll_interval;   # Elapsed time
+        }
+        # FIXME: WORK POINT: we hit this point a lot, but payload stays empty
+        # and we eventually time out
+        #print "cp1\n";
+    }
+
+    print "payload:\n $$pdr";
+
+    return "failure: timed out before receiving full (possibly any of) frame";
 } # }}}1
 
 configure_tty($df);
 
-if ( $cm ) {   # Command Mode {{{1
+if ( $cm ) {   # --command-mode {{{1
 
     enter_command_mode();
 
@@ -624,8 +1033,9 @@ if ( $cm ) {   # Command Mode {{{1
     }
 } # }}}1
 
-elsif ( $rm ) {   # Raw Mode {{{1
+elsif ( $rm or $flm ) {   # --raw-mode or --framed-lines-mode {{{1
 
+    # FIXME: fix grammar 'these modes' if we do that way
     # In raw mode we can't depend no synchronous responses from the XBee:
     # data could come in at any time, and when it does we want to get it to
     # our stdout ASAP.  At the same time, we want to allow the user to supply
@@ -659,15 +1069,26 @@ elsif ( $rm ) {   # Raw Mode {{{1
 
             # If it's data from the XBee module, send it to our stdout
             if ( vec($rout, $udfn, 1) ) {
-                my $btrao = 16;   # Bytes To Read At Once (maximum)
-                my $rd;           # Read Data
-                my $rr = sysread(UD, $rd, $btrao);   # Read Return value
-                defined($rr) or die "sysread failed on $df: $!";
-                $rr >= 1 or
+                if ( $rm ) {
+                    my $btrao = 16;   # Bytes To Read At Once (maximum)
+                    my $rd;           # Read Data
+                    my $rr = sysread(UD, $rd, $btrao);   # Read Return value
+                    defined($rr) or die "sysread failed on $df: $!";
+                    $rr >= 1 or
                     die "sysread() read 0 bytes despite select() saying it ".
                         "had data ready to read";
-                print $rd or die "print() (to stdout) failed";
-                STDOUT->flush();   # Flush output (avoid line buffering)
+                    print $rd or die "print() (to stdout) failed";
+                    STDOUT->flush();   # Flush output (avoid line buffering)
+                }
+                elsif ( $flm ) {
+                    my $to = 200;   # Timeout (milliseconds) for whole frame
+                    my $fp;   # Frame Payload
+                    my $result = get_frame(\$fp, $to);
+                    if ( $result =~ m/^failure:\s(.*)$/ ) {
+                        die "get_frame() failed: $1";
+                    }
+                    print $fp or die "print() (to stdout) failed";
+                }
             }
 
             # If it's data from stdin, send it to the XBee module
@@ -685,26 +1106,38 @@ elsif ( $rm ) {   # Raw Mode {{{1
                 # whatsoever happens (rather than the existing text on the line
                 # getting returned).  On empty lines its behaves as expected.
                 # Not worth fixing.
-                my $dts = STDIN->getline();   # Data To Send
+                my $il = STDIN->getline();   # Input Line
                 not STDIN->error() or die "error reading line from STDIN";
                 # Now undef means we must have got EOF on an empty line
                 # (possibly from Cntrl-D), so we're done
-                defined($dts) or exit(0);
-                if ( $pl ) {
+                defined($il) or exit(0);
+
+                my $dts;   # Data To Send
+
+                if ( $flm ) {
+                    $dts = frame($il);
+                    $dts or die "frame formed from input line too long";
+                    # FIXME: put a not in this die saying how to check the
+                    # length for safety or something
+                }
+                else {
+                    $dts = $il;
+                }
+
+                if ( $pl or $flm ) {
                     my $sr = send_single_packet($dts);
                     if ( $sr eq "failure: got >$mps bytes (max radio packet ".
                                 "size) of input" ) {
-                        warn "got more than $mps bytes in one line, can't ".
-                             "send that as a single packet, so not sending it";
+                        die "got more than $mps bytes in one line, can't ".
+                            "send that as a single packet";
                     }
                     elsif ( $sr eq "failure: didn't get data written fast ".
                                    "enough" ) {
-                        warn "didn't get data written fast enough to feel ".
-                             "confident it will go out as a single RF packet, ".
-                             "maybe better luck next time :)";
+                        die "didn't get data written fast enough to feel ".
+                            "confident it will go out as a single RF packet, ".
+                            "maybe better luck next time :)";
                     }
                     elsif ( $sr eq "success" ) {
-                        print STDERR "line packetized successfully\n";
                         ; # Do nothing on success
                     }
                     else {
@@ -712,6 +1145,7 @@ elsif ( $rm ) {   # Raw Mode {{{1
                             "value";
                     }
                 }
+
                 else {
                     my $swr = syswrite(UD, $dts);   # SysWrite Return
                     defined($swr) or die "syswrite to $df failed: $!";
