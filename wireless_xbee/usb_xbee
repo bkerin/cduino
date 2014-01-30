@@ -364,7 +364,23 @@ my $cm;     # Command Mode
 my $rm;     # Raw Mode
 my $plm;    # Packetized Lines Mode
 my $flm;    # Framed Lines Mode
-my $sm;     # Single packet Mode
+my $spm;    # Single packet Mode
+
+GetOptions(
+    "help|?"                  => \$help,
+    "device-file|d=s"         => \$df,
+    "command-mode|c"          => \$cm,
+    "raw-mode|r"              => \$rm,
+    "packetized-lines-mode|p" => \$plm,
+    "framed-lines-mode|f"     => \$flm,
+    "single-packet-mode|s"    => \$spm )
+    or die "usb_xbee: GetOptions failed, try usb_xbee --help\n";
+
+if ( $help ) {
+    pod2usage(-verbose => 1, -exitval => 0);
+}
+
+$df or die "--device-file option must be given";
 
 # FIXXME: --single-packet-mode worked as far as it goes last time it was,
 # but we currently don't document it or recognize it as a valid mode when
@@ -374,22 +390,8 @@ my $sm;     # Single packet Mode
 # (send-one-listen-for-one-exit would be sensible operation for this mode,
 # I think).  Since I'm planning to use text and not binary for communication,
 # I'm not going to implement this at the moment.
-
-GetOptions(
-    "help|?"                  => \$help,
-    "device-file|d=s"         => \$df,
-    "command-mode|c"          => \$cm,
-    "raw-mode|r"              => \$rm,
-    "packetized-lines-mode|p" => \$plm,
-    "framed-lines-mode|f"     => \$flm,
-    "single-packet-mode|s"    => \$sm )
-    or die "usb_xbee: GetOptions failed, try usb_xbee --help\n";
-
-if ( $help ) {
-    pod2usage(-verbose => 1, -exitval => 0);
-}
-
-$df or die "--device-file option must be given";
+not $spm
+    or die "--single-packet-mode workes when last checked but isn't done";
 
 ($cm xor $rm xor $plm xor $flm )
     or die "exactly one of --command-mode, --raw-mode, ".
@@ -398,18 +400,8 @@ $df or die "--device-file option must be given";
 
 # }}}1
 
-# Open serial port device # {{{1
-if ( not $sm ) {
-  # We probably don't really need O_SYNC here, but it shouldn't hurt.
-  sysopen(UD, "$df", O_RDWR | O_SYNC)   # USB Device
-      or die "couldn't sysopen device file '$df' for read/write: $!";
-}
-else {
-  sysopen(UD, "$df", O_WRONLY | O_SYNC)   # USB Device
-      or die "couldn't sysopen device file '$df' for reading: $!";
-
-}
-# }}}1
+sysopen(UD, "$df", O_RDWR | O_SYNC)   # USB Device
+    or die "couldn't sysopen device file '$df' for read/write: $!";
 
 sub configure_tty # {{{1
 {
@@ -711,11 +703,16 @@ sub frame # {{{1
 
     my $epdl = length($epd);   # Escaped Payload Data Length
 
-    my $efv = needs_escaped($epdl) ? $xflfv : $nxflfv;   # Escape Flag Value
+    # FIXME: WORK POINT: check out every use of needs_escaped and verify
+    # that they all ok mentally at least
+
+    my $lne = needs_escaped(chr($epdl));   # Length Needs Escaped?
+
+    my $efv = $lne ? $xflfv : $nxflfv;   # Escape Flag Value
     $lcrc = crc_ccitt_update($lcrc, $efv);    # Updata CRC
 
     # Possibly Xor'ed Length Value Itself
-    my $pxlvi = needs_escaped($epdl) ? $epdl ^ $escape_modifier : $epdl;
+    my $pxlvi = $lne ? $epdl ^ $escape_modifier : $epdl;
     $lcrc = crc_ccitt_update($lcrc, $pxlvi);    # Update CRC
 
     my $lfb = pack("CC", $efv, $pxlvi);   # Length Field Bytes
@@ -790,7 +787,7 @@ sub get_byte # {{{1
     $rr == 1 or die "sysread() didn't read exactly one byte as expected";
 
     return ord($rd);
-}
+} # }}}1
 
 sub high_byte # {{{1
 {
@@ -803,7 +800,7 @@ sub high_byte # {{{1
         or die "BUG: supposed 16 bit argument has bits > 16 set";
 
     return ($val16 & 0xff00) >> 8;
-}
+} # }}}1
 
 sub low_byte # {{{1
 {
@@ -816,7 +813,7 @@ sub low_byte # {{{1
         or die "BUG: supposed 16 bit argument has bits > 16 set";
 
     return $val16 & 0x00ff;
-}
+} # }}}1
 
 sub get_frame # {{{1
 {
@@ -1179,7 +1176,7 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
 
 } # }}}1
 
-elsif ( $sm ) {   # Single Packet Mode {{{1
+elsif ( $spm ) {   # Single Packet Mode {{{1
 
     # First slurp all the input data
     my $dts = '';
