@@ -331,6 +331,12 @@ sub crc_ccitt_update # {{{1
 } # }}}1
 
 # CRC implementation crosscheck/verification.  See ccitt.c.not_normally_built.
+my $crc = 0xffff;
+$crc = crc_ccitt_update($crc, 0x7e);
+$crc = crc_ccitt_update($crc, 0x00);
+$crc = crc_ccitt_update($crc, 0x02);
+#printf ("DEBUG: crc: %X\n", $crc);
+#exit (0);
 #{ # {{{1
 #    my $data_size = 100000;
 #    my @data = (1 .. $data_size);
@@ -596,7 +602,8 @@ sub needs_escaped # {{{1
     @_ == 1 or die "wrong number of arguments";
     my $bv = shift;
 
-    my $ubm = 255;   # Unsigned Byte Naximum
+    my $ubm = 255;   # Unsigned Byte Maximum
+    # FIXME: could use ord for consistency here I think
     vec($bv, 0, 8) <= $ubm or confess "argument isn't <= $ubm";
 
     return( 
@@ -636,6 +643,7 @@ sub escaped_crc_bytes # {{{1
     (length($ecrc) >= 2 and length($ecrc) <= 4)
         or die "escaped CRC doesn't appear to be between 2 and 4 bytes long";
 
+    printf "DEBUG: ecrc: %X %X\n", vec($ecrc, 0, 8), vec($ecrc, 1, 8);
     return $ecrc;
 } # }}}1
 
@@ -653,8 +661,6 @@ sub frame # {{{1
     my $lcrc = $crciv;   # CRC of the delimiter and escaped length field bytes
     my $pcrc = $crciv;   # CRC of the escaped payload bytes
 
-    my $escape_modifier = 0x02;   # Escaped bytes are XOR'ed with this value
-
     my $fd = '';    # Frame Data
     my $epd = '';   # Escaped Payload Data
     
@@ -663,8 +669,11 @@ sub frame # {{{1
         my $cc = substr($pd, $ii, 1);   # Current Character
         if ( needs_escaped($cc) ) {
             $pcrc = crc_ccitt_update($pcrc, $escape);
-            $pcrc = crc_ccitt_update($pcrc, $cc ^ $escape_modifier);
-            $epd .= pack "CC", $escape, vec($cc, 0, 8);
+            my $xored_bv = ord($cc) ^ $escape_modifier;
+            $pcrc = crc_ccitt_update($pcrc, $xored_bv);
+            $epd .= pack "CC", $escape, $xored_bv;
+            #printf "DEBUG: epd: cc: %X, escaped cc: %X\n", ord($cc), $xored_bv;
+            #printf "DEBUG: crc: %X\n", $pcrc;
         }
         else {
             $pcrc = crc_ccitt_update($pcrc, ord($cc));
@@ -688,6 +697,7 @@ sub frame # {{{1
     my $nxflfv = 0x00;   # Not Xor'ed Frame Length Flag Value
 
     my $epdl = length($epd);   # Escaped Payload Data Length
+    #print "DEBUG: epdl: $epdl\n";
 
     my $lfb = '';   # Length Field Bytes
 
@@ -697,7 +707,7 @@ sub frame # {{{1
     $lfb .= pack("C", $efv);
     # Possibly Xor'ed Length Value Itself
     my $pxlvi = needs_escaped($epdl) ? $epdl ^ $escape_modifier : $epdl;
-    $lcrc = crc_ccitt_update($lcrc, $pxlvi);    # Updata CRC
+    $lcrc = crc_ccitt_update($lcrc, $pxlvi);    # Update CRC
     $lfb .= pack("C", $pxlvi);
 
     $fd .= $lfb;
@@ -706,7 +716,10 @@ sub frame # {{{1
 
      # }}}2
 
-     $fd .= escaped_crc_bytes($lcrc);
+     my $elcrc_bytes = escaped_crc_bytes($lcrc);   # Escaped lcrc bytes
+     my $epcrc_bytes = escaped_crc_bytes($pcrc);   # Escaped pcrc bytes
+
+     $fd .= $elcrc_bytes;   # Add the escaped frame delimiter/lengch CRC bytes
 
      # Add the escaped payload data {{{2
 
@@ -716,13 +729,15 @@ sub frame # {{{1
 
      # }}}2
 
-     $fd .= escaped_crc_bytes($pcrc);
+     $fd .= $epcrc_bytes;   # Add the escaped payload CRC bytes
+
+     #print "DEBUG: len(fd) = ".length($fd)."\n";
 
      length($fd) == (
          $dplbl +
-         length(escaped_crc_bytes($lcrc)) +
+         length($elcrc_bytes) +
          $epdl +
-         length(escaped_crc_bytes($pcrc)) )
+         length($epcrc_bytes) )
          or die "BUG: frame length not as expected";
 
      return $fd;
@@ -747,7 +762,7 @@ sub byte_available # {{{1
     }
     elsif ( $rfc == 1 ) {
         vec($rout, $udfn, 1)
-            or die "BUG: file we expected to be readalb isn't after select";
+            or die "BUG: file we expected to be readable isn't after select";
         return 1;
     }
     else {
@@ -766,9 +781,7 @@ sub get_byte # {{{1
     defined($rr) or die "sysread failed on $df: $!";
     $rr == 1 or die "sysread() didn't read exactly one byte as expected";
 
-    # FIXME: use ord here rather than everywhere else, as above function
-    # description says.
-    return $rd;
+    return ord($rd);
 }
 
 sub high_byte # {{{1
@@ -824,44 +837,44 @@ sub get_frame # {{{1
     
     while ( $et < $to ) {
             
-
         if ( byte_available() ) {
 
             my $cb = get_byte();
 
-            if ( ord($cb) == $frame_delimiter ) {
+            if ( $cb == $frame_delimiter ) {
+                $crc = crc_ccitt_update($crc, $cb);
                 if ( $fs ne "outside frame" ) {
                     return "failure: frame delimiter while not outside frame";
                 }
-                $crc = crc_ccitt_update($crc, ord($cb));
                 $fs = "at length xored flag";
             }
 
             else {
                 if    ( $fs eq "at length xored flag" ) {
-                    $lxorfb = ord($cb);
+                    $crc = crc_ccitt_update($crc, $cb);
+                    $lxorfb = $cb;
                     $lxorfb == $xflfv or $lxorfb == $nxflfv
                         or return "failure: invalid length xor'ed flag value";
-                    $crc = crc_ccitt_update($crc, $lxorfb);
                     $fs = "at length itself";
                 }
 
                 elsif ( $fs eq "at length itself" ) {
+                    $crc = crc_ccitt_update($crc, $cb);
                     $epl = $cb;
-                    $crc = crc_ccitt_update($crc, ord($epl));
                     if ( $lxorfb == $xflfv ) {
                         $epl ^= $escape_modifier;
                     }
+                    #print "DEBUG: epl: $epl\n";
                     $fs = "at length crc high byte";
                 }
 
                 elsif ( $fs eq "at length crc high byte" ) {
-                    if ( ord($cb) == $escape ) {
+                    if ( $cb == $escape ) {
                         $fs = "at length crc high byte escaped";
                     }
                     else {
-                        # FIXME: here we are need high_byte now, more ords()
-                        if ( ord($cb) != high_byte($crc) ) {
+                        printf "DEBUG: length crc hb: %X\n", $cb;
+                        if ( $cb != high_byte($crc) ) {
                             return "failure: delimiter/length CRC error";
                         }
                         $fs = "at length crc low byte";
@@ -869,20 +882,21 @@ sub get_frame # {{{1
                 }
 
                 elsif ( $fs eq "at length crc high byte escaped" ) {
-                    # FIXME: verify that these XORes work as expected
-                    # FIXME: suspect need ord around cb here
-                    if ( ($cb ^ $escape_modifier) != high_byte($crc) ) {
+                    my $ucb = ($cb ^ $escape_modifier);   # Unescaped $cb
+                    printf "DEBUG: length crc hb: %X\n", $ucb;
+                    if ( $ucb != high_byte($crc) ) {
                         return "failure: delimiter/length CRC error";
                     }
                     $fs = "at length crc low byte";
                 } 
 
                 elsif ( $fs eq "at length crc low byte" ) {
-                    if ( ord($cb) == $escape ) {
+                    printf "DEBUG: length crc lb: %X\n", $cb;
+                    if ( $cb == $escape ) {
                         $fs = "at length crc low byte escaped";
                     }
                     else {
-                        if ( ord($cb) != low_byte($crc) ) {
+                        if ( $cb != low_byte($crc) ) {
                             return "failure: delimiter/length CRC error";
                         }
                         $crc = $crciv;   # Reset for later use on payload
@@ -891,7 +905,9 @@ sub get_frame # {{{1
                 }
 
                 elsif ( $fs eq "at length crc low byte escaped" ) {
-                    if ( ($cb ^ $escape_modifier) != low_byte($crc) ) {
+                    my $ucb = ($cb ^ $escape_modifier);   # Unescaped $cb
+                    printf "DEBUG: length crc lb: %X\n", $cb;
+                    if ( $ucb != low_byte($crc) ) {
                         return "failure: delimiter/length CRC error";
                     }
                     $crc = $crciv;   # Reset for later use on payload
@@ -899,34 +915,42 @@ sub get_frame # {{{1
                 }
 
                 elsif ( $fs eq "in payload" ) {
-                    if ( ord($cb) == $escape ) {
+                    $crc = crc_ccitt_update($crc, $cb);
+                    if ( $cb == $escape ) {
                         $fs = "in payload escaped";
                     }
                     else {
-                        $crc = crc_ccitt_update($crc, ord($cb));
-                        $$pdr .= $cb;   # FIXME: will this really add any byte?
-                        $epbr++;
+                        $$pdr .= chr($cb);
                     }
-                    if ( $epbr == ord($epl) ) {
+                    print "DEBUG: pdr: ".$$pdr."\n";
+                    $epbr++;
+                    if ( $epbr == $epl ) {
                         $fs = "at payload crc high byte";
                     }
                 }
 
                 elsif ( $fs eq "in payload escaped" ) {
-                    $crc = crc_ccitt_update($crc, ord($cb));
-                    $$pdr .= ($cb ^ $escape_modifier);
+                    $crc = crc_ccitt_update($crc, $cb);
+                    $$pdr .= chr($cb ^ $escape_modifier);
+                    print "DEBUG: pdr: ".$$pdr."\n";
                     $epbr++;
-                    if ( $epbr == ord($epl) ) {
+                    if ( $epbr == $epl ) {
+                        print "DEBUG: goind to crc with epbr: $epbr\n";
                         $fs = "at payload crc high byte";
+                    }
+                    else {
+                        $fs = "in payload";
                     }
                 }
 
                 elsif ( $fs eq "at payload crc high byte" ) {
-                    if ( ord($cb) == $escape ) {
+                    if ( $cb == $escape ) {
                         $fs = "at payload crc high byte escaped";
                     }
                     else {
-                        if ( ord($cb) != high_byte($crc) ) {
+                        printf "DEBUG: payload crc hb: %X\n", $cb;
+                        if ( $cb != high_byte($crc) ) {
+                            die "hitting here with brackets";
                             return "failure: payload CRC error";
                         }
                         $fs = "at payload crc low byte";
@@ -934,18 +958,21 @@ sub get_frame # {{{1
                 }
 
                 elsif ( $fs eq "at payload crc high byte escaped" ) {
-                    if ( ($cb ^ $escape_modifier) != high_byte($crc) ) {
+                    my $ucb = ($cb ^ $escape_modifier);   # Unescepd $cb
+                    printf "DEBUG: payload crc hb: %X\n", $ucb;
+                    if ( $ucb != high_byte($crc) ) {
                         return "failure: payload CRC error";
                     }
                     $fs = "at payload crc low byte";
                 } 
 
                 elsif ( $fs eq "at payload crc low byte" ) {
-                    if ( ord($cb) == $escape ) {
+                    if ( $cb == $escape ) {
                         $fs = "at payload crc low byte escaped";
                     }
                     else {
-                        if ( ord($cb) != low_byte($crc) ) {
+                        printf "DEBUG: payload crc lb: %X\n", $cb;
+                        if ( $cb != low_byte($crc) ) {
                             return "failure: payload CRC error";
                         }
                         return "success";
@@ -953,7 +980,9 @@ sub get_frame # {{{1
                 }
 
                 elsif ( $fs eq "at payload crc low byte escaped" ) {
-                    if ( ($cb ^ $escape_modifier) != low_byte($crc) ) {
+                    my $ucb = ($cb ^ $escape_modifier);   # Unescepd $cb
+                    printf "DEBUG: payload crc lb: %X\n", $ucb;
+                    if ( $ucb != low_byte($crc) ) {
                         return "failure: payload CRC error";
                     }
                     return "success";
@@ -1081,7 +1110,7 @@ elsif ( $rm or $flm ) {   # --raw-mode or --framed-lines-mode {{{1
                     STDOUT->flush();   # Flush output (avoid line buffering)
                 }
                 elsif ( $flm ) {
-                    my $to = 200;   # Timeout (milliseconds) for whole frame
+                    my $to = 3000;   # Timeout (milliseconds) for whole frame
                     my $fp;   # Frame Payload
                     my $result = get_frame(\$fp, $to);
                     if ( $result =~ m/^failure:\s(.*)$/ ) {
