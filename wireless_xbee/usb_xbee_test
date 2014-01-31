@@ -1,0 +1,100 @@
+#!/usr/bin/perl -w
+
+# This is a test script to exercise the usb_xbee program, in particular
+# its --framed-lines-mode (which covers the other modes pretty well also).
+# It just continually sends random frames and checks the responses (in
+# --query-mode) or echos back received frames with a rotation applied to
+# the bytes (in --response-mode).  So if you run two instances (connected
+# to different XBees via different pseudo-terminal device files) for long
+# enough, you get good stress testing of the packetized communication and
+# frame features of usb_xbee (including eventual exposure of symmetric frame
+# code/decode bugs).  Note that in the presence of non-frame traffic on
+# the network/channel in use by the XBees, or noise, the executed usb_xbee
+# instance might fail for those reasons, without the failure being indicative
+# of a bug.
+
+use strict;
+
+use Getopt::Long qw( GetOptions );
+use IO::Handle;
+use IPC::Open2;
+
+my $help;   # True iff we should just print usage information and exit
+my $df;     # Device File
+my $qm;     # Query Mode
+my $rm;     # Response Mode
+
+GetOptions(
+    "help|?"          => \$help,
+    "device-file|d=s" => \$df,
+    "query-mode|q"    => \$qm,
+    "response-mode|r" => \$rm )
+    or die "usb_xbee: GetOptions Failed, try usb_xbee --help";
+
+if ( $help ) {
+    print "Usage:\n".
+          "    ./usb_xbee_test --device=*DEVICE* --query-mode\n".
+          "\n".
+          "    ./usb_xbee_test --device=*DEVICE* --response-mode\n".
+          "\n".
+          "See the comments in the source for details.\n";
+    exit 0;
+}
+
+$qm xor $rm
+    or die "exactly one of the --query-mode or -response-mode options".
+           "must be given";
+
+sub random_payload # {{{1
+{
+    # Produce a random payload that ends with newline (FIXME: more precise
+    # descrip).
+
+    my $result = '';
+    
+    my $ps = 4;
+
+    for ( my $ii = 0 ; $ii < $ps - 1 ; $ii++ )  {
+        $result .= chr(int(rand(9.999)) + 48);
+    }
+
+    $result .= "\n";
+
+    return $result;
+} # }}}1
+   
+my $pid = open2(\*CHLD_OUT, \*CHLD_IN, "./usb_xbee -d $df -f")
+    or die "couldn't open usb_xbee process in currend dir for IO";
+CHLD_OUT->autoflush(1);   # I think open2 does this, but just to be clear
+
+# FIXME: WORK POINT: well basic echo-back is working, but where is the
+# delay per iteration coming from?
+# These two commands:
+#   ./usb_xbee_test -d /dev/ttyUSB1 -r
+# then this one chatters:
+#   ./usb_xbee_test -d /dev/ttyUSB0 -q
+# of course that first one will block endlessly if it never gets an answer
+
+if ( $qm ) {
+    while ( 1 ) {
+        my $rp = random_payload();
+        print CHLD_IN $rp;
+        print "sent: $rp";
+        my $tsb = '';   # Text Sent Back
+        read CHLD_OUT, $tsb, length($rp);
+        print "got back: $tsb";
+        print "\n";
+    }
+}
+elsif ( $rm ) {
+    while ( 1 ) {
+        my $rxp = CHLD_OUT->getline();   # Recieved Payload
+        not CHLD_OUT->error() or die "error receiving payload line";
+        print CHLD_IN $rxp;
+    }
+}
+else {
+    die "shouldn't be here";
+}
+
+exit 0;
