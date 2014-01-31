@@ -394,7 +394,7 @@ not $spm
     or die "--single-packet-mode workes when last checked but isn't done";
 
 ($cm xor $rm xor $plm xor $flm )
-    or die "exactly one of --command-mode, --raw-mode, ".
+    or die "exactly one of the --command-mode, --raw-mode, ".
            "--packetized-lines-mode, or --framed-lines-mode options must be ".
            "given";
 
@@ -605,22 +605,21 @@ my $escape_modifier = 0x02;   # Escaped bytes are XOR'ed with this value
 
 sub needs_escaped # {{{1
 {
-    # Return true iff the given single character argument needs escaping in
-    # our frame scheme.  Note that this function takes a character value
-    # (i.e. short string, i.e. not something that perl already thinks is
-    # an integer).
+    # Return true iff the given byte argument needs escaping in our
+    # frame scheme.  Note that this function takes an character value
+    # (i.e. something perl thinks is a number, not a short string).
 
     @_ == 1 or die "wrong number of arguments";
     my $bv = shift;
 
     my $ubm = 255;   # Unsigned Byte Maximum
-    ord($bv) <= $ubm or confess "argument isn't <= $ubm";
+    $bv <= $ubm or confess "argument isn't <= $ubm";
 
     return( 
-        ord($bv) == $frame_delimiter or
-        ord($bv) == $escape or
-        ord($bv) == $xon or
-        ord($bv) == $xoff );
+        $bv == $frame_delimiter or
+        $bv == $escape or
+        $bv == $xon or
+        $bv == $xoff );
 } # }}}1
 
 sub escaped_crc_bytes # {{{1
@@ -635,13 +634,13 @@ sub escaped_crc_bytes # {{{1
 
     my $hb = (0xff00 & $crc) >> 8;   # High Byte
     my $lb = 0xff & $crc;   # Low Byte
-    if ( needs_escaped(chr($hb)) ) {
+    if ( needs_escaped($hb) ) {
         $ecrc .= pack("CC", $escape, $hb ^ $escape_modifier);
     } 
     else {
         $ecrc .= pack("C", $hb);
     }
-    if ( needs_escaped(chr($lb)) ) {
+    if ( needs_escaped($lb) ) {
         $ecrc .= pack("CC", $escape, $lb ^ $escape_modifier);
     } 
     else {
@@ -674,7 +673,7 @@ sub frame # {{{1
     # Compute escaped payload data and associated CRC {{{2
     for ( my $ii = 0 ; $ii < length($pd) ; $ii++ ) {
         my $cc = substr($pd, $ii, 1);   # Current Character
-        if ( needs_escaped($cc) ) {
+        if ( needs_escaped(ord($cc)) ) {
             $pcrc = crc_ccitt_update($pcrc, $escape);
             my $xored_bv = ord($cc) ^ $escape_modifier;
             $pcrc = crc_ccitt_update($pcrc, $xored_bv);
@@ -706,7 +705,7 @@ sub frame # {{{1
     # FIXME: WORK POINT: check out every use of needs_escaped and verify
     # that they all ok mentally at least
 
-    my $lne = needs_escaped(chr($epdl));   # Length Needs Escaped?
+    my $lne = needs_escaped($epdl);   # Length Needs Escaped?
 
     my $efv = $lne ? $xflfv : $nxflfv;   # Escape Flag Value
     $lcrc = crc_ccitt_update($lcrc, $efv);    # Updata CRC
@@ -1097,7 +1096,7 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
                     die "sysread() read 0 bytes despite select() saying it ".
                         "had data ready to read";
                     print $rd or die "print() (to stdout) failed";
-                    STDOUT->flush();   # Flush output (avoid line buffering)
+                    STDOUT->flush();   # Flush output (avoid any buffering)
                 }
                 elsif ( $flm ) {
                     my $to = 200;   # Timeout (milliseconds) for whole frame
@@ -1107,6 +1106,7 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
                         die "get_frame() failed: $1";
                     }
                     print $fp or die "print() (to stdout) failed";
+                    STDOUT->flush();   # Flush output (avoid any buffering)
                 }
             }
 
