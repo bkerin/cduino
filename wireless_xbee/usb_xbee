@@ -523,7 +523,7 @@ sub timed_wait_for_stdin # {{{1
     my $rout = '';
     my $sifn = fileno(STDIN);
     vec($rin, $sifn, 1) = 1;
-    my $rfc = select($rout = $rin, undef, undef, 2);   # Ready File Count
+    my $rfc = select($rout = $rin, undef, undef, $to);   # Ready File Count
     $rfc != -1 or die "select failed: $!";
     $rfc == 0 or $rfc == 1
         or die "select indicated an unexpected number of ready files";
