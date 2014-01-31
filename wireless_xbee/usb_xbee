@@ -702,9 +702,6 @@ sub frame # {{{1
 
     my $epdl = length($epd);   # Escaped Payload Data Length
 
-    # FIXME: WORK POINT: check out every use of needs_escaped and verify
-    # that they all ok mentally at least
-
     my $lne = needs_escaped($epdl);   # Length Needs Escaped?
 
     my $efv = $lne ? $xflfv : $nxflfv;   # Escape Flag Value
@@ -1053,8 +1050,7 @@ if ( $cm ) {   # --command-mode {{{1
 
 elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
 
-    # FIXME: fix grammar 'these modes' if we do that way
-    # In raw mode we can't depend no synchronous responses from the XBee:
+    # In these modes we can't depend no synchronous responses from the XBee:
     # data could come in at any time, and when it does we want to get it to
     # our stdout ASAP.  At the same time, we want to allow the user to supply
     # data on stdin.  So we select() on both of these potential inputs and
