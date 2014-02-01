@@ -4,20 +4,39 @@
 # its --framed-lines-mode (which covers the other modes pretty well also).
 # It just continually sends random frames and checks the responses (in
 # --query-mode) or echos back received frames with a rotation applied to
-# the bytes (in --response-mode).  So if you run two instances (connected
-# to different XBees via different pseudo-terminal device files) for long
-# enough, you get good stress testing of the packetized communication and
+# the bytes (in --response-mode).  So if you run two instances connected
+# to different XBees in different terminals:
+#
+#   ./usb_xbee_test -d /dev/ttyUSB1 --response-mode
+#   ./usb_xbee_test -d /dev/ttyUSB0 --query-mode
+#
+# Over time you get good stress testing of the packetized communication and
 # frame features of usb_xbee (including eventual exposure of symmetric frame
-# code/decode bugs).  Note that in the presence of non-frame traffic on
-# the network/channel in use by the XBees, or noise, the executed usb_xbee
-# instance might fail for those reasons, without the failure being indicative
-# of a bug.
+# code/decode bugs).  Note that you must start the --response-mode instance
+# first, or the --query-mode one will deadlock at the start.
+#
+# In the presence of non-frame traffic on the network/channel in use by the
+# XBees, or noise, the executed usb_xbee instances might fail for those
+# reasons, without the failure being indicative of a bug.  This program
+# expects the channel to consist only of frame traffic, and doesn't handle
+# the failures that will occur in usb_xbee under other circumstances
+# (though it should be possible to do so).
+#
+# There are a couple tunable parameters buried in the code that are useful
+# for testing maximum packet sizes and such as well.
+
+# Pragmas and Modules {{{1
 
 use strict;
 
 use Getopt::Long qw( GetOptions );
 use IO::Handle;
 use IPC::Open2;
+use Time::HiRes qw( time );
+
+# }}}1
+
+# Process Command Line Options/Arguments {{{1
 
 my $help;   # True iff we should just print usage information and exit
 my $df;     # Device File
@@ -45,54 +64,117 @@ $qm xor $rm
     or die "exactly one of the --query-mode or -response-mode options".
            "must be given";
 
-sub random_payload # {{{1
+# }}}1
+
+sub almost_random_payload # {{{1
 {
-    # Produce a random payload that ends with newline (FIXME: more precise
-    # descrip).
+    # Produce a almost random payload that includes no newlines except a
+    # single one as the last byte.
 
     my $result = '';
-    
-    my $ps = 4;
+   
+    # Constants as dictated by our frame format and documented in usb_xbee
+    my $fsspl = 89;   # Frame Safe Safe Payload Length
+    my $fsapl = 44;   # Frame Safe Arbitrary Payload Length
+
+    my $ps = $fsapl;
+    # We can also test safe payloads of the maximum size using this line
+    # instead but then the rotation distance setting in almost_rotate_bytes()
+    # should be tweaked to not actually rotate, and the code below in the for
+    # loop in this function changes to produce only safe payload characters.
+    #my $ps = $fsspl;
 
     for ( my $ii = 0 ; $ii < $ps - 1 ; $ii++ )  {
-        $result .= chr(int(rand(9.999)) + 48);
+
+        # Compute payload that's random except for no newlines
+        my $mubv = 255;   # Maximum Unsigned Byte Value
+        my $eps = 0.00001;
+        my $rand_max = 255.0 - $eps;   # - $eps due to how perl rand() works
+        my $pnb;   # Potential Next Byte (as character)
+        do {
+            $pnb = chr(int(rand($rand_max)));
+        } until ( $pnb ne "\n" );
+        $result .= $pnb;
+
+        # Use this two values in this loop instead of the above to put just
+        # ordinary 0-9 digit characters in the payload:
+        #$result .= chr(int(rand(9.999)) + 48);
     }
 
-    $result .= "\n";
+    $result .= "\n";   # Add a single newline at the end
 
     return $result;
 } # }}}1
-   
-my $pid = open2(\*CHLD_OUT, \*CHLD_IN, "./usb_xbee -d $df -f")
-    or die "couldn't open usb_xbee process in currend dir for IO";
+
+sub almost_rotate_bytes # {{{1
+{
+    # Rotate the bytes of arg1 by an internally defined distance in direction
+    # arg2 along the ring formed by unsigned byte values, almost.  "Almost"
+    # because if a rotation would create or destroy newline byte value,
+    # we don't rotate that byte.
+
+    @_ == 2 or die "wrong number of arguments";
+    my ($bytes, $dir) = @_;
+
+    # Number of places by which to rotate the byte.  Note that this can be zero
+    # in which case no rotation occurs.
+    my $rd = 3;   # Rotation Distance
+    # FIXME: WORK POINT: fails when a real rotation is applied why?
+
+    my $ring_size = 256;   # Byte values form a ring mod 256
+
+    for ( my $ii = 0 ; $ii < length($bytes) ; $ii++ ) {
+        my $cb = ord(substr($bytes, $ii, 1));   # Current Byte
+        if ( $cb == ord("\n") ) {
+            next;
+        }
+        my $rb;   # Rotated Byte
+        if ( $dir eq 'forward' ) {
+            $rb = ($cb + $rd) % $ring_size;
+        }
+        elsif ( $dir eq 'reverse' ) {
+            $rb = ($cb - $rd) % $ring_size;
+        }
+        else {
+            die "BUG: rotation direction is neigher 'forward' nor 'reverse'";
+        }
+        #print $cb." ";
+        if ( $rb != ord("\n") ) {
+            substr($bytes, $ii, 1) = chr($rb);
+        }
+        #print $rb."\n";
+    }
+
+    return $bytes;
+} # }}}1
+
+my $uxbp = "./usb_xbee";   # usb_xbee Path
+my $pid = open2(\*CHLD_OUT, \*CHLD_IN, "$uxbp -d $df -f")
+    or die "couldn't open $uxbp process for IO";
 CHLD_OUT->autoflush(1);   # I think open2 does this, but just to be clear
 
-# FIXME: WORK POINT: well basic echo-back is working, but where is the
-# delay per iteration coming from?
-# These two commands:
-#   ./usb_xbee_test -d /dev/ttyUSB1 -r
-# then this one chatters:
-#   ./usb_xbee_test -d /dev/ttyUSB0 -q
-# of course that first one will block endlessly if it never gets an answer
-
-if ( $qm ) {
+if ( $qm ) {   # --query-mode {{{1
     while ( 1 ) {
-        my $rp = random_payload();
-        print CHLD_IN $rp;
-        print "sent: $rp";
-        my $tsb = '';   # Text Sent Back
-        read CHLD_OUT, $tsb, length($rp);
-        print "got back: $tsb";
-        print "\n";
+        my $arp = almost_random_payload();   # Almost Random Payload
+        print CHLD_IN $arp;
+        print "Sent frame... ";
+        STDOUT->flush();
+        my $rbsb = '';   # Rotated Bytes Sent Back
+        read CHLD_OUT, $rbsb, length($arp);
+        my $ubsb = almost_rotate_bytes($rbsb, "reverse");
+        $arp eq $ubsb
+            or die "bytes sent out didn't match rotated bytes sent back";
+        print "frame round trip succeeded\n";
     }
-}
-elsif ( $rm ) {
+} # }}}1
+elsif ( $rm ) {   # --response-mode {{{1
     while ( 1 ) {
         my $rxp = CHLD_OUT->getline();   # Recieved Payload
         not CHLD_OUT->error() or die "error receiving payload line";
-        print CHLD_IN $rxp;
+        print CHLD_IN almost_rotate_bytes($rxp, "forward");
+        print "Frame received and rotated version sent back out\n";
     }
-}
+} # }}}1
 else {
     die "shouldn't be here";
 }
