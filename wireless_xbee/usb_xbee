@@ -34,9 +34,9 @@ B<usb_xbee> --device=I<DEVICE> --command-mode
 
 B<usb_xbee> --device=I<DEVICE> --raw-mode
 
-B<usb_xbee> --device=I<DEVICE> --packetized-lines-mode
+B<usb_xbee> --device=I<DEVICE> --packetized-lines-mode [--xbee-ro=I<TIMEOUT>]
 
-B<usb_xbee> --device=I<DEVICE> --framed-lines-mode
+B<usb_xbee> --device=I<DEVICE> --framed-lines-mode [--xbee-ro=I<TIMEOUT>]
 
 =head1 DESCRIPTION
 
@@ -169,11 +169,7 @@ L<BUGS AND POTENTIAL WORK-AROUNDS> section.
 
 =item B<-p>, B<--packetized-lines-mode>
 
-WARNING: for this mode to perform as advertised, its a good idea to first use
-command mode to ensure that the packetization timeout configuration parameter
-is set to its maximum (0xFF), for example if your I<DEVICE> is /dev/ttyUSB0:
-
-  echo -e -n "ROFF\nWR\n" | ./usb_xbee -d /dev/ttyUSB0 -c
+WARNING: see also the description of the B<--xbee-ro> option.
 
 This mode is like raw mode, but it attempts to send each newline or end-of-file
 terminated line of input as a single radio packet.  If a line is too long
@@ -184,11 +180,7 @@ L<BUGS AND POTENTIAL WORK-AROUNDS> for more details.
 
 =item B<-f>, B<--framed-lines-mode>
 
-WARNING: for this mode to perform as advertised, its a good idea to first use
-command mode to ensure that the packetization timeout configuration parameter
-is set to its maximum (0xFF), for example if your I<DEVICE> is /dev/ttyUSB0:
-
-  echo -e -n "ROFF\nWR\n" | ./usb_xbee -d /dev/ttyUSB0 -c
+WARNING: see also the description of the B<--xbee-ro> option.
 
 This mode is like raw mode, but it attempts to send each newline or end-of-file
 terminated line of input as a single frame in the format described in
@@ -202,6 +194,26 @@ Received data is assumed to consist of frames in the same format (the payloads
 of which are printed to stdout as in raw mode).  Incoming data which
 cannot be interpreted as part of a frame will result in an error message
 and exit with a non-zero exit code.
+
+=item B<--xbee-r0>=I<TIMEOUT>
+
+Indicate that the packetization timeout (RO) configuration parameter of the
+XBee module being used has been set to I<TIMEOUT> (which must be a value in
+[0x00, 0xff]).  The default is 0x03, which is the default XBee configuration
+setting.  However, for more reliable operation in --packetized-lines-mode and
+--framed-lines-mode, you probably want to set RO to a larger value.  You can
+set it to its maximum using this command (if your I<DEVICE> is /dev/ttyUSB0):
+
+  echo -e -n "ROFF\nWR\n" | ./usb_xbee -d /dev/ttyUSB0 -c
+
+Note that --packetized-lines-mode and --frmamed-lines-mode cannot possibly work
+if R0 is set to 0x00, since that setting forces the XBee to transmit characters
+immediately on receipt.
+
+Note that setting RO to a larger value will generally increase the round-trip
+time required for a send-receive iteration between two XBees, since a longer
+delay will be required to force packetization.  See
+L<BUGS AND POTENTIAL WORK-AROUNDS> for more details.
 
 =back
 
@@ -257,8 +269,9 @@ http://www.labbookpages.co.uk/electronics/serialPort.html for details.
 I've tested the --packetized-lines-mode option in the presense of continuous
 byte-at-a-time traffic from a second source (a second XBee with RO set to 0x00,
 indicating send-at-once operation), and it "seems to work" (TM).  That is, the
-receiver (a third XBee) didn't see any cases where the incoming frame was
-interleaved with data from the byte-at-a-time source.  However...
+receiver (a third XBee) didn't see any cases where the transmitter believed
+its transmission had been fast enough and the incoming packet was interleaved
+with data from the byte-at-a-time source.  However...
 
 The measured time to syswrite() the data to the serial port is also much
 shorter than would be possible for the actual transmission of the bytes to the
@@ -362,6 +375,7 @@ my $help;   # True iff we should just print usage information and exit
 my $df;     # Device File
 my $cm;     # Command Mode
 my $rm;     # Raw Mode
+my $xbro;   # XBee RO
 my $plm;    # Packetized Lines Mode
 my $flm;    # Framed Lines Mode
 my $spm;    # Single packet Mode
@@ -371,6 +385,7 @@ GetOptions(
     "device-file|d=s"         => \$df,
     "command-mode|c"          => \$cm,
     "raw-mode|r"              => \$rm,
+    "xbee-ro=o"               => \$xbro,
     "packetized-lines-mode|p" => \$plm,
     "framed-lines-mode|f"     => \$flm,
     "single-packet-mode|s"    => \$spm )
@@ -381,6 +396,16 @@ if ( $help ) {
 }
 
 $df or die "--device-file option must be given";
+
+my $xbro_default = 0x03;   # Defaults to the XBee configuration default value
+defined($xbro) or $xbro = $xbro_default;
+$xbro >= 0x00 and $xbro <= 0xFF
+    or die "--xbee-ro option argument not in range [0x00, 0xff]";
+
+if ( $xbro == 0x00 and ($plm or $flm) ) {
+    die "--packetized-lines-mode and --framed-lines-mode cannot work with ".
+        "--xbee-ro=0x00";
+}
 
 # FIXXME: --single-packet-mode worked as far as it goes last time it was,
 # but we currently don't document it or recognize it as a valid mode when
@@ -577,23 +602,33 @@ sub send_single_packet # {{{1
     my $et = time();
 
     # Timing calculations.  See BUGS AND POTENTIAL WORK-AROUNDS in the POD.
-    my $ptb = 0xFF;   # Packetization Timeout in Bytes
     my $bpp = 8;      # Bits Per Byte
     my $bps = 9600;   # Bits Per Second
-    my $tr = $ptb * $bpp / $bps;   # Time Requirement (minimum time to send)
+    my $pts = $xbro * $bpp / $bps;   # Packetization Timeout in Seconds
     
     my $tmoe = 0.1;   # Time Margin Of Error
 
     # Did we make it fast enough?
-    if ( $et - $st > $tr * (1.0 - $tmoe) ) {
+    if ( $et - $st > $pts * (1.0 - $tmoe) ) {
         # It really might work next time, maybe OS won't interrupt us then :)
         return "failure: didn't get data written fast enough";
     }
 
+    # Now we want to delay long enough to make sure a transmission is forced.
+    # Here the factor of safely works the opposite direction of the one above,
+    # since we want to ensure that a transmission does happen.  Its also
+    # more conservative, since our estimation of what constitutes a single
+    # "character time" is a bit on the conservative side.
+    my $usps = 1000000;   # microSeconds Per Second
+    my $ptfs = 1.5;   # Packetization Time Factor of Safety
+    usleep($pts * $ptfs * $usps);
+
     return "success";
 } # }}}1
 
-# Frame related byte constants {{{1
+# Frame related constants {{{1
+
+# Special byte values
 my $frame_delimiter = 0x7e;
 my $escape          = 0x7d;   # This one is used in order to escape too :)
 my $xon             = 0x11;
@@ -601,6 +636,27 @@ my $xoff            = 0x13;
 my $xflfv           = 0xff;   # Xor'ed Frame Length Flag Value
 my $nxflfv          = 0x00;   # Not Xor'ed Frame Length Flag Value
 my $escape_modifier = 0x02;   # Escaped bytes are XOR'ed with this value
+
+# Maximum field sizes and espansion factor
+my $fdl   = 1;   # Frame Delimiter Length
+my $flfl  = 2;   # Frame Length Field Length (including flag byte but not CRC)
+my $fmcb  = 8;   # Frame Max Crc Bytes (after possible escaping)
+my $fmpef = 2;   # Frame Maximum Payload Expansion Factor (due to escaping)
+
+# Frame Safe Safe Payload Length
+my $fsspl = $mps - $fdl - $flfl - $fmcb;
+
+# FIXME: actually document this value in the POD
+$fsspl == 89
+    or die "frame safe safe payload length doesn't match documented value";
+
+# Frame Safe Arbitrary Payload Length
+my $fsapl = int($fsspl / $fmpef);
+
+# FIXME: actually document this value in the POD
+$fsapl == 44
+    or die "frame safe arbitrary payload length doesn't match documented value";
+
 # }}}1
 
 sub needs_escaped # {{{1
@@ -1141,8 +1197,7 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
                     my $sr = send_single_packet($dts);
                     if ( $sr eq "failure: got >$mps bytes (max radio packet ".
                                 "size) of input" ) {
-                        die "got more than $mps bytes in one line, can't ".
-                            "send that as a single packet";
+                        die "can't send >$mps bytes as a single packet";
                     }
                     elsif ( $sr eq "failure: didn't get data written fast ".
                                    "enough" ) {
