@@ -297,7 +297,10 @@ wx_restore_defaults (void)
   return TRUE;
 }
 
-// Factor of safety to use when delaying to force radio packet transmission
+// Factor of safety to use when delaying to force radio packet transmission.
+// We make this a little large since the character time might actually be
+// a bit greater than what we calculate in DELAY_TO_FORCE_TRANSMISSION()
+// due to start bits, padding etc.
 #define PACKETIZATION_TIMEOUT_FOS 1.5
 
 // Delay for long enough to force data already sent to the XBee to be
@@ -475,7 +478,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
   uint16_t et = 0;    // Elapsed Time
   uint8_t epl = 42;   // Escaped Payload Length  (bogus "= 42" for compiler)
   uint8_t epbr = 0;   // Escaped Payload Bytes Read (so far)
-    
+
   while ( et < timeout ) {
 
     if ( WX_BYTE_AVAILABLE () ) {
@@ -513,6 +516,10 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
 
           case FRAME_STATE_AT_LENGTH_XORED_FLAG:
             lxorfb = cb;
+            if ( lxorfb != WX_LENGTH_BYTE_XORED &&
+                 lxorfb != WX_LENGTH_BYTE_NOT_XORED ) {
+              return FALSE;   // This flag must be one of two possible values
+            }
             crc = _crc_ccitt_update (crc, lxorfb);
             fs = FRAME_STATE_AT_LENGTH_ITSELF;
             break;
@@ -567,11 +574,11 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
             break;
 
           case FRAME_STATE_IN_PAYLOAD:
+            crc = _crc_ccitt_update (crc, cb);
             if ( cb == ESCAPE ) {
               fs = FRAME_STATE_IN_PAYLOAD_ESCAPED;
             } 
             else {
-              crc = _crc_ccitt_update (crc, cb);
               ((uint8_t *) buf)[*rfps] = cb;
               (*rfps)++;
             }
@@ -585,7 +592,6 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
             break;
 
           case FRAME_STATE_IN_PAYLOAD_ESCAPED:
-            {  // C parser needs a block for a declaration in a case to work
               crc = _crc_ccitt_update (crc, cb);
               ((uint8_t *) buf)[*rfps] = cb ^ ESCAPE_MODIFIER;
               (*rfps)++;
@@ -593,11 +599,18 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
               if ( epbr == epl ) {
                 fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE;
               }
+              // FIXME: welllll we may need to go back to in payload
+              // (unescaped) here.
+              // FIXME: shouldn't this condition be predictable once we get the
+              // length?  Why are we only detecting it here?  Similar in 
+              // FRAME_STATE_IN_PAYLOAD handling
               else if ( *rfps == mfps ) {
                 return FALSE;   // Frame exceeded caller-supplied max size
               }
+              else {
+                fs = FRAME_STATE_IN_PAYLOAD;
+              }
               break;
-            }
 
           case FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE:
             if ( cb == ESCAPE ) {

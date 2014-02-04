@@ -205,18 +205,26 @@ wx_restore_defaults (void);
 #define WX_TRANSPARENT_MODE_MAX_PACKET_SIZE 100
 #define WX_TRANSPARENT_MODE_PACKETIZATION_TIMEOUT_BYTES 0x03
 
-// The length, CRC, and payload portions of frames will have the following
-// byte values escaped: 0x7E (ASCII '~'), 0x7D (ASCII '}'), 0x11 (ASCII
-// device control 1, and 0x13 (ASCII device control 3).  If the data
-// supplied to the frame transmission function contains many values
-// that need to be escaped, the escaped frame size can end up exceeding
-// WX_TRANSPARENT_MODE_MAX_PACKET_SIZE bytes.  However, the size of escaped
-// data is at most twice its unescaped size.  We therefore have this safe
-// size for an unescaped payload.
+// The CRC and payload portions of frames will have the following byte
+// values prefixed by an escape byte when they occur: 0x7E (ASCII '~'),
+// 0x7D (ASCII '}'), 0x11 (ASCII device control 1, and 0x13 (ASCII device
+// control 3).  If the data supplied to the frame transmission function
+// contains many values that need to be escaped, the escaped frame size can
+// end up exceeding WX_TRANSPARENT_MODE_MAX_PACKET_SIZE bytes.  However, the
+// size of escaped data is at most twice its unescaped size.  We therefore
+// have maximum safe sizes for unescaped payloads, and for unescaped payloads
+// that include no bytes that need to be escaped.
 #define WX_FRAME_DELIMITER_LENGTH 1   // Leading frame delimiter isn't escaped
+#define WX_FRAME_LENGTH_FIELD_LENGTH 2
+#define WX_FRAME_MAX_CRC_BYTES_WITH_ESCAPES 8
 #define WX_FRAME_MAX_PAYLOAD_EXPANSION_FACTOR 2
+#define WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE \
+  (   WX_TRANSPARENT_MODE_MAX_PACKET_SIZE \
+    - WX_FRAME_DELIMITER_LENGTH \
+    - wX_FRAME_LENGTH_FIELD_LENGTH \
+    - WX_FRAME_MAX_CRC_BYTES_WITH_ESCAPES )
 #define WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH \
-  ( (WX_TRANSPARENT_MODE_MAX_PACKET_SIZE - WX_FRAME_DELIMITER_LENGTH) / \
+  ( WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE / \
     WX_FRAME_MAX_PAYLOAD_ESCAPE_EXPANSION_FACTOR )
 
 // See below for details on these (you may not need to know).
