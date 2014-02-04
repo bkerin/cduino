@@ -22,6 +22,12 @@
 # the failures that will occur in usb_xbee under other circumstances
 # (though it should be possible to do so).
 #
+# On the other hand, a genuine failure in the frame escaping of bytes in
+# usb_xbee might result in this test driver hanging without an error message.
+# Only success has a well-defined meaning (it means perfectly formed packets
+# are being sent back and forth with all escaping and frame formatting
+# apparently working correctly).
+#
 # There are a couple tunable parameters buried in the code that are useful
 # for testing maximum packet sizes and such as well.
 
@@ -84,7 +90,8 @@ sub almost_random_payload # {{{1
     # We can also test safe payloads of the maximum size using this line
     # instead but then the rotation distance setting in almost_rotate_bytes()
     # should be tweaked to not actually rotate, and the code below in the for
-    # loop in this function changes to produce only safe payload characters.
+    # loop in this function changes to produce only safe payload characters
+    # (zero through nine for example).
     #my $ps = $fsspl;
 
     for ( my $ii = 0 ; $ii < $ps - 1 ; $ii++ )  {
@@ -138,16 +145,14 @@ sub rotate_byte # {{{1
     return ($bv + $dir * $dist) % $ring_size;   # Byte Rotated "Forward"
 } # }}}1
 
-
-
 sub almost_rotate_bytes # {{{1
 {
     # Rotate the bytes of arg1 by an internally defined distance in direction
     # arg2 along the ring formed by unsigned byte values, almost.  "Almost"
-    # because if a rotation in either direction (not just the specified
-    # one) would create or destroy newline byte value, we don't rotate that
-    # byte.  This allows us to successfuly talk to the usb_xbee program in
-    # --framed-lines mode, where newline mean end-of-frame.
+    # because if a rotation would create or destroy a newline byte value,
+    # we don't rotate that byte.  This allows us to successfuly talk to
+    # the usb_xbee program in --framed-lines mode (where newline means
+    # end-of-frame).
 
     @_ == 2 or die "wrong number of arguments";
     my ($bytes, $dir) = @_;
@@ -156,22 +161,16 @@ sub almost_rotate_bytes # {{{1
     # in which case no rotation occurs.
     my $rd = 93;   # Rotation Distance
 
-    # FIXME: WORK POINT: fails when a real rotation is applied why? rd =
-    # 93 fails only sometimes, 92 and 94 fail by exactly 1 or 2 in other
-    # dir respectively immediately, etc. hHMMMMMmmmm wtf
-
     for ( my $ii = 0 ; $ii < length($bytes) ; $ii++ ) {
 
         my $cb = ord(substr($bytes, $ii, 1));   # Current Byte
         
         my $prv = rotate_byte($cb, $dir, $rd);   # Prospective Rotated Value
 
-        if ( $cb == ord("\n") ) {
-            printf "not rotating byte $ii $dir from %i to %i\n", $cb, $prv;
+        if ( $cb == ord("\n") or $prv = ord("\n") ) {
             next;
         }
 
-        printf "rotating byte $ii $dir from %i to %i\n", $cb, $prv;
         substr($bytes, $ii, 1) = chr($prv);
     }
 
@@ -211,8 +210,10 @@ sub verify_child_health # {{{1
 # Finally, we propagate any SIGPIPE errors with a handler for that signal.
 # Which probably still leaves the possibility that we could hang trying
 # to read if our usb_xbee child decides to die at just the right instant.
-# It might be better to use the IPC::Run module from CPAN, or else alarm()
-# could be used in the parent (if this weren't just a test driver).
+# If this weren't just a test driver, it might be better to use the IPC::Run
+# module from CPAN, or perhaps open3, or else alarm() could be used in the
+# parent process, or IO::Socket::Timeout could be used to time the reads
+# from the child.
 
 my $uxbp = "./usb_xbee";   # usb_xbee Path
 $SIG{'PIPE'} = sub { confess $!; };
@@ -236,18 +237,16 @@ if ( $qm ) {   # --query-mode {{{1
         verify_child_health($pid);
         read CHLD_OUT, $rbsb, length($arp);
         my $ubsb = almost_rotate_bytes($rbsb, -1);
-        #$arp eq $ubsb
-        #    or die "bytes sent out didn't match rotated bytes sent back";
         if ( $arp ne $ubsb ) {
             print STDERR
                 "bytes sent out didn't match rotated bytes sent back:\n";
             length($arp) == length($ubsb)
                 or die "messages aren't the same length";
             for ( my $ii = 0 ; $ii < length($arp); $ii++ ) {
-                my $ob = ord(substr($arp, $ii, 1));    # Out Byte
-                my $bb = ord(substr($ubsb, $ii, 1));   # Back Byte
-                print STDERR "Byte $ii: out byte: $ob back byte: $bb\n";
-                $ob == $bb or last;
+                my $obv = ord(substr($arp, $ii, 1));    # Out Byte Value
+                my $bbv = ord(substr($ubsb, $ii, 1));   # Back Byte Value
+                print STDERR "Byte $ii: out value: $obv back value: $bbv\n";
+                $obv == $bbv or last;
             }
             exit 1;
         }
@@ -260,7 +259,8 @@ elsif ( $rm ) {   # --response-mode {{{1
         my $rxp = CHLD_OUT->getline();   # Recieved Payload
         not CHLD_OUT->error() or die "error receiving payload line";
         verify_child_health($pid);
-        print CHLD_IN almost_rotate_bytes($rxp, +1);
+        my $arb = almost_rotate_bytes($rxp, +1);   # Almost Rotated Bytes
+        print CHLD_IN $arb;
         print "Frame received and rotated version sent back out\n";
     }
 } # }}}1
