@@ -28,10 +28,13 @@
 # Pragmas and Modules {{{1
 
 use strict;
+use warnings FATAL => 'all';
 
+use Carp;
 use Getopt::Long qw( GetOptions );
 use IO::Handle;
 use IPC::Open2;
+use POSIX qw( :sys_wait_h );
 use Time::HiRes qw( time );
 
 # }}}1
@@ -86,19 +89,31 @@ sub almost_random_payload # {{{1
 
     for ( my $ii = 0 ; $ii < $ps - 1 ; $ii++ )  {
 
-        # Compute payload that's random except for no newlines
-        my $mubv = 255;   # Maximum Unsigned Byte Value
-        my $eps = 0.00001;
-        my $rand_max = 255.0 - $eps;   # - $eps due to how perl rand() works
-        my $pnb;   # Potential Next Byte (as character)
-        do {
-            $pnb = chr(int(rand($rand_max)));
-        } until ( $pnb ne "\n" );
-        $result .= $pnb;
+        # Other options include "zero through nine" and "printable chars"
+        # (including '}' which exercises escaping in our frame scheme).
+        my $tdt = "general bytes";       # Test Data Type
+        #my $tdt = "printable chars";     # Test Data Type
+        #my $tdt = "zero through nine";   #Test Data Type
 
-        # Use this two values in this loop instead of the above to put just
-        # ordinary 0-9 digit characters in the payload:
-        #$result .= chr(int(rand(9.999)) + 48);
+        if ( $tdt eq "general bytes") {
+            # Compute payload that's random except for no newlines
+            my $mubv = 255;   # Maximum Unsigned Byte Value
+            my $eps = 0.00001;
+            my $rand_max = 255.0 - $eps;   # - $eps due to how perl rand() works
+            my $pnb;   # Potential Next Byte (as character)
+            do {
+                $pnb = chr(int(rand($rand_max)));
+            } until ( $pnb ne "\n" );
+            $result .= $pnb;
+        }
+        elsif ( $tdt eq "printable chars" ) {
+            my $eps = 0.00001;
+            my $nc = chr(int(rand(126 - 33 - $eps)) + 33);   # New Char
+            $result .= $nc;
+        }
+        elsif ( $tdt eq "zero through nine" ) {
+            $result .= chr(int(rand(9.999)) + 48);
+        }
     }
 
     $result .= "\n";   # Add a single newline at the end
@@ -106,72 +121,146 @@ sub almost_random_payload # {{{1
     return $result;
 } # }}}1
 
+sub rotate_byte # {{{1
+{ 
+    # Given a byte value (as an integer), a rotation direction which must
+    # be either +1 or -1, and a rotation distance, return the byte value
+    # produced by rotating the given value on the ring formed by the unsigned
+    # byte values.
+
+    @_ == 3 or die "wrong number of arguments";
+    my ($bv, $dir, $dist) = @_;
+
+    my $ring_size = 256;   # Byte values form a ring mod 256
+
+    $dir == 1 or $dir == -1 or die "dir is neither +1 nor -1";
+
+    return ($bv + $dir * $dist) % $ring_size;   # Byte Rotated "Forward"
+} # }}}1
+
+
+
 sub almost_rotate_bytes # {{{1
 {
     # Rotate the bytes of arg1 by an internally defined distance in direction
     # arg2 along the ring formed by unsigned byte values, almost.  "Almost"
-    # because if a rotation would create or destroy newline byte value,
-    # we don't rotate that byte.
+    # because if a rotation in either direction (not just the specified
+    # one) would create or destroy newline byte value, we don't rotate that
+    # byte.  This allows us to successfuly talk to the usb_xbee program in
+    # --framed-lines mode, where newline mean end-of-frame.
 
     @_ == 2 or die "wrong number of arguments";
     my ($bytes, $dir) = @_;
 
     # Number of places by which to rotate the byte.  Note that this can be zero
     # in which case no rotation occurs.
-    my $rd = 3;   # Rotation Distance
-    # FIXME: WORK POINT: fails when a real rotation is applied why?
+    my $rd = 93;   # Rotation Distance
 
-    my $ring_size = 256;   # Byte values form a ring mod 256
+    # FIXME: WORK POINT: fails when a real rotation is applied why? rd =
+    # 93 fails only sometimes, 92 and 94 fail by exactly 1 or 2 in other
+    # dir respectively immediately, etc. hHMMMMMmmmm wtf
 
     for ( my $ii = 0 ; $ii < length($bytes) ; $ii++ ) {
+
         my $cb = ord(substr($bytes, $ii, 1));   # Current Byte
+        
+        my $prv = rotate_byte($cb, $dir, $rd);   # Prospective Rotated Value
+
         if ( $cb == ord("\n") ) {
+            printf "not rotating byte $ii $dir from %i to %i\n", $cb, $prv;
             next;
         }
-        my $rb;   # Rotated Byte
-        if ( $dir eq 'forward' ) {
-            $rb = ($cb + $rd) % $ring_size;
-        }
-        elsif ( $dir eq 'reverse' ) {
-            $rb = ($cb - $rd) % $ring_size;
-        }
-        else {
-            die "BUG: rotation direction is neigher 'forward' nor 'reverse'";
-        }
-        #print $cb." ";
-        if ( $rb != ord("\n") ) {
-            substr($bytes, $ii, 1) = chr($rb);
-        }
-        #print $rb."\n";
+
+        printf "rotating byte $ii $dir from %i to %i\n", $cb, $prv;
+        substr($bytes, $ii, 1) = chr($prv);
     }
 
     return $bytes;
 } # }}}1
 
+sub verify_child_health # {{{1
+{
+    # Try to verify that the child process mentioned as an argument is alive
+    # and well, confess'ing an error if it is not.
+
+    @_ == 1 or die "wrong number of arguments";
+    my ($cpid) = @_;
+
+    my $cs = waitpid $cpid, WNOHANG;
+    $cs == $cpid or return;   # Child hasn't changed state
+
+    if ( WIFEXITED($?) ) {
+        confess "child process exited with status code ".WEXITSTATUS($?);
+    }
+    elsif ( WIFSIGNALED($?) ) {
+        confess "child process died of signal ".WTERMSIG($?)
+    }
+} # }}}1
+
+# Start usb_xbee child process {{{1
+
+# There's some slightly gross stuff here.  We would like to detect if the
+# usb_xbee process fails, but open2 doesn't help us with that, it just wants
+# you to handle the SIGPIPE signal that you get when you try to write to
+# a nonexistent child.  But unfortunately, we seem to only get that signal
+# if we've waitpid()'ed for the dead child already.  And since we hope our
+# child will be alive, we can't do a blocking waitpid().  So we delay for a
+# short time then do a non-blocking one, to hopefully catch any quick failure
+# of usb_xbee.  Later in the program we check on the health of our child
+# with more non-blocking waitpid() calls before reading or writing from it.
+# Finally, we propagate any SIGPIPE errors with a handler for that signal.
+# Which probably still leaves the possibility that we could hang trying
+# to read if our usb_xbee child decides to die at just the right instant.
+# It might be better to use the IPC::Run module from CPAN, or else alarm()
+# could be used in the parent (if this weren't just a test driver).
+
 my $uxbp = "./usb_xbee";   # usb_xbee Path
+$SIG{'PIPE'} = sub { confess $!; };
 my $pid = open2(\*CHLD_OUT, \*CHLD_IN, "$uxbp -d $df -f")
     or die "couldn't open $uxbp process for IO";
 CHLD_OUT->autoflush(1);   # I think open2 does this, but just to be clear
+my $tafctfas = 1;   # Time Allowed For Child To Fail At Start
+sleep $tafctfas;
+verify_child_health($pid);
+
+# }}}1
 
 if ( $qm ) {   # --query-mode {{{1
     while ( 1 ) {
         my $arp = almost_random_payload();   # Almost Random Payload
+        verify_child_health($pid);
         print CHLD_IN $arp;
         print "Sent frame... ";
         STDOUT->flush();
         my $rbsb = '';   # Rotated Bytes Sent Back
+        verify_child_health($pid);
         read CHLD_OUT, $rbsb, length($arp);
-        my $ubsb = almost_rotate_bytes($rbsb, "reverse");
-        $arp eq $ubsb
-            or die "bytes sent out didn't match rotated bytes sent back";
+        my $ubsb = almost_rotate_bytes($rbsb, -1);
+        #$arp eq $ubsb
+        #    or die "bytes sent out didn't match rotated bytes sent back";
+        if ( $arp ne $ubsb ) {
+            print STDERR
+                "bytes sent out didn't match rotated bytes sent back:\n";
+            length($arp) == length($ubsb)
+                or die "messages aren't the same length";
+            for ( my $ii = 0 ; $ii < length($arp); $ii++ ) {
+                my $ob = ord(substr($arp, $ii, 1));    # Out Byte
+                my $bb = ord(substr($ubsb, $ii, 1));   # Back Byte
+                print STDERR "Byte $ii: out byte: $ob back byte: $bb\n";
+                $ob == $bb or last;
+            }
+            exit 1;
+        }
         print "frame round trip succeeded\n";
     }
 } # }}}1
 elsif ( $rm ) {   # --response-mode {{{1
     while ( 1 ) {
+        verify_child_health($pid);
         my $rxp = CHLD_OUT->getline();   # Recieved Payload
         not CHLD_OUT->error() or die "error receiving payload line";
-        print CHLD_IN almost_rotate_bytes($rxp, "forward");
+        verify_child_health($pid);
+        print CHLD_IN almost_rotate_bytes($rxp, +1);
         print "Frame received and rotated version sent back out\n";
     }
 } # }}}1
