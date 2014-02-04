@@ -426,7 +426,7 @@ not $spm
 # }}}1
 
 sysopen(UD, "$df", O_RDWR | O_SYNC)   # USB Device
-    or die "couldn't sysopen device file '$df' for read/write: $!";
+    or die "sysopen() of device file '$df' for read/write failed: $!";
 
 sub configure_tty # {{{1
 {
