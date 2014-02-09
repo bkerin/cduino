@@ -292,7 +292,7 @@ wx_put_data_frame (uint8_t count, void const *buf);
 uint8_t
 wx_put_string_frame (char const *str);
 
-// Spend up to timeout milliseconds trying to receive a frame with up to mfps
+// Spend about timeout milliseconds trying to receive a frame with up to mfps
 // (Maximum Frame Payload Size) unescaped payload bytes into buf.  The size of
 // the payload received is returned in *rfps (Received Frame Payload Size).
 // Regardless of the definedness of WX_ASSERT_SUCCESS, this routine returns
