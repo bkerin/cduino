@@ -350,14 +350,14 @@ needs_escaped (uint8_t byte)
 // real bytes).  This is probably most easily understood from its use context.
 #define PUT_POSSIBLY_ESCAPED_CRC_BYTES(crc16) \
   do { \
-    if ( needs_escaped (HIGH_BYTE (crc16)) ) { \
+    if ( UNLIKELY (needs_escaped (HIGH_BYTE (crc16))) ) { \
       WX_PUT_BYTE (ESCAPE); \
       WX_PUT_BYTE (HIGH_BYTE (crc16) ^ ESCAPE_MODIFIER); \
     } \
     else { \
       WX_PUT_BYTE (HIGH_BYTE (crc16)); \
     } \
-    if ( needs_escaped (LOW_BYTE (crc16)) ) { \
+    if ( UNLIKELY (needs_escaped (LOW_BYTE (crc16))) ) { \
       WX_PUT_BYTE (ESCAPE); \
       WX_PUT_BYTE (LOW_BYTE (crc16) ^ ESCAPE_MODIFIER); \
     } \
