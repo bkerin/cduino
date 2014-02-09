@@ -348,13 +348,13 @@ sub crc_ccitt_update # {{{1
     ($crc & 0xffff0000) == 0 or die "initial CRC value more than 16 bits wide";
     looks_like_number($bv)
         or confess "bug: perl doesn't think byte value is a number here"; 
-    ($bv  & 0xffffff00) == 0 or die "byte value more than 8 bits wide";
+    ($bv & 0xffffff00) == 0 or die "byte value more than 8 bits wide";
 
     $bv ^= (0xff & $crc);
     $bv ^= 0x00ff & ($bv << 4);
 
     return (
-        as_uint16(($bv << 8) | (0xff00 & $crc)) ^
+        as_uint16(($bv << 8) | ((0xff00 & $crc) >> 8)) ^
         as_uint8($bv >> 4) ^
         as_uint16($bv << 3) );
 } # }}}1
@@ -1003,7 +1003,6 @@ sub get_frame # {{{1
                     }
                     else {
                         if ( $cb != high_byte($crc) ) {
-                            die "hitting here with brackets";
                             return "failure: payload CRC error";
                         }
                         $fs = "at payload crc low byte";
