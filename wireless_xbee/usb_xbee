@@ -184,10 +184,12 @@ WARNING: see also the description of the B<--xbee-ro> option.
 
 This mode is like raw mode, but it attempts to send each newline or end-of-file
 terminated line of input as a single frame in the format described in
-wireless_xbee.h (see the wx_put_data_frame() in that file).  If an escaped line
-is too long (longer than 100 bytes) to transmit as a single frame, or if the
-timing requirements for single-packet transmission aren't met, this program
-prints an error message and exits with a non-zero exit code.  See
+wireless_xbee.h (see the wx_put_data_frame() in that file).  A frame payload
+can consist of up to 44 bytes of arbitrary data (100% bytes that require
+escaping), or 89 bytes of safe data (0% bytes that require escaping).  If an
+escaped line is too long (longer than 100 bytes) to transmit as a single frame,
+or if the timing requirements for single-packet transmission aren't met, this
+program prints an error message and exits with a non-zero exit code.  See
 L<BUGS AND POTENTIAL WORK-AROUNDS> for more details.
 
 Received data is assumed to consist of frames in the same format (the payloads
@@ -292,7 +294,8 @@ Then again, perhaps the OS-side kernel squirrels the data away in a buffer of
 its own (despite the O_SYNC option having been used when the device file was
 opened).  In that case, the OS might subsequently be interrupted in such a way
 that the frams data doesn't make it out as a single RF packet afterall.  Our
-timer will fail to detect this failure :( FIXME: investigate this issue.
+timer will fail to detect this failure :(  FIXXME: it should be possible to
+determine for sure how this works.
 
 =item *
 
@@ -646,14 +649,12 @@ my $fmpef = 2;   # Frame Maximum Payload Expansion Factor (due to escaping)
 # Frame Safe Safe Payload Length
 my $fsspl = $mps - $fdl - $flfl - $fmcb;
 
-# FIXME: actually document this value in the POD
 $fsspl == 89
     or die "frame safe safe payload length doesn't match documented value";
 
 # Frame Safe Arbitrary Payload Length
 my $fsapl = int($fsspl / $fmpef);
 
-# FIXME: actually document this value in the POD
 $fsapl == 44
     or die "frame safe arbitrary payload length doesn't match documented value";
 
