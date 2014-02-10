@@ -9,26 +9,30 @@
 // with the XBee.  It features high-level support for a few configuration
 // parameters that people are most likely to desire to change, some low-level
 // functions for people who need to do more extensive XBee reconfiguration,
-// and some data Tx and Rx macros which just use the underlying serial
-// interface.
+// some data Tx and Rx macros which just use the underlying serial interface,
+// and a higher-level Tx/Rx interface featuring atomic data frames.
 //
 // Though this module should not be dependent on any particular shield,
 // the Sparkfun XBee Shield (Sparkfun part number WRL-10854) was used
 // for development.  Its available on its own, or as part of the Sparkfun
 // "XBee Wireless Kit Retail" (Sparkfun part number RTL-11445), which also
 // includes the actual XBee modules and a stand-alone miniature USB XBee
-// interface board known as an "XBee Explorer USB" as well.  This last is
-// a must-have for development IMO.  Make sure to get a USB Type A to USB
-// Mini-B cable as well, it isn't included in the kit.
+// interface board known as an "XBee Explorer USB" (Sparkfun part number
+// WRL-08687) as well.  This last is a must-have for development IMO.
+// Make sure to get a USB Type A to USB Mini-B cable as well, it isn't
+// included in the kit.  Alternatively (if you aren't getting the whole kit)
+// you can grab an XBee Explorer Dongle (Sparkfun part number WRL-09819),
+// then you don't need the cable.
 //
 // The directory for this module contains a perl script called usb_xbee that
-// can be used to configure or send/receive data to/from an XBee Explorer or
-// XBee USB dongle.  You can view its documentation using
+// can be used to configure or send/receive data to/from an XBee Explorer
+// or XBee USB dongle.  You can view its documentation using
 //
 //    pod2text usb_xbee  | less
 //
 // or so.  The test driver in wireless_xbee_test.c depends on this script
-// for some of its testing.
+// for some of its testing.  The list of tested XBee modules given in the
+// usb_xbee documentation applies to this interface as well.
 //
 // Sparkfun has IMO the best information page for XBee modules:
 //
@@ -47,11 +51,14 @@
 // the XBee, the edit-compile-debug process is easier if you use in-system
 // programming for upload, rather than the serial port.  There are some clues
 // about how to do this near the CHKP_PD4() macro in wireless_xbee_test.c
-// Otherwise, make sure to take note of the tiny switch on the WRL-10854:
-// it needs to be in the DLINE position for serial programming to work,
-// and the UART position for communication between the Arduino and the
-// XBee to work.  So you'll end up toggling the switch twice and pushing
-// the reset button once per edit-compile-debug cycle.
+// Otherwise, make sure to take note of the tiny switch on the WRL-10854
+// XBee Shield: it needs to be in the DLINE position for serial programming
+// to work, and the UART position for communication between the Arduino
+// and the XBee to work.  So you'll end up toggling the switch twice and
+// pushing the reset button once per edit-compile-debug cycle.  I believe
+// the same goes for many other XBee shields, including the official
+// Arduino one, though it gives the switch positions different names (see
+// http://arduino.cc/en/Main/ArduinoWirelessShield).
 
 #ifndef WIRELESS_XBEE_H
 #define WIRELESS_XBEE_H
@@ -217,11 +224,11 @@ wx_restore_defaults (void);
 #define WX_FRAME_DELIMITER_LENGTH 1   // Leading frame delimiter isn't escaped
 #define WX_FRAME_LENGTH_FIELD_LENGTH 2
 #define WX_FRAME_MAX_CRC_BYTES_WITH_ESCAPES 8
-#define WX_FRAME_MAX_PAYLOAD_EXPANSION_FACTOR 2
+#define WX_FRAME_MAX_PAYLOAD_ESCAPE_EXPANSION_FACTOR 2
 #define WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE \
   (   WX_TRANSPARENT_MODE_MAX_PACKET_SIZE \
     - WX_FRAME_DELIMITER_LENGTH \
-    - wX_FRAME_LENGTH_FIELD_LENGTH \
+    - WX_FRAME_LENGTH_FIELD_LENGTH \
     - WX_FRAME_MAX_CRC_BYTES_WITH_ESCAPES )
 #define WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH \
   ( WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE / \
@@ -282,13 +289,14 @@ wx_restore_defaults (void);
 //
 uint8_t
 wx_put_data_frame (uint8_t count, void const *buf);
+// FIXME: should my name change to just put_frame?
 
 // Convenience wrappar around wx_put_data_frame().  If NUL-terminated
-// string str is longer than UINT8_MAX - 1 (which is too long to go in
-// one of our frames anyway) an assertion violation will be triggered.
-// The str argument must be NUL-terminated.  The trailing NUL is transmitted
-// as part of the data frame (assuming the escaped frame isn't too long,
-// see wx_put_data_frame()).
+// string str is longer than UINT8_MAX - 1 (which is too long to go in one
+// of our frames anyway) an assertion violation will be triggered.  The str
+// argument must be NUL-terminated.  The trailing NUL is transmitted as part
+// of the data frame (assuming the resulting escaped frame isn't too long).
+// See the underlying wx_put_data_frame() description for more details).
 uint8_t
 wx_put_string_frame (char const *str);
 
@@ -296,18 +304,26 @@ wx_put_string_frame (char const *str);
 // (Maximum Frame Payload Size) unescaped payload bytes into buf.  The size of
 // the payload received is returned in *rfps (Received Frame Payload Size).
 // Regardless of the definedness of WX_ASSERT_SUCCESS, this routine returns
-// TRUE immediately if a full frame is successfully received, and false
-// otherwise.  Any partial or corrupt frame data received from the XBee is
-// effectively discarded, though some of it might end up getting written into
-// *buf. Note that retries are not only possible but probably essential in
-// this context: we start listening for asynchronous transmissions at some
-// random time, and may want to do other things occasionally, which might
-// cause us to miss other data.  Note also that leading non-frame (or partial
-// frame) data may be discarded even if a frame is successfully retrieved.
+// TRUE if a full frame is successfully received, and false otherwise.
+// Any partial or corrupt frame data received from the XBee is effectively
+// discarded, though some of it might end up getting written into *buf. Note
+// that retries are not only possible but probably essential in this context:
+// we start listening for asynchronous transmissions at some random time,
+// and may want to do other things occasionally, which might cause us to
+// miss other data.  Note also that leading non-frame (or partial frame)
+// data may be discarded even if a frame is successfully retrieved.
 // Its reasonable to first use WX_BYTE_AVAILABLE() from a polling loop to
 // determine when it might be worthwhile to call this routine.
 uint8_t
 wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout);
+
+// Spend about timeout milliseconds trying to receive a frame containing
+// a string of up to msl characters into str.  A trailing NUL byte is
+// automatically added if the incoming string doesn't already end with one.
+// The memory pointed to by str should be at least msl + 1 bytes long (for
+// the possible trailing NUL).  This is a thin wrapper around wx_get_frame().
+uint8_t
+wx_get_string_frame (uint8_t msl, char *str, uint16_t timeout);
 
 ///////////////////////////////////////////////////////////////////////////////
 //

@@ -1,4 +1,9 @@
-
+// Test/demo for the wireless_xbee.h interface.
+//
+// Unlike many other Cduino test programs, this one doesn't blink the on-board
+// PB5 LED, but instead requires you to connect a led from Digital 4 (PD4)
+// to ground.  For much of the testing an second XBee tranciever and external
+// software driver are also required, see the details below.
 
 #include <assert.h>
 #include <stdlib.h>  // FIXME: probably only needed for broken assert.h 
@@ -9,34 +14,36 @@
 #include "util.h"
 #include "wireless_xbee.h"
 
-// FIXME: probably put a pointer to this story somewhere else too?:
-// The below macro is like the CHKP() macro from util.h, but it used pin
+// The below macro is like the CHKP() macro from util.h, but it uses pin
 // Digital 4 (aka PD4 in ATmega328P-speak).  Why, you ask?  Well, here's
 // the story:
 //
-//   The (FIXME: XBee shielf ref) uses the hardware serial port to talk to the
-//   XBee module.  Therefore:
+//   The Sparkfun XBee Shield (Sparkfun part number WRL-10854) uses the
+//   hardware serial port to talk to the XBee module (so do all other XBee
+//   shield sthat I'm aware of).  Therefore:
 //
 //   Your host computer cannot use serial-over-USB to program the Arduino
-//   unless you flip the tiny switch on the (FIXME: shield ref) to the 'DLINE'
-//   position.  After uploading you have to switch it back and push the tiny
-//   reset button.  This gets old fast.  Therefore:
+//   unless you flip the tiny switch on the shield to the 'DLINE' position.
+//
+//   After uploading you have to switch it back and push the tiny reset
+//   button.  This gets old fast.  Therefore:
 //
 //   You might want to use an AVRISPmkII to upload this test driver (assuming
 //   you'll be developing off it).  The build system supports this (see the
 //   description near UPLOAD_METHOD in generic.mk for warnings and details).
 //   However, you'll discover that the plug won't fit in the in-system
-//   programming header with the (FIXME: shield ref) fully installed. DO NOT
-//   try to use the (FIXME: shield ref) without it being fully plugged in,
-//   I can testify from experience that this can result in flaky connections
-//   and much frustration.  Instead, just use a set of stacking blocks
-//   (ref: where to get them) to raise the (FIXME: shield ref) up high
-//   enough that the ISP cable will fit.  Don't have extra stacking blocks?
-//   Then read on...
+//   programming header with the Sparkfun WRL-10854 fully installed (the
+//   official Arduino XBee shield might be better in this regard, as they
+//   have been leading the charge towards using longer tails on the stacking
+//   blocks). DO NOT try to use the shield without it being fully plugged
+//   in, I can testify that this can result in flaky connections and much
+//   frustration.  Instead, just use a set of stacking blocks to raise the
+//   shield up high enough that the ISP cable will fit.  Don't have extra
+//   stacking blocks?  Then read on...
 //
 //   I found that my Official Arduino Motor Shield R3 has long tails and
 //   leaves the ISP header unconnected, so I just plugged that in under the
-//   (FIXME: shield ref).  But the motor shield uses PB5 for its own purposes
+//   Sparkfun WRL-10854.  But the motor shield uses PB5 for its own purposes
 //   and I didn't want to confuse it, hence this macro.  If you remember
 //   to add a LED from PD4 to ground (with a current-limiting resistor if
 //   you're feeling prim and proper) you'll have a nice working test setup
@@ -51,12 +58,15 @@ main (void)
   wx_init ();
 
   char co[WX_MCOSL];   // Command Output
-  uint8_t sentinel;    // For sentinel values returned by functions
-
+  
   // The AT command which queries the current baud setting returns a string
   // containing a particular number followed by a carriage return ('\r')
   // to mean 9600 baud (and wx_com() will strip off the trailing '\r' for us).
 #define STRING_MEANING_9600_BAUD "3"
+
+// FIXME: first tests disabled for now
+co[0] = co[0];
+#if 0
 
   // Check that the current baud setting is 9600.  This is the default setting
   // for the XBee modules, and is the only setting this interface supports,
@@ -88,7 +98,7 @@ main (void)
 #define OTHER_POSSIBLE_DEFAULT_CHANNEL_STRING "C"
 #define NON_DEFAULT_NETWORK_ID_STRING "3342"
 #define NON_DEFAULT_CHANNEL_STRING "14"
-  
+
   // Test wx_ensure_network_id_set_to()
   sentinel = wx_ensure_network_id_set_to (NON_DEFAULT_NETWORK_ID);
   assert (sentinel);
@@ -117,7 +127,61 @@ main (void)
   // This first batch of checkpoint blinks mean all the setup stuff worked :)
   CHKP_PD4 ();
 
-  // FIXME: test over-the-air here, and explain somewhere how to set up
+#endif
+
+  float tbt_ms = 1000;   // Time Between Tests (in milliseconds)
+  
+  _delay_ms (tbt_ms);
+
+  // The remainder of this test program depends on having a Sparkfun XBee
+  // Explorer USB (Sparkfun part number WRL-08687) or equivalent (probably any
+  // USB adapter based on the FTDI FT232RL will work) and a copy of usb_xbee
+  // running in framed lines mode.  If you're Explorer is associated with
+  // device file /dev/ttyUSB0 (see the POD documentation in usb_xbee for a
+  // way to check) invocation would look like this:
+  //
+  //   ./usb_xbee -d /dev/ttyUSB0 -f
+  //
+  // Now we repeatedly send out prompts for the answer, blinking a light
+  // whenever we get it (the answer being 42 of course :).  Regardless of
+  // the answer given, we echo each received string back out.
+
+  while ( 1 ) {
+
+    uint8_t sentinel = wx_put_string_frame ("What is the answer?\n"); 
+    assert (sentinel);
+
+    uint16_t tpp_ms = 2042;   // Time Per Prompt (in milliseconds)
+
+    // Ok, some of the interface macros are long and ugly.  Here's a short
+    // ugly alias for our private use: Max Payload Length For Us.
+#define MPLFU WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE   
+    // Testing of frames of maximum length, with many escape characters, etc.
+    // is handled largely from usb_xbee_test, but in case you want to try to
+    // verify that such frames always work on the C side you can use these
+    // line instead of the above.
+//#define MPLFU WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH 
+  
+    char rstr[MPLFU + 1];   // Received string
+
+    sentinel = wx_get_string_frame(MPLFU + 1, rstr, tpp_ms);
+    if ( ! sentinel ) {
+      // Timeouts, bad frames, all sorts of errors end up getting eaten
+      // here FIXXME: the frame function should probably do some sort of
+      // error propagation.
+      continue;
+    }
+
+#define THE_ANSWER "42\n"
+
+    if ( ! strcmp (rstr, THE_ANSWER) ) {
+      CHKP_PD4 ();
+    }
+
+    sentinel = wx_put_string_frame (rstr);
+    assert (sentinel);
+  }
+
   // transmit from USB thingy to test other half of it.  Also explain blinky
   // test conditions at top of this file probably.
 }

@@ -1,4 +1,4 @@
-// Implementation of the interface described in wireless_xbee.h.
+// Implementation of the interface escribed in wireless_xbee.h.
 
 // We're using assert() to handle errors, we can't let clients turn it off.
 #ifdef NDEBUG
@@ -85,7 +85,7 @@ wx_enter_at_command_mode (void)
   UART_PUT_BYTE ('+');
   UART_PUT_BYTE ('+');
   _delay_ms (dwmms);
-  
+
   // This probably goes without saying, but we have to assert it somewhere
   assert (WX_MCOSL < UINT8_MAX); 
     
@@ -388,8 +388,8 @@ wx_put_data_frame (uint8_t count, void const *buf)
     }
   }
 
-  // Compute the length field byes and the CRC that covers the frame delimiter
-  // and length bytes
+  // Compute the length field bytes and the CRC that covers the frame
+  // delimiter and length bytes
   uint8_t lxorfb;   // Lenght XOR'ed Flag Byte
   uint8_t pxlb;     // Possibley Xor'ed Length Byte
   lcrc = _crc_ccitt_update (lcrc, FRAME_DELIMITER);
@@ -470,14 +470,60 @@ wx_put_string_frame (char const *str)
 #define FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE_ESCAPED  13
 #define FRAME_STATE_COMPLETE                         14
 
+// This chunk of code can be compared to the avr libc _crc_ccitt_update
+// behavior.  There is a commented out block in wx_get_frame() that can be
+// used to drive this function.  FIXXME: commented out sections should go
+// away eventually.
+/*
+#define lo8(arg) ((uint8_t) (0x00ff & arg))
+#define hi8(arg) ((uint8_t) ((0xff00 & arg) >> 8))
+static uint16_t
+crc_ccitt_update (uint16_t crc, uint8_t data)
+{
+  data ^= lo8 (crc);
+  data ^= data << 4;
+  
+  return (
+      (((uint16_t) data << 8) | hi8 (crc)) ^
+      (uint8_t) (data >> 4) ^
+      ((uint16_t) data << 3) );
+}
+*/
+
 uint8_t
 wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
 {
-  uint8_t fs = FRAME_STATE_OUTSIDE_FRAME;  // Frame State
-  uint16_t crc = CRC_INITIAL_VALUE;        // Cyclic Redundany Check value
+  uint8_t fs = FRAME_STATE_OUTSIDE_FRAME;   // Frame State
+  uint16_t crc = CRC_INITIAL_VALUE;         // Cyclic Redundany Check value
   uint16_t et = 0;    // Elapsed Time
   uint8_t epl = 42;   // Escaped Payload Length  (bogus "= 42" for compiler)
   uint8_t epbr = 0;   // Escaped Payload Bytes Read (so far)
+
+  *rfps = 0;   // We've received nothing so far
+
+  // Commented out code useful for comparing crc_ccitt_update to the builtin
+  // _crc_ccitt_update routine
+  {
+    /*
+    uint16_t tcrc1 = CRC_INITIAL_VALUE;
+    uint16_t tcrc2 = CRC_INITIAL_VALUE;
+    tcrc1 = _crc_ccitt_update (tcrc1, '4');
+    tcrc1 = _crc_ccitt_update (tcrc1, '2');
+    tcrc1 = _crc_ccitt_update (tcrc1, '\n');
+    tcrc2 = crc_ccitt_update (tcrc2, '4');
+    tcrc2 = crc_ccitt_update (tcrc2, '2');
+    tcrc2 = crc_ccitt_update (tcrc2, '\n');
+    if ( tcrc1 == tcrc2 ) {
+      CHKP_PD4 ();
+    }
+    if ( tcrc1 == 0xf6b4 ) {
+      CHKP_PD4 ();
+    }
+    */
+  }
+
+  // FIXME: WORK POINT: escaped characters aren't making the round trip
+  // correctly.
 
   while ( et < timeout ) {
 
@@ -491,6 +537,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
       uint8_t lxorfb = 42;   // Length XOR'ed Flag Byte (bogus initialization)
 
       if ( cb == FRAME_DELIMITER ) {
+        crc = _crc_ccitt_update (crc, cb);
         // A frame delimiter should only occur unescaped when we aren't
         // already reading a frame.  If we see it elsewhere it means corrupt
         // data.  Since this is an an error from every frame state except
@@ -501,7 +548,6 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
         if ( fs != FRAME_STATE_OUTSIDE_FRAME ) {
           return FALSE;
         }
-        crc = _crc_ccitt_update (crc, cb);
         fs = FRAME_STATE_AT_LENGTH_XORED_FLAG;
       }
 
@@ -514,19 +560,28 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
 
         switch ( fs ) {
 
+          // FIXME: move the frame state advance in here, that way we really
+          // will ignore leading garbage as advertised in the interface
+          case FRAME_STATE_OUTSIDE_FRAME:
+            if ( cb == FRAME_DELIMITER ) {
+              crc = _crc_ccitt_update (crc, cb);
+              fs = FRAME_STATE_AT_LENGTH_XORED_FLAG;
+            }
+            break;
+
           case FRAME_STATE_AT_LENGTH_XORED_FLAG:
+            crc = _crc_ccitt_update (crc, cb);
             lxorfb = cb;
             if ( lxorfb != WX_LENGTH_BYTE_XORED &&
                  lxorfb != WX_LENGTH_BYTE_NOT_XORED ) {
               return FALSE;   // This flag must be one of two possible values
             }
-            crc = _crc_ccitt_update (crc, lxorfb);
             fs = FRAME_STATE_AT_LENGTH_ITSELF;
             break;
 
           case FRAME_STATE_AT_LENGTH_ITSELF:
+            crc = _crc_ccitt_update (crc, cb);
             epl = cb;
-            crc = _crc_ccitt_update (crc, epl);
             if ( lxorfb == WX_LENGTH_BYTE_XORED ) {
               epl ^= ESCAPE_MODIFIER;
             }
@@ -599,11 +654,10 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
               if ( epbr == epl ) {
                 fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE;
               }
-              // FIXME: welllll we may need to go back to in payload
-              // (unescaped) here.
-              // FIXME: shouldn't this condition be predictable once we get the
-              // length?  Why are we only detecting it here?  Similar in 
-              // FRAME_STATE_IN_PAYLOAD handling
+              // FIXXME: we could detect this error once we get as far as 
+              // reading the length in the frame, but wasting a little time
+              // reading the frame bytes probably doesn't make much difference
+              // at least given our current very coarse error reporting scheme
               else if ( *rfps == mfps ) {
                 return FALSE;   // Frame exceeded caller-supplied max size
               }
@@ -661,12 +715,11 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
     }
 
     else {
-      // FIXME: we are spending "about" rather than "up to" here
       // If there isn't any data ready to read, wait a little bit and
       // try again.  1 ms is reasonably here since its about the time the
       // serial port takes to receive a character at 9600 baud (see the BUGS
       // AND POTENTIAL WORK-AROUNDS section of the POD text in the usb_xbee
-      // perl script for the timing calculations).  Not that it matter much,
+      // perl script for the timing calculations).  Not that it matters much,
       // since its a busy wait anyway.
       uint16_t const poll_interval_ms = 1;
       _delay_ms (poll_interval_ms);
@@ -676,4 +729,22 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
   }
 
   return FALSE;   // Timeout
+}
+
+uint8_t
+wx_get_string_frame (uint8_t msl, char *str, uint16_t timeout)
+{
+  uint8_t bytes_received;
+  uint8_t sentinel = wx_get_frame (msl + 1, &bytes_received, str, timeout);
+  if ( ! sentinel ) {
+    return FALSE;
+  }
+  if ( str[bytes_received - 1] != '\0' ) {
+    if ( bytes_received == msl ) {
+      return FALSE;   // Client hasn't provided a big enough buffer str
+    }
+    str[bytes_received] = '\0';
+  }
+  
+  return TRUE;
 }
