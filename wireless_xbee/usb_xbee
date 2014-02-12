@@ -638,7 +638,7 @@ my $xon             = 0x11;
 my $xoff            = 0x13;
 my $xflfv           = 0xff;   # Xor'ed Frame Length Flag Value
 my $nxflfv          = 0x00;   # Not Xor'ed Frame Length Flag Value
-my $escape_modifier = 0x02;   # Escaped bytes are XOR'ed with this value
+my $escape_modifier = 0x20;   # Escaped bytes are XOR'ed with this value
 
 # Maximum field sizes and espansion factor
 my $fdl   = 1;   # Frame Delimiter Length
