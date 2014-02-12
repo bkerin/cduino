@@ -145,6 +145,13 @@ co[0] = co[0];
   // Now we repeatedly send out prompts for the answer, blinking a light
   // whenever we get it (the answer being 42 of course :).  Regardless of
   // the answer given, we echo each received string back out.
+  //
+  // Note that if this test program is started on the Arduino before usb_xbee
+  // is started, usb_xbee may fail at startup complaining about a timeout
+  // before receiving a full frame.  This is expected and correct behavior.
+  // Just try starting it again.  It might also fail later if there is
+  // non-frame radio data floating around on the network/channel in use.
+  // Its supposed to do that.
 
   while ( 1 ) {
 
@@ -164,10 +171,13 @@ co[0] = co[0];
   
     char rstr[MPLFU + 1];   // Received string
 
-    sentinel = wx_get_string_frame(MPLFU + 1, rstr, tpp_ms);
+    sentinel = wx_get_string_frame (MPLFU + 1, rstr, tpp_ms);
     if ( ! sentinel ) {
+      // In kindness to other caller, we do this to get rid of any leftover
+      // data and clear the UART error flags after a failure.
+      WX_UART_FLUSH_RX_BUFFER ();
       // Timeouts, bad frames, all sorts of errors end up getting eaten
-      // here FIXXME: the frame function should probably do some sort of
+      // here FIXXME: the frame functions should probably do some sort of
       // error propagation.
       continue;
     }
@@ -182,6 +192,4 @@ co[0] = co[0];
     assert (sentinel);
   }
 
-  // transmit from USB thingy to test other half of it.  Also explain blinky
-  // test conditions at top of this file probably.
 }

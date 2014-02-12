@@ -44,9 +44,11 @@ wx_init (void)
 static char
 get_char (void)
 {
-  UART_WAIT_FOR_BYTE ();
-  HANDLE_ERRORS (! UART_RX_ERROR ());
-  return UART_GET_BYTE ();
+  WX_WAIT_FOR_BYTE ();
+  // FIXME: well, HANDLE_ERRORS doesn't flush the RX buffer/clear errors.
+  // should it?
+  HANDLE_ERRORS (! WX_UART_RX_ERROR ());
+  return WX_GET_BYTE ();
 }
 
 static uint8_t
@@ -81,9 +83,9 @@ wx_enter_at_command_mode (void)
   // This magic sequence should send us into AT command mode
   float const dwmms = 1142;   // Delay With Margin (in ms) -- AT requires 1 s
   _delay_ms (dwmms);
-  UART_PUT_BYTE ('+');
-  UART_PUT_BYTE ('+');
-  UART_PUT_BYTE ('+');
+  WX_PUT_BYTE ('+');
+  WX_PUT_BYTE ('+');
+  WX_PUT_BYTE ('+');
   _delay_ms (dwmms);
 
   // This probably goes without saying, but we have to assert it somewhere
@@ -109,15 +111,15 @@ put_command (char const *command)
   // are automatically added to the supplied command.  This resulting bytes
   // are sent.  This routine doesn't wait for a response.
 
-  UART_PUT_BYTE ('A');
-  UART_PUT_BYTE ('T');
+  WX_PUT_BYTE ('A');
+  WX_PUT_BYTE ('T');
 
   uint8_t csl = strlen (command);   // Command String Length
   for ( uint8_t ii = 0 ; ii < csl ; ii++ ) {
-    UART_PUT_BYTE (command[ii]);
+    WX_PUT_BYTE (command[ii]);
   }
 
-  UART_PUT_BYTE ('\r');
+  WX_PUT_BYTE ('\r');
 }
 
 static uint8_t
@@ -430,11 +432,11 @@ wx_put_data_frame (uint8_t count, void const *buf)
   for ( ii = 0 ; ii < count ; ii++ ) {
     // NOTE: we're using fall-through behavior of C switch statement here
     if ( needs_escaped (((uint8_t *) buf)[ii]) ) {
-        UART_PUT_BYTE (ESCAPE);
-        UART_PUT_BYTE (((uint8_t *) buf)[ii] ^ ESCAPE_MODIFIER);
+        WX_PUT_BYTE (ESCAPE);
+        WX_PUT_BYTE (((uint8_t *) buf)[ii] ^ ESCAPE_MODIFIER);
     }
     else{
-      UART_PUT_BYTE (((uint8_t *) buf)[ii]);
+      WX_PUT_BYTE (((uint8_t *) buf)[ii]);
     }
   }
   PUT_POSSIBLY_ESCAPED_CRC_BYTES (pcrc);
@@ -522,22 +524,31 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
     */
   }
 
-  // FIXME: WORK POINT: escaped characters aren't making the round trip
-  // correctly.
-
   while ( et < timeout ) {
 
     if ( WX_BYTE_AVAILABLE () ) {
-
-      if ( UART_RX_ERROR () ) {
+      
+      if ( WX_UART_RX_ERROR () ) {
+        if ( WX_UART_RX_FRAME_ERROR () ) {
+          WX_UART_FLUSH_RX_BUFFER ();
+          // FIXXME: could propagate error from here
+        }
+        // This can actually happen pretty easily if we abort early due
+        // to a CRC error (bad or non-frame data) on a previous read.
+        // Flushing the buffer here is sort of a weird courtesy particular
+        // to this function, and shouldn't be required now given the approach
+        // prescribed in the interface (see wireless_xbee.h).
+        if ( WX_UART_RX_DATA_OVERRUN_ERROR () ) {
+          WX_UART_FLUSH_RX_BUFFER ();
+          // FIXXME: could propagate error from here
+        }
         return FALSE;   // UART says somethig bad happened
       }
 
-      uint8_t cb = UART_GET_BYTE ();   // Current Byte
+      uint8_t cb = WX_GET_BYTE ();   // Current Byte
       uint8_t lxorfb = 42;   // Length XOR'ed Flag Byte (bogus initialization)
-
+          
       if ( cb == FRAME_DELIMITER ) {
-        crc = _crc_ccitt_update (crc, cb);
         // A frame delimiter should only occur unescaped when we aren't
         // already reading a frame.  If we see it elsewhere it means corrupt
         // data.  Since this is an an error from every frame state except
@@ -548,169 +559,162 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
         if ( fs != FRAME_STATE_OUTSIDE_FRAME ) {
           return FALSE;
         }
-        fs = FRAME_STATE_AT_LENGTH_XORED_FLAG;
       }
-
       // The XON and XOFF bytes should never occur unescaped in a frame
       else if ( fs != FRAME_STATE_OUTSIDE_FRAME && (cb == XON || cb == XOFF) ) {
         return FALSE;
       }
+ 
+      switch ( fs ) {
 
-      else {
-
-        switch ( fs ) {
-
-          // FIXME: move the frame state advance in here, that way we really
-          // will ignore leading garbage as advertised in the interface
-          case FRAME_STATE_OUTSIDE_FRAME:
-            if ( cb == FRAME_DELIMITER ) {
-              crc = _crc_ccitt_update (crc, cb);
-              fs = FRAME_STATE_AT_LENGTH_XORED_FLAG;
-            }
-            break;
-
-          case FRAME_STATE_AT_LENGTH_XORED_FLAG:
+        case FRAME_STATE_OUTSIDE_FRAME:
+          if ( cb == FRAME_DELIMITER ) {
             crc = _crc_ccitt_update (crc, cb);
-            lxorfb = cb;
-            if ( lxorfb != WX_LENGTH_BYTE_XORED &&
-                 lxorfb != WX_LENGTH_BYTE_NOT_XORED ) {
-              return FALSE;   // This flag must be one of two possible values
-            }
-            fs = FRAME_STATE_AT_LENGTH_ITSELF;
-            break;
+            fs = FRAME_STATE_AT_LENGTH_XORED_FLAG;
+          }
+          break;
 
-          case FRAME_STATE_AT_LENGTH_ITSELF:
-            crc = _crc_ccitt_update (crc, cb);
-            epl = cb;
-            if ( lxorfb == WX_LENGTH_BYTE_XORED ) {
-              epl ^= ESCAPE_MODIFIER;
-            }
-            fs = FRAME_STATE_AT_LENGTH_CRC_HIGH_BYTE;
-            break;
+        case FRAME_STATE_AT_LENGTH_XORED_FLAG:
+          crc = _crc_ccitt_update (crc, cb);
+          lxorfb = cb;
+          if ( lxorfb != WX_LENGTH_BYTE_XORED &&
+               lxorfb != WX_LENGTH_BYTE_NOT_XORED ) {
+            return FALSE;   // This flag must be one of two possible values
+          }
+          fs = FRAME_STATE_AT_LENGTH_ITSELF;
+          break;
 
-          case FRAME_STATE_AT_LENGTH_CRC_HIGH_BYTE:
-            if ( cb == ESCAPE ) {
-              fs = FRAME_STATE_AT_LENGTH_CRC_HIGH_BYTE_ESCAPED;
-            }
-            else {
-              if ( cb != HIGH_BYTE (crc) ) {
-                return FALSE;   // CRC of frame delimiter and length failed
-              }
-              fs = FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE;
-            }
-            break;
+        case FRAME_STATE_AT_LENGTH_ITSELF:
+          crc = _crc_ccitt_update (crc, cb);
+          epl = cb;
+          if ( lxorfb == WX_LENGTH_BYTE_XORED ) {
+            epl ^= ESCAPE_MODIFIER;
+          }
+          fs = FRAME_STATE_AT_LENGTH_CRC_HIGH_BYTE;
+          break;
 
-          case FRAME_STATE_AT_LENGTH_CRC_HIGH_BYTE_ESCAPED:
-            if ( (cb ^ ESCAPE_MODIFIER) != HIGH_BYTE (crc) ) {
-              return FALSE;
+        case FRAME_STATE_AT_LENGTH_CRC_HIGH_BYTE:
+          if ( cb == ESCAPE ) {
+            fs = FRAME_STATE_AT_LENGTH_CRC_HIGH_BYTE_ESCAPED;
+          }
+          else {
+            if ( cb != HIGH_BYTE (crc) ) {
+              return FALSE;   // CRC of frame delimiter and length failed
             }
             fs = FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE;
-            break;
-          
-          case FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE:
-            if ( cb == ESCAPE ) {
-              fs = FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE_ESCAPED;
-            }
-            else {
-              if ( cb != LOW_BYTE (crc) ) {
-                return FALSE;   // CRC of frame delimiter and length failed
-              }
-              crc = CRC_INITIAL_VALUE;  // Reset for later use on payload
-              fs = FRAME_STATE_IN_PAYLOAD;
-            }
-            break;
-          
-          case FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE_ESCAPED:
-            if ( (cb ^ ESCAPE_MODIFIER) != LOW_BYTE (crc) ) {
-              return FALSE;
+          }
+          break;
+
+        case FRAME_STATE_AT_LENGTH_CRC_HIGH_BYTE_ESCAPED:
+          if ( (cb ^ ESCAPE_MODIFIER) != HIGH_BYTE (crc) ) {
+            return FALSE;
+          }
+          fs = FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE;
+          break;
+        
+        case FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE:
+          if ( cb == ESCAPE ) {
+            fs = FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE_ESCAPED;
+          }
+          else {
+            if ( cb != LOW_BYTE (crc) ) {
+              return FALSE;   // CRC of frame delimiter and length failed
             }
             crc = CRC_INITIAL_VALUE;  // Reset for later use on payload
             fs = FRAME_STATE_IN_PAYLOAD;
-            break;
+          }
+          break;
+        
+        case FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE_ESCAPED:
+          if ( (cb ^ ESCAPE_MODIFIER) != LOW_BYTE (crc) ) {
+            return FALSE;
+          }
+          crc = CRC_INITIAL_VALUE;  // Reset for later use on payload
+          fs = FRAME_STATE_IN_PAYLOAD;
+          break;
 
-          case FRAME_STATE_IN_PAYLOAD:
+        case FRAME_STATE_IN_PAYLOAD:
+          crc = _crc_ccitt_update (crc, cb);
+          if ( cb == ESCAPE ) {
+            fs = FRAME_STATE_IN_PAYLOAD_ESCAPED;
+          } 
+          else {
+            ((uint8_t *) buf)[*rfps] = cb;
+            (*rfps)++;
+          }
+          epbr++;
+          if ( epbr == epl ) {
+            fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE;
+          }
+          else if ( *rfps == mfps ) {
+            return FALSE;   // Frame exceeded caller-supplied max size
+          }
+          break;
+
+        case FRAME_STATE_IN_PAYLOAD_ESCAPED:
             crc = _crc_ccitt_update (crc, cb);
-            if ( cb == ESCAPE ) {
-              fs = FRAME_STATE_IN_PAYLOAD_ESCAPED;
-            } 
-            else {
-              ((uint8_t *) buf)[*rfps] = cb;
-              (*rfps)++;
-            }
+            ((uint8_t *) buf)[*rfps] = cb ^ ESCAPE_MODIFIER;
+            (*rfps)++;
             epbr++;
             if ( epbr == epl ) {
               fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE;
             }
+            // FIXXME: we could detect this error once we get as far as 
+            // reading the length in the frame, but wasting a little time
+            // reading the frame bytes probably doesn't make much difference
+            // at least given our current very coarse error reporting scheme
             else if ( *rfps == mfps ) {
               return FALSE;   // Frame exceeded caller-supplied max size
             }
-            break;
-
-          case FRAME_STATE_IN_PAYLOAD_ESCAPED:
-              crc = _crc_ccitt_update (crc, cb);
-              ((uint8_t *) buf)[*rfps] = cb ^ ESCAPE_MODIFIER;
-              (*rfps)++;
-              epbr++;
-              if ( epbr == epl ) {
-                fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE;
-              }
-              // FIXXME: we could detect this error once we get as far as 
-              // reading the length in the frame, but wasting a little time
-              // reading the frame bytes probably doesn't make much difference
-              // at least given our current very coarse error reporting scheme
-              else if ( *rfps == mfps ) {
-                return FALSE;   // Frame exceeded caller-supplied max size
-              }
-              else {
-                fs = FRAME_STATE_IN_PAYLOAD;
-              }
-              break;
-
-          case FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE:
-            if ( cb == ESCAPE ) {
-              fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE_ESCAPED;
-            }
             else {
-              if ( cb != HIGH_BYTE (crc) ) {
-                return FALSE;   // CRC failed
-              }
-              fs = FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE;
+              fs = FRAME_STATE_IN_PAYLOAD;
             }
             break;
 
-          case FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE_ESCAPED:
-            if ( (cb ^ ESCAPE_MODIFIER) != HIGH_BYTE (crc) ) {
-              return FALSE;
+        case FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE:
+          if ( cb == ESCAPE ) {
+            fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE_ESCAPED;
+          }
+          else {
+            if ( cb != HIGH_BYTE (crc) ) {
+              return FALSE;   // CRC failed
             }
             fs = FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE;
-            break;
+          }
+          break;
 
-          case FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE:
-            if ( cb == ESCAPE ) {
-              fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE_ESCAPED;
-            }
-            else {
-              if ( cb != LOW_BYTE (crc) ) {
-                return FALSE;   // CRC failed
-              }
-              // Frame is complete and correct.  Note that we don't ever
-              // need to actually set fs to FRAME_STATE_COMPLETE.
-              return TRUE;  
-            }
-            break;
+        case FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE_ESCAPED:
+          if ( (cb ^ ESCAPE_MODIFIER) != HIGH_BYTE (crc) ) {
+            return FALSE;
+          }
+          fs = FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE;
+          break;
 
-          case FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE_ESCAPED:
-            if ( (cb ^ ESCAPE_MODIFIER) != LOW_BYTE (crc) ) {
-              return FALSE;
+        case FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE:
+          if ( cb == ESCAPE ) {
+            fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE_ESCAPED;
+          }
+          else {
+            if ( cb != LOW_BYTE (crc) ) {
+              return FALSE;   // CRC failed
             }
             // Frame is complete and correct.  Note that we don't ever need
             // to actually set fs to FRAME_STATE_COMPLETE.
             return TRUE;  
+          }
+          break;
 
-          default:
-            assert (0);   // Shouldn't be here
-            break;
-        }
+        case FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE_ESCAPED:
+          if ( (cb ^ ESCAPE_MODIFIER) != LOW_BYTE (crc) ) {
+            return FALSE;
+          }
+          // Frame is complete and correct.  Note that we don't ever need
+          // to actually set fs to FRAME_STATE_COMPLETE.
+          return TRUE;  
+
+        default:
+          assert (0);   // Shouldn't be here
+          break;
       }
     }
 

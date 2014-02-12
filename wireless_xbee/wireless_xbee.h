@@ -186,6 +186,7 @@ wx_restore_defaults (void);
 #define WX_UART_RX_FRAME_ERROR()        UART_RX_FRAME_ERROR()
 #define WX_UART_RX_DATA_OVERRUN_ERROR() UART_RX_DATA_OVERRUN_ERROR()
 #define WX_GET_BYTE()                   UART_GET_BYTE()
+#define WX_UART_FLUSH_RX_BUFFER()       UART_FLUSH_RX_BUFFER()
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -306,14 +307,43 @@ wx_put_string_frame (char const *str);
 // Regardless of the definedness of WX_ASSERT_SUCCESS, this routine returns
 // TRUE if a full frame is successfully received, and false otherwise.
 // Any partial or corrupt frame data received from the XBee is effectively
-// discarded, though some of it might end up getting written into *buf. Note
-// that retries are not only possible but probably essential in this context:
-// we start listening for asynchronous transmissions at some random time,
-// and may want to do other things occasionally, which might cause us to
-// miss other data.  Note also that leading non-frame (or partial frame)
-// data may be discarded even if a frame is successfully retrieved.
-// Its reasonable to first use WX_BYTE_AVAILABLE() from a polling loop to
-// determine when it might be worthwhile to call this routine.
+// discarded, though some of it might end up getting written into *buf.
+// This function grabs a slice of incoming data starting when called and
+// ending when either a valid frame is received, or a frame that has been
+// started (due to the appearance of a frame delimiter in the data stream)
+// turns out to be invalid.  Therefore:
+//
+//   * Callers must be prepared to retry.  A frame could easily cross the
+//     timeout boundry, and therefore not be received properly.
+//
+//   * Transmitters must be prepared to resend their message (until they
+//     get some sort of acknowledgement).
+//
+//   * Leading non-frame (or partial fram) data may be discarded even if a
+//     frame is eventually received successfully.
+//
+//   * If this function fails, it probably a good idea to call
+//     WX_UART_FLUSH_RX_BUFFER() before attempting to receive any additional
+//     data.  A data overrun can easily occur after such a failure, which will
+//     leave WX_UART_RX_ERROR() true, which might confuse other functions that
+//     check for errors when a byte is available.  Well-written functions
+//     should flush the buffer themselves when they encounter the error,
+//     but the results can still be confusing since that other function will
+//     be seeing an error that's left over after the call to this function.
+//     Note that the actual return from this function doesn't take much
+//     time on success or failure (its fast enough that successive calls can
+//     pick up successive frames sent in the same radio packet).  Its just
+//     that when failure occurs, other things tend to be need doing that
+//     cause enough delay that a serial overrun occurs.  The same thing
+//     can happen with success if there's extra radio data floating around
+//     and your polling loop isn't tight enough.  In other words, this is
+//     just a particularly likely instance of the general class of problems
+//     that can occurn when you don't poll fast enough and fail to flush
+//     the receiver buffer and clear error flags after a failure.
+//
+//   * Its reasonable to first use WX_BYTE_AVAILABLE() from a polling loop to
+//     determine when it might be worthwhile to call this routine.
+//
 uint8_t
 wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout);
 
