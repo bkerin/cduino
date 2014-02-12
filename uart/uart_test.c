@@ -69,10 +69,12 @@ main (void)
       // Handle receiver errors
       if ( UART_RX_ERROR () ) {
         if ( UART_RX_FRAME_ERROR () ) {
-          // Do something?
+          UART_FLUSH_RX_BUFFER ();
+          // Do something?  Propagate error?
         } 
         if ( UART_RX_DATA_OVERRUN_ERROR () ) {
-          // Do something?
+          UART_FLUSH_RX_BUFFER ();
+          // Do something?  Propagate error?
         }
         // Hope we aren't here.  We could try to print an error...
         assert (0);

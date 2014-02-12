@@ -1,14 +1,14 @@
 // Interface to hardware serial port (UART) controller.
 //
 // Test driver: uart_test.c    Implementation: uart.c
+//
+// This module supports serial port initialization and byte transfer using
+// polling (i.e. busy waits, not interrupts).
 
 #ifndef UART_H
 #define UART_H
 
 #include <avr/io.h>
-
-// This module supports serial port initialization and byte transfer using
-// polling (i.e. busy waits, not interrupts).
 
 // F_CPU is supposed to be defined in the Makefile (because that's where
 // the other part and programmer specs go).
@@ -42,20 +42,41 @@ uart_init (void);
 
 // This macro evaluates to true iff there is a receiver error flag set.
 // This should be called immediately after UART_BYTE_AVAILABLE() or
-// UART_WIAT_FOR_BYTE() and before UART_GET_BYTE().  FIXXME: if we supported
-// parity mode, we would need to check for UPE0 bit as well.
+// UART_WIAT_FOR_BYTE() and before UART_GET_BYTE().  When a receiver
+// error is detected, the receive buffer should be flushed using
+// UART_FLUSH_RX_BUFFER() before any other attempt to use the UART (except
+// for the UART_RX_FRAME_ERROR() and UART_RX_DATA_OVERRUN_ERROR() macros).
+// Flushing the receive buffer clears the error flags (rendering error details
+// unrecoverable).  Not clearing the flag can result in confusing errors
+// later, and/or endless failure of other function that try to read data.
+// FIXXME: if we supported parity mode, we would need to check for the UPE0
+// bit as well.
 #define UART_RX_ERROR() (UCSR0A & (_BV (FE0) | _BV (DOR0)))
 
-// These macros evaluate to true iff particular receiver error flags are set.
-// They can be used after or instead of UART_RX_ERROR() to determine the
-// detailed cause of the error.
+// This macro evaluates to true when the frame error flag is set (indicating
+// that a stop bit failed to be 1).
 #define UART_RX_FRAME_ERROR() (UCSR0A & _BV (FE0))
+
+// This macro evaluates to true when the receiver buffer overflow flag it set.
+// The receiver buffer is only two bytes deep, so this can easily occur if
+// you don't poll the serial port fast enough.
 #define UART_RX_DATA_OVERRUN_ERROR() (UCSR0A & _BV (DOR0))
 
 // Get the byte that is ready to be recieved.  This should only be used after
-// UART_BYTE_AVAILABLE() evaluate to true or UART_WAIT_FOR_BYTE() completes.
-// Using this macro clears the error flags underlying the UART_RX_ERROR_*()
-// macros.
+// UART_BYTE_AVAILABLE() evaluates to true or UART_WAIT_FOR_BYTE() completes.
+// Using this macro will probably clear the error flags underlying the
+// UART_RX_ERROR_*() macros, but UART_FLUSH_RX_BUFFER() is the certain way
+// to do that.
 #define UART_GET_BYTE() UDR0
+
+// Flush the receive buffer.  This should be called after a receiver error
+// has occurred.
+#define UART_FLUSH_RX_BUFFER() \
+  do { \
+    uint8_t XxX_dummy; \
+    while ( UART_BYTE_AVAILABLE() ) { \
+      XxX_dummy = UART_GET_BYTE (); \
+    } \
+  } while ( 0 );
 
 #endif // UART_H
