@@ -2,7 +2,7 @@
 //
 // Test driver: adc_test.c    Implementation: adc.c
 //
-// This interface This interface always uses a 125 kHz ADC clock.
+// This interface always uses a 125 kHz ADC clock.
 //
 // See the ATMega328P datasheet for details of other options.
 
