@@ -67,6 +67,9 @@
 
 #include "uart.h"
 
+
+///////////////////////////////////////////////////////////////////////////////
+//
 // About Errror Handling
 //
 // This module really doesn't do much of it.  It just returns true on succes,
