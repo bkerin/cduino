@@ -119,7 +119,7 @@ wx_init (void);
 // Enter AT command mode by doing the sleep-send_+++-sleep ritual.  NOTE: the
 // XBee module will automatically drop out of command mode after 10 seconds
 // (unless the AT CT command has been used to reconfigure the module with
-// a non-default timeout).  Returns true on success, false otherwise.  It 
+// a non-default timeout).  Returns true on success, false otherwise.
 uint8_t
 wx_enter_at_command_mode (void);
 
@@ -235,7 +235,7 @@ wx_restore_defaults (void);
   ( WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE / \
     WX_FRAME_MAX_PAYLOAD_ESCAPE_EXPANSION_FACTOR )
 
-// See below for details on these (you may not need to know).
+// See below for details on these (you may not need to know)
 #define WX_LENGTH_BYTE_XORED     0xff
 #define WX_LENGTH_BYTE_NOT_XORED 0x00
 
