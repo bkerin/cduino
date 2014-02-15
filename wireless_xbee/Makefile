@@ -20,15 +20,12 @@ ARDUINO_BOOTLOADER = optiboot_atmega328.hex
 # macro definition in wireless_sbee_test.c for details.
 #
 # WARNING: using this will make normal serial Arduino programming impossible
-# until the Arduino bootloader is reloaded, see the discussion in hte Upload
+# until the Arduino bootloader is reloaded, see the discussion in the Upload
 # Method of generik.mk for details.
 #UPLOAD_METHOD = AVRISPmkII
 
 include generic.mk
 
-# Start a screen session connected to the FIXME: part number here XBee
-# USB dongle.
-.PHONY: dongle_screen
-dongle_screen:
-	# FIXME: fix the hardwiredness here probably
-	screen -S dongle_screen /dev/ttyUSB0
+# Uncomment this to build the test program for bulk testing with
+# usb_xbee_test.  See the comments in wireless_xbee_test.c for details.
+#CPPFLAGS += -DAUTOMATIC_TESTING_WITH_USB_XBEE_TEST
