@@ -175,8 +175,9 @@ This mode is like raw mode, but it attempts to send each newline or end-of-file
 terminated line of input as a single radio packet.  If a line is too long
 (longer than 100 bytes) to transmit as a single frame, or if the timing
 requirements for single-packet transmission aren't met, this program prints
-an error message and exits with a non-zero exit code.  See
-L<BUGS AND POTENTIAL WORK-AROUNDS> for more details.
+an error message and exits with a non-zero exit code.  Note that no trailing
+NUL byte is added or transmitted.  See L<BUGS AND POTENTIAL WORK-AROUNDS> for
+more details.
 
 =item B<-f>, B<--framed-lines-mode>
 
@@ -203,14 +204,17 @@ Indicate that the packetization timeout (RO) configuration parameter of the
 XBee module being used has been set to I<TIMEOUT> (which must be a value in
 [0x00, 0xff]).  The default is 0x03, which is the default XBee configuration
 setting.  However, for more reliable operation in --packetized-lines-mode and
---framed-lines-mode, you probably want to set RO to a larger value.  You can
-set it to its maximum using this command (if your I<DEVICE> is /dev/ttyUSB0):
+--framed-lines-mode, you may want to set RO to a larger value.  WARNING: if you use an XBee module that has had its RO parameter changed from the Arduino side,
+you need to change the definition of
+WX_TRANSPARENT_MODE_PACKETIZATION_TIMEOUT_BYTES in wireless_xbee.h as well.
+You can change R0 to its maximum using this command (assuming your I<DEVICE> is
+/dev/ttyUSB0):
 
   echo -e -n "ROFF\nWR\n" | ./usb_xbee -d /dev/ttyUSB0 -c
 
-Note that --packetized-lines-mode and --frmamed-lines-mode cannot possibly work
+Note that --packetized-lines-mode and --framed-lines-mode cannot possibly work
 if R0 is set to 0x00, since that setting forces the XBee to transmit characters
-immediately on receipt.
+immediately as soon as it gets them.
 
 Note that setting RO to a larger value will generally increase the round-trip
 time required for a send-receive iteration between two XBees, since a longer
@@ -605,8 +609,8 @@ sub send_single_packet # {{{1
     my $et = time();
 
     # Timing calculations.  See BUGS AND POTENTIAL WORK-AROUNDS in the POD.
-    my $bpp = 8;      # Bits Per Byte
-    my $bps = 9600;   # Bits Per Second
+    my $bpp = 8.0;      # Bits Per Byte
+    my $bps = 9600.0;   # Bits Per Second
     my $pts = $xbro * $bpp / $bps;   # Packetization Timeout in Seconds
     
     my $tmoe = 0.1;   # Time Margin Of Error
@@ -743,7 +747,7 @@ sub frame # {{{1
     }
     # }}}2
 
-    # Add frame delimiter, begin delimiter + length CRC calculation {{{2 
+    # Begin delimiter + length CRC calculation, add frame delimiter {{{2 
 
     $lcrc = crc_ccitt_update($lcrc, $frame_delimiter);    # Updata CRC
     $fd .= pack "C", $frame_delimiter;
@@ -1151,6 +1155,8 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
                     STDOUT->flush();   # Flush output (avoid any buffering)
                 }
                 elsif ( $flm ) {
+                    # FIXME: think about and justify this number.  It seems
+                    # reasonable but it needs explained.
                     my $to = 200;   # Timeout (milliseconds) for whole frame
                     my $fp;   # Frame Payload
                     my $result = get_frame(\$fp, $to);
@@ -1187,6 +1193,14 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
 
                 if ( $flm ) {
                     $dts = frame($il);
+                    # This can be used instead of the above to verify that
+                    # the microcontroller wx_get_frame() can read to frames
+                    # in the same packer (to verify it recovers fast enough).
+                    #$dts = frame($il).frame($il);
+                    # This can be used instead of the above to test the effects
+                    # of non-frame data before the start of the frame (supposed
+                    # to work except for a bogus delimiter of course).
+                    #$dts = "wewogwj324}}}".frame($il);
                     $dts or die "BUG: frame() returned false";
                 }
                 else {
