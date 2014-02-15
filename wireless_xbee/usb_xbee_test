@@ -1,19 +1,32 @@
 #!/usr/bin/perl -w
 
-# This is a test script to exercise the usb_xbee program, in particular
-# its --framed-lines-mode (which covers the other modes pretty well also).
-# It just continually sends random frames and checks the responses (in
-# --query-mode) or echos back received frames with a rotation applied to
-# the bytes (in --response-mode).  So if you run two instances connected
-# to different XBees in different terminals:
+# vim:foldmethod=marker
+
+# This is a test script to exercise the usb_xbee program and wireless_xbee
+# module, in particular the frame/--framed-lines-mode functionality (which
+# covers the other functionality indirectly).  It just continually sends
+# random frames and checks the responses (in --query-mode) or echos back
+# received frames with a rotation applied to the bytes (in --response-mode).
+# So if you run two instances connected to different XBees in different
+# terminals:
 #
 #   ./usb_xbee_test -d /dev/ttyUSB1 --response-mode
 #   ./usb_xbee_test -d /dev/ttyUSB0 --query-mode
 #
-# Over time you get good stress testing of the packetized communication and
-# frame features of usb_xbee (including eventual exposure of symmetric frame
-# code/decode bugs).  Note that you must start the --response-mode instance
-# first, or the --query-mode one will deadlock at the start.
+# Over time you get good stress testing of the packetized communication
+# and frame features of usb_xbee (including eventual exposure of symmetric
+# frame code/decode bugs).  Note that you must start the --response-mode
+# instance first, or it will miss the first transmission from the --query-mode
+# instance and so never respond, causing the --query-mode instance to time
+# out at the start.
+
+# You can also use --response-mode to test the wireless_xbee arduino module.
+# To do this the wireless_xbee_test.c program must first be rebuilt with
+# AUTOMATIC_TESTING_WITH_USB_XBEE_TEST defined (there is a normally commented
+# out line in the Makefile for the wireless_xbee module which will do this).
+# Next, the usb_xbee_test must be invoked like this:
+#
+#   ./usb_xbee_test -d /dev/ttyUSB0 --query-mode --no-byte-rotation
 #
 # In the presence of non-frame traffic on the network/channel in use by the
 # XBees, or noise, the executed usb_xbee instances might fail for those
@@ -22,11 +35,11 @@
 # the failures that will occur in usb_xbee under other circumstances
 # (though it should be possible to do so).
 #
-# On the other hand, a genuine failure in the frame escaping of bytes in
-# usb_xbee might result in this test driver hanging without an error message.
-# Only success has a well-defined meaning (it means perfectly formed packets
-# are being sent back and forth with all escaping and frame formatting
-# apparently working correctly).
+# On the other hand, a genuine failure in the frame machinery might result
+# in this test driver hanging without an error message.  Only success has
+# a well-defined meaning (it means perfectly formed packets are being sent
+# back and forth with all escaping, frame formatting, and CRC code apparently
+# working correctly).
 #
 # There are a couple tunable parameters buried in the code that are useful
 # for testing maximum packet sizes and such as well.
@@ -50,22 +63,28 @@ use Time::HiRes qw( time );
 my $help;   # True iff we should just print usage information and exit
 my $df;     # Device File
 my $qm;     # Query Mode
+my $nbr;    # No Byte Rotation
 my $rm;     # Response Mode
 
 GetOptions(
-    "help|?"          => \$help,
-    "device-file|d=s" => \$df,
-    "query-mode|q"    => \$qm,
-    "response-mode|r" => \$rm )
-    or die "usb_xbee: GetOptions Failed, try usb_xbee --help";
+    "help|?"             => \$help,
+    "device-file|d=s"    => \$df,
+    "query-mode|q"       => \$qm,
+    "no-byte-rotation|n" => \$nbr,
+    "response-mode|r"    => \$rm )
+    or die "usb_xbee: GetOptions() Failed, try usb_xbee --help";
 
 if ( $help ) {
-    print "Usage:\n".
-          "    ./usb_xbee_test --device=*DEVICE* --query-mode\n".
-          "\n".
-          "    ./usb_xbee_test --device=*DEVICE* --response-mode\n".
-          "\n".
-          "See the comments in the source for details.\n";
+    print <<END_USAGE;
+Usage:
+    ./usb_xbee_test --device=*DEVICE* --query-mode
+
+    ./usb_xbee_test --device=*DEVICE* --response-mode
+
+    ./usb_xbee_test --device=*DEVICE* --query-mode --no-byte-rotation
+
+See the comments in the source for details.
+END_USAGE
     exit 0;
 }
 
@@ -100,7 +119,7 @@ sub almost_random_payload # {{{1
         # (including '}' which exercises escaping in our frame scheme).
         my $tdt = "general bytes";       # Test Data Type
         #my $tdt = "printable chars";     # Test Data Type
-        #my $tdt = "zero through nine";   #Test Data Type
+        #my $tdt = "zero through nine";   # Test Data Type
 
         if ( $tdt eq "general bytes") {
             # Compute payload that's random except for no newlines
@@ -145,7 +164,7 @@ sub rotate_byte # {{{1
     return ($bv + $dir * $dist) % $ring_size;   # Byte Rotated "Forward"
 } # }}}1
 
-sub almost_rotate_bytes # {{{1
+sub maybe_almost_rotate_bytes # {{{1
 {
     # Rotate the bytes of arg1 by an internally defined distance in direction
     # arg2 along the ring formed by unsigned byte values, almost.  "Almost"
@@ -160,6 +179,11 @@ sub almost_rotate_bytes # {{{1
     # Number of places by which to rotate the byte.  Note that this can be zero
     # in which case no rotation occurs.
     my $rd = 93;   # Rotation Distance
+
+    # If we got the command line option saying not to rotate bytes, then don't.
+    if ( $nbr ) {
+        $rd = 0;
+    }
 
     for ( my $ii = 0 ; $ii < length($bytes) ; $ii++ ) {
 
@@ -226,6 +250,34 @@ verify_child_health($pid);
 
 # }}}1
 
+sub byte_string_dump # {{{1
+{
+    # Given a byte string, dump a description of it to STDERR
+
+    @_ == 1 or die "wrong number of arguments";
+    my ($bs) = @_;
+
+    my $result = '';
+
+    my ($frame_delimiter, $escape, $xon, $xoff) = (0x7e, 0x7d, 0x11, 0x13);
+    for ( my $ii = 0 ; $ii < length($bs) ; $ii++ ) {
+        my $cb = substr($bs, $ii, 1);
+        if ( 
+            ord($cb) == $frame_delimiter or
+            ord($cb) == $escape or
+            ord($cb) == $xon or
+            ord($cb) == $xoff ) {
+            $result .= "That ^ was a magical byte\n";
+        }
+        $result .= sprintf
+            "Byte $ii hex: %#.2x, decimal: %i\n",
+            ord($cb),
+            ord($cb) ;
+    }
+
+    return $result;
+} # }}}1
+
 if ( $qm ) {   # --query-mode {{{1
     while ( 1 ) {
         my $arp = almost_random_payload();   # Almost Random Payload
@@ -235,8 +287,19 @@ if ( $qm ) {   # --query-mode {{{1
         STDOUT->flush();
         my $rbsb = '';   # Rotated Bytes Sent Back
         verify_child_health($pid);
+        $SIG{ALRM}
+            = sub {
+                die "read timeout waiting for response (got nothing back)"; };
+                #die "read timeout waiting for response after sending:\n".
+                #    byte_string_dump($arp); };
+        my $ttwfr = 1.42;   # Time To Wait For Response
+        alarm($ttwfr);
         read CHLD_OUT, $rbsb, length($arp);
-        my $ubsb = almost_rotate_bytes($rbsb, -1);
+        # Cancel the alarm
+        alarm(0);
+        $SIG{ALRM} = 'DEFAULT';
+        # Unrotated Bytes Sent Back
+        my $ubsb = maybe_almost_rotate_bytes($rbsb, -1);
         if ( $arp ne $ubsb ) {
             print STDERR
                 "bytes sent out didn't match rotated bytes sent back:\n";
@@ -259,7 +322,7 @@ elsif ( $rm ) {   # --response-mode {{{1
         my $rxp = CHLD_OUT->getline();   # Recieved Payload
         not CHLD_OUT->error() or die "error receiving payload line";
         verify_child_health($pid);
-        my $arb = almost_rotate_bytes($rxp, +1);   # Almost Rotated Bytes
+        my $arb = maybe_almost_rotate_bytes($rxp, +1);   # Almost Rotated Bytes
         print CHLD_IN $arb;
         print "Frame received and rotated version sent back out\n";
     }
