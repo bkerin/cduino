@@ -314,6 +314,33 @@ sub frame # {{{1
      return $fd;
 } # }}}1
 
+sub byte_available # {{{1
+{
+    # Return true iff a byte appears to be available to read from the
+    # serial device.
+
+    my ($rin, $rout, $ein, $eout) = ('', '', '', '');
+    my $udfn = fileno(UD);
+    vec($rin, $udfn, 1) = 1;
+
+    my ($rfc, $tl) = select($rout = $rin, undef, $eout = $ein, 0);
+
+    not vec($eout, $udfn, 1)
+        or die "select() reported an exception related to file '$df'";
+
+    if ( $rfc == 0 ) {
+        return 0;
+    }
+    elsif ( $rfc == 1 ) {
+        vec($rout, $udfn, 1)
+            or die "BUG: file we expected to be readable isn't after select";
+        return 1;
+    }
+    else {
+        confess "BUG: unexpected ready file count from select()";
+    }
+} # }}}1
+
 sub get_byte # {{{1
 {
     # Read exactly one byte from the serial device.  Its wise to call
@@ -352,33 +379,6 @@ sub low_byte # {{{1
         or die "BUG: supposed 16 bit argument has bits > 16 set";
 
     return $val16 & 0x00ff;
-} # }}}1
-
-sub byte_available # {{{1
-{
-    # Return true iff a byte appears to be available to read from the
-    # serial device.
-
-    my ($rin, $rout, $ein, $eout) = ('', '', '', '');
-    my $udfn = fileno(UD);
-    vec($rin, $udfn, 1) = 1;
-
-    my ($rfc, $tl) = select($rout = $rin, undef, $eout = $ein, 0);
-
-    not vec($eout, $udfn, 1)
-        or die "select() reported an exception related to file '$df'";
-
-    if ( $rfc == 0 ) {
-        return 0;
-    }
-    elsif ( $rfc == 1 ) {
-        vec($rout, $udfn, 1)
-            or die "BUG: file we expected to be readable isn't after select";
-        return 1;
-    }
-    else {
-        confess "BUG: unexpected ready file count from select()";
-    }
 } # }}}1
 
 sub get_frame # {{{1

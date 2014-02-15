@@ -877,8 +877,8 @@ sub get_frame # {{{1
     # Like wx_get_frame() from wireless_xbee.c, but with a perlesque
     # signature.  Most of the explanatory comments are there.  Unlike that
     # function, this one gives some feedback when things go wrong: it
-    # returns "success" on success, or a string beginning with "failure:
-    # " on failure.  As arguments we require a ref to an empty string (where
+    # returns "success" on success, or a string beginning with "failure: "
+    # on failure.  As arguments we require a ref to an empty string (where
     # the payload data will be stored) and a timeout value in milliseconds.
     # The timeout value is actually the time spent polling the serial port,
     # other code time isn't included (but is pretty negligible).
