@@ -14,7 +14,9 @@
 #include "wireless_xbee.h"
 
 //#define CHKP_PD4() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 300.0, 3)
-#define CHKP_PD4() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 300.0, 1)
+
+// Single-blink checkpoint (or other thing) version
+#define CHKP_PD4_SB() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 300.0, 1)
 
 // Put something like this in util.
 // FIXME: extra debug
@@ -36,6 +38,7 @@ main (void)
   
     char rstr[MPLFU + 1];   // Received string
 
+    // FIXME: weird to use _string when its data in the data case
     sentinel = wx_get_string_frame (MPLFU + 1, rstr, tpra_ms);
     if ( ! sentinel ) {
       // In kindness to other callers, we do this to get rid of any leftover
@@ -46,11 +49,8 @@ main (void)
       }
       continue;
     }
-    CHKP_PD4 ();
+    CHKP_PD4_SB ();
 
-    //_delay_ms (500);
-
-    //sentinel = wx_put_string_frame (rstr);
     sentinel = wx_put_frame (44, rstr);
   }
 
