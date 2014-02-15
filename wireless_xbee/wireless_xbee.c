@@ -20,6 +20,10 @@
 // For development: signal a check point by blinking something attached to PD4
 #define CHKP_PD4() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 300.0, 3)
 
+// FIXME: extra debug
+#define HYPB() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 100.0, 50)
+#define FIXME_SERT(condition) do { if (! (condition)) { for (;;) {HYPB();} } } while ( 0 );
+
 void
 wx_init (void)
 {
@@ -27,27 +31,30 @@ wx_init (void)
 }
 
 // Define a HANDLE_ERRORS macro that either asserts the given condition,
-// or simple returns depending on a compile-time setting.  We guarantee
+// or simply returns depending on a compile-time setting.  We guarantee
 // that this macro will evaluate its argument only once, so its safe to
 // use around a function that has other effects.
 #ifdef WX_ASSERT_SUCCESS
 #  define HANDLE_ERRORS(condition) assert (condition)
 #else
 #  define HANDLE_ERRORS(condition) \
-  do { \
-    if ( UNLIKELY (! (condition)) ) { \
-      return FALSE; \
-    } \
-  } while ( 0 )
+     do { \
+       if ( UNLIKELY (! (condition)) ) { \
+         return FALSE; \
+       } \
+     } while ( 0 )
 #endif
 
 static char
 get_char (void)
 {
   WX_WAIT_FOR_BYTE ();
-  // FIXME: well, HANDLE_ERRORS doesn't flush the RX buffer/clear errors.
-  // should it?
-  HANDLE_ERRORS (! WX_UART_RX_ERROR ());
+
+  if ( WX_UART_RX_ERROR () ) {
+    WX_UART_FLUSH_RX_BUFFER ();
+    HANDLE_ERRORS (FALSE);   // Meaning we have an error to handle
+  }
+
   return WX_GET_BYTE ();
 }
 
@@ -104,6 +111,22 @@ wx_enter_at_command_mode (void)
   return TRUE;
 }
 
+uint8_t
+wx_exit_at_command_mode (void)
+{
+  // Require the XBee module to be in AT command mode (see
+  // enter_at_command_mode()).  Leave AT command mode.
+
+  char response[WX_MCOSL];
+
+  HANDLE_ERRORS (wx_at_command ("CN", response));
+
+  HANDLE_ERRORS (! strcmp (response, "OK"));
+
+  return TRUE;
+}
+
+
 static void
 put_command (char const *command)
 {
@@ -122,18 +145,9 @@ put_command (char const *command)
   WX_PUT_BYTE ('\r');
 }
 
-static uint8_t
-at_command (char *command, char *output)
+uint8_t
+wx_at_command (char *command, char *output)
 {
-  // Require the XBee module to be in AT command mode (see
-  // enter_at_command_mode()).  Execute the given AT command, and return its
-  // output.  The command should ommit the "AT" prefix and "\r" postfix: this
-  // routine will add them.  The trailing "\r" that is returned is removed
-  // from output.  Return true on success.  Both command and output must be
-  // pointers to at least WX_MCOSL bytes of storage.  Its ok to pass the same
-  // pointer for both command and output, in which case the command string
-  // is overwritten with the command output (saving a few bytes of RAM).
-
   put_command (command);
  
   HANDLE_ERRORS (get_line (WX_MCOSL, output));
@@ -148,26 +162,8 @@ at_command (char *command, char *output)
 }
 
 uint8_t
-wx_exit_at_command_mode (void)
+wx_at_command_expect_ok (char const *command)
 {
-  // Require the XBee module to be in AT command mode (see
-  // enter_at_command_mode()).  Leave AT command mode.
-
-  char response[WX_MCOSL];
-
-  HANDLE_ERRORS (at_command ("CN", response));
-
-  HANDLE_ERRORS (! strcmp (response, "OK"));
-
-  return TRUE;
-}
-
-static uint8_t
-at_command_expect_ok (char const *command)
-{
-  // Like at_command(), but simply checks that the result is "OK\r" and
-  // returns TRUE iff it is.
-
   put_command (command);
 
   HANDLE_ERRORS (get_char () == 'O');
@@ -178,40 +174,14 @@ at_command_expect_ok (char const *command)
 }
 
 uint8_t
-wx_com (char *command, char *output)
-{
-  HANDLE_ERRORS (wx_enter_at_command_mode ());
-
-  HANDLE_ERRORS (at_command (command, output));
-
-  HANDLE_ERRORS (wx_exit_at_command_mode ());
-
-  return TRUE;
-}
-
-uint8_t
-wx_com_expect_ok (char const *command)
-{
-  HANDLE_ERRORS (wx_enter_at_command_mode ());
-
-  HANDLE_ERRORS (at_command_expect_ok (command));
-
-  HANDLE_ERRORS (wx_exit_at_command_mode ());
-  
-  return TRUE;
-}
-
-uint8_t
 wx_ensure_network_id_set_to (uint16_t id)
 {
   char buf[WX_MCOSL];   // Buffer for command/output string storage
 
-  HANDLE_ERRORS (wx_enter_at_command_mode ());
-   
   uint8_t cp = sprintf_P (buf, PSTR ("ID"));   // Chars Printed
   HANDLE_ERRORS (cp == 2);  // sprintf_P gives a return value, so we check it
 
-  HANDLE_ERRORS (at_command (buf, buf));
+  HANDLE_ERRORS (wx_at_command (buf, buf));
 
   int const base_16 = 16;   // Base to use to convert retrieved string
   char *endptr;   //  Pointer to be set to end of converted string
@@ -232,11 +202,9 @@ wx_ensure_network_id_set_to (uint16_t id)
   cp = sprintf_P (buf, PSTR ("ID%.4" PRIX16), id);
   HANDLE_ERRORS (cp == escsl);
 
-  HANDLE_ERRORS (at_command_expect_ok (buf));
+  HANDLE_ERRORS (wx_at_command_expect_ok (buf));
 
-  HANDLE_ERRORS (at_command_expect_ok ("WR"));
-
-  HANDLE_ERRORS (wx_exit_at_command_mode ());
+  HANDLE_ERRORS (wx_at_command_expect_ok ("WR"));
 
   return TRUE;
 }
@@ -250,12 +218,10 @@ wx_ensure_channel_set_to (uint8_t channel)
   
   char buf[WX_MCOSL];   // Buffer for command/output string storage
 
-  HANDLE_ERRORS (wx_enter_at_command_mode ());
-   
   uint8_t cp = sprintf_P (buf, PSTR ("CH"));   // Chars Printed
   HANDLE_ERRORS (cp == 2);  // sprintf_P gives a return value, so we check it
 
-  HANDLE_ERRORS (at_command (buf, buf));
+  HANDLE_ERRORS (wx_at_command (buf, buf));
 
   int const base_16 = 16;   // Base to use to convert retrieved string
   char *endptr;   //  Pointer to be set to end of converted string
@@ -276,11 +242,9 @@ wx_ensure_channel_set_to (uint8_t channel)
   cp = sprintf_P (buf, PSTR ("CH%.4" PRIX16), channel);
   HANDLE_ERRORS (cp == escsl);
 
-  HANDLE_ERRORS (at_command_expect_ok (buf));
+  HANDLE_ERRORS (wx_at_command_expect_ok (buf));
 
-  HANDLE_ERRORS (at_command_expect_ok ("WR"));
-
-  HANDLE_ERRORS (wx_exit_at_command_mode ());
+  HANDLE_ERRORS (wx_at_command_expect_ok ("WR"));
 
   return TRUE;
 }
@@ -288,14 +252,10 @@ wx_ensure_channel_set_to (uint8_t channel)
 uint8_t
 wx_restore_defaults (void)
 {
-  HANDLE_ERRORS (wx_enter_at_command_mode ());
+  HANDLE_ERRORS (wx_at_command_expect_ok ("RE"));
 
-  HANDLE_ERRORS (at_command_expect_ok ("RE"));
-
-  HANDLE_ERRORS (at_command_expect_ok ("WR"));
+  HANDLE_ERRORS (wx_at_command_expect_ok ("WR"));
   
-  HANDLE_ERRORS (wx_exit_at_command_mode ());
-
   return TRUE;
 }
 
@@ -369,7 +329,7 @@ needs_escaped (uint8_t byte)
   } while ( 0 )
 
 uint8_t
-wx_put_data_frame (uint8_t count, void const *buf)
+wx_put_frame (uint8_t count, void const *buf)
 {
   uint8_t epl = 0;   // Escaped payload length
   uint8_t ii;        // Index variable
@@ -398,8 +358,6 @@ wx_put_data_frame (uint8_t count, void const *buf)
   if ( needs_escaped (epl) ) {
     lxorfb = WX_LENGTH_BYTE_XORED;
     pxlb = epl ^ ESCAPE_MODIFIER;
-    lcrc = _crc_ccitt_update (lcrc, WX_LENGTH_BYTE_XORED);
-    lcrc = _crc_ccitt_update (lcrc, epl ^ ESCAPE_MODIFIER);
   }
   else {
     lxorfb = WX_LENGTH_BYTE_NOT_XORED;
@@ -452,9 +410,9 @@ wx_put_string_frame (char const *str)
   assert (sizeof (char) == 1);   // Paranoid truism :)
 
   size_t sl = strlen (str);   // String length
-  assert (sl <= UINT8_MAX - 1);   // -1 to allow for terminating NUL
+  assert (sl <= UINT8_MAX);   // -1 to allow for terminating NUL
 
-  return wx_put_data_frame (sl + 1, str);   // +1 to allow for terminating NUL
+  return wx_put_frame (sl, str);
 }
 
 #define FRAME_STATE_OUTSIDE_FRAME                     1
@@ -498,6 +456,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
   uint8_t fs = FRAME_STATE_OUTSIDE_FRAME;   // Frame State
   uint16_t crc = CRC_INITIAL_VALUE;         // Cyclic Redundany Check value
   uint16_t et = 0;    // Elapsed Time
+  uint8_t lxorfb = 42;   // Length XOR'ed Flag Byte (bogus initialization)
   uint8_t epl = 42;   // Escaped Payload Length  (bogus "= 42" for compiler)
   uint8_t epbr = 0;   // Escaped Payload Bytes Read (so far)
 
@@ -546,7 +505,6 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
       }
 
       uint8_t cb = WX_GET_BYTE ();   // Current Byte
-      uint8_t lxorfb = 42;   // Length XOR'ed Flag Byte (bogus initialization)
           
       if ( cb == FRAME_DELIMITER ) {
         // A frame delimiter should only occur unescaped when we aren't
@@ -621,7 +579,12 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
               return FALSE;   // CRC of frame delimiter and length failed
             }
             crc = CRC_INITIAL_VALUE;  // Reset for later use on payload
-            fs = FRAME_STATE_IN_PAYLOAD;
+            if ( epl > 0 ) {
+              fs = FRAME_STATE_IN_PAYLOAD;
+            }
+            else {
+              fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE;
+            }
           }
           break;
         
@@ -630,7 +593,12 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
             return FALSE;
           }
           crc = CRC_INITIAL_VALUE;  // Reset for later use on payload
-          fs = FRAME_STATE_IN_PAYLOAD;
+          if ( epl > 0 ) {
+            fs = FRAME_STATE_IN_PAYLOAD;
+          }
+          else {
+            fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE;
+          }
           break;
 
         case FRAME_STATE_IN_PAYLOAD:
@@ -652,24 +620,24 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
           break;
 
         case FRAME_STATE_IN_PAYLOAD_ESCAPED:
-            crc = _crc_ccitt_update (crc, cb);
-            ((uint8_t *) buf)[*rfps] = cb ^ ESCAPE_MODIFIER;
-            (*rfps)++;
-            epbr++;
-            if ( epbr == epl ) {
-              fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE;
-            }
-            // FIXXME: we could detect this error once we get as far as 
-            // reading the length in the frame, but wasting a little time
-            // reading the frame bytes probably doesn't make much difference
-            // at least given our current very coarse error reporting scheme
-            else if ( *rfps == mfps ) {
-              return FALSE;   // Frame exceeded caller-supplied max size
-            }
-            else {
-              fs = FRAME_STATE_IN_PAYLOAD;
-            }
-            break;
+          crc = _crc_ccitt_update (crc, cb);
+          ((uint8_t *) buf)[*rfps] = cb ^ ESCAPE_MODIFIER;
+          (*rfps)++;
+          epbr++;
+          if ( epbr == epl ) {
+            fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE;
+          }
+          // FIXXME: we could detect this error once we get as far as
+          // reading the length in the frame, but wasting a little time
+          // reading the frame bytes probably doesn't make much difference
+          // at least given our current very coarse error reporting scheme
+          else if ( *rfps == mfps ) {
+            return FALSE;   // Frame exceeded caller-supplied max size
+          }
+          else {
+            fs = FRAME_STATE_IN_PAYLOAD;
+          }
+          break;
 
         case FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE:
           if ( cb == ESCAPE ) {
@@ -692,7 +660,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
 
         case FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE:
           if ( cb == ESCAPE ) {
-            fs = FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE_ESCAPED;
+            fs = FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE_ESCAPED;
           }
           else {
             if ( cb != LOW_BYTE (crc) ) {

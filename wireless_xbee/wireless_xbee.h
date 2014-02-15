@@ -93,14 +93,15 @@
 // anywhere.  In the default point-to-multipoint XBee configuration, all
 // nearby modules with the same network ID (see wx_ensure_network_id_set_to())
 // and channel (see wx_ensure_channel_set_to()) will hopefully receive
-// the byte, but its up to you to arrange for them to send back something
-// saying they have if you really want to know.  No radio system is entirely
-// immune to noise.  Also, in the default configuration the RF data rate
-// is greater than the serial interface data rate, and all nodes recieve
-// any transmission (point-to-multipoint), so if many nodes decide to talk
-// at once the receiving buffers will likely overflow and some transmitted
-// data will silently fail to make its way via the serial port out of the
-// receiving XBee module(s).
+// the transmission, but its up to you to arrange for them to send back
+// something saying they have if you really want to know.  No radio system
+// is entirely immune to noise.  Also, in the default configuration the
+// RF data rate is greater than the serial interface data rate, and all
+// nodes recieve any transmission (point-to-multipoint), so if many nodes
+// decide to talk at once the receiving buffers will likely overflow and
+// some transmitted data will fail to make its way via the serial port out
+// of the receiving XBee module(s).
+//
 
 // Serial communication rate at which we talk to the XBee.  Because our
 // underlying serial module always communicates at this rate, this value isn't
@@ -119,10 +120,12 @@ wx_init (void);
 // enable simplified error handling.  See "About Error Handling" above.
 //#define WX_ASSERT_SUCCESS
 
-// Enter AT command mode by doing the sleep-send_+++-sleep ritual.  NOTE: the
-// XBee module will automatically drop out of command mode after 10 seconds
-// (unless the AT CT command has been used to reconfigure the module with
-// a non-default timeout).  Returns true on success, false otherwise.
+// Enter AT command mode by doing the sleep-send_+++-sleep ritual.
+// This function takes a few seconds to execute, because entering command
+// mode requires two guard times of 1 second or more.  The XBee module will
+// automatically drop out of command mode after 10 seconds (unless the AT
+// CT command has been used to reconfigure the module with a non-default
+// timeout).  Returns true on success, false otherwise.
 uint8_t
 wx_enter_at_command_mode (void);
 
@@ -130,24 +133,25 @@ wx_enter_at_command_mode (void);
 uint8_t
 wx_exit_at_command_mode (void);
 
-// Enter AT command mode and check if the XBee network ID (ID parameter)
-// is set to id, and if not, set it to id, save the settings, and exit
-// command mode.  Valid id values are 0x00 - 0xffff.  NOTE: this command
-// may permanently alter the XBee configuration (it can be restored using
-// wx_restore_defaults().
+// Require the XBee module to be in AT command mode (see
+// wx_enter_at_command_mode()).  Check if the XBee network ID (ID parameter)
+// is set to id, and if not, set it to id and save the settings.  Valid id
+// values are 0x00 - 0xffff.  NOTE: this command may permanently alter the
+// XBee configuration (it can be restored using wx_restore_defaults().
 uint8_t
 wx_ensure_network_id_set_to (uint16_t id);
 
-// Enter AT command mode and check if the XBee channel (CH parameter)
-// is set to channel, and if not, set it to channel, save the settings,
-// and exit command mode.  Valid channel values are 0x0b - 0x1a.  NOTE:
-// this command may permanently alter the XBee configuration (it can be
-// restored using wx_restore_defaults()).
+// Require the XBee module to be in AT command mode (see
+// wx_enter_at_command_mode()).  Check if the XBee channel (CH parameter) is
+// set to channel, and if not, set it to channel and save the settings.  Valid
+// channel values are 0x0b - 0x1a.  NOTE: this command may permanently alter
+// the XBee configuration (it can be restored using wx_restore_defaults()).
 uint8_t
 wx_ensure_channel_set_to (uint8_t channel);
 
-// Enter AT command mode, restore the XBee factory default configuration,
-// save the settings, and exit command mode.
+// Require the XBee module to be in AT command mode (see
+// wx_enter_at_command_mode()).  Restore the XBee factory default
+// configuration, and save the settings.
 uint8_t
 wx_restore_defaults (void);
 
@@ -203,8 +207,8 @@ wx_restore_defaults (void);
 //   * can be conveniently received and verified (using wx_get_frame())
 //
 // Transmission can fail for a variety of reasons and acknowledgement
-// messages, retries, etc. are still the responsibility of clients of
-// this interface.
+// messages, retries, etc. are the responsibility of clients of this
+// interface.
 
 // This interface assumes the XBee is being used in transparent mode, with
 // the packetization timeout configuration parameter (R0) set to its default
@@ -264,8 +268,8 @@ wx_restore_defaults (void);
 //     indicating whether the second byte should be xor'ed in XBee API mode.
 //     The flag byte has value WX_LENGTH_BYTE_XORED if the next byte has
 //     been xor'ed, or WX_LENGTH_BYTE_NOT_XORED otherwise.  The purpose of
-//     this arrangement is to avoid ambiguity about payload length in the
-//     presence of noise on the length field.
+//     this arrangement is to help avoid undetected errors that can result
+//     from corruption in the payload length field.
 //
 //   * Immediately following the length field is a two-byte CRC computed from
 //     the frame delimiter and the length bytes (the escape flag and the
@@ -273,15 +277,16 @@ wx_restore_defaults (void);
 //     bytes are by far the weakest point in most implementations that
 //     use checksums or CRCs, including probably the one available
 //     in XBee API mode; see http://www.ece.cmu.edu/~koopman/pubs/
-//     01oct2013_koopman_faa_final_presentation.pdf.  Note that this CRC might
-//     itself need bytes escaped, if so this is done as described in the XBee
-//     API mode documentation (resulting in a sequence of up to four bytes
+//     01oct2013_koopman_faa_final_presentation.pdf.  Note that the bytes
+//     of this CRC might themselves need to be escaped, if so this is done
+//     as described in the XBee API mode documentation (resulting in a
+//     sequence of up to four bytes).
 //
 //   * The payload checksum is two bytes long, and is computed from the
-//     *escaped* payload contents using the 16 bit CRC-CCITT calculation
-//     described in the util/crc16.h header of AVR libc.  Note that this CRC
-//     might itself need its bytes escaped, resulting in a sequence of up to
-//     four bytes.
+//     escaped payload contents using the 16 bit CRC-CCITT calculation
+//     described in the util/crc16.h header of AVR libc.  Note that the
+//     individual bytes of this CRC might themselves need to be escaped,
+//     resulting in a sequence of up to four bytes.
 //
 // The data is first scanned to determine its length after escape bytes
 // are added.  If the escaped data sequence is too long to go in a single
@@ -292,15 +297,14 @@ wx_restore_defaults (void);
 // These frames are not in any way compatible with the XBee API mode frames.
 //
 uint8_t
-wx_put_data_frame (uint8_t count, void const *buf);
-// FIXME: should my name change to just put_frame?
+wx_put_frame (uint8_t count, void const *buf);
 
-// Convenience wrappar around wx_put_data_frame().  If NUL-terminated
-// string str is longer than UINT8_MAX - 1 (which is too long to go in one
-// of our frames anyway) an assertion violation will be triggered.  The str
-// argument must be NUL-terminated.  The trailing NUL is transmitted as part
-// of the data frame (assuming the resulting escaped frame isn't too long).
-// See the underlying wx_put_data_frame() description for more details).
+// Convenience wrappar around wx_put_frame().  If NUL-terminated string str
+// is longer than UINT8_MAX - 1 (which is too long to go in one of our frames
+// anyway) an assertion violation will be triggered.  The str argument must
+// be NUL-terminated, but the trailing NUL is not transmitted as part of
+// the data frame (the frame knows how long it is by other means anyway).
+// See the underlying wx_put_frame() description for more details.
 uint8_t
 wx_put_string_frame (char const *str);
 
@@ -316,33 +320,38 @@ wx_put_string_frame (char const *str);
 // started (due to the appearance of a frame delimiter in the data stream)
 // turns out to be invalid.  Therefore:
 //
-//   * Callers must be prepared to retry.  A frame could easily cross the
-//     timeout boundry, and therefore not be received properly.
+//   * Callers must be prepared to retry.  A frame could cross the
+//     timeout boundry, or be corrupted.
 //
-//   * Transmitters must be prepared to resend their message (until they
-//     get some sort of acknowledgement).
+//   * Transmitters must be prepared to resend their message (presumably
+//     until they get some sort of acknowledgement).
 //
 //   * Leading non-frame (or partial fram) data may be discarded even if a
 //     frame is eventually received successfully.
 //
+//   * Leading non-frame data that contains a frame delimiter byte (0x7E) will
+//     inevitably result in what looks like a malformed frame, causing this
+//     routine to attempt to read a frame and fail.
+//
 //   * If this function fails, it probably a good idea to call
 //     WX_UART_FLUSH_RX_BUFFER() before attempting to receive any additional
-//     data.  A data overrun can easily occur after such a failure, which will
-//     leave WX_UART_RX_ERROR() true, which might confuse other functions that
-//     check for errors when a byte is available.  Well-written functions
-//     should flush the buffer themselves when they encounter the error,
-//     but the results can still be confusing since that other function will
-//     be seeing an error that's left over after the call to this function.
-//     Note that the actual return from this function doesn't take much
-//     time on success or failure (its fast enough that successive calls can
-//     pick up successive frames sent in the same radio packet).  Its just
-//     that when failure occurs, other things tend to be need doing that
-//     cause enough delay that a serial overrun occurs.  The same thing
-//     can happen with success if there's extra radio data floating around
-//     and your polling loop isn't tight enough.  In other words, this is
-//     just a particularly likely instance of the general class of problems
-//     that can occurn when you don't poll fast enough and fail to flush
-//     the receiver buffer and clear error flags after a failure.
+//     data.  A data overrun can easily occur after such a failure,
+//     which will leave WX_UART_RX_ERROR() true, which might confuse
+//     other functions that check for errors when a byte is available.
+//     Well-written functions should flush the buffer themselves when they
+//     encounter a UART receiver error, but the results can still be confusing
+//     since that other function will be seeing an error that's left over
+//     from the aftermath of a call to this function.  Note that the actual
+//     return from this function doesn't take much time on success or failure
+//     (its fast enough that successive calls can pick up successive frames
+//     sent in the same radio packet).  Its just that when failure occurs,
+//     other things tend to be need doing that cause enough delay that a
+//     serial overrun occurs.  The same thing can happen with success if
+//     there's extra radio data floating around and your polling loop isn't
+//     tight enough.  In other words, this is just a particularly likely
+//     instance of the general class of problems that can occurn when you
+//     don't poll fast enough and fail to flush the receiver buffer and
+//     clear error flags after a failure.
 //
 //   * Its reasonable to first use WX_BYTE_AVAILABLE() from a polling loop to
 //     determine when it might be worthwhile to call this routine.
@@ -364,28 +373,33 @@ wx_get_string_frame (uint8_t msl, char *str, uint16_t timeout);
 //
 // The remaining functions in this header are only useful if you need to
 // change the XBee module configuration significantly.
+//
+// Note that there are many changes you can make to the XBee configuration
+// which will violate the assumptions made by other parts of the interface.
 
 // Maximum Command Output String Length (in bytes).  This includes any
 // trailing carriage return ('\r') or NUL bytes that may be involved,
-// and so is a safe size of buffer to use with wx_com().
+// and so is a safe size of buffer to use with wx_at_command().
 #define WX_MCOSL 15
 
-// Enter command mode, execute the given AT command with an "AT" prefix
-// and "\r" postfix implicitly added (e.g. "BD9600" becomes "ATBD9600"),
-// place the command output in output, stip the trailing carriage return
-// ("\r") from output, and finally return TRUE if all that succeeded.
+// Require the XBee module to be in AT command mode (see
+// wx_enter_at_command_mode()).  Execute the given AT command with an
+// "AT" prefix and "\r" postfix implicitly added (e.g. "BD9600" becomes
+// "ATBD9600"), place the command output in output, stip the trailing carriage
+// return ("\r") from output, and finally return TRUE if all that succeeded.
 // Both command and output should be pointers to at least WX_MCOSL bytes
 // of storage.  Its ok to pass the same pointer for both command and output,
 // in which case the command string is overwritten with the command output
 // (saving a few bytes of RAM).  The command string should be NUL-terminated,
 // and the output will be NUL-terminated.
 uint8_t
-wx_com (char *command, char *output);
+wx_at_command (char *command, char *output);
 
-// Convenience function.  Like wx_com(), but the given command is expected
-// to ouput "OK\r" (note that wx_com() would strip the trailing "\r").
-// Return true iff everything wx_com() would do works and we get an OK back.
+// Require the XBee module to be in AT command mode (see
+// wx_enter_at_command_mode()).  Calls wx_at_command(), and the given
+// command is expected to ouput "OK".  Return true iff everything wx_com()
+// would do works and we get an OK back.
 uint8_t
-wx_com_expect_ok (char const *command);
+wx_at_command_expect_ok (char const *command);
 
 #endif // WIRELESS_XBEE_H
