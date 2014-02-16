@@ -105,7 +105,10 @@ sub almost_random_payload # {{{1
     my $fsspl = 89;   # Frame Safe Safe Payload Length
     my $fsapl = 44;   # Frame Safe Arbitrary Payload Length
 
-    my $ps = $fsapl;
+    my $silly_eps = 0.001;   # Silly epsilon for perl's rand() function
+    my $ps = int(rand($fsapl + 1.0 - $silly_eps));   # Packet Size
+    # Fixed maximum length packets
+    #my $ps = $fsapl;
     # We can also test safe payloads of the maximum size using this line
     # instead but then the rotation distance setting in almost_rotate_bytes()
     # should be tweaked to not actually rotate, and the code below in the for
@@ -142,6 +145,9 @@ sub almost_random_payload # {{{1
         }
     }
 
+    # FIXXME: its a pain to test 0-length frames, because our test machinery 
+    # uses the newline for various things (we use getline() etc.).  So they 
+    # haven't been tested.  But they are pretty useless, so who cares.
     $result .= "\n";   # Add a single newline at the end
 
     return $result;
@@ -292,7 +298,12 @@ if ( $qm ) {   # --query-mode {{{1
                 die "read timeout waiting for response (got nothing back)"; };
                 #die "read timeout waiting for response after sending:\n".
                 #    byte_string_dump($arp); };
-        my $ttwfr = 1.42;   # Time To Wait For Response
+        # NOTE: this next setting isn't quite arbitrary: its a good bit
+        # larger than the value of the tpra_ms variable used when the
+        # wireless_xbee_test.c file is compiled for testing with this program
+        # (when AUTOMATIC_TESTING_WITH_USB_XBEE_TEST is defined).  See the
+        # notes there for the why of it.
+        my $ttwfr = 2.42;   # Time To Wait For Response
         alarm($ttwfr);
         read CHLD_OUT, $rbsb, length($arp);
         # Cancel the alarm
