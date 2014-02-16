@@ -191,7 +191,7 @@ sub maybe_almost_rotate_bytes # {{{1
         
         my $prv = rotate_byte($cb, $dir, $rd);   # Prospective Rotated Value
 
-        if ( $cb == ord("\n") or $prv = ord("\n") ) {
+        if ( $cb == ord("\n") or $prv == ord("\n") ) {
             next;
         }
 
