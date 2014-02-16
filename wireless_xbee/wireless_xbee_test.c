@@ -188,10 +188,10 @@ main (void)
 
     sentinel = wx_get_string_frame (MPLFU + 1, rstr, tpra_ms);
     if ( ! sentinel ) {
-      // In kindness to other callers, we do this to get rid of any leftover
-      // data and clear the UART error flags after a failure.
-      // FIXME: do we want this?
-      WX_UART_FLUSH_RX_BUFFER ();
+      // In kindness to other callers, we clean up after any UART Rx error.
+      if ( WX_UART_RX_ERROR () ) {
+        WX_UART_FLUSH_RX_BUFFER ();
+      }
       // Timeouts, bad frames, all sorts of errors end up getting eaten
       // here FIXXME: the frame functions should probably do some sort of
       // error propagation.
@@ -228,9 +228,7 @@ main (void)
  
     sentinel = wx_get_frame (MPLFU, &rfps, rpyld, tpra_ms);
     if ( ! sentinel ) {
-      // In kindness to other callers, we do this to get rid of any leftover
-      // data and clear the UART error flags after a failure.
-      // FIXME: do we want this?
+      // In kindness to other callers, we clean up after any UART Rx error.
       if ( WX_UART_RX_ERROR () ) {
         WX_UART_FLUSH_RX_BUFFER ();
       }
