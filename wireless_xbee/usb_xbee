@@ -1155,8 +1155,9 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
                     STDOUT->flush();   # Flush output (avoid any buffering)
                 }
                 elsif ( $flm ) {
-                    # FIXME: think about and justify this number.  It seems
-                    # reasonable but it needs explained.
+                    # Given that each byte takes somewhat less than a
+                    # millisecond at 9600 "baud" (see calculations in POD
+                    # documentation), a whole frame shouldn't take this long.
                     my $to = 200;   # Timeout (milliseconds) for whole frame
                     my $fp;   # Frame Payload
                     my $result = get_frame(\$fp, $to);
