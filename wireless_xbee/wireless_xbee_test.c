@@ -246,7 +246,7 @@ main (void)
       continue;
     }
     // We can afford a quick blink per packet to show from the Arduino side
-    // that a packet has been sent.
+    // that a packet has been sent, without causing timeouts elsewhere.
     CHKP_PD4_SB ();
 
     sentinel = wx_put_frame (rfps, rpyld);
