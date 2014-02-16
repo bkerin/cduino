@@ -54,10 +54,10 @@
 // Single-blink checkpoint (or other thing) version
 #define CHKP_PD4_SB() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 300.0, 1)
 
-// FIXME: Put something like this in util.
-#define HYPB() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 100.0, 50)
-#define FIXME_SERT(condition) \
-  do { if (! (condition)) { for ( ; ; ) { HYPB(); } } } while ( 0 );
+// For the reasons described for CHKP_PD4() above, we need to rewire the
+// BTRAP() macro from util.h to work on a different LED.
+#undef BTRAP
+#define BTRAP() BTRAP_USING (DDRD, DDD4, PORTD, PORTD4, 100.0)
 
 int
 main (void)
