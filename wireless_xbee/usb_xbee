@@ -962,7 +962,12 @@ sub get_frame # {{{1
                             return "failure: delimiter/length CRC error";
                         }
                         $crc = $crciv;   # Reset for later use on payload
-                        $fs = "in payload";
+                        if ( $epl > 0 ) {
+                            $fs = "in payload";
+                        }
+                        else {
+                            $fs = "at payload crc high byte";
+                        }
                     }
                 }
 
@@ -972,7 +977,12 @@ sub get_frame # {{{1
                         return "failure: delimiter/length CRC error";
                     }
                     $crc = $crciv;   # Reset for later use on payload
-                    $fs = "in payload";
+                    if ( $epl > 0 ) {
+                        $fs = "in payload";
+                    }
+                    else {
+                        $fs = "at payload crc high byte";
+                    }
                 }
 
                 elsif ( $fs eq "in payload" ) {
@@ -1189,6 +1199,8 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
                 # Now undef means we must have got EOF on an empty line
                 # (possibly from Cntrl-D), so we're done
                 defined($il) or exit(0);
+                # This can be uncommented to test zero-length packets
+                #chomp($il);
 
                 my $dts;   # Data To Send
 

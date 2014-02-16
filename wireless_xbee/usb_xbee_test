@@ -145,9 +145,10 @@ sub almost_random_payload # {{{1
         }
     }
 
-    # FIXXME: its a pain to test 0-length frames, because our test machinery 
-    # uses the newline for various things (we use getline() etc.).  So they 
-    # haven't been tested.  But they are pretty useless, so who cares.
+    # NOTE: because we talk to usb_xbee in a line-by-line oriented way,
+    # we can't test zero-length payloads via this program.  But they have
+    # been tested by a commented-out hack in usb_xbee, and seem to work
+    # (uninteresting though they may be).
     $result .= "\n";   # Add a single newline at the end
 
     return $result;
