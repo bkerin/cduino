@@ -29,4 +29,4 @@ include generic.mk
 
 # Uncomment this to build the test program for bulk testing with
 # usb_xbee_test.  See the comments in wireless_xbee_test.c for details.
-CPPFLAGS += -DAUTOMATIC_TESTING_WITH_USB_XBEE_TEST
+#CPPFLAGS += -DAUTOMATIC_TESTING_WITH_USB_XBEE_TEST
