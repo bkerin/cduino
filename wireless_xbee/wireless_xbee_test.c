@@ -10,8 +10,6 @@
 #include <string.h>
 #include <util/delay.h>
 
-// FIXME: presumably dont need this header directly
-#include "uart.h"
 #include "util.h"
 #include "wireless_xbee.h"
 
@@ -67,6 +65,11 @@ main (void)
   wx_init ();
 
   uint8_t sentinel;    // For sentinel value returned by many functions
+
+// Uncomment this to enable to arduino to act as a responder that can be
+// substituted for the ./usb_xbee_test --query-mode instance as described in
+// the comments at the start of usb_xbee_test.
+//#define AUTOMATIC_TESTING_WITH_USB_XBEE_TEST
 
 #ifndef AUTOMATIC_TESTING_WITH_USB_XBEE_TEST
   
@@ -145,8 +148,6 @@ main (void)
   float tbt_ms = 1000;   // Time Between Tests (in milliseconds)
   _delay_ms (tbt_ms);
 
-#endif
-
   // The remainder of this test program depends on having a Sparkfun XBee
   // Explorer USB (Sparkfun part number WRL-08687) or equivalent (probably any
   // USB adapter based on the FTDI FT232RL will work) and a copy of usb_xbee
@@ -166,13 +167,6 @@ main (void)
   // Just try starting it again.  It might also fail later if there is
   // non-frame radio data floating around on the network/channel in use.
   // Its supposed to do that.
-
-// Uncomment this to enable to arduino to act as a responder that can be
-// substituted for the ./usb_xbee_test --query-mode instance described in
-// the header comments of usb_xbee_test.
-//#define AUTOMATIC_TESTING_WITH_USB_XBEE_TEST
-
-#ifndef AUTOMATIC_TESTING_WITH_USB_XBEE_TEST
 
   while ( 1 ) {
 
