@@ -1174,16 +1174,16 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
                 # Note: using getline() means that we may end up sending
                 # binary data in funny-sized chunks (because we probably
                 # send both on newline and when the stdin buffer gets full).
-                # When stdin is connected to a terminal it's convenient, but
-                # it could have surprising effects on packetization for binary
-                # data (see BUGS AND POTENTIAL WORK-AROUNDS in the POD).
-                # FIXXME: this getline() seems to works slightly different
-                # than the terminal and probably other GNU readline and
-                # possibly other input functions with respect to EOF (Cntrl-D)
-                # inputs: when Cntrl-D is typed on a non-empty line, nothing
-                # whatsoever happens (rather than the existing text on the line
-                # getting returned).  On empty lines its behaves as expected.
-                # Not worth fixing.
+                # When stdin is connected to a terminal it's convenient,
+                # but it could have surprising effects on packetization
+                # for binary data (see BUGS AND POTENTIAL WORK-AROUNDS in
+                # the POD).  FIXXME: this getline() seems to works slightly
+                # different than the terminal and probably other GNU readline
+                # and possibly other input functions with respect to EOF
+                # (Cntrl-D) inputs: when Cntrl-D is typed on a non-empty line,
+                # nothing whatsoever happens (rather than the existing text
+                # on the line getting returned).  On empty lines its behaves
+                # is as expected.  Not worth fixing.
                 my $il = STDIN->getline();   # Input Line
                 not STDIN->error() or die "error reading line from STDIN";
                 # Now undef means we must have got EOF on an empty line
