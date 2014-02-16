@@ -174,7 +174,7 @@ main (void)
     uint8_t sentinel = wx_put_string_frame ("What is the answer?\n"); 
     assert (sentinel);
 
-    uint16_t tpra_ms = 2042;   // Time Per Read Attempt (in milliseconds)
+    uint16_t tpra_ms = 4042;   // Time Per Read Attempt (in milliseconds)
 
     // Ok, some of the interface macros are long and ugly.  Here's a short
     // ugly alias for our private use: Max Payload Length For Us.
@@ -213,7 +213,14 @@ main (void)
 
   while ( 1 ) {
 
-    uint16_t tpra_ms = 2042;   // Time Per Read Attempt (in milliseconds)
+    // This value isn't entirely arbitrary: it's less than the $ttwfr (Time To
+    // Wait For Response) vaalue in the --query-mode path of usb_xbee_test.
+    // This allows the the usb_xbee_test instance to be started in quesry
+    // mode at any time after the Arduino is up and running without risking
+    // a timeout in that program at startup.  Note that a malformed packet
+    // could still sometimes occur at startup, if the wx_get_frame() below
+    // has almost timed out when a query packet arrives.
+    uint16_t tpra_ms = 1042;   // Time Per Read Attempt (in milliseconds)
 
     // Ok, some of the interface macros are long and ugly.  Here's a short
     // ugly alias for our private use: Max Payload Length For Us.
