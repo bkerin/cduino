@@ -10,7 +10,11 @@ include run_screen.mk
 # Try commenting out these lines and rebuilding whatever target you're
 # working on: the build system should print out some hints about what to
 # try (unplugging and replugging the Arduino to see which file in /dev
-# dissapears/reapears is a good way to start :).
+# dissapears/reapears is a good way to start :).  Annoyingly, this problem
+# breaks the rebuilds that the toplevel Makefile release targets do, so
+# you have to make sure there is no Explorer plugged in when you do that.
+# FIXME: we should put some sort of check in this makefile so we get a good
+# diagnostic when this happens.
 ARDUINO_PORT = /dev/ttyACM0
 ARDUINO_BAUD = 115200
 ARDUINO_BOOTLOADER = optiboot_atmega328.hex
