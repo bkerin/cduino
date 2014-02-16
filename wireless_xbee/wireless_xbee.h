@@ -304,7 +304,7 @@ wx_put_frame (uint8_t count, void const *buf);
 // anyway) an assertion violation will be triggered.  The str argument must
 // be NUL-terminated, but the trailing NUL is not transmitted as part of
 // the data frame (the frame knows how long it is by other means anyway).
-// See the underlying wx_put_frame() description for more details.
+// See the description of the underlying wx_put_frame() for more details.
 uint8_t
 wx_put_string_frame (char const *str);
 

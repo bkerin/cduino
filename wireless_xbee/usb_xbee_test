@@ -110,7 +110,7 @@ sub almost_random_payload # {{{1
     # Fixed maximum length packets
     #my $ps = $fsapl;
     # We can also test safe payloads of the maximum size using this line
-    # instead but then the rotation distance setting in almost_rotate_bytes()
+    # instead, but then the rotation distance setting in almost_rotate_bytes()
     # should be tweaked to not actually rotate, and the code below in the for
     # loop in this function changes to produce only safe payload characters
     # (zero through nine for example).
