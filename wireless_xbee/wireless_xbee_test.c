@@ -174,7 +174,7 @@ main (void)
     uint8_t sentinel = wx_put_string_frame ("What is the answer?\n"); 
     assert (sentinel);
 
-    uint16_t tpra_ms = 4042;   // Time Per Read Attempt (in milliseconds)
+    uint16_t tpra_ms = 2042;   // Time Per Read Attempt (in milliseconds)
 
     // Ok, some of the interface macros are long and ugly.  Here's a short
     // ugly alias for our private use: Max Payload Length For Us.
