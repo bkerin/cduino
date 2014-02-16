@@ -2,7 +2,8 @@
 # This is only required for debugging.
 include run_screen.mk
 
-# The presence of the (FIXME: dongle name here) causes the build system
+# The presence of an XBee Explorer or XBee Explorer Dongle (or probably
+# any other FTDI FT232-based device) on the USB causes the build system
 # to think it might be an Arduino, so it requires us to specify which
 # Arduino we want to program.  These are the likely settings for Arduino
 # Uno Rev.3 boards at least, though the ARDUINO_PORT could be different.
@@ -15,9 +16,9 @@ ARDUINO_BAUD = 115200
 ARDUINO_BOOTLOADER = optiboot_atmega328.hex
 
 # Uncomment this to use an AVRISPmkII for upload instead of the serial port,
-# in order to avoid having to flip the switch on the (FIXME: shield ref)
-# and push the reset button every time.  See the notes above the CHKP_PD4()
-# macro definition in wireless_sbee_test.c for details.
+# in order to avoid having to flip the switch on the XBee Shield and push
+# the reset button every time.  See the notes above the CHKP_PD4() macro
+# definition in wireless_sbee_test.c for details.
 #
 # WARNING: using this will make normal serial Arduino programming impossible
 # until the Arduino bootloader is reloaded, see the discussion in the Upload
@@ -28,4 +29,4 @@ include generic.mk
 
 # Uncomment this to build the test program for bulk testing with
 # usb_xbee_test.  See the comments in wireless_xbee_test.c for details.
-#CPPFLAGS += -DAUTOMATIC_TESTING_WITH_USB_XBEE_TEST
+CPPFLAGS += -DAUTOMATIC_TESTING_WITH_USB_XBEE_TEST
