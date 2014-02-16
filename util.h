@@ -31,6 +31,11 @@
 #  define MICROSECONDS_TO_CLOCK_CYCLES(a) (((a) * (F_CPU / 1000L)) / 1000L)
 #endif
 
+// Branch prediction macros.  These let you hint the compiler whether a
+// condition is likely to be true or not, so it can generate faster code.
+#define LIKELY(condition)   __builtin_expect (!!(condition), 1)
+#define UNLIKELY(condition) __builtin_expect (!!(condition), 0)
+
 // Set pin for output low and toggle it high-low bc times, mspb ms per cycle.
 // Useful for making LEDs blink See CHKP() for an example of how to call
 // this macro.  WARNING: no effort has been made to anticipate everything a
@@ -51,6 +56,10 @@
     } \
   } while ( 0 )
 
+// Form a trap point where we blink forever.
+#define BTRAP_USING(ddr, ddrb, portr, portrb, mspb) \
+  do { CHKP_USING (ddr, ddrb, portr, portrb, mspb, 1); } while ( TRUE );
+
 // WARNING: some shields (e.g. the official Arduino motor shield, version R3)
 // use the pin PB5 (AKA Digital 13 in Arduino-speak) for their own purposes,
 // hence using this function will have unfortunate effects.  It can easily
@@ -63,12 +72,15 @@
 // first :)
 #define CHKP() CHKP_USING(DDRB, DDB5, PORTB, PORTB5, 300.0, 3)
 
-// Branch prediction macros.  These let you hint the compiler whether a
-// condition is likely to be true or not, so it can generate faster code.
-#define LIKELY(condition)   __builtin_expect (!!(condition), 1)
-#define UNLIKELY(condition) __builtin_expect (!!(condition), 0)
+// Like CHKP(), but blinks a bit faster, forever.  The same caveats apply.
+#define BTRAP() BTRAP_USING (DDRB, DDB5, PORTB, PORTB5, 100.0)
 
-// All symbolic constants are evil :)
+// Like assert(), but with frantic blinking :) The same caveats that apply
+// to CHKP() apply to this macro.
+#define BASSERT(condition) \
+  do { if ( UNLIKELY (! (condition)) ) { BTRAP (); } } while ( 0 );
+
+// All non-symbolic constants are evil :)
 #define BITS_PER_BYTE 8
 
 // Really, all of them :)
