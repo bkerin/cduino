@@ -66,11 +66,12 @@ main (void)
 
   uint8_t sentinel;    // For sentinel value returned by many functions
 
-// Uncomment this to enable to arduino to act as a responder that can be
-// substituted for the ./usb_xbee_test --query-mode instance as described in
-// the comments at the start of usb_xbee_test.
+// Uncomment this to morph this program into a responder that can be
+// substituted for the ./usb_xbee_test --query-mode instance as described
+// in the comments at the start of usb_xbee_test.
 //#define AUTOMATIC_TESTING_WITH_USB_XBEE_TEST
 
+// This ifndef is supposed to be true by default (as shipped).
 #ifndef AUTOMATIC_TESTING_WITH_USB_XBEE_TEST
   
   char co[WX_MCOSL];   // Command Output
