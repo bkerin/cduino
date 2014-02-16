@@ -17,12 +17,11 @@
 #include "wireless_xbee.h"
 #include "util.h"
 
-// For development: signal a check point by blinking something attached to PD4
+// These macros are convenient during development of this module; see the
+// notes about thim in wireless_xbee_test.c.
 #define CHKP_PD4() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 300.0, 3)
-
-// FIXME: extra debug
-#define HYPB() CHKP_USING (DDRD, DDD4, PORTD, PORTD4, 100.0, 50)
-#define FIXME_SERT(condition) do { if (! (condition)) { for (;;) {HYPB();} } } while ( 0 );
+#undef BTRAP
+#define BTRAP() BTRAP_USING (DDRD, DDD4, PORTD, PORTD4, 100.0)
 
 void
 wx_init (void)
