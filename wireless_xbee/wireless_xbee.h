@@ -59,6 +59,14 @@
 // the same goes for many other XBee shields, including the official
 // Arduino one, though it gives the switch positions different names (see
 // http://arduino.cc/en/Main/ArduinoWirelessShield).
+//
+// At least for the Sparkfun shield, when the swith is in the DLINE position,
+// the data input and output signals (DOUT and DIN) of the XBee end up
+// connected (through a level shifter) to the Digital 2 and Digital 3 Arduino
+// pins (PD2 and PD3 on the ATMega328P).  This isn't useful for this library,
+// since it doesn't provide a software serial implementation at the moment.
+// But of course it can screw things up if you're trying to use those pins
+// for some other purpose, so its something to be aware of.
 
 #ifndef WIRELESS_XBEE_H
 #define WIRELESS_XBEE_H
