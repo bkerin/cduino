@@ -422,6 +422,8 @@ endif
 #
 # FIXME: ATmegaBOOT_168_atmega328.hex seems unchanged in latest distribution,
 # but we should autotrack
+# FIXME: by settin (SUT1, SUT0) to (1, 1), we would seem to be stomping a
+# reserved state.
 replace_bootloader: $(ACTUAL_ARDUINO_BOOTLOADER)  binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -e -u \
