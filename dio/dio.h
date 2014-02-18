@@ -89,14 +89,17 @@
 //
 //   * PB3, PB4     used for in-system programming (ISP)
 //
-//   * PB5          connected to to ground via ~1 kohm resistor and LED,
-//                  also used for in-system programming (ISP)
+//   * PB5          Connected to to ground via ~1 kohm resistor and LED,
+//                  with a op amp buffer in there as well for the Uno Rev
+//                  3 (and probably later models).  Also used for in-system
+//                  programming (ISP)
 //
 //   * PB6, PB7     used for the external oscillator
 //
 //   * PC6          used as the reset pin, and for in-system programming
 //
-//   * PD0, PD1     set up for serial communication by Arduino bootloader
+//   * PD0, PD1     set up for serial communication by Arduino bootloader,
+//                  physically connected to the serial-to-USB interface
 //
 // These pins cannot be used for arbitrary general digital IO in the normal
 // Arduino configuration.  PB5 can be usefully set for output to control
