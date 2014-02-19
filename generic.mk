@@ -101,6 +101,11 @@ HEADERS ?= $(wildcard *.h)
 
 ##### Upload Method (Overridable) {{{1
 
+# If this is set to a non-empty value, the normal checks for an Arduino on
+# USB are disabled.  This is useful if you're trying to program a bare chip
+# using an AVRISPmkII.
+NO_USB_ARDUINO_CONNECTION ?=
+
 # This must be one of:
 #
 #    arduino_bl          Arduino bootloader over USB
@@ -124,14 +129,17 @@ AVRDUDE ?= avrdude
 # The programmer type being used as understood by avrdude.
 AVRDUDE_ARDUINO_PROGRAMMERID ?= arduino
 
-# Upload programmer parameters for when the arduino_bl UPLOAD_METHOD is used.
-# The values that should be used here differ for different recent arduinos:
-# for me at least, the Duemilanove needs /dev/ttyUSB0 and 57600 baud,
-# the Uno /dev/ttyUSB0 and 115200 baud.  For other setups or setups with
-# multiple Arduinos hooked up, different device names might be required.
-# The special value of 'autoguess' can be used to indicate that the build
-# system should try to guess which values to use based on the device it
-# finds connected (and output diagnostic messages if it can't guess).
+# Location and characteristics of the Arduino on the USB.  Note that this
+# build system currently tries to find an Arduino even if the AVRISPmkII
+# method is being used.  If you don't want any of these checks to happen
+# see the NO_USB_ARDUINO_CONNECTION variable above.  The values that should
+# be used here differ for different recent arduinos: for me at least, the
+# Duemilanove needs /dev/ttyUSB0 and 57600 baud, the Uno /dev/ttyUSB0 and
+# 115200 baud.  For other setups or setups with multiple Arduinos hooked
+# up, different device names might be required.  The special value of
+# 'autoguess' can be used to indicate that the build system should try to
+# guess which values to use based on the device it finds connected (and
+# output diagnostic messages if it can't guess).
 ARDUINO_PORT ?= autoguess
 #ARDUINO_PORT ?= /dev/ttyACM0
 #ARDUINO_PORT ?= /dev/ttyUSB0
@@ -220,50 +228,57 @@ ARDUINOLESS_TARGET_WARNING_TEXT := \
   VALID_ARDUINOLESS_TARGET_PATTERNS Make variable. \
   \
   If you are using an AVRISPmkII (UPLOAD_METHOD = AVRISPmkII), note that the \
-  autodetection code still requires the Arduino to be connected to the \
-  computer by USB.  The autodetection should work even if the bootloader on \
-  the chip needs to be replaced (using the replace_bootloader target). \
-  If you need to use the AVRISPmkII while powering the Arduino some other \
-  way, you will need to explicitly set the ARDUINO_PORT, ARDUINO_BAUD, and \
-  ARDUINO_BOOTLOADER variables; see the comments near those variables in \
-  generic.mk for some common values.
+  autodetection code normally still requires the Arduino to be connected to \
+  the computer by USB.  If you are using this build system to program a naked \
+  chip without an Aruino attached, you must define the \
+  NO_USB_ARDUINO_CONNECTION make variable to a non-empty value. \
+  \
+  The autodetection should work even if the bootloader on the chip needs to \
+  be replaced (using the replace_bootloader target). If you need to use the \
+  AVRISPmkII while powering the Arduino some other way, you will need to \
+  explicitly set the ARDUINO_PORT, ARDUINO_BAUD, and ARDUINO_BOOTLOADER \
+  variables; see the comments near those variables in generic.mk for some \
+  common values.
+ifeq ($(NO_USB_ARDUINO_CONNECTION), )
 
-ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
+  ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
 
-  ifeq ($(ARDUINO_PORT),autoguess)
-    ACTUAL_ARDUINO_PORT := \
-      $(call SHELL_CHECKED,./guess_arduino_attribute.perl --device)
-    ifeq ($(ACTUAL_ARDUINO_PORT),)
-      $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
-      $(info )
-      $(error could not guess ARDUINO_PORT, see messages above)
+    ifeq ($(ARDUINO_PORT),autoguess)
+      ACTUAL_ARDUINO_PORT := \
+        $(call SHELL_CHECKED,./guess_arduino_attribute.perl --device)
+      ifeq ($(ACTUAL_ARDUINO_PORT),)
+        $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
+        $(info )
+        $(error could not guess ARDUINO_PORT, see messages above)
+      endif
+    else
+      ACTUAL_ARDUINO_PORT := $(ARDUINO_PORT)
     endif
-  else
-    ACTUAL_ARDUINO_PORT := $(ARDUINO_PORT)
-  endif
 
-  ifeq ($(ARDUINO_BAUD),autoguess)
-    ACTUAL_ARDUINO_BAUD := \
-      $(call SHELL_CHECKED,./guess_arduino_attribute.perl --baud)
-    ifeq ($(ACTUAL_ARDUINO_BAUD),)
-      $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
-      $(info )
-      $(error could not guess ARDUINO_BAUD, see messages above)
+    ifeq ($(ARDUINO_BAUD),autoguess)
+      ACTUAL_ARDUINO_BAUD := \
+        $(call SHELL_CHECKED,./guess_arduino_attribute.perl --baud)
+      ifeq ($(ACTUAL_ARDUINO_BAUD),)
+        $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
+        $(info )
+        $(error could not guess ARDUINO_BAUD, see messages above)
+      endif
+    else
+      ACTUAL_ARDUINO_BAUD := $(ARDUINO_BAUD)
     endif
-  else
-    ACTUAL_ARDUINO_BAUD := $(ARDUINO_BAUD)
-  endif
 
-  ifeq ($(ARDUINO_BOOTLOADER),autoguess)
-    ACTUAL_ARDUINO_BOOTLOADER := \
-      $(call SHELL_CHECKED,./guess_arduino_attribute.perl --bootloader)
-    ifeq ($(ACTUAL_ARDUINO_BOOTLOADER),)
-      $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
-      $(info )
-      $(error could not guess ARDUINO_BOOTLOADER, see messages above)
+    ifeq ($(ARDUINO_BOOTLOADER),autoguess)
+      ACTUAL_ARDUINO_BOOTLOADER := \
+        $(call SHELL_CHECKED,./guess_arduino_attribute.perl --bootloader)
+      ifeq ($(ACTUAL_ARDUINO_BOOTLOADER),)
+        $(warning $(ARDUINOLESS_TARGET_WARNING_TEXT))
+        $(info )
+        $(error could not guess ARDUINO_BOOTLOADER, see messages above)
+      endif
+    else
+      ACTUAL_ARDUINO_BOOTLOADER := $(ARDUINO_BOOTLOADER)
     endif
-  else
-    ACTUAL_ARDUINO_BOOTLOADER := $(ARDUINO_BOOTLOADER)
+
   endif
 
 endif
@@ -370,10 +385,10 @@ PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
 
 PRINT_AVRISPMKII_PROGRAMMING_FAILED_MESSAGE := \
   echo ; \
-  echo Programming failed.  Is the AVRISPmkII hooked up?  Does the ; \
-  echo Arduino have power?  The AVRISPmkII does not power the ; \
-  echo Arduino, but you can just plug in the USB cable to power it ; \
-  echo and still use the AVRISPmkII for programming. ; \
+  echo Programming failed.  Is the AVRISPmkII hooked up?  Does the Arduino ; \
+  echo have power?  The AVRISPmkII does not power the Arduino, but you can ; \
+  echo just plug in the USB cable to power it and still use the AVRISPmkII ; \
+  echo for programming. ; \
   echo
 
 .PHONY: writeflash
@@ -423,7 +438,7 @@ endif
 # FIXME: ATmegaBOOT_168_atmega328.hex seems unchanged in latest distribution,
 # but we should autotrack
 # FIXME: by settin (SUT1, SUT0) to (1, 1), we would seem to be stomping a
-# reserved state.
+# reserved state.  Why not just leave in (1, 0) (meaning slowly rising power)?
 replace_bootloader: $(ACTUAL_ARDUINO_BOOTLOADER)  binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -e -u \
