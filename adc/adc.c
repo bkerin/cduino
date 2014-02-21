@@ -59,6 +59,8 @@ adc_pin_init (uint8_t pin)
 
   PORTC &= ~(0x01 << pin);   // Disable pull-up on pin
   DDRC &= ~(0x01 << pin);    // Ensure pin is set as an input
+
+  // Save power: See the ATmega328P datasheet section 9.10.6.
   DIDR0 |= 0x01 << pin;      // Disable digital input buffer on pin
 }
 
