@@ -466,7 +466,7 @@ allow an interrupt to be generated instead of or in addition to (before) the
 reset.  This usage is not covered here.  </p>
 
 <p align="justify">  Finally, because the newer AVRs use a reset flag that must
-be cleared early the AVR boot process to avoid re-resetting after a watchdog
+be cleared early in the AVR boot process to avoid re-resetting after a watchdog
 reset, careful programs will want to clear this flag early in the boot process.
 Even if your code never explicitly enables the watchdog timer at all, it is
 possible that it could get turned on by erroneous code or electrical noise.
