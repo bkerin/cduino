@@ -485,7 +485,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
   while ( et < timeout ) {
 
     if ( WX_BYTE_AVAILABLE () ) {
-      
+
       if ( WX_UART_RX_ERROR () ) {
         if ( WX_UART_RX_FRAME_ERROR () ) {
           WX_UART_FLUSH_RX_BUFFER ();
