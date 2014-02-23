@@ -104,7 +104,7 @@ wx_enter_at_command_mode (void)
 
   uint8_t sentinel = get_line (WX_MCOSL, response);
   HANDLE_ERRORS (sentinel);
-  
+
   HANDLE_ERRORS (! strcmp (response, "OK\r"));
 
   return TRUE;
