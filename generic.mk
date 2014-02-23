@@ -165,18 +165,17 @@ AVRGDB ?=
 
 ##### Fuse Settings (Overridable) {{{1
 
-# WARNING: UNTESTED.  Fuse settings to be programmed, in the form of a list of
-# setting for individual bits as they are named in for example the Mega328P
-# datasheet.  For example, setting this to 'BODLEVEL2=1 BODLEVEL1=0
-# BODLEVEL0=1' will enable brown out detection for a typical value of 2.7 V
-# supply as described in the datasheet.  Note that lock and fuse bits are
-# always written a byte at a time: if any bits of a byte are specified, all
-# should be (or else they will take their default values).  Note also that the
-# arduino uses a number of non-default lock and fuse settings; changing them
-# may break things.  On the other hand, if you want to use in-system
-# programming to program a minimal system at a different clock rate, you'll
-# need to learn about fuse settings.  See the uses of this variable for more
-# details.
+# Fuse settings to be programmed, in the form of a list of setting for
+# individual bits as they are named in for example the Mega328P datasheet.
+# For example, setting this to 'BODLEVEL2=1 BODLEVEL1=0 BODLEVEL0=1' will
+# enable brown out detection for a typical value of 2.7 V supply as described
+# in the datasheet.  Note that lock and fuse bits are always written a byte
+# at a time: if any bits of a byte are specified, all should be (or else they
+# will take their default values).  Note also that the arduino uses a number
+# of non-default lock and fuse settings; changing them may break things.
+# On the other hand, if you want to use in-system programming to program
+# a minimal system at a different clock rate, you'll need to learn about
+# fuse settings.  See the uses of this variable for more details.
 LOCK_AND_FUSE_SETTINGS ?=
 
 
