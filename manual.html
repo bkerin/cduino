@@ -105,6 +105,7 @@ link to the file generic.mk in the distribution top-level directory).
 
 To disable some troublesome crufty old Make behavior, the -R and -r options
 must be passed to all make invocations that use <code>generic.mk</code>.
+<p />
 
 The <code>generic.mk</code> file provides the following targets intended for
 public use:
@@ -112,14 +113,19 @@ public use:
 <ul>
 
   <li><code>writeflash</code> -- Compile all .c files into object files using
-  settings appropriate for Arduino ardware, link them, and upload them using
-  the arduino bootloader method.  All <code>.c</code> files are assumed to
-  depend on all headers and on the Makefile (so everything is recompiled if
-  anything has changed).</li>
+  settings appropriate for Arduino ardware, link them, and upload them together
+  with any fuse settings specified (see <a href="#lock_and_fuse_settings">
+  LOCK_AND_FUSE_SETTINGS</a> below) using the arduino bootloader method.  All
+  <code>.c</code> files are assumed to depend on all headers and on the
+  Makefile (so everything is recompiled if anything has changed).</li>
 
   <li><code>replace_bootloader</code> -- replace the bootloader on the ATMega
   on the arduino.  This is useful if an upload method that nukes the bootloader
   has been used (see below).</li>
+
+  <li>Implicit or static pattern rules for generating <code>.o</code> files
+  from any <code>.c</code> or <code>.cpp</code> files found in the module
+  directory as usual.
 
 </ul>
 
@@ -166,6 +172,13 @@ make:
   all <code>.c</code> files depend on all header files found in the module
   directory.</li>
 
+  <li><code>NO_USB_ARDUINO_CONNECTION</code> -- If this is set to a non-empty
+  value, the build system doesn't freak out if it can't find an Arduino on the
+  USB.  This is convenient if UPLOAD_METHOD=AVRISPmkII and you don't intend to
+  use the USB to talk to the Arduino for debugging either, which in turn is
+  likely to be the case if you're migrating from the Arduino to something
+  simpler.</li>
+
   <li id="upload_method"><code>UPLOAD_METHOD</code> -- This must be either
   "arduino_bl" or "AVRISPmkII".  The defualt is "arduino_bl", meaning that the
   program should be uploaded over the USB/serial line using the arduino
@@ -179,23 +192,24 @@ make:
   <li><code>DTR_PULSE_NOT_REQUIRED</code> -- If this is set to "true", the DTR
   pulse that the arduino normall uses to save the user having to push the reset
   button immediately after avrdude programming begins is not considered
-  essential (os the perl modules used to do it aren't required).  Of course,
+  essential (so the perl modules used to do it aren't required).  Of course,
   now you will have to push the reset button all the time.</li>
 
   <li>build and upload program variables -- a number of variables exist which
-  allow the compiler, uploader, etc. programs to bet set (e.g. CC, AVRDUDE,
+  allow the compiler, uploader, etc. programs to be set (e.g. CC, AVRDUDE,
   etc.).  These are useful if you want to test the effects of different
   compiler or uploader versions.</li>
 
-  <li><code>LOCK_AND_FUSE_SETTINGS</code> -- This variable can be used to set
-  the lock and fuse bytes of the arduino (normally they are left alone).  Doing
-  so is required for the use of different clock frequencies, clock sources,
-  power management, brown-out detection, watchdog timer, and other hardware
-  features.  However, certain settings are required for normal arduino
-  functionality, so changing them may break things.  They can hopefully be
-  reset using the replace_bootloader target, but this is not guaranteed.  For
-  example, setting the clock source to the low-frequency low-power internal
-  oscillator makes the chips unprogrammable for me.</li>
+  <li id="lock_and_fuse_settings"><code>LOCK_AND_FUSE_SETTINGS</code> -- This
+  variable can be used to set the lock and fuse bytes of the arduino (normally
+  they are left alone).  Doing so is required for the use of different clock
+  frequencies, clock sources, power management, brown-out detection, always-on
+  watchdog timer, and other hardware features.  However, certain settings are
+  required for normal arduino functionality, so changing them may break things.
+  They can hopefully be reset using the replace_bootloader target, but this is
+  not guaranteed.  For example, setting the clock source to the low-frequency
+  low-power internal oscillator makes the chips unprogrammable for me (but
+  saves a lot of power on finnished products :).</li>
 
   <li><code>AVRLIBC_PRINTF_LDFLAGS</code> -- This variable can be used to get a
   more feature-complete (and bigger) or more minimal (and smaller)
