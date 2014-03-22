@@ -45,7 +45,9 @@
 // use to control the first SPI slave device, and is the only one you'll need
 // to use if you're talking to just one slave.  This is all I've tested myself.
 //
-// UNTESTEDNESS WARNING: I haven't tried this multiple slave approach:
+// LIKELY UNTESTEDNESS WARNING: I have a vague memory of having tried out
+// the below multi-slave approach out once upon a time, and having it work.
+// But I might be imagining it.
 //
 // It's possible to use another digital output to control a SPI slave,
 // however.  If there are multiple slaves, you'll need to use a different
@@ -138,6 +140,8 @@ typedef enum {
 // See comments at the top of this file for details on how to use other
 // pins instead of or in addition to SS as slave select pins.
 #define SPI_SS_PIN DIO_PIN_DIGITAL_10
+// FIXME: shouldn't these intermediate functionesqe macros be declared with
+// parens for clarity, or does that work?
 #define SPI_SS_INIT DIO_INIT_DIGITAL_10
 #define SPI_SS_SET_LOW DIO_SET_DIGITAL_10_LOW
 #define SPI_SS_SET_HIGH DIO_SET_DIGITAL_10_HIGH
@@ -167,7 +171,7 @@ typedef enum {
 //   * Data order is MSB first
 //
 //   * Data mode is 0 (~CPOL and ~CPHA), meaning the the clock is active-high
-//     (~CPOL) and sampled at the leading edge of the clock cycle
+//     (~CPOL) and sampled at the leading edge of the clock cycle (~CPHA).
 //
 //   * A SPI clock frequency of F_CPU / 4 is used (SPR1, SPR0, and ~SPI2X)
 //
