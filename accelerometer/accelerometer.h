@@ -15,6 +15,7 @@
 #ifndef ACCELEROMETER_H
 #define ACCELEROMETER_H
 
+// FIXME: add note about namespace pollution caused by this header
 #include "lis331dlh_driver.h"
 
 // Initialize the accelerometer.  This must be done first, but once its

@@ -313,7 +313,10 @@ typedef enum {
 /* Exported functions --------------------------------------------------------*/
 
 //Sensor Configuration Functions
-status_t LIS331DLH_GetWHO_AM_I(u8_t* val);
+// This probably doesn't work on the LIS331HH, though it would be nice and
+// should work fine on the LIS331DHL.  But since LIS331HH is the part I have
+// to play with I'm disabling it.
+//status_t LIS331DLH_GetWHO_AM_I(u8_t* val);
 status_t LIS331DLH_SetODR(LIS331DLH_ODR_t dr);
 status_t LIS331DLH_SetMode(LIS331DLH_Mode_t pm);
 status_t LIS331DLH_SetAxis(LIS331DLH_Axis_t axis);
