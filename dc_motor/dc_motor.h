@@ -20,8 +20,6 @@
 //
 //   0 -> Arduino A0 -> ATmega pin PC0
 //   1 -> Arduino A1 -> ATmega pin PC1
-//   ...
-//   5 -> Arduino A5 -> Atmega pin PC5
 //
 #define DC_MOTOR_CHANNEL_A_CURRENT_SENSE_ADC_PIN 0
 #define DC_MOTOR_CHANNEL_B_CURRENT_SENSE_ADC_PIN 1
