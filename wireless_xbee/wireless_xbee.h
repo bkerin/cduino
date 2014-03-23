@@ -67,6 +67,11 @@
 // since it doesn't provide a software serial implementation at the moment.
 // But of course it can screw things up if you're trying to use those pins
 // for some other purpose, so its something to be aware of.
+//
+// This modules doesn't do anything with the DTR/RTS lines to the XBee.
+// Sending data too fast can overwhelm the XBee.  Its always possible to
+// send an entire frame without causing any overflow though (assuming the
+// queue was clear to start with).  See the XBee datasheet for details.
 
 #ifndef WIRELESS_XBEE_H
 #define WIRELESS_XBEE_H
