@@ -140,8 +140,8 @@ typedef enum {
 // See comments at the top of this file for details on how to use other
 // pins instead of or in addition to SS as slave select pins.
 #define SPI_SS_PIN DIO_PIN_DIGITAL_10
-// FIXME: shouldn't these intermediate functionesqe macros be declared with
-// parens for clarity, or does that work?
+// Note that its possible to use pins other than DIGITAL_10 for the SS line
+// (see comment above).
 #define SPI_SS_INIT DIO_INIT_DIGITAL_10
 #define SPI_SS_SET_LOW DIO_SET_DIGITAL_10_LOW
 #define SPI_SS_SET_HIGH DIO_SET_DIGITAL_10_HIGH
@@ -175,7 +175,7 @@ typedef enum {
 //
 //   * A SPI clock frequency of F_CPU / 4 is used (SPR1, SPR0, and ~SPI2X)
 //
-// These are the default setting for the SPCR and SPSR registers, except that
+// These are the default settings for the SPCR and SPSR registers, except that
 // that SPI is enabled (SPE) and set to master mode (MSTR).  Its possible
 // to change the data order, data mode, and SPI clock frequency using other
 // methods in this interface.

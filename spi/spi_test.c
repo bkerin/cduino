@@ -8,12 +8,12 @@
 //   * SDI to digital pin 11 (MOSI pin)
 //   * CLK - to digital pin 13 (SCK pin)
 //
-// This program starts with the wiper pin W6 connected to ground (SPI
-// data input 0x00).  It then move the wiper 1/4 of the way up the scale
-// every 5 seconds.  If things are working correctly, this will produce a
-// voltage output sequence of ~0V, ~1/4 Vcc, ~1/2 Vcc, ~3/4 Vcc, and ~Vcc
-// at wiper pin W6.  It then repeats this sequence using all the different
-// clock divider frequencies (of which there are a total of 7).
+// This program starts with the wiper pin W6 connected to ground (SPI data
+// input 0x00).  It then moves the wiper 1/4 of the way up the scale every
+// 5 seconds.  If things are working correctly, this will produce a voltage
+// output sequence of ~0V, ~1/4 Vcc, ~1/2 Vcc, ~3/4 Vcc, and ~Vcc at wiper
+// pin W6.  It then repeats this sequence using all the different clock
+// divider frequencies (of which there are a total of 7).
 
 #include <assert.h>
 #include <stdlib.h>   // FIXME: remove this once assert.h is fixed (new avrlibc)
@@ -27,6 +27,17 @@
 #  error The macros which specify which pin should be used for SPI slave \
          selection are not set.  Please see the example in the Makefile \
          in the spi module directory.
+#endif
+
+// SPI communication uses PB5, so we rewire the blinky macros to use a LED
+// on a different pin.
+#ifdef CHKP
+#  undef CHKP
+#  define CHKP() CHKP_USING(DDRD, DDD2, PORTD, PORTD2, 300.0, 3)
+#endif
+#ifdef BTRAP
+#  undef BTRAP
+#  define BTRAP() BTRAP_USING(DDRD, DDD2, PORTD, PORTD2, 100.0)
 #endif
 
 // WARNING: This module not fully tested.  These tests test output with
@@ -59,7 +70,7 @@ main (void)
 
     spi_set_clock_divider (cds); 
 
-    // Number of different resistor setting we test
+    // Number of different resistor settings we test
     int const test_steps = 5;
 
     // For each different resistance setting we want to test...
