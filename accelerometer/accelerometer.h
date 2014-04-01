@@ -2,6 +2,10 @@
 //
 // Test driver: accelerometer_test.c    Implementation: accelerometer.h
 //
+// Only a few features of the underlying lis331dlh_driver.h are brought
+// out directly in this interface.  See that file for interrupt generation,
+// high-pass filtering etc.
+//
 // Some of the underlying code we grabbed from the ST Microelectronics site
 // was written for the LIS331DLH, so everything should work fine with that
 // device.  We have an LIS331HH, which is almost identical register-wise (see
@@ -15,12 +19,53 @@
 #ifndef ACCELEROMETER_H
 #define ACCELEROMETER_H
 
-// FIXME: add note about namespace pollution caused by this header
+#include <inttypes.h>
+
+// WARNING: this header pollutes the namespace with a variety of types with
+// fairly short names.  I don't want to go through and make a zillion tiny
+// changes to the file, since that would make it hard to track the upstream
+// source from which it came.
 #include "lis331dlh_driver.h"
 
 // Initialize the accelerometer.  This must be done first, but once its
 // done all the functions from lis331dlh_driver.h can be used.
 void
 accelerometer_init (void);
+
+// Power down the accelerometer.  This puts the device fully to sleep.
+// For other low-power modes with periodic sampling and interrupts see the
+// datasheet and/or underlying lis331dlh_driver.h interface.
+void
+accelerometer_power_down (void);
+
+// Put the accelerometer in fully operational normal mode.  See
+// accelerometer_power_down().
+void
+accelerometer_power_up (void);
+
+typedef enum {
+  ACCELEROMETER_FULLSCALE_TYPE_6G  = LIS331HH_FULLSCALE_6,
+  ACCELEROMETER_FULLSCALE_TYPE_12G = LIS331HH_FULLSCALE_12,
+  ACCELEROMETER_FULLSCALE_TYPE_24G = LIS331HH_FULLSCALE_24,
+} accelerometer_fullscale_t;
+
+// Set the full-scale (and corresponding sensitivity) setting.
+void
+accelerometer_set_fullscale (accelerometer_fullscale_t fs);
+
+typedef enum {
+  ACCELEROMETER_DATA_RATE_50HZ   = LIS331DLH_ODR_50Hz,
+  ACCELEROMETER_DATA_RATE_100HZ  = LIS331DLH_ODR_100Hz,
+  ACCELEROMETER_DATA_RATE_400HZ  = LIS331DLH_ODR_400Hz,
+  ACCELEROMETER_DATA_RATE_1000HZ = LIS331DLH_ODR_1000Hz
+} accelerometer_data_rate_t;
+
+// Set the output data rate.
+void
+accelerometer_set_data_rate (accelerometer_data_rate_t dr);
+
+// Block until new acceleration data is ready, then return it in *ax, *ay, *az.
+void
+accelerometer_get_accel (int16_t *ax, int16_t *ay, int16_t *az);
 
 #endif // ACCELEROMETER_H

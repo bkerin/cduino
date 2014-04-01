@@ -23,7 +23,41 @@ accelerometer_init (void)
 {
   MY_SPI_SLAVE_ACCELEROMETER_SELECT_INIT ();
   spi_init ();
-  // The defaults that spi_init() uses will work for this device, so we don't
-  // need any more calls to configure SPI FIXME: if we can use a higher data
-  // rate than 4 MHz, we might want to do that by default?
+  spi_set_data_mode (SPI_DATA_MODE_3);
+
+  accelerometer_power_up ();
+}
+
+void
+accelerometer_power_down (void)
+{
+  LIS331DLH_SetMode(LIS331DLH_POWER_DOWN);
+}
+
+void
+accelerometer_power_up (void)
+{
+  LIS331DLH_SetMode(LIS331DLH_NORMAL);
+}
+
+void
+accelerometer_set_fullscale (accelerometer_fullscale_t fs)
+{
+  LIS331HH_SetFullScale (fs);                    
+}
+
+void
+accelerometer_set_data_rate (accelerometer_data_rate_t dr)
+{
+  LIS331DLH_SetODR (dr);
+}
+
+void
+accelerometer_get_accel (int16_t *ax, int16_t *ay, int16_t *az)
+{
+  AxesRaw_t aclr;   // Accelerometer Readings
+  LIS331DLH_GetAccAxesRaw (&aclr);
+  *ax = aclr.AXIS_X;
+  *ay = aclr.AXIS_Y;
+  *az = aclr.AXIS_Z;
 }
