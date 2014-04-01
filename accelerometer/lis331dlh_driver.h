@@ -118,11 +118,21 @@ typedef enum {
   LIS331DLH_SLEEP_TO_WAKE_ENA              =             0x03,
 } LIS331DLH_Sleep_To_Wake_Conf_t;
 
+// WARNING: The LIS331HH differs fromt he LIS331DLH in the full-scale values
+// of its supported acceleration ranges.
 typedef enum {
   LIS331DLH_FULLSCALE_2                    =             0x00,
   LIS331DLH_FULLSCALE_4                    =             0x01,
   LIS331DLH_FULLSCALE_8                    =             0x03,
 } LIS331DLH_Fullscale_t;
+
+// Full scale values for the LIS331HH.  Values of this type can be used where
+// a value of type LIS331DLK_Fullscale_t is called for in this interface.
+typedef enum {
+  LIS331HH_FULLSCALE_6                    =             0x00,
+  LIS331HH_FULLSCALE_12                   =             0x01,
+  LIS331HH_FULLSCALE_24                   =             0x03,
+} LIS331HH_Fullscale_t;
 
 typedef enum {
   LIS331DLH_BLE_LSB                        =		0x00,
@@ -313,14 +323,16 @@ typedef enum {
 /* Exported functions --------------------------------------------------------*/
 
 //Sensor Configuration Functions
-// This probably doesn't work on the LIS331HH, though it would be nice and
-// should work fine on the LIS331DHL.  But since LIS331HH is the part I have
-// to play with I'm disabling it.
+// This GetWHOA_M_I function probably doesn't work on the LIS331HH, though it
+// would be nice and should work fine on the LIS331DHL.  But since LIS331HH
+// is the part I have to play with I'm disabling it.
 //status_t LIS331DLH_GetWHO_AM_I(u8_t* val);
 status_t LIS331DLH_SetODR(LIS331DLH_ODR_t dr);
 status_t LIS331DLH_SetMode(LIS331DLH_Mode_t pm);
 status_t LIS331DLH_SetAxis(LIS331DLH_Axis_t axis);
 status_t LIS331DLH_SetFullScale(LIS331DLH_Fullscale_t fs);
+// The LIS331HH supports different full-scale values than the LIS331DLH.
+status_t LIS331HH_SetFullScale(LIS331HH_Fullscale_t fs);
 status_t LIS331DLH_SetBDU(State_t bdu);
 status_t LIS331DLH_SetBLE(LIS331DLH_Endianess_t ble);
 status_t LIS331DLH_SetSelfTest(State_t st);

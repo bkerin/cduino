@@ -40,6 +40,17 @@
 #include "lis331dlh_driver.h"
 #include "spi.h"
 
+// SPI communication uses PB5, so we rewire our debugging macros to use a
+// LED on a different pin.
+#ifdef CHKP
+#  undef CHKP
+#  define CHKP() CHKP_USING(DDRD, DDD2, PORTD, PORTD2, 300.0, 3)
+#endif
+#ifdef BTRAP
+#  undef BTRAP
+#  define BTRAP() BTRAP_USING(DDRD, DDD2, PORTD, PORTD2, 100.0)
+#endif
+
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -85,7 +96,7 @@ u8_t LIS331DLH_ReadReg(u8_t deviceAddr, u8_t Reg, u8_t* Data) {
     // for the first byte of the request and last byte of the result).
     // But this interface doesn't seem to do it, so we're sure not going to
     // worry about it.
-    spi_transfer (Reg);
+    spi_transfer (B10000000 | Reg);
     uint8_t dont_care_value = 0x00;
     *Data = spi_transfer (dont_care_value);
   }
@@ -253,6 +264,13 @@ status_t LIS331DLH_SetFullScale(LIS331DLH_Fullscale_t fs) {
   return MEMS_SUCCESS;
 }
 
+// Analogous to LIS331DLH_SetFullScale().
+status_t LIS331HH_SetFullScale(LIS331HH_Fullscale_t fs) {
+  // Values of type LIS331HH_Fullscale_t can be used where values
+  // of type LIS331DLH_Fullscale_t are called for, so we can use
+  // LIS331DLH_SetFullScale() to implement this function.
+  return LIS331DLH_SetFullScale (fs);
+}
 
 /*******************************************************************************
 * Function Name  : LIS331DLH_SetBDU
