@@ -46,7 +46,7 @@ main (void)
   
   spi_set_data_mode (SPI_DATA_MODE_0);
   
-  // We're going to use a look over the clock divider settings, so here we
+  // We're going to use a loop over the clock divider settings, so here we
   // verify that the interface gives them the the endpoint values we expect.
   assert (SPI_CLOCK_DIVIDER_DIV4 == 0x00);
   assert (SPI_CLOCK_DIVIDER_DIV32 == 0x06);
