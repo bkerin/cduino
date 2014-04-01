@@ -1,8 +1,11 @@
 // Test/demo for the accelerometer.h interface.
 
+#include <float.h>
 #include <inttypes.h>
+#include <math.h>
 
 #include "accelerometer.h"
+#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 #include "util.h"
 
@@ -41,62 +44,61 @@ int
 main (void)
 {
   term_io_init ();
-  printf ("term_io_init() completed.\n");
+  PFP ("term_io_init() completed.\n");
 
   accelerometer_init ();
-  printf ("accelerometer_init() completed.\n");
-
-  //status_t sent_value = LIS331DLH_SetMode (LIS331DLH_NORMAL);
-  //BASSERT (sent_value);
+  PFP ("accelerometer_init() completed.\n");
   
+  // After power-up, control register 1 should consist of its default
+  // value (0x07) or'ed with the bits that indicate normal mode (0x20).
+  // NOTE that since the accelerometer isn't reset when the ATmega328P is,
+  // other settings (performed below) may persist accross resets.  To reset
+  // the accelerometer, power down the board.  If you want to see the startup
+  // values in screen, hold the reset button down after powering up the board
+  // until you have the screen setting up and running (make -rR run_screen),
+  // then release the reset button.
   uint8_t ctrl1_value;
   LIS331DLH_ReadReg (
       LIS331DLH_MEMS_I2C_ADDRESS, LIS331DLH_CTRL_REG1, &ctrl1_value);
-  printf ("CTRL_REG1: %x\n", ctrl1_value);
+  PFP ("CTRL_REG1 value: %x\n", ctrl1_value);
 
-  LIS331DLH_SetMode(LIS331DLH_NORMAL);
+  accelerometer_power_down ();
+  PFP ("accelerometer_power_down() completed.\n");
 
-  LIS331HH_SetFullScale (LIS331HH_FULLSCALE_24);                    
+  // In theory a delay could be inserted here, and the actual power
+  // consumption of the device in power-down state measured.  I haven't
+  // actually done this.
+
+  accelerometer_power_up ();
+  PFP ("accelerometer_power_up() completed.\n");
+
+  accelerometer_set_fullscale (ACCELEROMETER_FULLSCALE_TYPE_24G);
+  PFP ("Fullscale set to 24 gravities.\n");
+  
+  accelerometer_set_data_rate (ACCELEROMETER_DATA_RATE_1000HZ);
+  PFP ("Date rate set to 1000 Hz.\n");
 
   for ( ; ; ) {
 
-    for ( uint8_t ii = 0 ; ii < BRC ; ) {
-
-      uint8_t status_reg_contents;
-      LIS331DLH_GetStatusReg (&status_reg_contents);
-
-      if ( ! (status_reg_contents & LIS331DLH_DATAREADY_BIT) ) {
-        continue;
-      }
-      // BTRAP ();
-          
-      AxesRaw_t aclr;   // Accelerometer Readings
-      aclr.AXIS_X = 42;
-      aclr.AXIS_Y = 42;
-      aclr.AXIS_Z = 42;
-      status_t result = LIS331DLH_GetAccAxesRaw (&aclr);
-      BASSERT (result = MEMS_SUCCESS);
-      ax[ii] = aclr.AXIS_X;
-      ay[ii] = aclr.AXIS_Y;
-      az[ii] = aclr.AXIS_Z;
-  
-      ii++;
-    }
-
     for ( uint8_t ii = 0 ; ii < BRC ; ii++ ) {
-      printf (
-          "Ax: %3i  Ay: %3i  Az: %3i\n",
-          (int) ax[ii], (int) ay[ii], (int) az[ii] );
-      // The AVR libc version I have seems to get confused when we try to use
-      // field widths with the type macros PRIi16 etc. so we can't use this:
-      //printf (
-      //    "Ax: %3 " PRIi16 "Ay: %3 " PRIi16 "Az: %3 " PRIi16 "\n",
-      //    (int) ax[ii], (int) ay[ii], (int) az[ii] );
+      accelerometer_get_accel (&(ax[ii]), &(ay[ii]), &(az[ii]));
     }
 
-    // FIXME: we don't use a delay loop at the moment just frantically read
-    // untel the device signals us it has a new value.
-    //float tbr = 1000.0;   // Time Between Readings (in milliseconds)
-    //_delay_ms (tbr);
+    // Find the peak acceleration (in an arbitrary direction).
+    float peak_abs_a = -FLT_MAX;
+    int16_t peak_ax = INT16_MIN, peak_ay = INT16_MIN, peak_az = INT16_MIN;
+    for ( uint8_t ii = 0 ; ii < BRC ; ii++ ) {
+      float cur_a
+        = sqrt (pow(ax[ii], 2.0) + pow (ay[ii], 2.0) + pow (az[ii], 2.0)); 
+      if ( cur_a > peak_abs_a ) {
+        peak_ax = ax[ii];
+        peak_ay = ay[ii];
+        peak_az = az[ii];
+      }
+    }
+
+    PFP (
+        "Recent-time peak acceleration: Ax: %3i  Ay: %3i  Az: %3i\n",
+        (int) peak_ax, (int) peak_ay, (int) peak_az );
   }
 }

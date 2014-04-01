@@ -55,6 +55,15 @@ accelerometer_set_data_rate (accelerometer_data_rate_t dr)
 void
 accelerometer_get_accel (int16_t *ax, int16_t *ay, int16_t *az)
 {
+  for ( ; ; ) {
+    uint8_t status_reg_contents;
+    LIS331DLH_GetStatusReg (&status_reg_contents);
+
+    if ( status_reg_contents & LIS331DLH_DATAREADY_BIT) {
+      break;
+    }
+  }
+
   AxesRaw_t aclr;   // Accelerometer Readings
   LIS331DLH_GetAccAxesRaw (&aclr);
   *ax = aclr.AXIS_X;

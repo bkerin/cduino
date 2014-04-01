@@ -27,8 +27,10 @@
 // source from which it came.
 #include "lis331dlh_driver.h"
 
-// Initialize the accelerometer.  This must be done first, but once its
-// done all the functions from lis331dlh_driver.h can be used.
+// Initialize the accelerometer and put it in normal (not power-down mode).
+// Other than selecting normal mode instead of power-down mode, all the
+// device defaults are used.  This function must be called first, but once
+// its done all the functions from lis331dlh_driver.h can be used.
 void
 accelerometer_init (void);
 
@@ -64,7 +66,10 @@ typedef enum {
 void
 accelerometer_set_data_rate (accelerometer_data_rate_t dr);
 
-// Block until new acceleration data is ready, then return it in *ax, *ay, *az.
+// Block until new acceleration data is ready, then return it in *ax, *ay,
+// *az.  FIXME: The exact choice of units is not clear to me, and seems to
+// depend on the selected full-scale setting.  You're always supposed to
+// get 1g pointing down :).
 void
 accelerometer_get_accel (int16_t *ax, int16_t *ay, int16_t *az);
 
