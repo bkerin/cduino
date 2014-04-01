@@ -60,10 +60,10 @@
 #define BTRAP_USING(ddr, ddrb, portr, portrb, mspb) \
   do { CHKP_USING (ddr, ddrb, portr, portrb, mspb, 1); } while ( TRUE );
 
-// WARNING: some shields (e.g. the official Arduino motor shield, version R3)
-// use the pin PB5 (AKA Digital 13 in Arduino-speak) for their own purposes,
-// hence using this function will have unfortunate effects.  It can easily
-// be redefined to toggle a different pin.
+// WARNING: some shields (e.g. shields which actively use SPI, the official
+// Arduino motor shield, version R3) use the pin PB5 (AKA Digital 13 in
+// Arduino-speak) for their own purposes, hence using this function will have
+// unfortunate effects.  It can easily be redefined to toggle a different pin.
 //
 // Initialize and blink the on-board LED on PB5 three quick times to
 // indicate that we've hit a checkpoint.  WARNING: no effort has been made
