@@ -73,7 +73,7 @@
 // means you're likely to get strange hard-to-interpret errors if you call
 // them wrong.  So I don't reccomend these forms.  However, they may be
 // convenient for clients that want to allow compile-time pin configuration.
-// See the sd_card module for an example.  FIXME: run all the tests again
+// See the sd_card module for an example.
 
 
 ///////////////////////////////////////////////////////////////////////////////
