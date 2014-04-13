@@ -34,3 +34,9 @@ include generic.mk
 # Uncomment this to build the test program for bulk testing with
 # usb_xbee_test.  See the comments in wireless_xbee_test.c for details.
 #CPPFLAGS += -DAUTOMATIC_TESTING_WITH_USB_XBEE_TEST
+
+# This is really just a note-to-self about one of the most useful usb_xbee
+# invocations: it just listenes for incoming frame lines and displays them.
+# Assuming the hard-wired device file used here is actually right.
+start_frame_listener:
+	./usb_xbee --device=/dev/ttyUSB0 --framed-lines-mode
