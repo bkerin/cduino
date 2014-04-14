@@ -1,14 +1,14 @@
 // Implementation of the interface described in accelerometer.h.
 
 #include "accelerometer.h"
-#include "lis331dlh_driver.h"
+#include "lis331dlh_driver_private.h"
 #include "spi.h"
 
 // SPI-related initialization macro as described in spi.h.
 #define MY_SPI_SLAVE_ACCELEROMETER_SELECT_INIT() \
   SPI_SS_INIT(DIO_OUTPUT, DIO_DONT_CARE, HIGH)
-// Note that since all the actual SPI use other than initialization
-// takes place in the lis331dlh_driver.c file (kindly provided by ST
+// Note that since all the actual SPI use other than initialization takes
+// place in the lis331dlh_driver_private.c file (kindly provided by ST
 // Microelectronics) the MY_SPI_SLAVE_ACCELEROMETER_SELECT_SET_LOW/HIGH
 // macros that spi.h implies should exist are defined there.  Letting this
 // interface be responsible for SPI initialization keeps the changes

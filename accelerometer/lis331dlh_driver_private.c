@@ -1,13 +1,16 @@
-// Turns out ST Microelectronics already provides an almost-finished interface
-// for the LIS331DLH, which is an almost identical device: the WHO_AM_I
-// register document for that device isn't documented for the LIS331HH,
-// but thats the only difference I've notice in the datasheet (besides the
-// different pin out and dynmic ranges and sensitivities of the devices,
-// which aren't relevant to this interface).
+// Turns out ST Microelectronics already provides an almost-finished
+// interface for the LIS331DLH, which is an almost identical device: the
+// WHO_AM_I register document for that device isn't documented for the
+// LIS331HH, but thats the only difference I've notice in the datasheet
+// (besides the different pin out and dynmic ranges and sensitivities of
+// the devices, which aren't relevant to this interface).  The original
+// ST Microelectronics code is included in the LIS331DLH.model directory.
+// For consistency with our build system, the individual sources files have
+// had _private added to them.
 //
-// All we have to do is fill in the in the LIS331DLH_ReadReg() and
-// LIS331DLH_WriteReg() functions in lis331dlh_driver.c.  Note that the
-// accelerometer_init() function in accelerometer.h must still be called
+// All we had to do is fill in the in the LIS331DLH_ReadReg() and
+// LIS331DLH_WriteReg() functions in lis331dlh_driver_private.c.  Note that
+// the accelerometer_init() function in accelerometer.h must still be called
 // first to ensure that SPI is set up correctly, so that our implementation
 // of these routines works.
 
@@ -37,7 +40,7 @@
 *******************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
-#include "lis331dlh_driver.h"
+#include "lis331dlh_driver_private.h"
 #include "spi.h"
 
 // SPI communication uses PB5, so we rewire our debugging macros to use a
@@ -558,12 +561,12 @@ status_t LIS331DLH_TurnONEnable(LIS331DLH_Sleep_To_Wake_Conf_t stw) {
 * Return         : Status [MEMS_ERROR, MEMS_SUCCESS]
 *******************************************************************************/
 
-// This function didn't have a prototype in lis331dlh_driver.h, so I'm
-// commenting it out.  Given its signature, I think the default signature
-// thingy C assumes of undeclared functions would probably work, so it may
-// have been working despite the lack of a prototype.  But it does something
-// weird that I don't care about anyway so I'm playing it safe and taking
-// it out.
+// This function didn't have a prototype in lis331dlh_driver_private.h,
+// so I'm commenting it out.  Given its signature, I think the default
+// signature thingy C assumes of undeclared functions would probably work,
+// so it may have been working despite the lack of a prototype.  But it
+// does something weird that I don't care about anyway so I'm playing it
+// safe and taking it out.
 /*
 status_t LIS331DLH_HPFilterReset(void) {
   u8_t value;

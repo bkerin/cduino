@@ -2,19 +2,19 @@
 //
 // Test driver: accelerometer_test.c    Implementation: accelerometer.h
 //
-// Only a few features of the underlying lis331dlh_driver.h are brought
-// out directly in this interface.  See that file for interrupt generation,
-// high-pass filtering etc.
+// Only a few features of the underlying lis331dlh_driver_private.h are
+// brought out directly in this interface.  See that file for interrupt
+// generation, high-pass filtering etc.
 //
-// Some of the underlying code we grabbed from the ST Microelectronics site
-// was written for the LIS331DLH, so everything should work fine with that
-// device.  We have an LIS331HH, which is almost identical register-wise (see
-// the start of lis331dlh_driver.c for a description of the difference).
-// This interface will probably work almost unchanged for a number of
-// ST Microelectronics accelerometers; the major task when considering a
-// different one would be to look through lis331dlh_driver.h and compare
-// it to the datasheet for the device you're considering and ensure that
-// the registers used are the same.
+// Some of the underlying code we grabbed from the ST Microelectronics
+// site was written for the LIS331DLH, so everything should work fine
+// with that device.  We have an LIS331HH, which is almost identical
+// register-wise (see the start of lis331dlh_driver_private.c for a
+// description of the difference).  This interface will probably work
+// almost unchanged for a number of ST Microelectronics accelerometers;
+// the major task when considering a different one would be to look through
+// lis331dlh_driver_private.h and compare it to the datasheet for the device
+// you're considering and ensure that the registers used are the same.
 
 #ifndef ACCELEROMETER_H
 #define ACCELEROMETER_H
@@ -25,18 +25,18 @@
 // fairly short names.  I don't want to go through and make a zillion tiny
 // changes to the file, since that would make it hard to track the upstream
 // source from which it came.
-#include "lis331dlh_driver.h"
+#include "lis331dlh_driver_private.h"
 
 // Initialize the accelerometer and put it in normal (not power-down mode).
 // Other than selecting normal mode instead of power-down mode, all the
 // device defaults are used.  This function must be called first, but once
-// its done all the functions from lis331dlh_driver.h can be used.
+// its done all the functions from lis331dlh_driver_private.h can be used.
 void
 accelerometer_init (void);
 
 // Power down the accelerometer.  This puts the device fully to sleep.
 // For other low-power modes with periodic sampling and interrupts see the
-// datasheet and/or underlying lis331dlh_driver.h interface.
+// datasheet and/or underlying lis331dlh_driver_private.h interface.
 void
 accelerometer_power_down (void);
 

@@ -1,5 +1,5 @@
-// Turns out ST Microelectronics already provides an almost-finished
-// interface for us.  See the comments at the start of lis331dlh_driver.c.
+// Turns out ST Microelectronics already provides an almost-finished interface
+// for us.  See the comments at the start of lis331dlh_driver_private.c.
 
 /******************** (C) COPYRIGHT 2012 STMicroelectronics ********************
 * File Name          : lis331dlh_driver.h
