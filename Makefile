@@ -93,7 +93,7 @@ check_api_doc_completeness: apis_and_sources.html \
           FNP=`echo $$SF | perl -p -e 's/.*\/(.*)\.html/$$1/'`; \
           echo $$SF | perl -n -e 'not m/\/lesson.*/ or exit 1' || continue; \
           echo $$SF | perl -n -e 'not m/\/blink\.c/ or exit 1' || continue; \
-          echo $$SF | perl -n -e 'not m/\/\w+_private\.h/ or exit 1' || \
+          echo $$SF | perl -n -e 'not m/\/\w+_private\.[hc]/ or exit 1' || \
             continue; \
           grep -q -P "\Q\"$$SF\"\E" $< || \
             ERROR="probably no link to $$SF in $<"; \
@@ -134,7 +134,9 @@ check_lesson_doc_completeness: lessons.html \
 xlinked_source_html:
 	rm -rf $@
 	mkdir $@
-	find . -name "*.[ch]" -exec cp \{\} $@ \;
+	# To exclude some model code that we keep in subdirs in the modules we
+	# use the -maxdepth 2 option to find.
+	find . -maxdepth 2 -name "*.[ch]" -exec cp \{\} $@ \;
 	./nuke_non_highlightable_files.perl $@;
 	cd $@ ; source-highlight --gen-references=inline *.[ch]
 	# This gets a bit wild.  We use ||= to take advantage of non-lexical
