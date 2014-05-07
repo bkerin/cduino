@@ -31,6 +31,13 @@ ARDUINO_BOOTLOADER = optiboot_atmega328.hex
 
 include generic.mk
 
+# Clients can optionally declare which Arduino pins are connected to the
+# XBee SLEEP_RQ and RESET lines to enable some macros which use them.
+# See wireless_xbee.h for details.  The actual setting here are random
+# examples (unfortunately there is no DIO_PIN_PD42 :).
+#CPPFLAGS += -DWX_RESET_CONTROL_PIN=DIO_PIN_PD6
+#CPPFLAGS += -DWX_SLEEP_RQ_PIN=DIO_PIN_PB1
+
 # Uncomment this to build the test program for bulk testing with
 # usb_xbee_test.  See the comments in wireless_xbee_test.c for details.
 #CPPFLAGS += -DAUTOMATIC_TESTING_WITH_USB_XBEE_TEST

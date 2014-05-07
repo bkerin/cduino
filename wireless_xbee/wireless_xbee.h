@@ -24,6 +24,18 @@
 // you can grab an XBee Explorer Dongle (Sparkfun part number WRL-09819),
 // then you don't need the cable.
 //
+// Its possible to use an XBee shield without using the XBee SLEEP_RQ
+// or RESET or signals, but in battery powered designs at least you'll
+// want to use both.  SLEEP_RQ lets you save power, and RESET is useful
+// for ensuring that the XBee always gets reset whenver the ATMega does.
+// Unfortunately the sparkfun shield at least doesn't break these XBee lines
+// out anywhere, but you can make your own strange wiring to the chip pins
+// (or perhaps make your own Arduino-free board :).  This interface supports
+// the use of these lines use via two macros: WX_SLEEP_RQ_CONTROL_PIN and
+// WX_RESET_CONTROL_PIN.  Clients can define these before including this
+// header to enable some other macros for putting the XBee to sleep and
+// resetting it.
+//
 // The directory for this module contains a perl script called usb_xbee that
 // can be used to configure or send/receive data to/from an XBee Explorer
 // or XBee USB dongle.  You can view its documentation using
@@ -60,13 +72,13 @@
 // Arduino one, though it gives the switch positions different names (see
 // http://arduino.cc/en/Main/ArduinoWirelessShield).
 //
-// At least for the Sparkfun shield, when the swith is in the DLINE position,
-// the data input and output signals (DOUT and DIN) of the XBee end up
-// connected (through a level shifter) to the Digital 2 and Digital 3 Arduino
-// pins (PD2 and PD3 on the ATMega328P).  This isn't useful for this library,
-// since it doesn't provide a software serial implementation at the moment.
-// But of course it can screw things up if you're trying to use those pins
-// for some other purpose, so its something to be aware of.
+// At least for the Sparkfun shield, when the switch is in the DLINE
+// position, the data input and output signals (DOUT and DIN) of the XBee
+// end up connected (through a level shifter) to the Digital 2 and Digital
+// 3 Arduino pins (PD2 and PD3 on the ATMega328P).  This isn't useful for
+// this library, since it doesn't provide a software serial implementation
+// at the moment.  But of course it can screw things up if you're trying
+// to use those pins for some other purpose, so its something to be aware of.
 //
 // This modules doesn't do anything with the DTR/RTS lines to the XBee.
 // Sending data too fast can overwhelm the XBee.  Its always possible to
@@ -85,11 +97,11 @@
 //
 // About Errror Handling
 //
-// This module really doesn't do much of it.  It just returns true on succes,
-// and false otherwise.  If the macro WX_ASSERT_SUCCES is defined it doesn't
-// even do that: it simply calls assert() internally if something fails.
-// In this case, all the function descriptions which indicate sentinel
-// return values are wrong unless otherwise noted.
+// This module really doesn't do much of it.  It just returns true on
+// succes, and false otherwise.  If the macro WX_ASSERT_SUCCESS is defined
+// it mostly doesn't even do that: it simply calls assert() internally
+// if something fails.  In this case, all the function descriptions which
+// indicate sentinel return values are wrong unless otherwise noted.
 //
 // For all the AT command mode functions, a false result almost certainly
 // means something isn't set up right and you're not talking to the XBee
@@ -120,6 +132,77 @@
 // underlying serial module always communicates at this rate, this value isn't
 // easy to change.
 #define WX_BAUD 9600
+
+// Clients can define this macro to an IO pin from dio.h (e.g. DIO_PIN_PB1)
+// before including this header to enable some macros to control explicit
+// XBee sleep requests via the XBee SLEEP_RQ pin.  For this to work, the
+// XBee must be configured to use a sleep mode that honors the SLEEP_RQ pin
+// (e.g. with wx_at_command_expect_ok("SM1")).  See also the general notes
+// above where this macro is mentioned.
+#ifdef WX_SLEEP_RQ_CONTROL_PIN
+
+   // Some pins we set as input without pullups a lot of the time to be
+   // sure they don't waste power, but not the sleep request line that's
+   // responsible for putting the XBee to sleep.  We want that configured
+   // as an output always.  We may not really need to delay after setting
+   // the line (using WX_WAKE() for convenience), but its a conservative
+   // thing to do.
+#  define WX_SLEEP_RQ_CONTROL_PIN_INIT() \
+     do { \
+       DIO_INIT (WX_SLEEP_RQ_CONTROL_PIN, DIO_OUTPUT, DIO_DONT_CARE, LOW); \
+       WX_WAKE (); \
+     } while ( 0 )
+
+   // Set the XBee on the path towards sleep.  It finishes up housekeeping
+   // before it goes to sleep.
+#  define WX_SLEEP() DIO_SET_HIGH (WX_SLEEP_RQ_CONTROL_PIN)
+
+   // NOTE: the XBee datasheet that when waking the XBee, it must be kept
+   // awake for at least two "character times" for proper operation.
+#  define WX_WAKE() \
+     do { \
+     DIO_SET_LOW (WX_SLEEP_RQ_CONTROL_PIN); \
+     float XxX_two_character_times_ms = 2.0; \
+     _delay_ms (XxX_two_character_times_ms); \
+   } while ( 0 )
+
+#endif
+
+// Clients can define this macro to an IO pin from dio.h (e.g. DIO_PIN_PD6)
+// before including this header to enable a macro to reset the XBee module
+// using its RESET line.  The WX_SLEEP_RQ_CONTROL_PIN must also be defined
+// if this macro is defined.  See also the general notes above where this
+// macro is mentioned.
+#ifdef WX_RESET_CONTROL_PIN
+
+   // If the RESET pin is going to be used, we require the SLEEP_RQ pin
+   // to be set up as well.  If I recall correctly, this is because RESET
+   // doesn't work when the device is sleeping, so we want to do an implict
+   // wake before resetting.
+#  ifndef WX_SLEEP_RQ_CONTROL_PIN
+#    error WX_RESET_CONTROL_PIN is defined but WX_SLEEP_RQ_CONTROL_PIN is not
+#  endif
+
+   // Reset the XBee.  I don't actually know how long it takes to boot up
+   // because the datasheet doesn't do a good job of saying, so we give it
+   // plenty of time.  We reconfigure the control pin as an input when we're
+   // not using it out of paranoia about power waste.
+#  define WX_RESET() \
+     do { \
+       WX_WAKE (); \
+       DIO_INIT (WX_RESET_CONTROL_PIN, DIO_OUTPUT, DIO_DONT_CARE, LOW); \
+       float XxX_reset_hold_time_us = 142.0; \
+       _delay_us (XxX_reset_hold_time_us); \
+       DIO_INIT ( \
+         WX_RESET_CONTROL_PIN, \
+         DIO_INPUT, \
+         DIO_DISABLE_PULLUP, \
+         DIO_DONT_CARE ); \
+      float XxX_reboot_time_ms = 42.0; \
+      _delay_ms (XxX_reboot_time_ms); \
+    } while ( 0 )
+
+#endif
 
 // Initialize the interface to the XBee.  Currently this interface only
 // supports talking to XBee devices over the hardware serial port at WX_BAUD
@@ -175,13 +258,12 @@ wx_restore_defaults (void);
 // using the Arduino.  A few hints:
 //
 //   * Setting the SM parameter to 1 (using wx_com_expect_ok() once to set
-//     the parameter and again to save the parameters) and then asserting
-//     the SLEEP_RQ should give a very simple way to cut Xbee module power
-//     consumption to about 10 uA, with the only disadvantage being that
-//     the sleepy node will have to wake itself up (it cannot be called
-//     awake from a coordinator).  Perhaps just soldering a lead to the
-//     top of the SLEEP_RQ on the XBee module and plugging it into a DIO
-//     line would be a good way to test this out.
+//     the parameter and again to save the parameters) and then using
+//     the WX_SLEEP() macro (which requires WX_SLEEP_RQ_CONTROL_PIN to
+//     be defined first) from this interfaces gives a very simple way to
+//     cut Xbee module power consumption to about 10 uA, with the only
+//     disadvantage being that the sleepy node will have to wake itself up
+//     (it cannot be called awake from a coordinator).
 //
 //   * An all-software solution which reduces power consumption to about 50 uA
 //     is also possible, but it requires significantly more module
