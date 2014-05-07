@@ -66,8 +66,8 @@
 //   #define MY_SPI_SLAVE_2_SELECT_SET_LOW DIO_SET_DIGITAL_4_LOW
 //   #define MY_SPI_SLAVE_2_SELECT_SET_HIGH DIO_SET_DIGITAL_4_HIGH
 */
-//   SPI_SLAVE_1_SELECT_INIT ();
-//   SPI_SLAVE_2_SELECT_INIT ();
+//   MY_SPI_SLAVE_1_SELECT_INIT ();
+//   MY_SPI_SLAVE_2_SELECT_INIT ();
 //
 //   spi_init ();
 //   spi_set_data_order (SPI_BIT_ORDER_LSB_FIRST);
@@ -75,18 +75,18 @@
 //   spi_set_clock_divider (SPI_CLOCK_DIVIDER_DIV4);
 //
 //   // Talk to first slave device
-//   SPI_SLAVE_1_SELECT_SET_LOW ();
+//   MY_SPI_SLAVE_1_SELECT_SET_LOW ();
 //   uint8_t input_byte1 = spi_transfer (output_byte1);
 //   uint8_t input_byte2 = spi_transfer (output_byte2);
 //   //...
-//   SPI_SLAVE_1_SELECT_SET_HIGH ();
+//   MY_SPI_SLAVE_1_SELECT_SET_HIGH ();
 //
 //   // Talk to second slave device
-//   SPI_SLAVE_2_SELECT_SET_LOW ();
+//   MY_SPI_SLAVE_2_SELECT_SET_LOW ();
 //   uint8_t input_byte1 = spi_transfer (output_byte1);
 //   uint8_t input_byte2 = spi_transfer (output_byte2);
 //   //...
-//   SPI_SLAVE_2_SELECT_SET_HIGH ();
+//   MY_SPI_SLAVE_2_SELECT_SET_HIGH ();
 //
 //   spi_shutdown ();   // Possibly
 //
