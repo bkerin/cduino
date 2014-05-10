@@ -58,7 +58,7 @@ dc_motor_init (void);
 // [-100, 100] and is interpreted as follows: -100 => full speed reverse,
 // 0 => off, 100 => full speed ahead).  WARNING: it's possible for sudden
 // changes to the motor speed or direction to place significant inertial
-// loads on the motor.  You might want to call this routing multiple times
+// loads on the motor.  You might want to call this routine multiple times
 // over time, or perhaps implement dc_motor_ramp_to_speed() (see below).
 void
 dc_motor_set_speed (dc_motor_channel_t channel, int8_t speed);
