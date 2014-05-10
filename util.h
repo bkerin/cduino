@@ -115,7 +115,7 @@
 // Like CHKP(), but also calls wdt_reset() about every 5 ms.  Note that
 // this routine is specifically designed to defeat the watchdog timer.
 #define CHKP_FEEDING_WDT()                                    \
-  CHKP_FEEDINT_WDT_USING(DDRB, DDB5, PORTB, PORTB5, 300.0, 3)
+  CHKP_FEEDING_WDT_USING(DDRB, DDB5, PORTB, PORTB5, 300.0, 3)
 
 // Like BTRAP(), but also calls wdt_reset() about every 5 ms.  Note that
 // this routine is specifically designed to defeat the watchdog timer.
