@@ -36,29 +36,30 @@
 #define LIKELY(condition)   __builtin_expect (!!(condition), 1)
 #define UNLIKELY(condition) __builtin_expect (!!(condition), 0)
 
+// Blink LEDs at checkpoints, trap points, or assertion violations {{{1
+
 // Set pin for output low and toggle it high-low bc times, mspb ms per cycle.
 // Useful for making LEDs blink See CHKP() for an example of how to call
 // this macro.  WARNING: no effort has been made to anticipate everything a
 // client might have done to put a pin in a state where it can't be properly
 // initialized/blinked.  Test this test function first :)
-#define CHKP_USING(ddr, ddrb, portr, portrb, mspb, bc) \
-  do { \
-    \
-    ddr |= _BV (ddrb); \
-    loop_until_bit_is_set (ddr, ddrb); \
-    portr &= ~(_BV (portrb)); \
-    \
-    for ( uint8_t XxX_ii = 0 ; XxX_ii < bc ; XxX_ii++ ) { \
-      portr |= _BV (portrb); \
-      _delay_ms (mspb / 2.0); \
-      portr &= ~(_BV (portrb)); \
-      _delay_ms (mspb / 2.0); \
-    } \
+#define CHKP_USING(ddr, ddrb, portr, portrb, mspb, bc)     \
+  do {                                                     \
+    ddr |= _BV (ddrb);                                     \
+    loop_until_bit_is_set (ddr, ddrb);                     \
+    portr &= ~(_BV (portrb));                              \
+                                                           \
+    for ( uint8_t XxX_ii = 0 ; XxX_ii < bc ; XxX_ii++ ) {  \
+      portr |= _BV (portrb);                               \
+      _delay_ms (mspb / 2.0);                              \
+      portr &= ~(_BV (portrb));                            \
+      _delay_ms (mspb / 2.0);                              \
+    }                                                      \
   } while ( 0 )
 
 // Form a trap point where we blink forever.
-#define BTRAP_USING(ddr, ddrb, portr, portrb, mspb) \
-  do { CHKP_USING (ddr, ddrb, portr, portrb, mspb, 1); } while ( TRUE );
+#define BTRAP_USING(ddr, ddrb, portr, portrb, mspb)                      \
+  do { CHKP_USING (ddr, ddrb, portr, portrb, mspb, 1); } while ( TRUE )
 
 // WARNING: some shields (e.g. shields which actively use SPI, the official
 // Arduino motor shield, version R3) use the pin PB5 (AKA Digital 13 in
@@ -77,8 +78,61 @@
 
 // Like assert(), but with frantic blinking :) The same caveats that apply
 // to CHKP() apply to this macro.
-#define BASSERT(condition) \
-  do { if ( UNLIKELY (! (condition)) ) { BTRAP (); } } while ( 0 );
+#define BASSERT(condition)                                          \
+  do { if ( UNLIKELY (! (condition)) ) { BTRAP (); } } while ( 0 )
+
+// Like CHKP_USING(), but also calls wdt_reset() about every 5 ms.  Note that
+// this routine is specifically designed to defeat the watchdog timer.
+#define CHKP_FEEDING_WDT_USING(ddr, ddrb, portr, portrb, mspb, bc)            \
+  do {                                                                        \
+    ddr |= _BV (ddrb);                                                        \
+    loop_until_bit_is_set (ddr, ddrb);                                        \
+    portr &= ~(_BV (portrb));                                                 \
+                                                                              \
+    for ( uint8_t XxX_ii = 0 ; XxX_ii < bc ; XxX_ii++ ) {                     \
+      portr |= _BV (portrb);                                                  \
+      uint8_t XxX_mspf = 5;                                                   \
+      for ( uint8_t XxX_jj = 0 ; XxX_jj < mspb / 2.0 ; XxX_jj += XxX_mspf ) { \
+        _delay_ms (XxX_mspf);                                                 \
+        wdt_reset ();                                                         \
+      }                                                                       \
+      portr &= ~(_BV (portrb));                                               \
+      for ( uint8_t XxX_jj = 0 ; XxX_jj < mspb / 2.0 ; XxX_jj += XxX_mspf ) { \
+        _delay_ms (XxX_mspf);                                                 \
+        wdt_reset ();                                                         \
+      }                                                                       \
+    }                                                                         \
+  } while ( 0 )
+
+// Like BTRAP_USING(), but also calls wdt_reset() about every 5 ms.  Note that
+// this routine is specifically designed to defeat the watchdog timer.
+#define BTRAP_FEEDING_WDT_USING(ddr, ddrb, portr, portrb, mspb) \
+  do {                                                          \
+    CHKP_FEEDING_WDT_USING (ddr, ddrb, portr, portrb, mspb, 1); \
+  } while ( TRUE )
+
+// Like CHKP(), but also calls wdt_reset() about every 5 ms.  Note that
+// this routine is specifically designed to defeat the watchdog timer.
+#define CHKP_FEEDING_WDT()                                    \
+  CHKP_FEEDINT_WDT_USING(DDRB, DDB5, PORTB, PORTB5, 300.0, 3)
+
+// Like BTRAP(), but also calls wdt_reset() about every 5 ms.  Note that
+// this routine is specifically designed to defeat the watchdog timer.
+#define BTRAP_FEEDING_WDT() \
+  BTRAP_FEEDING_WDT_USING (DDRB, DDB5, PORTB, PORTB5, 100.0)
+
+// Like BASSERT(), but also calls wdt_reset() about every 5 ms.  Note that
+// this will defeat the watchdog timer, forever.  I use it for debugging
+// or when I have a failure requiring manual intervention to avoid endless
+// resets and failure that might trash equipment.
+#define BASSERT_FEEDING_WDT(condition) \
+  do {                                 \
+    if ( UNLIKELY (! (condition)) ) {  \
+      BTRAP_FEEDING_WDT ();            \
+    }                                  \
+  } while ( 0 )
+
+// }}}1
 
 // All non-symbolic constants are evil :)
 #define BITS_PER_BYTE 8
@@ -88,9 +142,9 @@
 #define US_PER_S 1000000
 
 // Get the high or low byte of a two byte value (in a very paranoid way :)
-#define HIGH_BYTE(two_byte_value) \
+#define HIGH_BYTE(two_byte_value)                                       \
   ((uint8_t) ((((uint16_t) two_byte_value) >> BITS_PER_BYTE) & 0x00ff))
-#define LOW_BYTE(two_byte_value) \
+#define LOW_BYTE(two_byte_value)                                        \
   ((uint8_t) (((uint16_t) two_byte_value) & 0x00ff))
 
 // Macros for more readable/writable binary bit patterns {{{1
