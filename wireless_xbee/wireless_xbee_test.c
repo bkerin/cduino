@@ -214,7 +214,7 @@ main (void)
   while ( 1 ) {
 
     // This value isn't entirely arbitrary: it's less than the $ttwfr (Time To
-    // Wait For Response) vaalue in the --query-mode path of usb_xbee_test.
+    // Wait For Response) value in the --query-mode path of usb_xbee_test.
     // This allows the the usb_xbee_test instance to be started in quesry
     // mode at any time after the Arduino is up and running without risking
     // a timeout in that program at startup.  Note that a malformed packet
