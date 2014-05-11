@@ -207,8 +207,12 @@
 // Initialize the interface to the XBee.  Currently this interface only
 // supports talking to XBee devices over the hardware serial port at WX_BAUD
 // Baud, with eight data bits, no parity, and one stop bit (8-N-1 format).
-// So the serial port is initialized with those parameters, and that's all
-// this routine does.
+// So the serial port is initialized with those parameters, and that's
+// all this routine does.  Note that this routine doesn't use the XBee
+// RESET line at all.  You aren't even required to have a connection to
+// that line.  However, if you do have it connected (see the reference to
+// WX_RESET_CONTROL_PIN above), you likely want use the WX_RESET() macro
+// before calling this function.
 void
 wx_init (void);
 
