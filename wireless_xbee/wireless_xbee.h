@@ -191,10 +191,12 @@
 #    error WX_RESET_CONTROL_PIN is defined but WX_SLEEP_RQ_CONTROL_PIN is not
 #  endif
 
-   // Reset the XBee.  I don't actually know how long it takes to boot up
-   // because the datasheet doesn't do a good job of saying, so we give it
-   // plenty of time.  We reconfigure the control pin as an input when we're
-   // not using it out of paranoia about power waste.
+   // WARNING: WX_SLEEP_RQ_CONTROL_PIN_INIT() must be called before using
+   // this macro.  Reset the XBee.  I don't actually know how long it takes
+   // to boot up because the datasheet doesn't do a good job of saying,
+   // so we give it plenty of time.  We reconfigure the control pin as an
+   // input when we're not using it out of paranoia about power waste (this
+   // is why there is no seperate macro to initialized the reset control pin).
 #  define WX_RESET() \
      do { \
        WX_WAKE (); \

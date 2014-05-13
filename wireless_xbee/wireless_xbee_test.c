@@ -62,6 +62,27 @@
 int
 main (void)
 {
+  // NOTE: you almost certainly want to use the RESET line on the XBee to
+  // reset it at startup.  It's theoretically possible not to do this, and
+  // since additional hardware lines are required this test program doesn't
+  // do it.  But its also easy to get the XBee wedged, and resetting the
+  // Arduino doesn't reset the XBee, so a power cycle is required, which
+  // gets inconvenient fast.  The wireless_xbee.h header has more details,
+  // but the ritual looks something like this:
+  //
+  // // These must be defined before wireless_xbee.h is included for the first
+  // // time, so it's actually better to do it from the Makefile -- there is
+  // // some commented out code in the Makefile for this module to do it from
+  // // there.
+  // #define WX_SLEEP_RQ_CONTROL_PIN DIO_PIN_PD7
+  // #define WX_RESET_CONTROL_PIN DIO_PIN_PD6
+  // #include "wireless_xbee.h"
+  //
+  // WX_SLEEP_RQ_CONTROL_PIN_INIT ();
+  //
+  // WX_RESET ();
+  // wx_init ();
+
   wx_init ();
 
   uint8_t sentinel;    // For sentinel value returned by many functions
