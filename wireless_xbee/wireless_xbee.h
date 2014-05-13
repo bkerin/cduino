@@ -165,8 +165,8 @@
    // before it goes to sleep.
 #  define WX_SLEEP() DIO_SET_HIGH (WX_SLEEP_RQ_CONTROL_PIN)
 
-   // NOTE: the XBee datasheet that when waking the XBee, it must be kept
-   // awake for at least two "character times" for proper operation.
+   // NOTE: the XBee datasheet says that when waking the XBee, it must be
+   // kept awake for at least two "character times" for proper operation.
 #  define WX_WAKE() \
      do { \
      DIO_SET_LOW (WX_SLEEP_RQ_CONTROL_PIN); \
