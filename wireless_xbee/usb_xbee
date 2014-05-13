@@ -202,7 +202,7 @@ and exit with a non-zero exit code.
 
 Indicate that the packetization timeout (RO) configuration parameter of the
 XBee module being used has been set to I<TIMEOUT> (which must be a value in
-[0x00, 0xff]).  The default is 0x03, which is the default XBee configuration
+[0x00, 0xFF]).  The default is 0x03, which is the default XBee configuration
 setting.  However, for more reliable operation in --packetized-lines-mode and
 --framed-lines-mode, you may want to set RO to a larger value.  WARNING: if you use an XBee module that has had its RO parameter changed from the Arduino side,
 you need to change the definition of
@@ -407,7 +407,7 @@ $df or die "--device-file option must be given";
 my $xbro_default = 0x03;   # Defaults to the XBee configuration default value
 defined($xbro) or $xbro = $xbro_default;
 $xbro >= 0x00 and $xbro <= 0xFF
-    or die "--xbee-ro option argument not in range [0x00, 0xff]";
+    or die "--xbee-ro option argument not in range [0x00, 0xFF]";
 
 if ( $xbro == 0x00 and ($plm or $flm) ) {
     die "--packetized-lines-mode and --framed-lines-mode cannot work with ".
