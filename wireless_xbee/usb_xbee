@@ -298,7 +298,7 @@ Then again, perhaps the OS-side kernel squirrels the data away in a buffer of
 its own (despite the O_SYNC option having been used when the device file was
 opened).  In that case, the OS might subsequently be interrupted in such a way
 that the frams data doesn't make it out as a single RF packet afterall.  Our
-timer will fail to detect this failure :(  FIXXME: it should be possible to
+timer will fail to detect this failure :(  FIXXME: it should be possible to
 determine for sure how this works.
 
 =item *
