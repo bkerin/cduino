@@ -1,6 +1,10 @@
 
-# This is only required for debugging.
-include run_screen.mk
+# Unlike most modules, debugging using the Arduino serial port, a USB cable,
+# and the screen program is not supported.  This is because the XBee needs
+# to use the serial port to talk to the arduino, and because the XBee itself
+# provides a good way to get data out of the Arduino: see the usb_xbee program
+# in this directory (or its documentation: try 'pod2text usb_xbee | more').
+#include run_screen.mk
 
 # The presence of an XBee Explorer or XBee Explorer Dongle (or probably
 # any other FTDI FT232-based device) on the USB causes the build system
@@ -44,6 +48,7 @@ include generic.mk
 
 # This is really just a note-to-self about one of the most useful usb_xbee
 # invocations: it just listenes for incoming frame lines and displays them.
-# Assuming the hard-wired device file used here is actually right.
+# Assuming the hard-wired device file used here is actually right (try
+# 'pod2text uxb_xbee | more' for details).
 start_frame_listener:
 	./usb_xbee --device=/dev/ttyUSB0 --framed-lines-mode
