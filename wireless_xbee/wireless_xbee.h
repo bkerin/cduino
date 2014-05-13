@@ -3,7 +3,7 @@
 // Test driver: wireless_xbee_test.c    Implementation: wireless_xbee.c
 //
 // You really want to read this entire interface file, and maybe the
-// referenced material as well.
+// referenced material as well.  There are many ways to go wrong.
 //
 // This module uses the ATmega328P hardware serial port to communicate
 // with the XBee.  It features high-level support for a few configuration
@@ -24,17 +24,25 @@
 // you can grab an XBee Explorer Dongle (Sparkfun part number WRL-09819),
 // then you don't need the cable.
 //
-// Its possible to use an XBee shield without using the XBee SLEEP_RQ
-// or RESET or signals, but in battery powered designs at least you'll
-// want to use both.  SLEEP_RQ lets you save power, and RESET is useful
-// for ensuring that the XBee always gets reset whenver the ATMega does.
-// Unfortunately the sparkfun shield at least doesn't break these XBee lines
-// out anywhere, but you can make your own strange wiring to the chip pins
-// (or perhaps make your own Arduino-free board :).  This interface supports
-// the use of these lines use via two macros: WX_SLEEP_RQ_CONTROL_PIN and
-// WX_RESET_CONTROL_PIN.  Clients can define these before including this
-// header to enable some other macros for putting the XBee to sleep and
-// resetting it.
+// Its important to realize that pushing the reset button on the XBee shield
+// only resets the Arduino, not the XBee itself.  Same with reprogramming
+// the Arduino.  Its easy to wedge the XBee. If things work the first time
+// through but not on subsequent attempts, you may need to power everything
+// down (or run a line to the XBee RESET input as described below and make
+// your program reset the XBee on startup).
+//
+// Its possible to use an XBee shield without using the XBee SLEEP_RQ or
+// RESET or signals, but in battery powered designs at least you'll want to
+// use both.  SLEEP_RQ lets you save power, and RESET is useful for ensuring
+// that the XBee always gets reset whenver the ATMega does.  Unfortunately the
+// sparkfun shield at least doesn't break these XBee lines out anywhere, but
+// you can make your own strange wiring to the chip pins (or perhaps make your
+// own Arduino-free board :).  This interface supports the use of these lines
+// use via two macros: WX_SLEEP_RQ_CONTROL_PIN and WX_RESET_CONTROL_PIN.
+// Clients can define these before including this header to enable some
+// other macros for putting the XBee to sleep and resetting it.  If you use
+// either, you must use both (IIRC because I think I ssaw the XBee failing
+// to reset when asleep, so an implicit wake-up is required).
 //
 // The directory for this module contains a perl script called usb_xbee that
 // can be used to configure or send/receive data to/from an XBee Explorer
@@ -53,7 +61,7 @@
 // There are a couple pages on the Arduino site that are worth reading,
 // particularly if you need to do more extensive XBee configuration than
 // what this interface provides directly.  WARNING: read the comment near
-// the DEFAULT_CHANNEL_STRING define in wireless_xbee.h for an important
+// the DEFAULT_CHANNEL_STRING define in wireless_xbee_test.c for an important
 // caveat though.
 //
 //   http://arduino.cc/en/Main/ArduinoWirelessShield
@@ -74,13 +82,13 @@
 //
 // At least for the Sparkfun shield, when the switch is in the DLINE
 // position, the data input and output signals (DOUT and DIN) of the XBee
-// end up connected (through a level shifter) to the Digital 2 and Digital
-// 3 Arduino pins (PD2 and PD3 on the ATMega328P).  This isn't useful for
-// this library, since it doesn't provide a software serial implementation
-// at the moment.  But of course it can screw things up if you're trying
-// to use those pins for some other purpose, so its something to be aware of.
+// end up connected (through a level shifter) to the Digital 2 and Digital 3
+// Arduino pins (PD2 and PD3 on the ATMega328P).  This isn't useful for this
+// library, since it doesn't support over-the-air programming of the Arduino.
+// But of course it can screw things up if you're trying to use those pins
+// for some other purpose, so its something to be aware of.
 //
-// This modules doesn't do anything with the DTR/RTS lines to the XBee.
+// This module doesn't do anything with the DTR/RTS lines of the XBee.
 // Sending data too fast can overwhelm the XBee.  Its always possible to
 // send an entire frame without causing any overflow though (assuming the
 // queue was clear to start with).  See the XBee datasheet for details.
