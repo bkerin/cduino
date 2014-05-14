@@ -114,17 +114,11 @@
     portr &= ~(_BV (portrb));                                                 \
                                                                               \
     for ( uint8_t XxX_ii = 0 ; XxX_ii < bc ; XxX_ii++ ) {                     \
-      portr |= _BV (portrb);                                                  \
       uint8_t XxX_wrp = 5;                                                    \
-      for ( uint16_t XxX_jj = 0 ; XxX_jj < mspb / 2 ; XxX_jj += XxX_wrp ) {   \
-        _delay_ms (XxX_wrp);                                                  \
-        wdt_reset ();                                                         \
-      }                                                                       \
+      portr |= _BV (portrb);                                                  \
+      DELAY_WHILE_FEEDING_WDT (mspb / 2, XxX_wrp);                            \
       portr &= ~(_BV (portrb));                                               \
-      for ( uint16_t XxX_jj = 0 ; XxX_jj < mspb / 2 ; XxX_jj += XxX_wrp ) {   \
-        _delay_ms (XxX_wrp);                                                  \
-        wdt_reset ();                                                         \
-      }                                                                       \
+      DELAY_WHILE_FEEDING_WDT (mspb / 2, XxX_wrp);                            \
     }                                                                         \
   } while ( 0 )
 
@@ -165,12 +159,12 @@
   CHKP_FEEDING_WDT_USING (DDRB, DDB5, PORTB, PORTB5, mspb, bc)
 
 // Like BASSERT_FEEDING_WDT, but attempts to show using a single LED where
-// the assertion violation has occurred, using the following steps:
+// any assertion violation has occurred, using the following steps:
 //   
 //   1. A series of rapid blinks
 //
-//   2. A series of slower n slower blinks, where n is the number of
-//      characters in the source file where the violation occurred
+//   2. A series of n slower blinks, where n is the number of characters
+//      in the name of the source file where the violation occurred
 //
 //   3. The another series of 0-9 slower blinks, corresponding to a digit
 //      in the line number where the violation occurred
@@ -180,46 +174,40 @@
 //
 //   5. Go to step 1
 //
-//  This macro is sorta crazy.  Its huge, and it's only worthwhile if you
-//  need to use it many places, and can't just use term_io.h to sort out
-//  what's going on (perhaps because the serial port is being used to talk
-//  to something else).
+//  This macro is sorta crazy.  Its huge (though the size optimizer generally
+//  factors it pretty well), and it's only worthwhile if you need to use it
+//  many places, and can't just use term_io.h (or maybe wireless_xbee.h)
+//  to sort out what's going on (perhaps because the serial port is being
+//  used to talk to something else).
 //
 //  Note that this macro requires CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY()
 //  to first be redefined as appropriate if PB5 isn't the one with the LED.
 //
-
-#define BASSERT_FEEDING_WDT_SHOW_POINT(condition)                   \
-  do {                                                              \
-    if ( UNLIKELY (! (condition)) ) {                               \
-      for ( ; ; ) {                                                 \
-        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (100.0, 5);       \
-        float XxX_pbbb = 1042;   \
-        uint8_t XxX_wrp = 5; \
-        for ( uint16_t XxX_kk = 0 ; XxX_kk < XxX_pbbb ; XxX_kk += XxX_wrp ) { \
-          _delay_ms (XxX_wrp); \
-          wdt_reset ();                 \
-        } \
-        size_t XxX_fnl = strlen (__FILE__);                         \
-        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (542.0, XxX_fnl); \
-        for ( uint16_t XxX_kk = 0 ; XxX_kk < XxX_pbbb ; XxX_kk += XxX_wrp ) { \
-          _delay_ms (XxX_wrp); \
-          wdt_reset ();                 \
-        } \
-        char line_number_as_string[7];                              \
-        sprintf (line_number_as_string, "%i", __LINE__);            \
-        uint8_t llnas = strlen (line_number_as_string);             \
-        for ( uint8_t XxX_kk = 0 ; XxX_kk < llnas ; XxX_kk++ ) {    \
-          CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (               \
-              542.0, line_number_as_string[XxX_kk] - 48 );          \
-          _delay_ms (1042);                                         \
-        for ( uint16_t XxX_kk = 0 ; XxX_kk < XxX_pbbb ; XxX_kk += XxX_wrp ) { \
-          _delay_ms (XxX_wrp); \
-          wdt_reset ();                 \
-        } \
-        }                                                           \
-      }                                                             \
-    }                                                               \
+#define BASSERT_FEEDING_WDT_SHOW_POINT(condition)                     \
+  do {                                                                \
+    if ( UNLIKELY (! (condition)) ) {                                 \
+      for ( ; ; ) {                                                   \
+        uint16_t const XxX_pbbb = 942;                                \
+        uint8_t  const XxX_wrp  = 5;                                  \
+        uint16_t const XxX_fbp  = 100;                                \
+        uint8_t  const XxX_fbc  = 6;                                  \
+        uint16_t const XxX_sbp  = 442;                                \
+        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_fbp, XxX_fbc); \
+        DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                  \
+        size_t XxX_fnl = strlen (__FILE__);                           \
+        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_sbp, XxX_fnl); \
+        DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                  \
+        char line_number_as_string[7];                                \
+        sprintf (line_number_as_string, "%i", __LINE__);              \
+        uint8_t llnas = strlen (line_number_as_string);               \
+        for ( uint8_t XxX_kk = 0 ; XxX_kk < llnas ; XxX_kk++ ) {      \
+          uint8_t const ascii_0 = 48;                                 \
+          CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (                 \
+              XxX_sbp, line_number_as_string[XxX_kk] - ascii_0 );     \
+          DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                \
+        }                                                             \
+      }                                                               \
+    }                                                                 \
   } while ( 0 )
 
 // }}}1
