@@ -174,6 +174,11 @@
 //
 //   5. Go to step 1
 //
+// FIXXME: this should have a function core and macro wrapper to get the
+// __FILE__ and __LINE__, it makes your program size explode, you can't afford
+// to use it everywhere.  Same for some of the other blinky macros really.
+// But this is currently a sourceless header.
+//
 // Its better to use term_io.h (see the TERM_IO_PTP macro in particular) or
 // maybe wireless_xbee.h to sort out what's going on.  But if you can't do
 // that (perhaps because the serial port is being used to talk to something
