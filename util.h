@@ -174,14 +174,13 @@
 //
 //   5. Go to step 1
 //
-//  This macro is sorta crazy.  Its huge (though the size optimizer generally
-//  factors it pretty well), and it's only worthwhile if you need to use it
-//  many places, and can't just use term_io.h (or maybe wireless_xbee.h)
-//  to sort out what's going on (perhaps because the serial port is being
-//  used to talk to something else).
+// Its better to use term_io.h (see the TERM_IO_PTP macro in particular) or
+// maybe wireless_xbee.h to sort out what's going on.  But if you can't do
+// that (perhaps because the serial port is being used to talk to something
+// else) this can be useful.
 //
-//  Note that this macro requires CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY()
-//  to first be redefined as appropriate if PB5 isn't the one with the LED.
+// Note that this macro requires CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY()
+// to first be redefined as appropriate if PB5 isn't the one with the LED.
 //
 #define BASSERT_FEEDING_WDT_SHOW_POINT(condition)                           \
   do {                                                                      \
