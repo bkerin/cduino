@@ -7,6 +7,8 @@
 
 #include <avr/io.h>
 #include <avr/wdt.h>
+#include <stdio.h>
+#include <string.h>
 #include <util/delay.h>
 
 #define HIGH 0x01
@@ -38,6 +40,13 @@
 #define UNLIKELY(condition) __builtin_expect (!!(condition), 0)
 
 // Blink LEDs at checkpoints, trap points, or assertion violations {{{1
+
+// NOTE: the CHKP() and BASSERT() macros are probably the most useful in
+// this section.  The others let you change which pin drives the LED or
+// do other fancy things.  To use a different pin, you generally have to
+// do '#undef some_macro' then '#define some_macro' again with the DDRB,
+// DDB5, PORTB, and PORB5 argument in the right hand side of the original
+// definition replaces as appropriate in the new definition.
 
 // Set pin for output low and toggle it high-low bc times, mspb ms per cycle.
 // Useful for making LEDs blink See CHKP() for an example of how to call
@@ -82,8 +91,22 @@
 #define BASSERT(condition)                                          \
   do { if ( UNLIKELY (! (condition)) ) { BTRAP (); } } while ( 0 )
 
+// Do a busy wait for Delay Time (dt) milliseconds while feeding the watchdog
+// timer every Feeding Period (fp) milliseconds.  Useful for some assertion
+// stuff we do and probably a sign of profound pathology everywhere else.
+#define DELAY_WHILE_FEEDING_WDT(dt, fp)                                     \
+  do {                                                                      \
+    for ( uint16_t XxXdwfw_ii = 0 ; XxXdwfw_ii <= dt ; XxXdwfw_ii += fp ) { \
+      _delay_ms (fp);                                                       \
+      wdt_reset ();                                                         \
+    }                                                                       \
+  } while ( 0 )
+
 // Like CHKP_USING(), but also calls wdt_reset() about every 5 ms.  Note that
 // this routine is specifically designed to defeat the watchdog timer.
+// Since it calls wdt_reset(), it might be required that the watchdog
+// actually be in use (due to wdt_enable() having been called or the WDTON
+// fuse being programmed), though this probably isn't really required.
 #define CHKP_FEEDING_WDT_USING(ddr, ddrb, portr, portrb, mspb, bc)            \
   do {                                                                        \
     ddr |= _BV (ddrb);                                                        \
@@ -92,14 +115,14 @@
                                                                               \
     for ( uint8_t XxX_ii = 0 ; XxX_ii < bc ; XxX_ii++ ) {                     \
       portr |= _BV (portrb);                                                  \
-      uint8_t XxX_mspf = 5;                                                   \
-      for ( uint8_t XxX_jj = 0 ; XxX_jj < mspb / 2.0 ; XxX_jj += XxX_mspf ) { \
-        _delay_ms (XxX_mspf);                                                 \
+      uint8_t XxX_wrp = 5;                                                    \
+      for ( uint16_t XxX_jj = 0 ; XxX_jj < mspb / 2 ; XxX_jj += XxX_wrp ) {   \
+        _delay_ms (XxX_wrp);                                                  \
         wdt_reset ();                                                         \
       }                                                                       \
       portr &= ~(_BV (portrb));                                               \
-      for ( uint8_t XxX_jj = 0 ; XxX_jj < mspb / 2.0 ; XxX_jj += XxX_mspf ) { \
-        _delay_ms (XxX_mspf);                                                 \
+      for ( uint16_t XxX_jj = 0 ; XxX_jj < mspb / 2 ; XxX_jj += XxX_wrp ) {   \
+        _delay_ms (XxX_wrp);                                                  \
         wdt_reset ();                                                         \
       }                                                                       \
     }                                                                         \
@@ -112,25 +135,91 @@
     CHKP_FEEDING_WDT_USING (ddr, ddrb, portr, portrb, mspb, 1); \
   } while ( TRUE )
 
-// Like CHKP(), but also calls wdt_reset() about every 5 ms.  Note that
-// this routine is specifically designed to defeat the watchdog timer.
+// Like CHKP(), but also calls wdt_reset() about every 5 ms.
+// See CHKP_FEEDING_WDT_USING() for more details.
 #define CHKP_FEEDING_WDT()                                    \
   CHKP_FEEDING_WDT_USING(DDRB, DDB5, PORTB, PORTB5, 300.0, 3)
 
-// Like BTRAP(), but also calls wdt_reset() about every 5 ms.  Note that
-// this routine is specifically designed to defeat the watchdog timer.
+// Like BTRAP(), but also calls wdt_reset() about every 5 ms.
+// See CHKP_FEEDING_WDT_USING() for more details.
 #define BTRAP_FEEDING_WDT() \
   BTRAP_FEEDING_WDT_USING (DDRB, DDB5, PORTB, PORTB5, 100.0)
 
 // Like BASSERT(), but also calls wdt_reset() about every 5 ms.  Note that
-// this will defeat the watchdog timer, forever.  I use it for debugging
-// or when I have a failure requiring manual intervention to avoid endless
-// resets and failure that might trash equipment.
+// this will defeat the watchdog timer, forever.  I use it for debugging or
+// when I have a failure requiring manual intervention to avoid endless resets
+// and failure that might trash equipment.  See CHKP_FEEDING_WDT_USING()
+// for more details.
 #define BASSERT_FEEDING_WDT(condition) \
   do {                                 \
     if ( UNLIKELY (! (condition)) ) {  \
       BTRAP_FEEDING_WDT ();            \
     }                                  \
+  } while ( 0 )
+
+// Like CHKP_FEEDING_WDT_USING, but with the data direction and port related
+// arguments fixed, but the time up to the client.  Possibly useful for
+// making your own strange blink patterns, or for redefining such that
+// BASSERT_FEEDING_WDT_SHOW_POINT() uses a LED other than one attached to PB5.
+#define CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY(mspb, bc)   \
+  CHKP_FEEDING_WDT_USING (DDRB, DDB5, PORTB, PORTB5, mspb, bc)
+
+// Like BASSERT_FEEDING_WDT, but attempts to show using a single LED where
+// the assertion violation has occurred, using the following steps:
+//   
+//   1. A series of rapid blinks
+//
+//   2. A series of slower n slower blinks, where n is the number of
+//      characters in the source file where the violation occurred
+//
+//   3. The another series of 0-9 slower blinks, corresponding to a digit
+//      in the line number where the violation occurred
+//
+//   4. More series of 0-9 slower blinks (for the remaining digits of the
+//      line number)
+//
+//   5. Go to step 1
+//
+//  This macro is sorta crazy.  Its huge, and it's only worthwhile if you
+//  need to use it many places, and can't just use term_io.h to sort out
+//  what's going on (perhaps because the serial port is being used to talk
+//  to something else).
+//
+//  Note that this macro requires CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY()
+//  to first be redefined as appropriate if PB5 isn't the one with the LED.
+//
+
+#define BASSERT_FEEDING_WDT_SHOW_POINT(condition)                   \
+  do {                                                              \
+    if ( UNLIKELY (! (condition)) ) {                               \
+      for ( ; ; ) {                                                 \
+        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (100.0, 5);       \
+        float XxX_pbbb = 1042;   \
+        uint8_t XxX_wrp = 5; \
+        for ( uint16_t XxX_kk = 0 ; XxX_kk < XxX_pbbb ; XxX_kk += XxX_wrp ) { \
+          _delay_ms (XxX_wrp); \
+          wdt_reset ();                 \
+        } \
+        size_t XxX_fnl = strlen (__FILE__);                         \
+        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (542.0, XxX_fnl); \
+        for ( uint16_t XxX_kk = 0 ; XxX_kk < XxX_pbbb ; XxX_kk += XxX_wrp ) { \
+          _delay_ms (XxX_wrp); \
+          wdt_reset ();                 \
+        } \
+        char line_number_as_string[7];                              \
+        sprintf (line_number_as_string, "%i", __LINE__);            \
+        uint8_t llnas = strlen (line_number_as_string);             \
+        for ( uint8_t XxX_kk = 0 ; XxX_kk < llnas ; XxX_kk++ ) {    \
+          CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (               \
+              542.0, line_number_as_string[XxX_kk] - 48 );          \
+          _delay_ms (1042);                                         \
+        for ( uint16_t XxX_kk = 0 ; XxX_kk < XxX_pbbb ; XxX_kk += XxX_wrp ) { \
+          _delay_ms (XxX_wrp); \
+          wdt_reset ();                 \
+        } \
+        }                                                           \
+      }                                                             \
+    }                                                               \
   } while ( 0 )
 
 // }}}1
