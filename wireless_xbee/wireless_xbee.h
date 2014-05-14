@@ -427,7 +427,7 @@ wx_put_string_frame (char const *str);
 // This function grabs a slice of incoming data starting when called and
 // ending when either a valid frame is received, or a frame that has been
 // started (due to the appearance of a frame delimiter in the data stream)
-// turns out to be invalid.  Therefore:
+// turns out to be invalid or times out.  Therefore:
 //
 //   * Callers must be prepared to retry.  A frame could cross the
 //     timeout boundry, or be corrupted.
@@ -464,6 +464,16 @@ wx_put_string_frame (char const *str);
 //
 //   * Its reasonable to first use WX_BYTE_AVAILABLE() from a polling loop to
 //     determine when it might be worthwhile to call this routine.
+//
+// Using short timeout values is asking for trouble.  Although the serial
+// connection to the XBee goes at about one byte per millisecond, and
+// the XBee to XBee RF link is theoretically even faster, its probably
+// a bad idea to depend on these rates.  Who knows what the XBee does?
+// It may be laggy at the start of transmissions, or have RF packetization
+// overhead, or take longer when there's noise.  Using WX_BYTE_AVAILABLE()
+// before trying this function improves the success rate for a given timeout
+// setting, because it ensures that none of the timeout period is wasted
+// before the frame even starts.
 //
 uint8_t
 wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout);
