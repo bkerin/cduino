@@ -166,11 +166,11 @@
 //   2. A series of n slower blinks, where n is the number of characters
 //      in the name of the source file where the violation occurred
 //
-//   3. The another series of 0-9 slower blinks, corresponding to a digit
-//      in the line number where the violation occurred
+//   3. A quick flash for the digit 0, or a series of 1-9 slower blinks,
+//      corresponding to a digit in the line number where the violation
+//      occurred
 //
-//   4. More series of 0-9 slower blinks (for the remaining digits of the
-//      line number)
+//   4. Repeat step 3 for each digit in the line number
 //
 //   5. Go to step 1
 //
@@ -183,31 +183,36 @@
 //  Note that this macro requires CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY()
 //  to first be redefined as appropriate if PB5 isn't the one with the LED.
 //
-#define BASSERT_FEEDING_WDT_SHOW_POINT(condition)                     \
-  do {                                                                \
-    if ( UNLIKELY (! (condition)) ) {                                 \
-      for ( ; ; ) {                                                   \
-        uint16_t const XxX_pbbb = 942;                                \
-        uint8_t  const XxX_wrp  = 5;                                  \
-        uint16_t const XxX_fbp  = 100;                                \
-        uint8_t  const XxX_fbc  = 6;                                  \
-        uint16_t const XxX_sbp  = 442;                                \
-        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_fbp, XxX_fbc); \
-        DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                  \
-        size_t XxX_fnl = strlen (__FILE__);                           \
-        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_sbp, XxX_fnl); \
-        DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                  \
-        char line_number_as_string[7];                                \
-        sprintf (line_number_as_string, "%i", __LINE__);              \
-        uint8_t llnas = strlen (line_number_as_string);               \
-        for ( uint8_t XxX_kk = 0 ; XxX_kk < llnas ; XxX_kk++ ) {      \
-          uint8_t const ascii_0 = 48;                                 \
-          CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (                 \
-              XxX_sbp, line_number_as_string[XxX_kk] - ascii_0 );     \
-          DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                \
-        }                                                             \
-      }                                                               \
-    }                                                                 \
+#define BASSERT_FEEDING_WDT_SHOW_POINT(condition)                           \
+  do {                                                                      \
+    if ( UNLIKELY (! (condition)) ) {                                       \
+      for ( ; ; ) {                                                         \
+        uint16_t const XxX_pbbb = 942;                                      \
+        uint8_t  const XxX_wrp  = 5;                                        \
+        uint16_t const XxX_fbp  = 100;                                      \
+        uint8_t  const XxX_fbc  = 6;                                        \
+        uint16_t const XxX_sbp  = 442;                                      \
+        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_fbp, XxX_fbc);       \
+        DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                        \
+        size_t XxX_fnl = strlen (__FILE__);                                 \
+        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_sbp, XxX_fnl);       \
+        DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                        \
+        char XxX_line_number_as_string[7];                                  \
+        sprintf (XxX_line_number_as_string, "%i", __LINE__);                \
+        uint8_t llnas = strlen (XxX_line_number_as_string);                 \
+        for ( uint8_t XxX_kk = 0 ; XxX_kk < llnas ; XxX_kk++ ) {            \
+          uint8_t const ascii_0 = 48;                                       \
+          uint8_t XxX_digit = XxX_line_number_as_string[XxX_kk] - ascii_0;  \
+          if ( XxX_digit == 0 ) {                                           \
+            CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_fbp, 1);         \
+          }                                                                 \
+          else {                                                            \
+            CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_sbp, XxX_digit); \
+          }                                                                 \
+          DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                      \
+        }                                                                   \
+      }                                                                     \
+    }                                                                       \
   } while ( 0 )
 
 // }}}1
