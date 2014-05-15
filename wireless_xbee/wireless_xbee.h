@@ -165,13 +165,21 @@
    // before it goes to sleep.
 #  define WX_SLEEP() DIO_SET_HIGH (WX_SLEEP_RQ_CONTROL_PIN)
 
-   // NOTE: the XBee datasheet says that when waking the XBee, it must be
-   // kept awake for at least two "character times" for proper operation.
+   // Wake the XBee from sleep.
+   //
+   // WARNING: it takes the XBee some time to wake up.  The XBee datasheet
+   // says that the module needs 13.2 ms to wake from hibernate (XBee
+   // configuration parameter SM=1).  It also says the XBee will by ready
+   // for transmission two 'byte times' after it takes its CTS line low.
+   // This interface doesn't require the CTS line to be monitored, and
+   // transmissions do indeed get scrambled up if you rush things, so we
+   // give it a full 20 ms.  XBee doze mode (SM=2) is worth considering if
+   // you need faster wake-up (at the cost of more power of course).
 #  define WX_WAKE() \
      do { \
      DIO_SET_LOW (WX_SLEEP_RQ_CONTROL_PIN); \
-     float XxX_two_character_times_ms = 2.0; \
-     _delay_ms (XxX_two_character_times_ms); \
+     float XxX_wakeup_time_ms = 20.0; \
+     _delay_ms (XxX_wakeup_time_ms); \
    } while ( 0 )
 
 #endif
@@ -222,7 +230,10 @@
 // RESET line at all.  You aren't even required to have a connection to
 // that line.  However, if you do have it connected (see the reference to
 // WX_RESET_CONTROL_PIN above), you likely want use the WX_RESET() macro
-// before calling this function.
+// before calling this function.  The ATMega328P datasheet says that USART0
+// must be reinitialized after waking from sleep.  In practive I haven't
+// found it to need this, but this function is guaranteed to be callable
+// in this situation just in case (it will reinitialize USART0).
 void
 wx_init (void);
 
