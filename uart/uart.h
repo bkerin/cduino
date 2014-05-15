@@ -2,8 +2,10 @@
 //
 // Test driver: uart_test.c    Implementation: uart.c
 //
-// This module supports serial port initialization and byte transfer using
-// polling (i.e. busy waits, not interrupts).
+// This module supports serial port initialization and byte transfer
+// using polling (i.e. busy waits, not interrupts).  Only the core UART
+// functionality is implemented here, not all the serial port bells and
+// whistles (i.e. no CTS/RTS or other extra serial port signals).
 
 #ifndef UART_H
 #define UART_H
@@ -20,7 +22,9 @@
 
 // Initialize the USART0 to 9600 Bd, TX/RX, 8N1.  Note that this sets up
 // the PD0 (RXD) and PD1 (TXD) pins such that they cannot be used for normal
-// digital IO.
+// digital IO.  The ATMega328P datasheet says that SART0 must be reinitialized
+// after waking from sleep.  In practive I haven't found it to need this, but
+// this function is guaranteed to be callable in this situation just in case.
 void
 uart_init (void);
 
