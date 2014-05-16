@@ -157,6 +157,13 @@ mode for up to 10 seconds after the last command is issued (unless an explicit
 exit-command-mode command ("CN") is issued, or the module has been reconfigured
 to remain in command mode for less time).
 
+FIXXME: there is at least one XBee command for which this program doesn't work
+right: the ED (energy scan) command.  This is because this command takes too
+long to run and a timeout occurs during the wait for the keep-alive command
+response.  You can work around this somewhat by continuing to send junk while
+watching the output but its ugly and eventually an error happens.  To really 
+fix this an option to disable the keep-alive commands would need to be added.
+
 =item B<-r>, B<--raw-mode>
 
 Raw mode.  In this mode, bytes from the standard input may be line-buffered (if
