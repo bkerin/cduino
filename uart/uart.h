@@ -4,8 +4,8 @@
 //
 // This module supports serial port initialization and byte transfer
 // using polling (i.e. busy waits, not interrupts).  Only the core UART
-// functionality is implemented here, not all the serial port bells and
-// whistles (i.e. no CTS/RTS or other extra serial port signals).
+// functionality is implemented here, not all the serial bells and whistles
+// (i.e. no CTS/RTS or other extra serial port signals).
 
 #ifndef UART_H
 #define UART_H

@@ -122,6 +122,10 @@ which you plugged it in.
 
 =item B<-c>, B<--command-mode>
 
+WARNING: I have found that the XBee won't enter command mode if there is radio
+chatter on the network id and channel for which it is configured to listen.
+This is consistent with the implications of Figure 2-07 of the XBee datasheet.
+
 Enter command mode on startup by sending the sleep-bracketed '+++' AT command
 initiation sequence.  Then enable a convenient keep-alive feature and few
 tranformations on input and output:

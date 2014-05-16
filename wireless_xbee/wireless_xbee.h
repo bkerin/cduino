@@ -247,6 +247,12 @@ wx_init (void);
 // automatically drop out of command mode after 10 seconds (unless the AT
 // CT command has been used to reconfigure the module with a non-default
 // timeout).  Returns true on success, false otherwise.
+//
+// WARNING: I have found that the XBee won't enter command mode if there is
+// radio chatter on the network id and channel for which it is configured
+// to listen.  This is really annoying, since it makes it hard or impossible
+// to guarantee that an XBee design can auto-configure on deployment, but
+// its consistent with the implication of Figure 2-07 of the XBee datasheet.
 uint8_t
 wx_enter_at_command_mode (void);
 
