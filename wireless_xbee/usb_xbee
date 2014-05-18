@@ -18,7 +18,7 @@ use Getopt::Long qw( GetOptions );
 use IO::Handle;
 use Pod::Usage qw( pod2usage );
 use Scalar::Util qw(looks_like_number);
-use Time::HiRes qw( time usleep );
+use Time::HiRes qw( time usleep ualarm );
 
 # }}}1
 
@@ -90,6 +90,15 @@ firmware installed.  I don't know on the 900 MHz, XSC or XSC S3B modules.  See
 this page for more information of the different module families:
 
 https://www.sparkfun.com/pages/xbee_guide
+
+Entering command mode while there is chatter on the network_id/channel which
+the XBee is configured to use is somewhat interesting.  You can't count on
+getting the initial "OK\r" string that you normall get back when you enter
+command (I suspect because it can end up jumbled together with radio data).
+This program handles this by throwing away data for a short time after sending
+the sequence that's supposed to initiate command mode, then automatically
+trying a command.  If the command returns the expected response then we assume
+we made it into command mode.
 
 On my system at least, it takes a surprisingly long time (10 - 20 seconds) for
 the module device file to become usable the first time the module is plugged
@@ -467,6 +476,32 @@ sub configure_tty # {{{1
     not system ("stty -F $df 9600 raw") or die "stty failed";
 } # }}}1
 
+sub flush_data_from_xbee_for_a_short_time # {{{1
+{
+    # UGLY HACK WARNING.  The problem is that when we first enter command
+    # mode in the presence of chatter on the network_id/channel, we don't
+    # necessarilly ever get a clean "OK\n" response as far as I can tell,
+    # even if we throw away leading data.  Unless its outracing our read
+    # for it, which I think is highly unlikely.  Anyway, what we want to
+    # do is throw away any incoming garbage for "a while" after we send the
+    # sequence that's supposed to initiate command mode.  Then we can try a
+    # command and see if it gives a clean response.  We don't know how much
+    # junk we will get, of course.  So we just read stuff while waiting
+    # for a timer to go off.  Of course, the scaler we set to detect the
+    # alarm in the SIGALRM handler might not be truly atomic.  Something on
+    # the internet said if its an operation supported by tie, its atomic,
+    # which I think scalar assignment probably is :)
+
+    my $ft = 300042;
+    my $not_real_atom = 0;   # NOTE: am I really atmoic?  Who knows
+    $SIG{ALRM} = sub { $not_real_atom = 1; };
+    ualarm($ft);
+    my $junk_storage;
+    while ( not $not_real_atom ) {
+      sysread(UD, $junk_storage, 10042);
+    }
+} # }}}1
+
 sub get_response # {{{1
 {
     # Get a response to an AT command (which we assume was previously sent),
@@ -522,11 +557,31 @@ sub get_response # {{{1
         "Perhaps we exited command mode somehow?";
 } # }}}1
 
+sub at_command ($) # {{{1
+{
+    # Given an AT command, send it to the XBee and return any response up to
+    # the first "\r" received.  Die with an error if we don't get a "\r" back.
+    # Note that this should only be used after enter_command_mode().
+
+    @_ == 1 or die "wrong number of arguments";
+    my $command = shift;
+
+    my $swr = syswrite(UD, $command);
+    defined($swr) or die "syswrite failed: $!";
+    $swr == length($command)
+	or die "syswrite didn't write the expected number of bytes";
+
+    my $rl = get_response();   # Response Line (from XBee)
+
+    return $rl; 
+} # }}}1
+
 sub enter_command_mode # {{{1
 {
     # Perform the wait-one-second, send-+++, wait-1-second sequence required
-    # to go into command mode, and wait for the result indicating it worked
-    # (dying if we don't get it).
+    # to go into command mode, flush potential garbage data for a short time
+    # (see flush_data_from_xbee_for_a_short_time()), and try an empty command
+    # to see if we get "OK\r" back, dying if we don't.
 
     sleep 1;
     my $swr = syswrite(UD, '+++');   # SysWrite Return
@@ -536,7 +591,11 @@ sub enter_command_mode # {{{1
         or die "syswrite didn't write the expected number of bytes to $df";
     sleep 1;
 
-    get_response() eq "OK\r" or die "failed to enter command mode";
+    flush_data_from_xbee_for_a_short_time();
+
+    my $response = at_command("AT\r");
+
+    $response eq "OK\r" or die "failed to enter command mode";
 } # }}}1
 
 sub leave_command_mode # {{{1
@@ -551,6 +610,9 @@ sub leave_command_mode # {{{1
     $swr == length($ecmcs)
         or die "syswrite didn't write the expected number of bytes to $df";
 
+    # NOTE: I hope to hell the first thing you see when you leave command mode
+    # is the response sequence, regardless of what's going on on the radio.
+    # But who knows?
     get_response() eq "OK\r" or die "failed to leave command mode";
 } # }}}1
 
@@ -1106,13 +1168,7 @@ if ( $cm ) {   # --command-mode {{{1
         $cts =~ tr/a-z/A-Z/;         # Translate to upper case
         $cts = "AT".$cts."\r";       # Add leading "AT" and trailing "\r"
 
-        # Send stuff to the XBee
-        my $swr = syswrite(UD, $cts);
-        defined($swr) or die "syswrite failed: $!";
-        $swr == length($cts)
-            or die "syswrite didn't write the expected number of bytes";
-
-        my $rl = get_response();   # Response Line (from XBee)
+        my $rl = at_command($cts);   # Response Line
 
         if ( $gsi ) {
             # Transform output line as promised
