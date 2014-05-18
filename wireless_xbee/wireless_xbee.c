@@ -29,8 +29,8 @@ wx_init (void)
   uart_init ();
 }
 
-// Define a HANDLE_ERRORS macro that either asserts the given condition,
-// or simply returns depending on a compile-time setting.  We guarantee
+// Define a HANDLE_ERRORS macro that either asserts the given condition, or
+// simply returns FALSE depending on a compile-time setting.  We guarantee
 // that this macro will evaluate its argument only once, so its safe to
 // use around a function that has other effects.
 #ifdef WX_ASSERT_SUCCESS
@@ -44,30 +44,56 @@ wx_init (void)
      } while ( 0 )
 #endif
 
-static char
-get_char (void)
+static uint32_t
+get_char (char *dest, uint32_t timeout)
 {
-  WX_WAIT_FOR_BYTE ();
+  // Spend up to about timeout microseconds trying to get a character from
+  // the serial port.  Write the character into dest and return the non-zero
+  // approximate ellapsed time on success, or return FALSE via HANDLE_ERRORS()
+  // if a UART receive error or timeout occurs.
+
+  // Long enough to be longish relative to the loop overhead in the loop
+  // where its used.  More than that we cannot say.
+  uint8_t const poll_interval_us = 142;
+
+  uint32_t elapsed_time_us = 0;
+
+  do {
+    _delay_us (poll_interval_us);
+    elapsed_time_us += poll_interval_us;
+    HANDLE_ERRORS (elapsed_time_us < timeout);
+  } while ( ! WX_BYTE_AVAILABLE () );
 
   if ( WX_UART_RX_ERROR () ) {
     WX_UART_FLUSH_RX_BUFFER ();
     HANDLE_ERRORS (FALSE);   // Meaning we have an error to handle
   }
 
-  return WX_GET_BYTE ();
+  *dest = WX_GET_BYTE ();
+
+  return elapsed_time_us;
 }
 
 static uint8_t
-get_line (uint8_t bufsize, char *buf)
+get_line (uint8_t bufsize, char *buf, uint16_t timeout)
 {
-  // Get up to bufsize - 1 character from the serial port, or until a
-  // carriage return ('\r') character is recieved, then add a terminating
-  // NUL byte and return TRUE to indicate success.
+  // Spend up to approximately timeout milliseconds trying to get up to
+  // bufsize - 1 characters from the serial port, or until a carriage return
+  // ('\r') character is recieved, then add a terminating NUL byte and return
+  // TRUE to indicate success, or FALSE if a timeout has occurred.
 
   uint8_t ii;   // Index
 
+  uint32_t elapsed_time_us = 0;
+
   for ( ii = 0 ; ii < bufsize - 1 ; ii++ ) {
-    buf[ii] = get_char ();
+    uint32_t const uspms = 1000;   // Microseconds Per MilliSecond
+    uint32_t timeout_us = timeout * uspms;
+    // Get character, return Time Taken (in microseconds), or FALSE on timeout
+    uint32_t tt = get_char (&(buf[ii]), timeout_us);
+    HANDLE_ERRORS (tt != FALSE);
+    elapsed_time_us += tt;
+    HANDLE_ERRORS (elapsed_time_us < timeout_us);
     if ( buf[ii] == '\r' ) {
       ii++;
       break;
@@ -82,30 +108,44 @@ get_line (uint8_t bufsize, char *buf)
 uint8_t
 wx_enter_at_command_mode (void)
 {
-  // Send the sequence which initiates AT command mode, returning true on
+  // Send the sequence which initiates AT command mode, returning TRUE on
   // success.  After this function returns, the XBee will remain in command
   // mode for up to 10 seconds (or until exit_at_command_mode() is called.
 
   // This magic sequence should send us into AT command mode
-  float const dwmms = 1142;   // Delay With Margin (in ms) -- AT requires 1 s
+  float const dwmms = 1042;   // Delay With Margin (in ms) -- AT requires 1 s
   _delay_ms (dwmms);
   WX_PUT_BYTE ('+');
   WX_PUT_BYTE ('+');
   WX_PUT_BYTE ('+');
+  // Note that waiting too long after this point to start reading could be bad,
+  // since we might overflow part of the "OK\r" string.
   _delay_ms (dwmms);
 
-  // This probably goes without saying, but we have to assert it somewhere
-  assert (WX_MCOSL < UINT8_MAX); 
+  // We're now going to spend some time making sure any remaining input
+  // is flushed.  This is probably overly conservative, but since it's hard
+  // to distinguish the "OK\r" we're supposed to get out in the presence
+  // of radio chatter (in fact I strongly suspect that that string can get
+  // interspersed with radio data), we want to thouroughly flush things
+  // before we try a command to make sure we're in command mode.
+  float const flushing_time_ms = 300.42;   // Total time to spend flushing
+  float const ms_per_flush     = 4.2;      // Plenty Time for 2 byte buf fill
+  float       et_us            = 0.0;      // Elapsed Time in microseconds
+  while ( et_us < flushing_time_ms ) {
+    WX_UART_FLUSH_RX_BUFFER ();
+    _delay_ms (ms_per_flush);
+    et_us += ms_per_flush;
+  } 
 
-  // NOTE: this seems like more RAM than we need, but clients are eventually
-  // going to need it anyway to read the (longer) responses from real query
-  // commands.
-  char response[WX_MCOSL];
+  // We now expect silence unless we enter a command.  By *not* flushing the
+  // buffer for a short time, we help ensure that the command we're going to
+  // try next will not end up with the expected response if there is still
+  // chatter on the line.  Yes, I'm paranoid.
+  float const magic_guard_time = 4.2;
+  _delay_ms (magic_guard_time);
 
-  uint8_t sentinel = get_line (WX_MCOSL, response);
-  HANDLE_ERRORS (sentinel);
-
-  HANDLE_ERRORS (! strcmp (response, "OK\r"));
+  // Now try a command to ensure that we've made in into command mode.
+  HANDLE_ERRORS (wx_at_command_expect_ok (""));
 
   return TRUE;
 }
@@ -149,7 +189,8 @@ wx_at_command (char *command, char *output)
 {
   put_command (command);
  
-  HANDLE_ERRORS (get_line (WX_MCOSL, output));
+  HANDLE_ERRORS (
+      get_line (WX_MCOSL, output, WX_AT_COMMAND_RESPONSE_TIME_LIMIT_MS) );
 
   // Verify that the output string ends with '\r'
   uint8_t osl = strnlen (output, WX_MCOSL);   // Output String Length
@@ -165,9 +206,15 @@ wx_at_command_expect_ok (char const *command)
 {
   put_command (command);
 
-  HANDLE_ERRORS (get_char () == 'O');
-  HANDLE_ERRORS (get_char () == 'K');
-  HANDLE_ERRORS (get_char () == '\r');
+  // NOTE: this seems like more RAM than we need, but clients are eventually
+  // going to need it anyway to read the (longer) responses from real query
+  // commands.
+  char response[WX_MCOSL];
+
+  HANDLE_ERRORS (
+      get_line (WX_MCOSL, response, WX_AT_COMMAND_RESPONSE_TIME_LIMIT_MS) );
+
+  HANDLE_ERRORS (! strcmp (response, "OK\r"));
 
   return TRUE;
 }

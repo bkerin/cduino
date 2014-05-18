@@ -26,10 +26,10 @@
 //
 // Its important to realize that pushing the reset button on the XBee shield
 // only resets the Arduino, not the XBee itself.  Same with reprogramming
-// the Arduino.  Its easy to wedge the XBee. If things work the first time
-// through but not on subsequent attempts, you may need to power everything
-// down (or run a line to the XBee RESET input as described below and make
-// your program reset the XBee on startup).
+// the Arduino.  Its possible to wedge the XBee. If things work the first
+// time through but not on subsequent attempts, you may need to power
+// everything down (or run a line to the XBee RESET input as described
+// below and make your program reset the XBee on startup).
 //
 // Its possible to use an XBee shield without using the XBee SLEEP_RQ or
 // RESET or signals, but in battery powered designs at least you'll want to
@@ -241,18 +241,25 @@ wx_init (void);
 // enable simplified error handling.  See "About Error Handling" above.
 //#define WX_ASSERT_SUCCESS
 
-// Enter AT command mode by doing the sleep-send_+++-sleep ritual.
-// This function takes a few seconds to execute, because entering command
-// mode requires two guard times of 1 second or more.  The XBee module will
-// automatically drop out of command mode after 10 seconds (unless the AT
-// CT command has been used to reconfigure the module with a non-default
-// timeout).  Returns true on success, false otherwise.
-//
-// WARNING: I have found that the XBee won't enter command mode if there is
-// radio chatter on the network id and channel for which it is configured
-// to listen.  This is really annoying, since it makes it hard or impossible
-// to guarantee that an XBee design can auto-configure on deployment, but
-// its consistent with the implication of Figure 2-07 of the XBee datasheet.
+// All functions that require an AT command to be executed (except
+// wx_enter_at_command_mode()) will fail if they don't get a complete
+// response within about this amount of time after sending the request.
+// They might fail more quickly.  WARNING: for at least one XBee command,
+// ED (energy scan), this won't be long enough, and you may need to define
+// a higher limit yourself before including this header, or propagate the
+// timeout mechanics in the implementation in wireless_xbee.c up to the
+// interface level.
+#ifndef WX_AT_COMMAND_RESPONSE_TIME_LIMIE_MS
+#  define WX_AT_COMMAND_RESPONSE_TIME_LIMIT_MS 200
+#endif
+
+// Enter AT command mode.  We do this by doing the sleep-send_+++-sleep
+// ritual, thouroughly flushing the receive buffer, and then sending a blank
+// command and expecting an "OK\r" response.  Note that if some fiend is
+// sending an endless string of "OK\r" strings on the network_id/channel
+// the XBee is configured to use, we might be fooled into thinking we've
+// made it to command mode when we haven't.  This routine returns TRUE if it
+// thinks AT command mode has been entered successfully, or FALSE otherwise.
 uint8_t
 wx_enter_at_command_mode (void);
 
@@ -262,17 +269,23 @@ wx_exit_at_command_mode (void);
 
 // Require the XBee module to be in AT command mode (see
 // wx_enter_at_command_mode()).  Check if the XBee network ID (ID parameter)
-// is set to id, and if not, set it to id and save the settings.  Valid id
-// values are 0x00 - 0xffff.  NOTE: this command may permanently alter the
-// XBee configuration (it can be restored using wx_restore_defaults().
+// is set to id, and if not, set it to id and save the settings.  The new
+// setting is saved to saved to non-volatile memory when this command is
+// issued, but doesn't actually take effect until AT command mode is exited
+// (or an 'AC' command is issued).  Valid id values are 0x00 - 0xffff.
+// NOTE: this command may permanently alter the XBee configuration (it can
+// be restored using wx_restore_defaults().
 uint8_t
 wx_ensure_network_id_set_to (uint16_t id);
 
 // Require the XBee module to be in AT command mode (see
-// wx_enter_at_command_mode()).  Check if the XBee channel (CH parameter) is
-// set to channel, and if not, set it to channel and save the settings.  Valid
-// channel values are 0x0b - 0x1a.  NOTE: this command may permanently alter
-// the XBee configuration (it can be restored using wx_restore_defaults()).
+// wx_enter_at_command_mode()).  Check if the XBee channel (CH parameter)
+// is set to channel, and if not, set it to channel and save the settings.
+// The new setting is saved to saved to non-volatile memory when the command
+// is issued, but doesn't actually take effect until AT command mode is
+// exited (or an 'AC' command is issued).  Valid channel values are 0x0b
+// - 0x1a.  NOTE: this command may permanently alter the XBee configuration
+// (it can be restored using wx_restore_defaults()).
 uint8_t
 wx_ensure_channel_set_to (uint8_t channel);
 
