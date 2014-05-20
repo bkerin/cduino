@@ -65,6 +65,8 @@ main (void)
       // milliseconds, measuring load current half way through.
       _delay_ms (tps / 2.0);
       int mapa = 1000;   // Milliamps Per Amp
+      // NOTE: we can't output floating point values using PFP() without
+      // first SETTING AVRLIBC_PRINTF_LDFLAGS as described in generic.mk.
       PFP (
           "DC motor A load current: %i mA\n", 
           (int) (mapa * dc_motor_load_current (DC_MOTOR_CHANNEL_A)) );
