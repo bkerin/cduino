@@ -114,6 +114,10 @@ NO_USB_ARDUINO_CONNECTION ?=
 # WARNING: the AVRISPmkII options will make your Arduino unprogrammable using
 # the normal bootloader method (though you can recover: see the
 # replace_bootloader target).
+#
+# Note that unless NO_USB_ARDUINO_CONNECTION is defined to a non-empty value,
+# this build system still requires an Arduino to be connected over USB,
+# it just doesn't use it for programming.
 UPLOAD_METHOD ?= arduino_bl
 
 # If this is set to true, then if the perl modules required to pulse the DTR
@@ -130,7 +134,7 @@ AVRDUDE ?= avrdude
 AVRDUDE_ARDUINO_PROGRAMMERID ?= arduino
 
 # Location and characteristics of the Arduino on the USB.  Note that this
-# build system currently tries to find an Arduino even if the AVRISPmkII
+# build system usually tries to find an Arduino even if the AVRISPmkII
 # method is being used.  If you don't want any of these checks to happen
 # see the NO_USB_ARDUINO_CONNECTION variable above.  The values that should
 # be used here differ for different recent arduinos: for me at least, the
@@ -222,27 +226,20 @@ GENASMFILES := $(patsubst %.o,%.s,$(OBJS))
 # that isn't explicitly included in our list of things that don't really
 # need a connection, the autodetection code will go off and they will get
 # the detection failure messages.
+ARDUINOLESS_TARGET_WARNING_TEXT :=                                             \
+  If you should not need to be connected to an Arduino for the taget you are   \
+  are building, consider adding a pattern to the                               \
+  VALID_ARDUINOLESS_TARGET_PATTERNS Make variable.                             \
+                                                                               \
+  If you are using an AVRISPmkII (UPLOAD_METHOD = AVRISPmkII), note that the   \
+  autodetection code normally still requires the Arduino to be connected to    \
+  the computer by USB.  If you do not have a USB connection to the Arduino,    \
+  you must define the NO_USB_ARDUINO_CONNECTION make variable to a non-empty   \
+  value.  Note that the Arduino hardware autodetection should work even if     \
+  there is no Arduino bootloader on the chip.
+ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
 
-ARDUINOLESS_TARGET_WARNING_TEXT := \
-  If you should not need to be connected to an Arduino for the taget you are \
-  are building, consider adding a pattern to the \
-  VALID_ARDUINOLESS_TARGET_PATTERNS Make variable. \
-  \
-  If you are using an AVRISPmkII (UPLOAD_METHOD = AVRISPmkII), note that the \
-  autodetection code normally still requires the Arduino to be connected to \
-  the computer by USB.  If you are using this build system to program a naked \
-  chip without an Aruino attached, you must define the \
-  NO_USB_ARDUINO_CONNECTION make variable to a non-empty value. \
-  \
-  The autodetection should work even if the bootloader on the chip needs to \
-  be replaced (using the replace_bootloader target). If you need to use the \
-  AVRISPmkII while powering the Arduino some other way, you will need to \
-  explicitly set the ARDUINO_PORT, ARDUINO_BAUD, and ARDUINO_BOOTLOADER \
-  variables; see the comments near those variables in generic.mk for some \
-  common values.
-ifeq ($(NO_USB_ARDUINO_CONNECTION), )
-
-  ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
+  ifeq ($(NO_USB_ARDUINO_CONNECTION), )
 
     ifeq ($(ARDUINO_PORT),autoguess)
       ACTUAL_ARDUINO_PORT := \
@@ -278,6 +275,14 @@ ifeq ($(NO_USB_ARDUINO_CONNECTION), )
       endif
     else
       ACTUAL_ARDUINO_BOOTLOADER := $(ARDUINO_BOOTLOADER)
+    endif
+
+  else
+
+    ifeq ($(UPLOAD_METHOD),arduino_bl)
+      $(error NO_USB_ARDUINO_CONNECTION is non-empty, but UPLOAD_METHOD is   \
+              arduino_bl and at least one of the current make goals does not \
+              match any pattern in VALID_ARDUINOLESS_TARGET_PATTERNS )
     endif
 
   endif
