@@ -98,7 +98,7 @@ dc_motor_set_speed (dc_motor_channel_t channel, int8_t speed);
 // channel.  Note that this is the current value as computed using
 // DC_MOTOR_CURRENT_SENSE_AMPS_PER_VOLT, not the voltage reading at the
 // sensor output.
-float 
+float
 dc_motor_load_current (dc_motor_channel_t channel);
 
 // FIXXME: if we wanted to entirely shut down the timer/counter2 hardware to
