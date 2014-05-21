@@ -98,7 +98,7 @@ get_line (uint8_t bufsize, char *buf, uint16_t timeout)
       ii++;
       break;
     }
-  } 
+  }
 
   buf[ii] = '\0';
 
@@ -135,7 +135,7 @@ wx_enter_at_command_mode (void)
     WX_UART_FLUSH_RX_BUFFER ();
     _delay_ms (ms_per_flush);
     et_us += ms_per_flush;
-  } 
+  }
 
   // We now expect silence unless we enter a command.  By *not* flushing the
   // buffer for a short time, we help ensure that the command we're going to
@@ -188,7 +188,7 @@ uint8_t
 wx_at_command (char *command, char *output)
 {
   put_command (command);
- 
+
   HANDLE_ERRORS (
       get_line (WX_MCOSL, output, WX_AT_COMMAND_RESPONSE_TIME_LIMIT_MS) );
 
@@ -261,7 +261,7 @@ wx_ensure_channel_set_to (uint8_t channel)
   // The channel argument must fall in the valid range.
   HANDLE_ERRORS (channel >= 0x0b);
   HANDLE_ERRORS (channel <= 0x1a);
-  
+
   char buf[WX_MCOSL];   // Buffer for command/output string storage
 
   uint8_t cp = sprintf_P (buf, PSTR ("CH"));   // Chars Printed
@@ -301,7 +301,7 @@ wx_restore_defaults (void)
   HANDLE_ERRORS (wx_at_command_expect_ok ("RE"));
 
   HANDLE_ERRORS (wx_at_command_expect_ok ("WR"));
-  
+
   return TRUE;
 }
 
@@ -461,6 +461,24 @@ wx_put_string_frame (char const *str)
   return wx_put_frame (sl, str);
 }
 
+uint8_t
+wx_put_string_frame_printf (char const *format, ...)
+{
+  char es[WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH + 1];   // Expanded String
+
+  va_list ap;
+  va_start (ap, format);
+  int char_count
+    = vsnprintf (es, WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH + 1, format, ap);
+  va_end (ap);
+
+  if ( char_count > WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH ) {
+    return FALSE;
+  }
+
+  return wx_put_string_frame (es);
+}
+
 #define FRAME_STATE_OUTSIDE_FRAME                     1
 #define FRAME_STATE_AT_LENGTH_XORED_FLAG              2
 #define FRAME_STATE_AT_LENGTH_ITSELF                  3
@@ -471,7 +489,7 @@ wx_put_string_frame (char const *str)
 #define FRAME_STATE_IN_PAYLOAD                        8
 #define FRAME_STATE_IN_PAYLOAD_ESCAPED                9
 #define FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE         10
-#define FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE_ESCAPED 11 
+#define FRAME_STATE_AT_PAYLOAD_CRC_HIGH_BYTE_ESCAPED 11
 #define FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE          12
 #define FRAME_STATE_AT_PAYLOAD_CRC_LOW_BYTE_ESCAPED  13
 #define FRAME_STATE_COMPLETE                         14
@@ -488,7 +506,7 @@ crc_ccitt_update (uint16_t crc, uint8_t data)
 {
   data ^= lo8 (crc);
   data ^= data << 4;
-  
+
   return (
       (((uint16_t) data << 8) | hi8 (crc)) ^
       (uint8_t) (data >> 4) ^
@@ -551,7 +569,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
       }
 
       uint8_t cb = WX_GET_BYTE ();   // Current Byte
-          
+
       if ( cb == FRAME_DELIMITER ) {
         // A frame delimiter should only occur unescaped when we aren't
         // already reading a frame.  If we see it elsewhere it means corrupt
@@ -568,7 +586,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
       else if ( fs != FRAME_STATE_OUTSIDE_FRAME && (cb == XON || cb == XOFF) ) {
         return FALSE;
       }
- 
+
       switch ( fs ) {
 
         case FRAME_STATE_OUTSIDE_FRAME:
@@ -615,7 +633,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
           }
           fs = FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE;
           break;
-        
+
         case FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE:
           if ( cb == ESCAPE ) {
             fs = FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE_ESCAPED;
@@ -633,7 +651,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
             }
           }
           break;
-        
+
         case FRAME_STATE_AT_LENGTH_CRC_LOW_BYTE_ESCAPED:
           if ( (cb ^ ESCAPE_MODIFIER) != LOW_BYTE (crc) ) {
             return FALSE;
@@ -651,7 +669,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
           crc = _crc_ccitt_update (crc, cb);
           if ( cb == ESCAPE ) {
             fs = FRAME_STATE_IN_PAYLOAD_ESCAPED;
-          } 
+          }
           else {
             ((uint8_t *) buf)[*rfps] = cb;
             (*rfps)++;
@@ -714,7 +732,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
             }
             // Frame is complete and correct.  Note that we don't ever need
             // to actually set fs to FRAME_STATE_COMPLETE.
-            return TRUE;  
+            return TRUE;
           }
           break;
 
@@ -724,7 +742,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
           }
           // Frame is complete and correct.  Note that we don't ever need
           // to actually set fs to FRAME_STATE_COMPLETE.
-          return TRUE;  
+          return TRUE;
 
         default:
           assert (0);   // Shouldn't be here
@@ -763,6 +781,6 @@ wx_get_string_frame (uint8_t msl, char *str, uint16_t timeout)
     }
     str[bytes_received] = '\0';
   }
-  
+
   return TRUE;
 }

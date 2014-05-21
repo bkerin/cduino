@@ -161,8 +161,8 @@
        WX_WAKE (); \
      } while ( 0 )
 
-   // Set the XBee on the path towards sleep.  It finishes up housekeeping
-   // before it goes to sleep.
+   // Ensure that the XBee is set on the path towards sleep.  It finishes
+   // up housekeeping before it goes to sleep.
 #  define WX_SLEEP() DIO_SET_HIGH (WX_SLEEP_RQ_CONTROL_PIN)
 
    // Wake the XBee from sleep.
@@ -446,6 +446,20 @@ wx_put_frame (uint8_t count, void const *buf);
 // See the description of the underlying wx_put_frame() for more details.
 uint8_t
 wx_put_string_frame (char const *str);
+
+
+// FIXME: put somewhere better or remove or something
+#ifndef __GNUC__
+#  error __GNUC__ not defined
+#endif
+
+// Convenience wrapper around wx_put_string_frame().  The expanded string
+// must not be longer than WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH bytes.
+// Returns TRUE on success, or FALSE on error.
+// FIXME: printf_P version?
+uint8_t
+wx_put_string_frame_printf (char const *format, ...)
+  __attribute__ ((format (printf, 1, 2)));
 
 // Spend about timeout milliseconds trying to receive a frame with up to mfps
 // (Maximum Frame Payload Size) unescaped payload bytes into buf.  The size of
