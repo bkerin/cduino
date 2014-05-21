@@ -101,9 +101,10 @@ HEADERS ?= $(wildcard *.h)
 
 ##### Upload Method (Overridable) {{{1
 
-# If this is set to a non-empty value, the normal checks for an Arduino on
-# USB are disabled.  This is useful if you're trying to program a bare chip
-# using an AVRISPmkII.
+# Setting this to a non-empty value declares that there is no Arduino
+# connected via USB (or if there is it should be ignored), so the normal
+# probes for an Arduino on USB are disabled.  This is useful if you're
+# trying to program a bare chip using an AVRISPmkII.
 NO_USB_ARDUINO_CONNECTION ?=
 
 # This must be one of:
@@ -280,9 +281,18 @@ ifneq ($(filter-out $(VALID_ARDUINOLESS_TARGET_PATTERNS),$(MAKECMDGOALS)),)
   else
 
     ifeq ($(UPLOAD_METHOD),arduino_bl)
-      $(error NO_USB_ARDUINO_CONNECTION is non-empty, but UPLOAD_METHOD is   \
-              arduino_bl and at least one of the current make goals does not \
-              match any pattern in VALID_ARDUINOLESS_TARGET_PATTERNS )
+      $(error The NO_USB_ARDUINO_CONNECTION Make variable is non-empty, but \
+              UPLOAD_METHOD is arduino_bl and at least one of the current   \
+              make goals does not match any pattern in                      \
+              VALID_ARDUINOLESS_TARGET_PATTERNS )
+    endif
+
+    ifneq ($(filter replace_bootloader,$(MAKECMDGOALS)),)
+      $(error The NO_USB_ARDUINO_CONNECTION Make variable is non-empty, but   \
+              replace_bootloader  has been requested as a make goal.  The     \
+              replace_bootloader target needs to be able to find an Arduino   \
+              on USB to determine which bootloader image is required for your \
+              hardware. )
     endif
 
   endif

@@ -11,8 +11,10 @@
 # us since we need to kill them later before programming with the bootloader.
 SCREEN_SESSION_NAME = cduino_run_screen_mk
 
+# FIXME: might be nice to do something clever if the Arduino isn't hooked
+# up over USB.
 .PHONY: run_screen
-run_screen: have_screen
+run_screen: have_screen not_no_usb_arduino_connection
 	@echo
 	@echo About to run screen.  This command does two things:
 	@echo
@@ -45,3 +47,10 @@ run_screen: have_screen
 have_screen:
 	[ -n $$(which screen) ] || \
           (echo "the screen program doesn't appear to installed" 2>&1 && false)
+
+# If the NO_USB_ARDUINO_CONNECTION is non-empty, we won't have the port
+# definition we need for the run_screen target to work.
+.PHONY: not_no_usb_arduino_connection
+not_no_usb_arduino_connection:
+	[ -z "$(NO_USB_ARDUINO_CONNECTION)" ] || \
+          (echo "NO_USB_ARDUINO_CONNECTION is non-empty" 2>&1 && false)
