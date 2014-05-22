@@ -9,8 +9,7 @@
 void
 adc_init (adc_reference_source_t reference_source)
 {
-  // FIXME: disable PRADC to disable power management as we do for other
-  // modules?
+  PRR &= ~(_BV (PRADC));
 
   // Restore the default settings for ADMUX.
   ADMUX = 0x00;
@@ -31,7 +30,7 @@ adc_init (adc_reference_source_t reference_source)
       break;
   }
 
-  // Sample the ground for now (we'll change this before taking real samples). 
+  // Sample the ground for now (we'll change this before taking real samples).
   ADMUX |= _BV (MUX3) | _BV (MUX2) | _BV (MUX1) | _BV (MUX0);
 
   // Restore the default settings for ADC status register A.

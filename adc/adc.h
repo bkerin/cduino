@@ -24,12 +24,15 @@ typedef enum {
 } adc_reference_source_t;
 
 // WARNING: using ADC_REFERENCE_INTERNAL when the AREF pin is connected to
-// an external DC voltage can destroy the ADC.  Prepare port C pins for use
-// by the ADC, and ready the ADC.  See the warning above for more details.
+// an external DC voltage can destroy the ADC.
 //
-// Initialize the ADC hardware for simple polling operation with a 125
-// kHz ADC clock using reference_source.  Note that after this function is
-// called, adc_pin_init() must still be called on the pin to be read.
+// Prepare port C pins for use by the ADC, and ready the ADC.  If the
+// ADC hardware is shut down to save power (i.e. if the PRADC bit of PRR
+// register is set), this routine wakes it up.
+//
+// The ADC is initialized for polling operation with a 125 kHz ADC clock
+// using reference_source.  Note that after this function is called,
+// adc_pin_init() must still be called on the pin to be read.
 void
 adc_init (adc_reference_source_t reference_source);
 

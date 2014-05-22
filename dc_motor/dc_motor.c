@@ -3,7 +3,7 @@
 #include <avr/io.h>
 #include <assert.h>
 // FIXME: remove this if all its needed for is assert once assert.h is fixed
-#include <stdlib.h>  
+#include <stdlib.h>
 
 #include "adc.h"
 #include "dc_motor.h"
@@ -60,7 +60,7 @@ dc_motor_init (void)
 
   // Configure timer/counter2 hardware, with clocking stopped
   {
-    PRR &= ~(_BV (PRTIM2));   // Ensure timer2 not shut down to save power
+    PRR &= ~(_BV (PRTIM2));   // Ensure timer/counter2 not shut down
 
     // Clear OC2A/B on compare match when up-counting, set OC2A/B on
     // compare match when down-counting.  Count to TOP before reversing.
@@ -75,10 +75,10 @@ dc_motor_init (void)
     TCCR2B =  0x00;
 
     // We don't use timer interrupts in this application, or
-    // asynchronout clocking. 
+    // asynchronout clocking.
     TIMSK2 = 0x00;
     ASSR = 0x00;
-  
+
     // FIXXME: The ATmega328P datasheet Section 17.5.3 contains some
     // mumbo-jumbo about how OC2x setup should be performed using a FOC2X
     // strobe from Normal mode, which would have to be done before the mode
@@ -99,12 +99,12 @@ dc_motor_init (void)
     PORTB &= ~(_BV (PORTB3));   // Make sure output is initialized low.
     loop_until_bit_is_clear (PORTB, PORTB3);
     DDRB |= _BV (DDB3);
-    loop_until_bit_is_set (DDRB, DDB3);   
+    loop_until_bit_is_set (DDRB, DDB3);
 
     PORTD &= ~(_BV (PORTD3));   // Make sure output is initialized low.
     loop_until_bit_is_clear (PORTD, PORTD3);
     DDRD |= _BV (DDD3);
-    loop_until_bit_is_set (DDRD, DDD3);   
+    loop_until_bit_is_set (DDRD, DDD3);
   }
 
   // Start the clock.  We don't use any prescaler here, so the counter runs
@@ -152,7 +152,7 @@ dc_motor_set_speed (dc_motor_channel_t channel, int8_t speed)
   }
 }
 
-float 
+float
 dc_motor_load_current (dc_motor_channel_t channel)
 {
   uint8_t adc_pin;

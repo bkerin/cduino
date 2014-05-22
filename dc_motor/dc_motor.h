@@ -48,9 +48,9 @@ typedef enum {
 
 // Initialize the direction control pins, brake pins, PWM pins and their
 // associated timer hardware, and current sensing pins, and set the motor
-// speeds to 0.  If the timer/counter0 hardware is shut down to save power,
-// this routine wakes it up.  FIXME: should wake up the ADC hardware too
-// if required, or else the adc interface should do it (probably the latter).
+// speeds to 0.  If the timer/counter0 hardware is shut down to save power
+// (i.e. if the PRTIM2 bit of the PRR register is set), this routine wakes
+// it up.
 void
 dc_motor_init (void);
 
