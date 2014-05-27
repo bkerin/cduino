@@ -98,6 +98,7 @@
 
 #include <inttypes.h>
 
+#include "dio.h"
 #include "uart.h"
 
 
