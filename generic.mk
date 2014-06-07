@@ -349,6 +349,7 @@ ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   # it doesn't seem necessary.  And I originally thought it might be useful to
   # avoid nuking the bootloader when using AVRISPmkII programming, but it turns
   # out its impossible to prevent that.  So Its not enabled at the moment.
+  # FIXME: so get rid of this garbage
 
   #LDFLAGS += -Wl,--section-start=.text=0x7800
 endif
@@ -445,16 +446,52 @@ else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
 endif
 
+# Support for writing a random (hopefully unique) 8 byte signature from
+# /dev/random at the start of the EEPROM memory.  This isn't rolled into
+# writeflash like the lock and fuse settings are because its probably
+# something we want to do only once and not change all the time.  Note that
+# other memory types (program flash, lock and fuse bits, etc.) are unaffected
+# by this target, nor does the writeflash target affect the EEPROM area.
+# This target only affects the first 8 bytes of the EEPROM, the rest is
+# unchanged (FIXME: is that true?).
+RIF = /tmp/generic.mk.random_id_file   # Random Id File
+.PHONY: new_random_id
+new_random_id:
+	dd if=/dev/random of=$(RIF) bs=1 count=8
+.PHONY: write_random_id_to_eeprom
+write_random_id_to_eeprom: DUMP_RANDOM_ID = \
+  od --format=x8 $(RIF) | cut -f 2 -d' ' | head -n 1
+# ID Report String
+write_random_id_to_eeprom: IRS = \
+  "Wrote randomly generated 8 byte ID 0x"`$(DUMP_RANDOM_ID)` \
+  "to start of chip EEPROM"
+write_random_id_to_eeprom: avrdude_version_check new_random_id
+ifeq ($(UPLOAD_METHOD), arduino_bl)
+  write_random_id_to_eeprom:
+	false # FIXME: ill in
+else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
+  write_random_id_to_eeprom: binaries_suid_root_stamp
+	$(AVRDUDE) -c avrispmkII \
+                   -p $(PROGRAMMER_MCU) -P usb \
+                   -U eeprom:w:$(RIF)
+	@echo $(IRS)
+else
+  $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
+endif
+
+
 # This target is special: it uses an AVR ISPmkII and the bootloaded image
 # that comes in the arduino download package and some magic goop copied here
 # from arduino-1.0/hardware/arduino/bootloaders/atmega/Makefile to replace
 # the bootloader and program the fuses as required for bootloading to work.
-# This is useful if we've managed to nuke the bootloader some way or other.
+# The EEPROM is also erased.  The intent is to put the chip back into a
+# natural Arduino-ish state :) This is useful if we've managed to nuke the
+# bootloader some way or other.
 #
 # FIXME: ATmegaBOOT_168_atmega328.hex seems unchanged in latest distribution,
-# but we should autotrack
-# FIXME: by settin (SUT1, SUT0) to (1, 1), we would seem to be stomping a
-# reserved state.  Why not just leave in (1, 0) (meaning slowly rising power)?
+# but we should autotrack FIXME: by settin (SUT1, SUT0) to (1, 1), we
+# would seem to be stomping a reserved state.  Why not just leave in (1, 0)
+# (meaning slowly rising power)?
 replace_bootloader: $(ACTUAL_ARDUINO_BOOTLOADER)  binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
                    -e -u \
