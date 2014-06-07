@@ -21,7 +21,7 @@
 // WRL-08687) as well.  This last is a must-have for development IMO.
 // Make sure to get a USB Type A to USB Mini-B cable as well, it isn't
 // included in the kit.  Alternatively (if you aren't getting the whole kit)
-// you can grab an XBee Explorer Dongle (Sparkfun part number WRL-09819),
+// you can grab an XBee Explorer Dongle (Sparkfun part number WRL-11697),
 // then you don't need the cable.
 //
 // Its important to realize that pushing the reset button on the XBee shield

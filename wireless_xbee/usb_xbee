@@ -58,7 +58,7 @@ a USB Type A to USB Mini-B cable as well, it isn't included.
 
 =item *
 
-Sparkfun XBee Explorer Dongle (Sparkfun part number WRL-09819).
+Sparkfun XBee Explorer Dongle (Sparkfun part number WRL-11697).
 
 =item *
 
@@ -174,7 +174,7 @@ FIXXME: there is at least one XBee command for which this program doesn't work
 right: the ED (energy scan) command.  This is because this command takes too
 long to run and a timeout occurs during the wait for the keep-alive command
 response.  You can work around this somewhat by continuing to send junk while
-watching the output but its ugly and eventually an error happens.  To really 
+watching the output but its ugly and eventually an error happens.  To really
 fix this an option to disable the keep-alive commands would need to be added.
 
 =item B<-r>, B<--raw-mode>
@@ -269,7 +269,7 @@ have a few options:
 
 =over 4
 
-=item * 
+=item *
 
 Increase the XBee packetization timeout to the maximum 0xFF (using AT command
 RO, e.g. "ROFF" probably followed by "WR" in command mode), and use one of the
@@ -312,7 +312,7 @@ from the USB side.
 
 The FT232RL has no reason to hang onto the data, and if it makes it that far
 its probably safe to assume in gets to the XBee fast enough to meet the timing
-requirements.  
+requirements.
 
 Then again, perhaps the OS-side kernel squirrels the data away in a buffer of
 its own (despite the O_SYNC option having been used when the device file was
@@ -371,7 +371,7 @@ sub crc_ccitt_update # {{{1
 
     ($crc & 0xffff0000) == 0 or die "initial CRC value more than 16 bits wide";
     looks_like_number($bv)
-        or confess "bug: perl doesn't think byte value is a number here"; 
+        or confess "bug: perl doesn't think byte value is a number here";
     ($bv & 0xffffff00) == 0 or die "byte value more than 8 bits wide";
 
     $bv ^= (0xff & $crc);
@@ -509,7 +509,7 @@ sub get_response # {{{1
     # '\r' character which signals the end of the response is returned with
     # the rest of the response.
 
-    my $rt = '';   # Response Text 
+    my $rt = '';   # Response Text
 
     # Maximum Response Length.  If we don't see the "\r" within this many
     # characters, something is wrong.
@@ -517,7 +517,7 @@ sub get_response # {{{1
 
     # Timeout Time.  If we don't see the "\r" within this many seconds,
     # something is wrong.
-    my $tt  = 5; 
+    my $tt  = 5;
 
     # Set an alarm so we'll die instead of hanging forever if we don't get
     # a response.
@@ -573,7 +573,7 @@ sub at_command ($) # {{{1
 
     my $rl = get_response();   # Response Line (from XBee)
 
-    return $rl; 
+    return $rl;
 } # }}}1
 
 sub enter_command_mode # {{{1
@@ -685,7 +685,7 @@ sub send_single_packet # {{{1
     my $bpp = 8.0;      # Bits Per Byte
     my $bps = 9600.0;   # Bits Per Second
     my $pts = $xbro * $bpp / $bps;   # Packetization Timeout in Seconds
-    
+
     my $tmoe = 0.1;   # Time Margin Of Error
 
     # Did we make it fast enough?
@@ -749,7 +749,7 @@ sub needs_escaped # {{{1
     my $ubm = 255;   # Unsigned Byte Maximum
     $bv <= $ubm or confess "argument isn't <= $ubm";
 
-    return( 
+    return(
         $bv == $frame_delimiter or
         $bv == $escape or
         $bv == $xon or
@@ -770,13 +770,13 @@ sub escaped_crc_bytes # {{{1
     my $lb = 0xff & $crc;   # Low Byte
     if ( needs_escaped($hb) ) {
         $ecrc .= pack("CC", $escape, $hb ^ $escape_modifier);
-    } 
+    }
     else {
         $ecrc .= pack("C", $hb);
     }
     if ( needs_escaped($lb) ) {
         $ecrc .= pack("CC", $escape, $lb ^ $escape_modifier);
-    } 
+    }
     else {
         $ecrc .= pack("C", $lb);
     }
@@ -792,7 +792,7 @@ sub frame # {{{1
     # Return a frame in the format described in wireless_xbee.h from the
     # given argument data.  Note that this function doesn't verify that the
     # frame is short enough to go in a single radio packet.
-    
+
     @_ == 1 or die "wrong number of arguments";
     my $pd = shift;   # Payload Data
 
@@ -803,7 +803,7 @@ sub frame # {{{1
 
     my $fd = '';    # Frame Data
     my $epd = '';   # Escaped Payload Data
-    
+
     # Compute escaped payload data and associated CRC {{{2
     for ( my $ii = 0 ; $ii < length($pd) ; $ii++ ) {
         my $cc = substr($pd, $ii, 1);   # Current Character
@@ -820,13 +820,13 @@ sub frame # {{{1
     }
     # }}}2
 
-    # Begin delimiter + length CRC calculation, add frame delimiter {{{2 
+    # Begin delimiter + length CRC calculation, add frame delimiter {{{2
 
     $lcrc = crc_ccitt_update($lcrc, $frame_delimiter);    # Updata CRC
     $fd .= pack "C", $frame_delimiter;
 
     # }}}2
-    
+
     my $dplbl = 3;   # Delimiter byte plus length field bytes total
 
     # Add the length field, update delimiter + length CRC {{{2
@@ -922,7 +922,7 @@ sub get_byte # {{{1
 sub high_byte # {{{1
 {
     # Return the high byte of the given 16 bit value
-    
+
     @_ == 1 or die "wrong number of arguments";
     my ($val16) = @_;
 
@@ -935,7 +935,7 @@ sub high_byte # {{{1
 sub low_byte # {{{1
 {
     # Return the low byte of the given 16 bit value
-    
+
     @_ == 1 or die "wrong number of arguments";
     my ($val16) = @_;
 
@@ -963,7 +963,7 @@ sub get_frame # {{{1
     not defined ($$pdr) or length($$pdr) == 0
         or die "defined payload data ref doesn't point to empty string";
     $$pdr = '';
-    
+
     my $fs = "outside frame";   # Frame State
     my $crciv = 0xffff;         # CRC initial value for our CRC algorithm
     my $crc = $crciv;           # CRC value
@@ -975,7 +975,7 @@ sub get_frame # {{{1
     # Note that we don't count the time executing code, just the time spent
     # sleeping between polls.  Its very close though.
     while ( $et < $to ) {
-            
+
         if ( byte_available() ) {
 
             my $cb = get_byte();
@@ -1024,7 +1024,7 @@ sub get_frame # {{{1
                         return "failure: delimiter/length CRC error";
                     }
                     $fs = "at length crc low byte";
-                } 
+                }
 
                 elsif ( $fs eq "at length crc low byte" ) {
                     if ( $cb == $escape ) {
@@ -1102,7 +1102,7 @@ sub get_frame # {{{1
                         return "failure: payload CRC error";
                     }
                     $fs = "at payload crc low byte";
-                } 
+                }
 
                 elsif ( $fs eq "at payload crc low byte" ) {
                     if ( $cb == $escape ) {
@@ -1326,7 +1326,7 @@ elsif ( $spm ) {   # Single Packet Mode {{{1
     # First slurp all the input data
     my $dts = '';
     while ( <STDIN> ) {
-      $dts .= $_; 
+      $dts .= $_;
     }
 
     my $sr = send_single_packet($dts);   # Send Result
