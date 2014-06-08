@@ -13,16 +13,17 @@
 // and a higher-level Tx/Rx interface featuring atomic data frames.
 //
 // Though this module should not be dependent on any particular shield,
-// the Sparkfun XBee Shield (Sparkfun part number WRL-10854) was used
-// for development.  Its available on its own, or as part of the Sparkfun
-// "XBee Wireless Kit Retail" (Sparkfun part number RTL-11445), which also
-// includes the actual XBee modules and a stand-alone miniature USB XBee
-// interface board known as an "XBee Explorer USB" (Sparkfun part number
-// WRL-08687) as well.  This last is a must-have for development IMO.
-// Make sure to get a USB Type A to USB Mini-B cable as well, it isn't
-// included in the kit.  Alternatively (if you aren't getting the whole kit)
-// you can grab an XBee Explorer Dongle (Sparkfun part number WRL-11697),
-// then you don't need the cable.
+// the Sparkfun XBee Shield (Sparkfun part number WRL-10854) was used for
+// development.  Its available on its own, or as part of the Sparkfun "XBee
+// Wireless Kit Retail" (Sparkfun part number RTL-11445), which also includes
+// the actual XBee modules and a stand-alone miniature USB XBee interface
+// board known as an "XBee Explorer USB" (Sparkfun part number WRL-08687)
+// as well.  This last is a must-have for development IMO.  Make sure to get
+// a USB Type A to USB Mini-B cable as well, it isn't included in the kit.
+// Alternatively (if you aren't getting the whole kit) you can grab an XBee
+// Explorer Dongle (Sparkfun part number WRL-09819), then you don't need
+// the cable.  There is another different Sparkfun USB dongle that didn't
+// work for me: see the paragraph on the WRL-09819 in usb_xbee for details.
 //
 // Its important to realize that pushing the reset button on the XBee shield
 // only resets the Arduino, not the XBee itself.  Same with reprogramming

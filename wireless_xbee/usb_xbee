@@ -58,7 +58,12 @@ a USB Type A to USB Mini-B cable as well, it isn't included.
 
 =item *
 
-Sparkfun XBee Explorer Dongle (Sparkfun part number WRL-11697).
+Sparkfun XBee Explorer Dongle, Sparkfun part number WRL-09819.  Note that there
+are two different Sparkfun XBee Explorer Dongle parts.  The other one, the
+WRL-11697, doesn't work for me: my linux doesn't seem to create a device file
+for it.  It has a different FTDI chip and I suspect my older linux kernel just
+doesn't handle it yet.  It might work fine for you.  FIXME: check if the new
+dongle works with a later kernel.
 
 =item *
 
