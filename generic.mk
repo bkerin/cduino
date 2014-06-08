@@ -447,20 +447,38 @@ else
 endif
 
 # Support for writing a random (hopefully unique) 8 byte signature from
-# /dev/random at the start of the EEPROM memory.  This isn't rolled into
-# writeflash like the lock and fuse settings are because its probably
-# something we want to do only once and not change all the time.  Note that
-# other memory types (program flash, lock and fuse bits, etc.) are unaffected
-# by this target, nor does the writeflash target affect the EEPROM area.
-# This target only affects the first 8 bytes of the EEPROM, the rest is
-# unchanged (FIXME: is that true?).
+# /dev/random to the start of the EEPROM memory using an AVRISPmkII.
+#
+# The write_random_id_to_eeprom target requires UPLOAD_METHOD to be
+# AVRISPmkII, because I don't know how to program the EEPROM using the
+# arduino bootloader upload method, assuming its even supported.
+#
+# This isn't rolled into writeflash like the lock and fuse settings are
+# because its probably something we want to do only once and not change
+# all the time.  Unfortunately the UPLOAD_METHOD options used to upload
+# the program code differ in behavior with respect to the EEPROM:
+#
+#   * The AVRISPmkII seems to always delete the entire EEPROM when the program
+#     memory space is written.  So if you're using this programmer you'll
+#     probably want to create a spoofed version of the routine you use
+#     to read the ID during edit-compile-debug work (assuming you care
+#     if the ID stays the same).  When everything is done you can use the
+#     write_random_id_to_eeprom target to give your part a real ID.
+#
+#   * The arduino_bl (bootloader over USB programming method) seems to leave
+#     the EEPROM alone.  So you can use the write_random_id_to_eeprom target
+#     once to give your part an ID then reprogram as desired.
+#
+# The other memory types (program flash, lock and fuse bits, etc.) are
+# unaffected by the write_random_id_to_eeprom (so you can change the ID
+# using the write_random_id_to_eeprom target after uploading the main program.
 RIF = /tmp/generic.mk.random_id_file   # Random Id File
 .PHONY: new_random_id
 new_random_id:
 	dd if=/dev/random of=$(RIF) bs=1 count=8
 .PHONY: write_random_id_to_eeprom
 write_random_id_to_eeprom: DUMP_RANDOM_ID = \
-  od --format=x8 $(RIF) | cut -f 2 -d' ' | head -n 1
+  od --format=x1 $(RIF) | cut -f 2-9 -d' ' | head -n 1 | perl -p -e 's/ //g'
 # ID Report String
 write_random_id_to_eeprom: IRS = \
   "Wrote randomly generated 8 byte ID 0x"`$(DUMP_RANDOM_ID)` \
@@ -468,7 +486,10 @@ write_random_id_to_eeprom: IRS = \
 write_random_id_to_eeprom: avrdude_version_check new_random_id
 ifeq ($(UPLOAD_METHOD), arduino_bl)
   write_random_id_to_eeprom:
-	false # FIXME: ill in
+	# I think most likely the bootloader just doesn't support this
+	@echo EEPROM writing using the $(UPLOAD_METHO) upload method is not \
+              supported.  If it can be done somehow please let me know! \
+              1>&2 && false
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   write_random_id_to_eeprom: binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII \
