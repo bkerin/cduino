@@ -449,14 +449,18 @@ endif
 # Support for writing a random (hopefully unique) 8 byte signature from
 # /dev/random to the start of the EEPROM memory using an AVRISPmkII.
 #
-# The write_random_id_to_eeprom target requires UPLOAD_METHOD to be
-# AVRISPmkII, because I don't know how to program the EEPROM using the
-# arduino bootloader upload method, assuming its even supported.
+# The write_random_id_to_eeprom target requires UPLOAD_METHOD to
+# be AVRISPmkII, because I don't know how to program the EEPROM using
+# the arduino bootloader upload method, assuming its even supported.
+# Note that fine to use bootloader programming for the program upload
+# (writeflash target) while using the AVRISPmkII upload method for the
+# write_random_id_to_eeprom target (see below).
 #
 # This isn't rolled into writeflash like the lock and fuse settings are
 # because its probably something we want to do only once and not change
-# all the time.  Unfortunately the UPLOAD_METHOD options used to upload
-# the program code differ in behavior with respect to the EEPROM:
+# all the time.  Unfortunately the UPLOAD_METHOD options used to upload the
+# program code with the writeflash target differ in behavior with respect
+# to the EEPROM:
 #
 #   * The AVRISPmkII seems to always delete the entire EEPROM when the program
 #     memory space is written.  So if you're using this programmer you'll
@@ -470,8 +474,8 @@ endif
 #     once to give your part an ID then reprogram as desired.
 #
 # The other memory types (program flash, lock and fuse bits, etc.) are
-# unaffected by the write_random_id_to_eeprom (so you can change the ID
-# using the write_random_id_to_eeprom target after uploading the main program.
+# unaffected by the write_random_id_to_eeprom target, so you can use it to
+# change the ID after uploading the main program.
 RIF = /tmp/generic.mk.random_id_file   # Random Id File
 .PHONY: new_random_id
 new_random_id:
