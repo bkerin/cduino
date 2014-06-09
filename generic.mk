@@ -446,8 +446,10 @@ else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
 endif
 
-# Support for writing a random (hopefully unique) 8 byte signature from
-# /dev/random to the start of the EEPROM memory using an AVRISPmkII.
+# Support for writing a random 8 byte signature from /dev/random to the
+# start of the EEPROM memory using an AVRISPmkII.  This lets you easily
+# donate some entropy from your linux box to your ATMega chip to give it a
+# (hopefully unique) ID.
 #
 # The write_random_id_to_eeprom target requires UPLOAD_METHOD to
 # be AVRISPmkII, because I don't know how to program the EEPROM using

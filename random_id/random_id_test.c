@@ -1,8 +1,7 @@
-// Test/demo for the term_io.h interface.
+// Test/demo for the write_random_id_to_eeprom target in generic.mk.
 
-// FIXME: WORK POINT: document what this test program is really testing,
-// change names, change the doc parts of this header, insert into module
-// list, etc.
+// This module just demonstrates/exercises some functionality from the
+// build system.  See the target mentioned above for more details.
 
 #include <avr/eeprom.h>
 #include <util/delay.h>
@@ -10,9 +9,6 @@
 
 #include "term_io.h"
 
-// This program repeatedly prompts for a line of input, then prints it
-// back out.
-//
 // There are no external hardware requirements other than an arduino and a USB
 // cable to connect it to the computer.  It should be possible to run
 //
@@ -32,10 +28,10 @@ main (void)
   for ( ; ; ) {
 
     void const   *id_address = 0;   // ID is at start of EEPROM
-    size_t const  id_bytes   = 8;   // ID is this many bytes long
+    size_t const  id_size    = 8;   // ID is this many bytes long
     uint64_t      id;               // ID itself (to be read)
 
-    eeprom_read_block (&id, id_address, id_bytes);
+    eeprom_read_block (&id, id_address, id_size);
 
     // AVR libc doesn't support 64 bit printf/scanf conversions, so we just
     // do things a byte at a time.

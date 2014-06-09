@@ -119,6 +119,11 @@ public use:
   <code>.c</code> files are assumed to depend on all headers and on the
   Makefile (so everything is recompiled if anything has changed).</li>
 
+  <li><code>write_random_id_to_eeprom</code> -- Use an AVRISPmkII programmer to
+  write some random bytes to the beginning of the EEPROM.  This can be used to
+  give a part a unique ID (which the ATMega328P normally lacks).  See the
+  comments near this target in <code>generic.mk</code> for details.</li>
+
   <li><code>replace_bootloader</code> -- replace the bootloader on the ATMega
   on the arduino.  This is useful if an upload method that nukes the bootloader
   has been used (see below).</li>
@@ -175,9 +180,8 @@ make:
   <li><code>NO_USB_ARDUINO_CONNECTION</code> -- If this is set to a non-empty
   value, the build system doesn't freak out if it can't find an Arduino on the
   USB.  This is convenient if UPLOAD_METHOD=AVRISPmkII and you don't intend to
-  use the USB to talk to the Arduino for debugging either, which in turn is
-  likely to be the case if you're migrating from the Arduino to something
-  simpler.</li>
+  use the USB to talk to the Arduino for debugging either, which is likely to
+  be the case if you're migrating from the Arduino to something simpler.</li>
 
   <li id="upload_method"><code>UPLOAD_METHOD</code> -- This must be either
   "arduino_bl" or "AVRISPmkII".  The defualt is "arduino_bl", meaning that the
@@ -209,7 +213,7 @@ make:
   They can hopefully be reset using the replace_bootloader target, but this is
   not guaranteed.  For example, setting the clock source to the low-frequency
   low-power internal oscillator makes the chips unprogrammable for me (but
-  saves a lot of power on finnished products :).</li>
+  saves a lot of power on finished products :).</li>
 
   <li><code>AVRLIBC_PRINTF_LDFLAGS</code> -- This variable can be used to get a
   more feature-complete (and bigger) or more minimal (and smaller)
@@ -225,7 +229,7 @@ make:
 </ul>
 
 There are also variables that can usefully be augmented by adding your own
-values to them somewhere: 
+values to them somewhere:
 
 <ul>
 
@@ -239,7 +243,7 @@ values to them somewhere:
 
   <li><code>VALID_ARDUINOLESS_TARGET_PATTERNS</code> -- Add new files or file
   patterns which should be buildable even when no Arduino is connected (so you
-  can for example get syntax fixes finnished without an Arduino).  Note that
+  can for example get syntax fixes finished without an Arduino).  Note that
   many normal patterns are already included (%.o, %.out, etc.), but this can
   be useful if you are adding your own rules for different file types.  This
   variable must be assigned to before <code>generic.mk</code> is included (or
