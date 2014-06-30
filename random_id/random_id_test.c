@@ -33,10 +33,15 @@ main (void)
 
     eeprom_read_block (&id, id_address, id_size);
 
-    // AVR libc doesn't support 64 bit printf/scanf conversions, so we just
-    // do things a byte at a time.
+    // Print the ID value one byte at a time.  WARNING: endianness can cause
+    // confusion when you interpret id as a single uint64_t.  For example,
+    // if your ID happens to be 0x0123456789abcdef, then to declare a
+    // literal uint64_t that will compare equal to it you would need to write
+    // '0xefcdab8967452301ULL' (or 'UINT64_C (0xefcdab8967452301)' if you're
+    // using the better integer literal macros from stdint.h).  WARNING:
+    // also, AVR libc doesn't support 64 bit printf/scanf conversions.
     printf ("ID: ");
-    for ( uint8_t ii = 0 ; ii < 8 ; ii++ ) {
+    for ( uint8_t ii = 0 ; ii < id_size ; ii++ ) {
       printf ("%" PRIx8, ((uint8_t *) (&id))[ii] );
     }
     printf ("\n");

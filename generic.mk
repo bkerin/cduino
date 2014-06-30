@@ -454,30 +454,39 @@ endif
 # The write_random_id_to_eeprom target requires UPLOAD_METHOD to
 # be AVRISPmkII, because I don't know how to program the EEPROM using
 # the arduino bootloader upload method, assuming its even supported.
-# Note that fine to use bootloader programming for the program upload
+# Note that its fine to use bootloader programming for the program upload
 # (writeflash target) while using the AVRISPmkII upload method for the
 # write_random_id_to_eeprom target (see below).
 #
-# This isn't rolled into writeflash like the lock and fuse settings are
-# because its probably something we want to do only once and not change
-# all the time.  Unfortunately the UPLOAD_METHOD options used to upload the
-# program code with the writeflash target differ in behavior with respect
-# to the EEPROM:
+# Unfortunately the UPLOAD_METHOD options used to upload the program code
+# with the writeflash target differ in behavior with respect to the EEPROM:
 #
 #   * The AVRISPmkII seems to always delete the entire EEPROM when the program
 #     memory space is written.  So if you're using this programmer you'll
-#     probably want to create a spoofed version of the routine you use
-#     to read the ID during edit-compile-debug work (assuming you care
-#     if the ID stays the same).  When everything is done you can use the
+#     probably want to create a spoofed version of the routine you use to
+#     read the ID during edit-compile-debug work (assuming you care if the
+#     ID stays the same), or possibly use the REUSE_EXISTING_RANDOM_ID
+#     feature (see below).  When everything is done you can use the
 #     write_random_id_to_eeprom target to give your part a real ID.
 #
 #   * The arduino_bl (bootloader over USB programming method) seems to leave
 #     the EEPROM alone.  So you can use the write_random_id_to_eeprom target
 #     once to give your part an ID then reprogram as desired.
 #
-# The other memory types (program flash, lock and fuse bits, etc.) are
-# unaffected by the write_random_id_to_eeprom target, so you can use it to
-# change the ID after uploading the main program.
+# This problem doesn't apply in reverse: you can write the EEPROM using
+# the AVRISPmkII without disturbing the other memory types (program flash,
+# lock and fuse bits, etc.)  So you can use the write_random_id_to_eeprom
+# target to change the ID after uploading the main program (or to reset it
+# to its previous value using the REUSE_EXISTING_RANDOM_ID functionality).
+#
+# See the cduino/random_id module for an example of how to read your random
+# ID back out of the EEPROM from the ATMega side.  Note in particular the
+# possible endianness issues that exist when interpreting the ID as a uint64_t
+# (or other integer) type.
+#
+# This isn't rolled into writeflash like the lock and fuse settings are
+# because its probably something we want to do only once and not change
+# all the time.
 #
 # Random Id File
 RIF = /tmp/generic.mk.random_id_file
@@ -538,6 +547,9 @@ else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
                    -U eeprom:r:$(IDF):r
 	@echo -n "The ID at byte 0 of the EEPROM appears to be 0x"
 	@$(call DUMP_RANDOM_ID, $(RIF))
+	@echo "NOTE: due to endianness you'll need to reverse the bytes of a"
+	@echo "uint64_t literal value to get it to equal this (assuming you"
+	@echo "read the bytes of the ID starting from EEPROM byte 0)."
 	@echo
 else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
