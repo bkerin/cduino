@@ -478,22 +478,38 @@ endif
 # The other memory types (program flash, lock and fuse bits, etc.) are
 # unaffected by the write_random_id_to_eeprom target, so you can use it to
 # change the ID after uploading the main program.
-RIF = /tmp/generic.mk.random_id_file   # Random Id File
+#
+# Random Id File
+RIF = /tmp/generic.mk.random_id_file
+# Dump the Id stored at the start of the first argument in human readable form.
+DUMP_RANDOM_ID = \
+  od --format=x1 $(1) | cut -f 2-9 -d' ' | head -n 1 | perl -p -e 's/ //g'
 .PHONY: new_random_id
 new_random_id:
+# Because its sometimes nice to be able to hard-wire things to use a
+# particular id, we have this variable that can be defined non-empty to
+# reuse an existing random id file.  This is useful for example during
+# testing when programming with the AVRISPmkII and you want to embed a
+# known ID into your program code (because writing the program area blows
+# away the EEPROM area forcing you to set the ID again afterwords).
+ifndef REUSE_EXISTING_RANDOM_ID
 	dd if=/dev/random of=$(RIF) bs=1 count=8
+else
+	test -r $(RIF) || \
+        ( echo -e "\n"file $(RIF) not readable.  Maybe you need to try \
+                  without REUSE_EXISTING_RANDOM_ID first?"\n" 1>&2 && \
+          false )
+endif
 .PHONY: write_random_id_to_eeprom
-write_random_id_to_eeprom: DUMP_RANDOM_ID = \
-  od --format=x1 $(RIF) | cut -f 2-9 -d' ' | head -n 1 | perl -p -e 's/ //g'
 # ID Report String
 write_random_id_to_eeprom: IRS = \
-  "Wrote randomly generated 8 byte ID 0x"`$(DUMP_RANDOM_ID)` \
+  "Wrote randomly generated 8 byte ID 0x"`$(call DUMP_RANDOM_ID, $(RIF))` \
   "to start of chip EEPROM"
 write_random_id_to_eeprom: avrdude_version_check new_random_id
 ifeq ($(UPLOAD_METHOD), arduino_bl)
   write_random_id_to_eeprom:
 	# I think most likely the bootloader just doesn't support this
-	@echo EEPROM writing using the $(UPLOAD_METHO) upload method is not \
+	@echo EEPROM writing using the $(UPLOAD_METHOD) upload method is not \
               supported.  If it can be done somehow please let me know! \
               1>&2 && false
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
@@ -502,6 +518,27 @@ else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
                    -p $(PROGRAMMER_MCU) -P usb \
                    -U eeprom:w:$(RIF)
 	@echo $(IRS)
+else
+  $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
+endif
+# This target gives a way of reading the ID back out of a device
+.PHONY: read_id_from_eeprom
+read_id_from_eeprom: IDF = /tmp/generic.mk.id_dump_file
+read_id_from_eeprom:
+ifeq ($(UPLOAD_METHOD), arduino_bl)
+  read_id_from_eeprom:
+	# I think most likely the bootloader just doesn't support this
+	@echo EEPROM reading using the $(UPLOAD_METHOD) upload method is not \
+              supported.  If it can be done somehow please let me know! \
+              1>&2 && false
+else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
+  read_id_from_eeprom: binaries_suid_root_stamp
+	$(AVRDUDE) -c avrispmkII \
+                   -p $(PROGRAMMER_MCU) -P usb \
+                   -U eeprom:r:$(IDF):r
+	@echo -n "The ID at byte 0 of the EEPROM appears to be 0x"
+	@$(call DUMP_RANDOM_ID, $(RIF))
+	@echo
 else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
 endif
