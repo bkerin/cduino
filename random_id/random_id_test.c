@@ -42,7 +42,7 @@ main (void)
     printf ("\n");
 
     // This block is used to verify that writing the first 8 bytes of the
-    // flash doesn't change the others: after running this program, the
+    // flash doesn't change the others: after running this program, then
     // changing the ID with the make target, then restarting this program,
     // the value should still be 42 the first time we hit this point.
     uint8_t *byte_8_offset = (uint8_t *) 8;
