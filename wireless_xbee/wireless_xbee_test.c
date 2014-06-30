@@ -6,7 +6,7 @@
 // software driver are also required, see the details below.
 
 #include <assert.h>
-#include <stdlib.h>  // FIXME: probably only needed for broken assert.h 
+#include <stdlib.h>  // FIXME: probably only needed for broken assert.h
 #include <string.h>
 #include <util/delay.h>
 
@@ -94,9 +94,9 @@ main (void)
 
 // This ifndef is supposed to be true by default (as shipped).
 #ifndef AUTOMATIC_TESTING_WITH_USB_XBEE_TEST
-  
+
   char co[WX_MCOSL];   // Command Output
-  
+
   // The AT command which queries the current baud setting returns a string
   // containing a particular number followed by a carriage return ('\r')
   // to mean 9600 baud (and wx_com() will strip off the trailing '\r' for us).
@@ -160,7 +160,7 @@ main (void)
   assert (
       (! strcmp (co, DEFAULT_CHANNEL_STRING)) ||
       (! strcmp (co, OTHER_POSSIBLE_DEFAULT_CHANNEL_STRING)) );
-  
+
   sentinel = wx_exit_at_command_mode ();
   assert (sentinel);
 
@@ -192,20 +192,20 @@ main (void)
 
   while ( 1 ) {
 
-    uint8_t sentinel = wx_put_string_frame ("What is the answer?\n"); 
+    uint8_t sentinel = wx_put_string_frame ("What is the answer?\n");
     assert (sentinel);
 
     uint16_t tpra_ms = 2042;   // Time Per Read Attempt (in milliseconds)
 
     // Ok, some of the interface macros are long and ugly.  Here's a short
     // ugly alias for our private use: Max Payload Length For Us.
-#  define MPLFU WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE   
+#  define MPLFU WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE
     // Testing of frames of maximum length, with many escape characters, etc.
     // is handled largely from usb_xbee_test, but in case you want to try to
     // verify that such frames always work on the C side you can use these
     // line instead of the above.
-//#  define MPLFU WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH 
-  
+//#  define MPLFU WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH
+
     char rstr[MPLFU + 1];   // Received string
 
     sentinel = wx_get_string_frame (MPLFU + 1, rstr, tpra_ms);
@@ -245,16 +245,16 @@ main (void)
 
     // Ok, some of the interface macros are long and ugly.  Here's a short
     // ugly alias for our private use: Max Payload Length For Us.
-#define MPLFU WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE   
+#define MPLFU WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE
     // Testing of frames of maximum length, with many escape characters, etc.
     // is handled largely from usb_xbee_test, but in case you want to try to
     // verify that such frames always work on the C side you can use these
     // line instead of the above.
-//#define MPLFU WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH 
-  
+//#define MPLFU WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH
+
     uint8_t rfps;
     char rpyld[MPLFU];   // Received payload
- 
+
     sentinel = wx_get_frame (MPLFU, &rfps, rpyld, tpra_ms);
     if ( ! sentinel ) {
       // In kindness to other callers, we clean up after any UART Rx error.
