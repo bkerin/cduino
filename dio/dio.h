@@ -14,7 +14,7 @@
 #include "util.h"
 
 ///////////////////////////////////////////////////////////////////////////////
-// 
+//
 // How This Interface Works
 //
 // This interface provides simple pin-at-a-time initialization, reading,
@@ -47,7 +47,7 @@
 //
 // This interface doesn't support configuring/reading/writing multiple pins
 // that use the same port in a single instruction, which is possible with
-// the raw memory map read/write interface provided by AVR Libc.  
+// the raw memory map read/write interface provided by AVR Libc.
 //
 // For those who like the alternate numbering system that Aruidnos use
 // for their preferred digital IO pins, macros that work like this are
@@ -77,7 +77,7 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// 
+//
 // Notes About Particular Pins
 //
 // All the IO pins on the ATMega chips can be set to perform alternate
@@ -130,7 +130,7 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// 
+//
 // Pin Initialization Details
 //
 // In general, it is possible to re-initialize a pin to change it from
@@ -148,6 +148,12 @@
 // When initializing a pin for output, the requested initial value is first
 // set and then the pin direction set for output.  This might likewise
 // result in a momentarily floating input pin (and potential interrupt).
+//
+// Its presumably possible to use a pin as a digital input (via the dio
+// module or equivalent) sometimes, and as an ADC input other times (via
+// the adc module or equivalent).  Note however that the adc_pin_init()
+// function of the adc module sets the appropriate DIDR0 bit, and this
+// interface doesn't do anything to clear it.  FIXME: should it?  probably
 
 // FIXME: possibly all the loop_until_bit_is_* calls could be replaced with
 // single *hardware* no-ops.  Recent versions of AVR libc have added a _NOP
@@ -155,7 +161,7 @@
 
 // Ensure that HIGH and LOW are defined as expected.  We could probably make
 // due with the normal C definition of truth, but I like to be paranoid
-// and keep it the same everywhere in case someone likes to write 
+// and keep it the same everywhere in case someone likes to write
 // 'if ( some_boolean == TRUE )'.
 #if HIGH != 0x01
 #  error uh oh, HIGH != 0x01
@@ -167,7 +173,7 @@
 // Pin Initialization {{{1
 
 // These macros can be used to make DIO_INIT_* calls more readable.
-#define DIO_INPUT TRUE 
+#define DIO_INPUT TRUE
 #define DIO_OUTPUT FALSE
 #define DIO_ENABLE_PULLUP TRUE
 #define DIO_DISABLE_PULLUP FALSE
@@ -282,7 +288,7 @@
       break; \
   } while ( 0 )
 
-// Pin PB* Initialization {{{2 
+// Pin PB* Initialization {{{2
 
 #define DIO_INIT_PB0(for_input, enable_pullup, initial_value) \
   DIO_INIT (DIO_PIN_PB0, for_input, enable_pullup, initial_value)
@@ -576,11 +582,11 @@
 #define DIO_PIN_DIGITAL_6 DIO_PIN_PD6
 #define DIO_PIN_DIGITAL_7 DIO_PIN_PD7
 #define DIO_PIN_DIGITAL_8 DIO_PIN_PB0
-#define DIO_PIN_DIGITAL_9 DIO_PIN_PB1 
-#define DIO_PIN_DIGITAL_10 DIO_PIN_PB2 
-#define DIO_PIN_DIGITAL_11 DIO_PIN_PB3 
-#define DIO_PIN_DIGITAL_12 DIO_PIN_PB4 
-#define DIO_PIN_DIGITAL_13 DIO_PIN_PB5 
+#define DIO_PIN_DIGITAL_9 DIO_PIN_PB1
+#define DIO_PIN_DIGITAL_10 DIO_PIN_PB2
+#define DIO_PIN_DIGITAL_11 DIO_PIN_PB3
+#define DIO_PIN_DIGITAL_12 DIO_PIN_PB4
+#define DIO_PIN_DIGITAL_13 DIO_PIN_PB5
 
 #define DIO_INIT_DIGITAL_0 DIO_INIT_PD0
 #define DIO_INIT_DIGITAL_1 DIO_INIT_PD1
