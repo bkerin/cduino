@@ -70,9 +70,9 @@ adc_read_voltage (uint8_t pin, float reference_voltage);
 // The ADC hardware does not consume power when the ADEN bit of ADCSRA
 // is cleared (ATmega328P datasheet Rev. 8271C, section 23.2).
 
-// Disable the ADC to save power.  Note that the ADC hardware is not
-// automatically disabled when entering power-saving sleep modes.
-// (see ATmega328P datasheet Rev. 8271C, sections, 23.2 and 23.6).
+// Disable the ADC to save power.  NOTE: the ADC hardware is NOT automatically
+// disabled when entering power-saving sleep modes.  (see ATmega328P
+// datasheet Rev. 8271C, sections, 23.2 and 23.6).
 #define ADC_DISABLE()                       \
   do {                                      \
     ADCSRA &= ~(_BV (ADEN));                \
