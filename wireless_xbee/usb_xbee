@@ -59,11 +59,14 @@ a USB Type A to USB Mini-B cable as well, it isn't included.
 =item *
 
 Sparkfun XBee Explorer Dongle, Sparkfun part number WRL-09819.  Note that there
-are two different Sparkfun XBee Explorer Dongle parts.  The other one, the
-WRL-11697, doesn't work for me: my linux doesn't seem to create a device file
-for it.  It has a different FTDI chip and I suspect my older linux kernel just
-doesn't handle it yet.  It might work fine for you.  FIXME: check if the new
-dongle works with a later kernel.
+are two different Sparkfun XBee Explorer Dongle parts.
+
+=item *
+
+Sparkfun XBee Explorer Dongle, Sparkfun part number WRL-11697, on a newer
+(3.8.13) kernel.  This dongle doesn't work for me on my fairly ancient
+(2.6.32) kernel box, presumably because the ftdi driver in the old kernel
+doesn't support the newer chip on this dongle.
 
 =item *
 
@@ -71,7 +74,7 @@ A random older USB dongle from Smiley Micros.
 
 =back
 
-I've succesfully tried this program with the following modules:
+I've succesfully tried this program with the following XBee modules:
 
 =over 4
 
@@ -105,10 +108,10 @@ the sequence that's supposed to initiate command mode, then automatically
 trying a command.  If the command returns the expected response then we assume
 we made it into command mode.
 
-On my system at least, it takes a surprisingly long time (10 - 20 seconds) for
-the module device file to become usable the first time the module is plugged
-in.  This program will fail with an error during this time.  I assume there's
-a kernel module that gets loaded or something.
+On my older 2.6 kernel system, it takes a surprisingly long time (10 - 20
+seconds) for the module device file to become usable the first time the module
+is plugged in.  I don't know why.  This long delay isn't present on my 3.8.13
+kernel system.
 
 =head1 OPTIONS AND ARGUMENTS
 
