@@ -32,18 +32,21 @@
 // everything down (or run a line to the XBee RESET input as described
 // below and make your program reset the XBee on startup).
 //
-// Its possible to use an XBee shield without using the XBee SLEEP_RQ or
-// RESET or signals, but in battery powered designs at least you'll want to
-// use both.  SLEEP_RQ lets you save power, and RESET is useful for ensuring
-// that the XBee always gets reset whenver the ATMega does.  Unfortunately the
-// sparkfun shield at least doesn't break these XBee lines out anywhere, but
-// you can make your own strange wiring to the chip pins (or perhaps make your
-// own Arduino-free board :).  This interface supports the use of these lines
-// use via two macros: WX_SLEEP_RQ_CONTROL_PIN and WX_RESET_CONTROL_PIN.
-// Clients can define these before including this header to enable some
-// other macros for putting the XBee to sleep and resetting it.  If you use
-// either, you must use both (IIRC because I think I ssaw the XBee failing
-// to reset when asleep, so an implicit wake-up is required).
+// Its possible to use an XBee shield without using the XBee SLEEP_RQ
+// or RESET or signals, but in battery powered designs at least you'll
+// want to use both.  SLEEP_RQ lets you save power, and RESET is useful
+// for ensuring that the XBee always gets reset whenever the ATMega does.
+// Unfortunately the sparkfun shield at least doesn't break these XBee lines
+// out anywhere, but you can make your own strange wiring to the chip pins
+// (or perhaps make your own Arduino-free board :).  This interface supports
+// the use of these lines use via two macros: WX_SLEEP_RQ_CONTROL_PIN
+// and WX_RESET_CONTROL_PIN.  Clients can define these before including
+// this header to enable some other macros for putting the XBee to sleep
+// and resetting it.  If you use either, you must use both (IIRC because
+// I think I saw the XBee failing to reset when asleep, so an implicit
+// wake-up is required).  The wireless_xbee_test.c file has a (commented
+// out) snippet at the start of its main() function showing the whole XBee
+// initialization procedure when these signals are being used.
 //
 // The directory for this module contains a perl script called usb_xbee that
 // can be used to configure or send/receive data to/from an XBee Explorer
