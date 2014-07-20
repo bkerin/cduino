@@ -309,15 +309,16 @@ wx_restore_defaults (void)
 // We make this a little large since the character time might actually be
 // a bit greater than what we calculate in DELAY_TO_FORCE_TRANSMISSION()
 // due to start bits, padding etc.
-#define PACKETIZATION_TIMEOUT_FOS 1.5
+#define PACKETIZATION_TIMEOUT_FOS 1.42
 
 // Delay for long enough to force data already sent to the XBee to be
 // transmitted.
-#define DELAY_TO_FORCE_TRANSMISSION() \
-  _delay_ms ( \
-      BITS_PER_BYTE * \
-      (1.0 / WX_BAUD) * \
-      WX_TRANSPARENT_MODE_PACKETIZATION_TIMEOUT_BYTES * \
+#define DELAY_TO_FORCE_TRANSMISSION()                                 \
+  _delay_ms (                                                         \
+      MS_PER_S *                                                      \
+      BITS_PER_BYTE *                                                 \
+      (1.0 / WX_BAUD) *                                               \
+      WX_TRANSPARENT_MODE_PACKETIZATION_TIMEOUT_BYTES *               \
       PACKETIZATION_TIMEOUT_FOS )
 
 // Bytes that need to be escaped when they occur in data frames
