@@ -210,6 +210,11 @@ SAMESY_CHECK_CODE := \
         ) &&))) \
   true
 
+# If this is defined non-empty, meld is automagically invoked on the first
+# difference discovered during DIFFN.  This is intended to make it a little
+# bit easier to migrate changes between projects.
+AUTOMELD_FIRST_DIFF =
+
 # Make function which expands to shell code that fails if all of the files
 # listed in the space- (NOT comma-) seperated list of files given as an
 # argument aren't identical.  NOTE: files that are totally missing cause
