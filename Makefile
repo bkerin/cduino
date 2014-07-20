@@ -210,30 +210,50 @@ SAMESY_CHECK_CODE := \
         ) &&))) \
   true
 
-# This is useful if we need to ensure that arbitrary sets of files are
-# identical.  NOTE: SAMESY_CHECK_CODE could in theory be implemented in
-# terms of this, if it was worth doing.  This make function which expands to
-# shell code that fails if all of the files listed in the space- (NOT comma-)
-# seperated list of files given as an argument aren't identical.  This check
-# will fail if any of the mentioned files are missing as well. NOTE:
-# somewhat weirdly we need to use '||' after the subshell '(echo... exit
+# Make function which expands to shell code that fails if all of the files
+# listed in the space- (NOT comma-) seperated list of files given as an
+# argument aren't identical.  NOTE: files that are totally missing cause
+# this test to fail (though its easy to change that with a quick edit below).
+# NOTE: somewhat weirdly we need to use '||' after the subshell '(echo... exit
 # 1) to prevent the shell from somehow eating our diff output and error
 # message... I suppose because '||' guarantees via short-circuit execution
 # that the command before it is fully executed, and '&&' doesn't.  Then we
 # need another 'exit 1' to exit the shell executing the loop, rather than
 # just the subshell (because for doesn't care if commands return non-zero).
-DIFFN = for fa in $(1); do \
-          for fb in $(1); \
-            do diff -u $$fa $$fb || \
-               (echo "Files $(1) are not all identical" 1>&2 && exit 1) || \
-               exit 1; \
-          done; \
+# There's some support for automatic correction of the first difference
+# discovered; see the description near AUTOMELD_FIRST_DIFF above.
+DIFFN = for fa in $(1); do                                                 \
+          for fb in $(1); do                                               \
+            (                                                              \
+              (test -e $$fa && test -e $$fb) &&                            \
+              (                                                            \
+                diff -u $$fa $$fb ||                                       \
+                (                                                          \
+                  echo "Files $(1) are not all identical" &&               \
+                  echo "" &&                                               \
+                  echo "At least these files differ: $$fa $$fb" &&         \
+                  echo "" &&                                               \
+                  (                                                        \
+                    [ -z $(AUTOMELD_FIRST_DIFF) ] ||                       \
+                    (                                                      \
+                      echo "Will now meld first diff ($$fa and $$fb)" &&   \
+                      meld $$fa $$fb                                       \
+                    )                                                      \
+                  ) &&                                                     \
+                  exit 1                                                   \
+                )                                                          \
+              )                                                            \
+            ) ||                                                           \
+            (                                                              \
+              echo "Files $(1) are not all identical" &&                   \
+              echo "" &&                                                   \
+              echo "At least one of these files don't exist: $$fa $$fb" && \
+              echo "" &&                                                   \
+              exit 1                                                       \
+            ) 1>&2 ||                                                      \
+            exit 1;                                                        \
+          done;                                                            \
         done
-
-# For debugging:
-.PHONY: escc
-escc:
-	@echo '$(SAMESY_CHECK_CODE)'
 
 # Pronounced "samsees" or "samsies" or however you write that pronounciation :)
 .PHONY: samesys
