@@ -166,8 +166,9 @@
        WX_WAKE (); \
      } while ( 0 )
 
-   // Ensure that the XBee is set on the path towards sleep.  It finishes
-   // up housekeeping before it goes to sleep.
+   // Ensure that the XBee is set on the path towards sleep.  The datasheet
+   // states that any transmission that is in progress is completed before
+   // the device goes to sleep.
 #  define WX_SLEEP() DIO_SET_HIGH (WX_SLEEP_RQ_CONTROL_PIN)
 
    // Wake the XBee from sleep.
