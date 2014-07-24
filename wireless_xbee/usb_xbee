@@ -1283,7 +1283,7 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
                     $dts = frame($il);
                     # This can be used instead of the above to verify that
                     # the microcontroller wx_get_frame() can read to frames
-                    # in the same packer (to verify it recovers fast enough).
+                    # in the same packet (to verify it recovers fast enough).
                     #$dts = frame($il).frame($il);
                     # This can be used instead of the above to test the effects
                     # of non-frame data before the start of the frame (supposed
