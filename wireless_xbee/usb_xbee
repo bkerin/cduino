@@ -40,6 +40,11 @@ B<usb_xbee> --device=I<DEVICE> --framed-lines-mode [--xbee-ro=I<TIMEOUT>]
 
 =head1 DESCRIPTION
 
+This program first sets the stty settings for the I<DEVICE> file used to
+communicate with the XBee.  It makes no attempt to restore the preexisting
+settings.  The stty settings seem to persist accross unplug/plug events.  You
+have been warned.
+
 Usage is simple: start the program and start typing commands without their "AT"
 prefixes (if --command-mode), or data (if --raw-mode), or lines of input (if
 --packetized-lines-mode of --framed-lines-mode).  Of course you can also use
@@ -479,9 +484,38 @@ sub configure_tty # {{{1
     @_ == 1 or die "wrong number of arguments";
     my $df = shift;
 
-    # I *think* this consolidated raw setting is what we want.  Serial port
-    # configuration counts as a black art these days IMO.
-    not system ("stty -F $df 9600 raw") or die "stty failed";
+    # The device tty file for the XBee adapter must be configured as
+    # illustrated here:
+    #
+    #   $ stty -a -F /dev/ttyUSB0
+    #   speed 9600 baud; rows 0; columns 0; line = 0;
+    #   intr = ^C; quit = ^\; erase = ^?; kill = ^U; eof = ^A; eol = <undef>;
+    #   eol2 = <undef>; swtch = <undef>; start = ^Q; stop = ^S; susp = ^Z;
+    #   rprnt = ^R; werase = ^W; lnext = ^V; flush = ^O; min = 1; time = 0;
+    #   -parenb -parodd cs8 hupcl -cstopb cread -clocal -crtscts
+    #   -ignbrk -brkint -ignpar -parmrk -inpck -istrip -inlcr -igncr -icrnl
+    #   -ixon -ixoff -iuclc -ixany -imaxbel -iutf8 -opost -olcuc -ocrnl -onlcr
+    #   -onocr -onlret -ofill -ofdel nl0 cr0 tab0 bs0 vt0 ff0
+    #   -isig -icanon -iexten -echo -echoe -echok -echonl -noflsh -xcase
+    #   -tostop -echoprt -echoctl -echoke
+    #
+    # This is a sort of super-raw mode in which nothing is echoed or mangled
+    # or anything.  Note that the 'raw' setting offered by the stty program
+    # is not enough: it doesn't set many options that are enabled by default
+    # on at least some systems (e.g. echoctl, echonl, etc.)
+    #
+    # Here are the stty-readable settings corresponding to the above (as
+    # produced by stty -g -F /dev/ttyUSB0):
+    my $stty_settings = '0:0:4bd:0:3:1c:7f:15:1:0:1:0:11:13:1a:0:12:f:17:16:'.
+                        '0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0';
+
+    # We try this twice, because when I tried first changing the speed then
+    # using this command as a test, I get a behavior where the first attempt
+    # reports a failure to be able to perform all requested operations,
+    # though all the setting then looked ok and things work, and then the
+    # same command repeated succeeds...
+    system("stty -F $df $stty_settings 2>/dev/null");
+    not system("stty -F $df $stty_settings") or die "stty failed twice";
 } # }}}1
 
 sub flush_data_from_xbee_for_a_short_time # {{{1
