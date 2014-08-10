@@ -35,7 +35,7 @@
 // The number of values the underlying counter can assums (values
 // representable with eight bits).  Some interface macros need this, but
 // there should be no reason to use it directly.
-#define TIMER0_STOPWATCH_COUNTER_VALUES 256   
+#define TIMER0_STOPWATCH_COUNTER_VALUES 256
 
 // This interface ensures that the prescaler divider is set as per this macro.
 // It should be possible to use a different prescaler setting, but many of
@@ -145,7 +145,7 @@ timer0_stopwatch_ticks (void);
 
 // This macro is analagous to the
 // TIMER0_STOPWATCH_TICKS_FUNCTION_MAX_READ_OVERHEAD_TICKS macro.
-#define TIMER0_STOPWATCH_MICROSECONDS_FUNCTION_MAX_READ_OVERHEAD_US 4   
+#define TIMER0_STOPWATCH_MICROSECONDS_FUNCTION_MAX_READ_OVERHEAD_US 4
 
 // The approximate number of elapsed microseconds since the last
 // init() or reset() method call.  This is just a wrapper around the
@@ -194,7 +194,7 @@ timer0_stopwatch_microseconds (void);
 //
 //   * Th counter is entirely disabled to save power.
 //
-// NOTE that interrupts are NOT disabled globally (in that respect this
+// NOTE that interrupts are NOT disabled globally (in this respect this
 // routine is asymmetric with timer0_stopwatch_init()).
 void
 timer0_stopwatch_shutdown (void);
