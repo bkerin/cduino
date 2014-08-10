@@ -41,14 +41,25 @@ B<usb_xbee> --device=I<DEVICE> --framed-lines-mode [--xbee-ro=I<TIMEOUT>]
 =head1 DESCRIPTION
 
 This program first sets the stty settings for the I<DEVICE> file used to
-communicate with the XBee.  It makes no attempt to restore the preexisting
-settings.  The stty settings seem to persist accross unplug/plug events.  You
-have been warned.
+communicate with the XBee.  It makes no attempt to restore the pre-existing
+settings on exit, since it's not possible to gaurantee that this happens
+correctly for all different kinds of program termination (uncatchable signals
+in particular).  The settings can be saved: see the stty man page.  The stty
+settings seem to persist accross unplug/plug events, despite the fact that the
+device file itself vanishes on unplug.  You have been warned.
 
 Usage is simple: start the program and start typing commands without their "AT"
 prefixes (if --command-mode), or data (if --raw-mode), or lines of input (if
 --packetized-lines-mode of --framed-lines-mode).  Of course you can also use
 pipes or shell redirects to supply data and store output.
+
+Its possible to plug in multiple devices (which will get different dev file
+names, e.g. /dev/ttyUSB0 and /dev/ttyUSB1) and make them talk to each other,
+but when the second device is plugged in, an copy of this program which is
+communicating with the first device will probably experience an error, since
+the stty settings for the second device won't be correct yet.  Simply run this
+program on the second device to give it correct stty settings, then re-run it
+on the first device.
 
 You need both an XBee module and an adapter to talk to it over USB.
 
@@ -98,7 +109,7 @@ firmware version 10EC (the version that came on the module, at least for me).
 
 Some other modules will likely work as well, though I tried an old XBee Pro
 from 2006 and it didn't work (couldn't get into command mode).  Series 2.5, ZB,
-and 2B modules probably won't work outof the box, but might with appropriate
+and 2B modules probably won't work out of the box, but might with appropriate
 firmware installed.  I don't know on the 900 MHz, XSC or XSC S3B modules.  See
 this page for more information of the different module families:
 
@@ -113,7 +124,7 @@ the sequence that's supposed to initiate command mode, then automatically
 trying a command.  If the command returns the expected response then we assume
 we made it into command mode.
 
-On my older 2.6 kernel system, it takes a surprisingly long time (10 - 20
+On my old 2.6 kernel system, it takes a surprisingly long time (10 - 20
 seconds) for the module device file to become usable the first time the module
 is plugged in.  I don't know why.  This long delay isn't present on my 3.8.13
 kernel system.
@@ -595,7 +606,7 @@ sub get_response # {{{1
     alarm(0);
     $SIG{ALRM} = 'DEFAULT';
 
-    die "didn't get command response with trailing '\r' within $mrl bytes.  ".
+    die "didn't get command response with trailing '\\r' within $mrl bytes.  ".
         "Perhaps we exited command mode somehow?";
 } # }}}1
 
@@ -1203,6 +1214,16 @@ if ( $cm ) {   # --command-mode {{{1
         else {
             # Note that we'll add the AT and "\r" as for normal commands
             $cts = '';
+        }
+
+        if ( $cts =~ m/^\s*ED\s*$/ ) {
+            warn "\nThe ED command causes problems.  see man page for this ".
+                 "program for details\n\n"
+        }
+
+        if ( $cts =~ m/^\s*VL\s*$/ ) {
+            warn "\nThe VL command doesn't work: its output is too long.".
+                 "Note that this command is deprecated anyway\n\n";
         }
 
         # Transform input line as promised
