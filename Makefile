@@ -3,15 +3,33 @@
 
 # vim: foldmethod=marker
 
-# FIXME: I think there are some more things I normally do to make Make more
-# sane now, clone them in from other projects.
+# Make Make more sane and useful {{{1
+
+# Make the user set the .DEFAULT_GOAL variable if they want a default rule,
+# rather than just having it be the first rule in the Makefile.
+default_default_rule:
+	@echo Sorry, this Makefile does not support default rules 2>&1 && false
 
 # Delete files produced by rules the commands of which return non-zero.
 .DELETE_ON_ERROR:
+
+# Don't let make parallelize anything.
+.NOTPARALLEL:
+
+# Don't automagically remove intermediate files.
+.SECONDARY:
+
+# Enable a second expsion of variables in the prerequisite parts of rules.
+# So $$(OBJS) will give us what we want if we have made a target- or
+# pattern-local version of OBJS, for example.
+.SECONDEXPANSION:
+
 # Disable all suffix rules.
 .SUFFIXES:
 
 SHELL= /bin/bash
+
+# }}}1
 
 WEB_SSH := brittonk@box201.bluehost.com
 WEB_ROOT := public_html/cduino
