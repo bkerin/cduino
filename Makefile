@@ -217,8 +217,8 @@ view_web_page:
 # libraries themselves).  Since this should be done from a module subdirectory
 # it must be invoked like this: 'make -f ../Makefile grab_arduino_libs'.
 # Note that compiling all this junk together will result in a program too
-# big to upload (FIXME: WHY? cpp constructors are always in scope or just
-# too much static data or what? Is there a way to strip more junk out?) See
+# big to upload (WHY? cpp constructors are always in scope or just too
+# much static data or what? Is there a way to strip more junk out?) See
 # arduino_lib_code/README for more details.
 .PHONY:
 grab_arduino_libs:
