@@ -1,4 +1,5 @@
 
+#include <stdlib.h>
 #include <util/delay.h>
 
 #include "dio.h"
@@ -6,31 +7,108 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Line Drive and Sample Functions
+// Line Drive, Sample, and Delay Routines
 //
-// These routines correspond to the uses of the inp and outp functions of
-// Maxim application note AN126.  These work on a per-instance basis.
+// These macros correspond to the uses of the inp and outp and tickDelay
+// functions of Maxim application note AN126.  Our versions work on a
+// per-instance basis but are otherwise the same.  We use macros to avoid
+// function call time overhead, which can be significant: Maxim application
+// note AN148 states that the most common programming error in 1-wire
+// programmin involves late sampling, which given that some samples occur
+// after proscribed waits of only 9 us requires some care, especially at
+// slower processor frequencies.
 //
 
-static void
-one_wire_release_line (OneWireMaster *owi)
-{
-  owi = owi;
-}
+// Reinterpret One Wire Master Instance pointer owmi as a dio_pin_t Pointer.
+#define OADP(owm) ((dio_pin_t *) owm)
+
+// Canned Pin Description Arguments (just a convenience tuple)
+#define CPDA(owm)                    \
+  _SFR_IO8 ((OADP (owm))->dir_reg),  \
+  (OADP (owm))->dir_bit,             \
+  _SFR_IO8 ((OADP (owm))->port_reg), \
+  (OADP (owm))->port_bit,            \
+  _SFR_IO8 ((OADP (owm))->pin_reg),  \
+  (OADP (owm))->pin_bit              \
+
+// Release the line of the give OneWireMaster Instance.
+#define RELEASE_LINE(owm) \
+  DIO_INIT (              \
+      CPDA(owm),          \
+      DIO_INPUT,          \
+      DIO_ENABLE_PULLUP,  \
+      DIO_DONT_CARE )
 
 static void
-one_wire_drive_line_low (OneWireMaster *owi)
+one_wire_release_line (OneWireMaster *owm)
 {
-  owi = owi;
+  dio_pin_t *pin = (dio_pin_t *) owm;
+  DIO_INIT_NA (
+      _SFR_IO8 (pin->dir_reg),
+      pin->dir_bit,
+      _SFR_IO8 (pin->port_reg),
+      pin->port_bit,
+      _SFR_IO8 (pin->pin_reg),
+      pin->pin_bit,
+      DIO_INPUT,
+      DIO_ENABLE_PULLUP,
+      DIO_DONT_CARE );
 }
+
+// Drive the line of the given OneWireMaster Instance low.
+#define DRIVE_LINE_LOW(owm) \
+  DIO_INIT_NA (             \
+      CPDA(owm),            \
+      DIO_OUTPUT,           \
+      DIO_DONT_CARE,        \
+      LOW )
+
+static void
+one_wire_drive_line_low (OneWireMaster *owm)
+{
+  dio_pin_t *pin = (dio_pin_t *) owm;
+  DIO_INIT_NA (
+      _SFR_IO8 (pin->dir_reg),
+      pin->dir_bit,
+      _SFR_IO8 (pin->port_reg),
+      pin->port_bit,
+      _SFR_IO8 (pin->pin_reg),
+      pin->pin_bit,
+      DIO_OUTPUT,
+      DIO_DONT_CARE,
+      LOW );
+}
+
+#define SAMPLE_LINE(owm) DIO_READ_NA (CPDA(owm))
 
 static uint8_t
-one_wire_sample_line (OneWireMaster *owi)
+one_wire_sample_line (OneWireMaster *owm)
 {
-  owi = owi;
+  dio_pin_t *pin = (dio_pin_t *) owm;
 
-  return 42;   // FIXME: fill in
+  return
+    DIO_READ_NA (
+        _SFR_IO8 (pin->dir_reg),
+        pin->dir_bit,
+        _SFR_IO8 (pin->port_reg),
+        pin->port_bit,
+        _SFR_IO8 (pin->pin_reg),
+        pin->pin_bit );
 }
+
+// We support only stand speed, not overdrive speed, so we make our tick 1 us.
+#define TICK_TIME_IN_US 1.0
+
+#define TICK_DELAY(ticks) _delay_us (TICK_TIME_IN_US * ticks)
+
+// Pause for exactly ticks ticks.
+static void
+tickDelay (int ticks)
+{
+  _delay_us (TICK_TIME_IN_US * ticks);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 // Tick delays for various parts of the standard speed one-wire protocol,
 // as described in Table 2 in Maxim application note AN126.
@@ -45,52 +123,45 @@ one_wire_sample_line (OneWireMaster *owi)
 #define TICK_DELAY_I  70
 #define TICK_DELAY_J 410
 
-// Implementation of the delay function described in Maxim application
-// note AN126.  Pause for exactly 'ticks' number of 0.25 us ticks.
-static void
-tickDelay (int ticks)
+OneWireMaster *
+owm_new (dio_pin_t pin)
 {
-  float const tick_time_in_us = 0.25;
-  _delay_us (tick_time_in_us * ticks);
-} // Implementation is platform specific
+  OneWireMaster *new_instance = malloc (sizeof (OneWireMaster));
+  new_instance->pin = pin;
 
-//---------------------------------------------------------------------------
-// Generate a 1-Wire reset, return 1 if no presence detect was found,
-// return 0 otherwise.
-// (NOTE: Does not handle alarm presence from DS2404/DS1994)
-//
-int
+  return new_instance;
+}
+
+uint8_t
 owm_touch_reset (OneWireMaster *owm)
 {
-  int result;
   tickDelay (TICK_DELAY_G);
   one_wire_drive_line_low (owm);
   tickDelay (TICK_DELAY_H);
-  one_wire_release_line (owm);
+  // FIXME: WORK POINT: here is start converting from fctn to macro operation
+  //one_wire_release_line (owm);
+  RELEASE_LINE (owm);
   tickDelay (TICK_DELAY_I);
   // Look for presence pulse from slave
-  result = one_wire_sample_line (owm);
-
+  uint8_t result = one_wire_sample_line (owm);
   tickDelay (TICK_DELAY_J); // Complete the reset sequence recovery
+
   return result; // Return sample presence pulse result
 }
 
-//---------------------------------------------------------------------------
-// Send a 1-Wire write bit. Provide 10us recovery time.
-//
 static void
-OWWriteBit (OneWireMaster *owm, int bit)
+OWWriteBit (OneWireMaster *owm, uint8_t bit)
 {
-  if (bit)
-  {
+  // Send a 1-Wire write bit. Provide 10us recovery time.
+
+  if ( bit ) {
     // Write '1' bit
     one_wire_drive_line_low (owm);
     tickDelay (TICK_DELAY_A);
     one_wire_release_line (owm);
     tickDelay (TICK_DELAY_B); // Complete the time slot and 10us recovery
   }
-  else
-  {
+  else {
     // Write '0' bit
     one_wire_drive_line_low (owm);
     tickDelay (TICK_DELAY_C);
@@ -99,27 +170,23 @@ OWWriteBit (OneWireMaster *owm, int bit)
   }
 }
 
-//---------------------------------------------------------------------------
-// Read a bit from the 1-Wire bus and return it. Provide 10us recovery time.
-//
-static int
+static uint8_t
 OWReadBit (OneWireMaster *owm)
 {
-  int result;
+  // Read a bit from the 1-Wire bus and return it. Provide 10us recovery time.
+
   one_wire_drive_line_low (owm);
   tickDelay(TICK_DELAY_A);
   one_wire_release_line (owm);
   tickDelay(TICK_DELAY_E);
-  result = one_wire_sample_line (owm);   // Sample the bit value from the slave
+  uint8_t result = one_wire_sample_line (owm);   // Sample bit value from slave
   tickDelay(TICK_DELAY_F); // Complete the time slot and 10us recovery
+
   return result;
 }
 
-//---------------------------------------------------------------------------
-// Write 1-Wire data byte
-//
 void
-owm_write_byte (OneWireMaster *owm, int data)
+owm_write_byte (OneWireMaster *owm, uint8_t data)
 {
   int loop;
   // Loop to write each bit in the byte, LS-bit first
@@ -131,34 +198,28 @@ owm_write_byte (OneWireMaster *owm, int data)
   }
 }
 
-//---------------------------------------------------------------------------
-// Read 1-Wire data byte and return it
-//
-int owm_read_byte (OneWireMaster *owm)
+uint8_t
+owm_read_byte (OneWireMaster *owm)
 {
-  int loop, result=0;
-  for (loop = 0; loop < 8; loop++)
-  {
-    // shift the result to get it ready for the next bit
+  uint8_t loop, result = 0;
+  for ( loop = 0; loop < 8; loop++ ) {
+    // Shift the result to get it ready for the next bit
     result >>= 1;
-    // if result is one, then set MS bit
+    // If result is one, then set MS bit
     if ( OWReadBit (owm) ) {
       result |= 0x80;
     }
   }
+
   return result;
 }
 
-//---------------------------------------------------------------------------
-// Write a 1-Wire data byte and return the sampled result.
-//
-int
-owm_touch_byte (OneWireMaster *owm, int data)
+uint8_t
+owm_touch_byte (OneWireMaster *owm, uint8_t data)
 {
-  int loop, result=0;
-  for (loop = 0; loop < 8; loop++)
-  {
-    // shift the result to get it ready for the next bit
+  uint8_t loop, result = 0;
+  for ( loop = 0; loop < 8; loop++ ) {
+    // Shift the result to get it ready for the next bit
     result >>= 1;
     // If sending a '1' then read a bit else write a '0'
     if ( data & 0x01 ) {
@@ -169,7 +230,7 @@ owm_touch_byte (OneWireMaster *owm, int data)
     else {
       OWWriteBit (owm, 0);
     }
-    // shift the data byte for the next bit
+    // Shift the data byte for the next bit
     data >>= 1;
   }
   return result;
