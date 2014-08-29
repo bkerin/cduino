@@ -170,6 +170,23 @@
 #  error uh oh, LOW != 0x00
 #endif
 
+// NOTE: usually you don't want to use this type: this interface is designed
+// to work via macros which specify everything at compile time (for speed).
+// However, some clients do allow run-time selection of the pins to use,
+// so this type can be useful (e.g. one_wire_master.h).  NOTE HOWEVER that
+// the _SFR_IO8() from AVR libc must be explicitly used on the *_reg members
+// of this structure, since the macros which normally provide it (e.g. DDRB)
+// are cannot be passed through here.  See one_wire_master.c for an example
+// of how to do this.
+typedef struct {
+  uint8_t dir_reg;
+  uint8_t dir_bit;
+  uint8_t port_reg;
+  uint8_t port_bit;
+  uint8_t pin_reg;
+  uint8_t pin_bit;
+} dio_pin_t;
+
 // Pin Initialization {{{1
 
 // These macros can be used to make DIO_INIT_* calls more readable.
