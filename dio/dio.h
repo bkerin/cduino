@@ -202,7 +202,8 @@ typedef struct {
 // DIO_SET_HIGH(), DIO_SET(), and DIO_READ() macros).  NOTE: to support
 // the use of these tuples, a number of macros have a variadic top layer.
 // Obviously these tuples are best interpreted by the variadic macros
-// intented to receive them.
+// intented to receive them.  They can also be used to initialize dio_pin_t
+// structure literals.
 #define DIO_PIN_PB0 DDRB, DDB0, PORTB, PORTB0, PINB, PINB0
 #define DIO_PIN_PB1 DDRB, DDB1, PORTB, PORTB1, PINB, PINB1
 #define DIO_PIN_PB2 DDRB, DDB2, PORTB, PORTB2, PINB, PINB2
