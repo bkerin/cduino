@@ -22,6 +22,9 @@
 // Reinterpret One Wire Master Instance pointer owmi as a dio_pin_t Pointer.
 #define OADP(owm) ((dio_pin_t *) owm)
 
+// FIXME: if all this crap works CPDA should probably be provided in dio.h,
+// together with the mention of the example here
+
 // Canned Pin Description Arguments (just a convenience tuple)
 #define CPDA(owm)                    \
   _SFR_IO8 ((OADP (owm))->dir_reg),  \

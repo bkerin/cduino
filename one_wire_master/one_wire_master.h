@@ -8,6 +8,8 @@
 // it's a convenient way to store the port/pin details being used, partly
 // because there's enough hardware to support multiple instances and that
 // might actually be useful).
+// FIXME: do we maye want to just use a typedef between OneWireMaster and
+// dio_pin_t here?
 typedef struct {
   dio_pin_t pin;
 } OneWireMaster;
