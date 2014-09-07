@@ -17,7 +17,6 @@ adc_init (adc_reference_source_t reference_source)
   switch ( reference_source ) {
     case ADC_REFERENCE_AREF:
       // Nothing to set since ADMUX bits default to 0.
-      // FIXME: this path hasn't been tested.
       break;
     case ADC_REFERENCE_AVCC:
       ADMUX |= _BV (REFS0);
@@ -88,5 +87,5 @@ adc_read_voltage (uint8_t pin, float reference_voltage)
 {
     uint16_t raw = adc_read_raw (pin);
 
-    return ((float) raw / ADC_RAW_READING_STEPS) * reference_voltage;
+    return ((float) raw / (ADC_RAW_READING_STEPS - 1)) * reference_voltage;
 }
