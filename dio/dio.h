@@ -153,7 +153,9 @@
 // module or equivalent) sometimes, and as an ADC input other times (via
 // the adc module or equivalent).  Note however that the adc_pin_init()
 // function of the adc module sets the appropriate DIDR0 bit, and this
-// interface doesn't do anything to clear it.  FIXME: should it?  probably
+// interface doesn't do anything to clear it.  FIXME: should it?  probably or
+// maybe not.  Also a number of the adc pins when using for dio create a
+// bunch of noise on the adc apparently, which deservers a mention here.
 
 // FIXME: possibly all the loop_until_bit_is_* calls could be replaced with
 // single *hardware* no-ops.  Recent versions of AVR libc have added a _NOP
@@ -169,23 +171,6 @@
 #if LOW != 0x00
 #  error uh oh, LOW != 0x00
 #endif
-
-// NOTE: usually you don't want to use this type: this interface is designed
-// to work via macros which specify everything at compile time (for speed).
-// However, some clients do allow run-time selection of the pins to use,
-// so this type can be useful (e.g. one_wire_master.h).  NOTE HOWEVER that
-// the _SFR_IO8() from AVR libc must be explicitly used on the *_reg members
-// of this structure, since the macros which normally provide it (e.g. DDRB)
-// are cannot be passed through here.  See one_wire_master.c for an example
-// of how to do this.
-typedef struct {
-  uint8_t dir_reg;
-  uint8_t dir_bit;
-  uint8_t port_reg;
-  uint8_t port_bit;
-  uint8_t pin_reg;
-  uint8_t pin_bit;
-} dio_pin_t;
 
 // Pin Initialization {{{1
 
