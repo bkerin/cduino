@@ -7,6 +7,7 @@
 
 #include <avr/io.h>
 #include <avr/wdt.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <util/delay.h>
@@ -41,6 +42,21 @@
 
 // Blink LEDs at checkpoints, trap points, or assertion violations {{{1
 
+// The _delay_ms() and _delay_us() functions of AVR libc *REQUIRE* their
+// arguments to be recognizable to GCC as double constants at compile-time.
+// If they aren't various weird horrible effects can occur, including
+// excessively long randomish delays, etc.  So for safety we have this
+// functions as a way to get approximately correct largish delays.  Of course,
+// using this for short delays would be insane.
+#define DELAY_APPROX_MS(time)   \
+  do {                          \
+    double XxX_ems = 0.0;       \
+    do {                        \
+      _delay_ms (5.0);          \
+      XxX_ems += 5.0;           \
+    } while ( XxX_ems < time ); \
+  } while ( 0 )                 \
+
 // NOTE: the CHKP() and BASSERT() macros are probably the most useful in
 // this section.  The others let you change which pin drives the LED or
 // do other fancy things.  To use a different pin, you generally have to
@@ -48,23 +64,22 @@
 // DDB5, PORTB, and PORB5 argument in the right hand side of the original
 // definition replaces as appropriate in the new definition.
 
-// Set pin for output low and toggle it high-low bc times, mspb ms per cycle.
+// Set pin for output low and toggle it high-low bc times, ~mspb ms per cycle.
 // Useful for making LEDs blink See CHKP() for an example of how to call
 // this macro.  WARNING: no effort has been made to anticipate everything a
 // client might have done to put a pin in a state where it can't be properly
 // initialized/blinked.  Test this test function first :)
-#define CHKP_USING(ddr, ddrb, portr, portrb, mspb, bc)     \
-  do {                                                     \
-    ddr |= _BV (ddrb);                                     \
-    loop_until_bit_is_set (ddr, ddrb);                     \
-    portr &= ~(_BV (portrb));                              \
-                                                           \
-    for ( uint8_t XxX_ii = 0 ; XxX_ii < bc ; XxX_ii++ ) {  \
-      portr |= _BV (portrb);                               \
-      _delay_ms (mspb / 2.0);                              \
-      portr &= ~(_BV (portrb));                            \
-      _delay_ms (mspb / 2.0);                              \
-    }                                                      \
+#define CHKP_USING(ddr, ddrb, portr, portrb, mspb, bc)          \
+  do {                                                          \
+    ddr |= _BV (ddrb);                                          \
+    loop_until_bit_is_set (ddr, ddrb);                          \
+    portr &= ~(_BV (portrb));                                   \
+    for ( uint8_t XxXcu_ii = 0 ; XxXcu_ii < bc ; XxXcu_ii++ ) { \
+      portr |= _BV (portrb);                                    \
+      DELAY_APPROX_MS (mspb / 2.0);                             \
+      portr &= ~(_BV (portrb));                                 \
+      DELAY_APPROX_MS (mspb / 2.0);                             \
+    }                                                           \
   } while ( 0 )
 
 // Form a trap point where we blink forever.
@@ -91,15 +106,17 @@
 #define BASSERT(condition)                                          \
   do { if ( UNLIKELY (! (condition)) ) { BTRAP (); } } while ( 0 )
 
-// Do a busy wait for Delay Time (dt) milliseconds while feeding the watchdog
-// timer every Feeding Period (fp) milliseconds.  Useful for some assertion
+// Do a busy wait for about Delay Time (dt) milliseconds while feeding the
+// watchdog timer about every 5 milliseconds.  Useful for some assertion
 // stuff we do and probably a sign of profound pathology everywhere else.
-#define DELAY_WHILE_FEEDING_WDT(dt, fp)                                     \
-  do {                                                                      \
-    for ( uint16_t XxXdwfw_ii = 0 ; XxXdwfw_ii <= dt ; XxXdwfw_ii += fp ) { \
-      _delay_ms (fp);                                                       \
-      wdt_reset ();                                                         \
-    }                                                                       \
+// Note that _delay_ms() requires an argument that GCC can identify as
+// constant to work correctly.
+#define DELAY_WHILE_FEEDING_WDT(dt)                                        \
+  do {                                                                     \
+    for ( uint16_t XxXdwfw_ii = 0 ; XxXdwfw_ii <= dt ; XxXdwfw_ii += 5 ) { \
+      _delay_ms (5.0);                                                     \
+      wdt_reset ();                                                        \
+    }                                                                      \
   } while ( 0 )
 
 // Like CHKP_USING(), but also calls wdt_reset() about every 5 ms.  Note that
@@ -107,19 +124,18 @@
 // Since it calls wdt_reset(), it might be required that the watchdog
 // actually be in use (due to wdt_enable() having been called or the WDTON
 // fuse being programmed), though this probably isn't really required.
-#define CHKP_FEEDING_WDT_USING(ddr, ddrb, portr, portrb, mspb, bc)            \
-  do {                                                                        \
-    ddr |= _BV (ddrb);                                                        \
-    loop_until_bit_is_set (ddr, ddrb);                                        \
-    portr &= ~(_BV (portrb));                                                 \
-                                                                              \
-    for ( uint8_t XxX_ii = 0 ; XxX_ii < bc ; XxX_ii++ ) {                     \
-      uint8_t XxX_wrp = 5;                                                    \
-      portr |= _BV (portrb);                                                  \
-      DELAY_WHILE_FEEDING_WDT (mspb / 2, XxX_wrp);                            \
-      portr &= ~(_BV (portrb));                                               \
-      DELAY_WHILE_FEEDING_WDT (mspb / 2, XxX_wrp);                            \
-    }                                                                         \
+#define CHKP_FEEDING_WDT_USING(ddr, ddrb, portr, portrb, mspb, bc)    \
+  do {                                                                \
+    ddr |= _BV (ddrb);                                                \
+    loop_until_bit_is_set (ddr, ddrb);                                \
+    portr &= ~(_BV (portrb));                                         \
+                                                                      \
+    for ( uint8_t XxXcfwu_ii = 0 ; XxXcfwu_ii < bc ; XxXcfwu_ii++ ) { \
+      portr |= _BV (portrb);                                          \
+      DELAY_WHILE_FEEDING_WDT (mspb / 2.0);                           \
+      portr &= ~(_BV (portrb));                                       \
+      DELAY_WHILE_FEEDING_WDT (mspb / 2.0);                           \
+    }                                                                 \
   } while ( 0 )
 
 // Like BTRAP_USING(), but also calls wdt_reset() about every 5 ms.  Note that
@@ -158,65 +174,86 @@
 #define CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY(mspb, bc)   \
   CHKP_FEEDING_WDT_USING (DDRB, DDB5, PORTB, PORTB5, mspb, bc)
 
-// Like BASSERT_FEEDING_WDT, but attempts to show using a single LED where
-// any assertion violation has occurred, using the following steps:
-//   
-//   1. A series of rapid blinks
+// Blink out a representation of an unsigned integer, calling wdt_reset()
+// about every 5 ms as we go.  The integer is represented using these steps:
 //
-//   2. A series of n slower blinks, where n is the number of characters
-//      in the name of the source file where the violation occurred
+//   1.  A short burst of rapid blinks is produced.
 //
-//   3. A quick flash for the digit 0, or a series of 1-9 slower blinks,
-//      corresponding to a digit in the line number where the violation
-//      occurred
+//   2.  The given number is cast to type uint32_t, and printed to a string
+//       using printf format code "%" PRIu32.
 //
-//   4. Repeat step 3 for each digit in the line number
+//   3.  For each digit in the string, a quick flash is produced for the
+//       digit 0, or a series of 1-9 slower blinks corresponding to the
+//       digit value is produced.
 //
-//   5. Go to step 1
-//
-// FIXXME: this should have a function core and macro wrapper to get the
-// __FILE__ and __LINE__, it makes your program size explode, you can't afford
-// to use it everywhere.  Same for some of the other blinky macros really.
-// But this is currently a sourceless header.
-//
-// Its better to use term_io.h (see the TERM_IO_PTP macro in particular) or
-// maybe wireless_xbee.h to sort out what's going on.  But if you can't do
-// that (perhaps because the serial port is being used to talk to something
-// else) this can be useful.
+// WARNING: FIXXME: this should have a function core and macro wrapper to
+// get the __FILE__ and __LINE__, it makes your program size explode, you
+// can't afford to use it everywhere.  Same for some of the other blinky
+// macros really.  But this is currently a sourceless header.
 //
 // Note that this macro requires CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY()
 // to first be redefined as appropriate if PB5 isn't the one with the LED.
 //
-#define BASSERT_FEEDING_WDT_SHOW_POINT(condition)                           \
-  do {                                                                      \
-    if ( UNLIKELY (! (condition)) ) {                                       \
-      for ( ; ; ) {                                                         \
-        uint16_t const XxX_pbbb = 942;                                      \
-        uint8_t  const XxX_wrp  = 5;                                        \
-        uint16_t const XxX_fbp  = 100;                                      \
-        uint8_t  const XxX_fbc  = 6;                                        \
-        uint16_t const XxX_sbp  = 442;                                      \
-        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_fbp, XxX_fbc);       \
-        DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                        \
-        size_t XxX_fnl = strlen (__FILE__);                                 \
-        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_sbp, XxX_fnl);       \
-        DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                        \
-        char XxX_line_number_as_string[7];                                  \
-        sprintf (XxX_line_number_as_string, "%i", __LINE__);                \
-        uint8_t llnas = strlen (XxX_line_number_as_string);                 \
-        for ( uint8_t XxX_kk = 0 ; XxX_kk < llnas ; XxX_kk++ ) {            \
-          uint8_t const ascii_0 = 48;                                       \
-          uint8_t XxX_digit = XxX_line_number_as_string[XxX_kk] - ascii_0;  \
-          if ( XxX_digit == 0 ) {                                           \
-            CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_fbp, 1);         \
-          }                                                                 \
-          else {                                                            \
-            CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_sbp, XxX_digit); \
-          }                                                                 \
-          DELAY_WHILE_FEEDING_WDT (XxX_pbbb, XxX_wrp);                      \
-        }                                                                   \
-      }                                                                     \
-    }                                                                       \
+// That's all clients need to know.
+//
+// The weirdly named variables in this macro have the following meanings:
+//
+//   XxX_pbbb    Per-Blink-Batch Break
+//   XxX_fbc     Fast Blink Count
+//   XxX_fbp     Fast Blink Period
+//   XxX_sbp     Slow Blink Period
+//   lias        Length of (Int As String)
+//
+#define BLINK_OUT_UINT32_FEEDING_WDT(value)                                \
+  do {                                                                     \
+    uint16_t const XxX_pbbb = 942;                                         \
+    uint16_t const XxX_fbp  = 100;                                         \
+    uint8_t  const XxX_fbc  = 6;                                           \
+    uint16_t const XxX_sbp  = 442;                                         \
+    CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_fbp, XxX_fbc);          \
+    DELAY_WHILE_FEEDING_WDT (XxX_pbbb);                                    \
+    char XxX_uint_as_string[11];                                           \
+    sprintf (XxX_uint_as_string, "%" PRIu32, (uint32_t) value);            \
+    uint8_t lias = strlen (XxX_uint_as_string);                            \
+    for ( uint8_t XxXboifw_ii = 0 ; XxXboifw_ii < lias ; XxXboifw_ii++ ) { \
+      uint8_t const ascii_0 = 48;                                          \
+      uint8_t XxX_digit = XxX_uint_as_string[XxXboifw_ii] - ascii_0;       \
+      if ( XxX_digit == 0 ) {                                              \
+        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_fbp, 1);            \
+      }                                                                    \
+      else {                                                               \
+        CHKP_FEEDING_WDT_WITH_TIME_AND_COUNT_ONLY (XxX_sbp, XxX_digit);    \
+      }                                                                    \
+      DELAY_WHILE_FEEDING_WDT (XxX_pbbb);                                  \
+    }                                                                      \
+  } while ( 0 )
+
+// Like BASSERT_FEEDING_WDT, but attempts to show using a single LED where
+// any assertion violation has occurred, using the following steps:
+//
+//   1. Call BLINK_OUT_UINT32_FEEDING_WDT(number_of_chars_in_source_file_name)
+//
+//   2. Call BLINK_OUT_UINT32_FEEDING_WDT(__LINE__)
+//
+//   3. Go to step 1
+//
+// WARNING: this macro suffers from the problem afflicting
+// BLINK_OUT_UINT32_FEEDING_WDT().
+//
+// Its usually better to use term_io.h (see the TERM_IO_PTP macro
+// in particular) or maybe wireless_xbee.h to sort out what's going on.
+// But if you can't do that (perhaps because the serial port is being used
+// to talk to something else) this can be useful.
+//
+#define BASSERT_FEEDING_WDT_SHOW_POINT(condition) \
+  do {                                            \
+    if ( UNLIKELY (! (condition)) ) {             \
+      for ( ; ; ) {                               \
+        size_t XxX_fnl = strlen (__FILE__);       \
+        BLINK_OUT_UINT32_FEEDING_WDT (XxX_fnl);   \
+        BLINK_OUT_UINT32_FEEDING_WDT (__LINE__);  \
+      }                                           \
+    }                                             \
   } while ( 0 )
 
 // }}}1
