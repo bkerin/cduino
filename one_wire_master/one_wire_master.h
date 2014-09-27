@@ -10,28 +10,32 @@
 #endif
 
 // Intialize the one wire master interface.  All this does is set up the
-// chosen DIO pin.  It starts out tri-stated (line released).
+// chosen DIO pin.  It starts out set as an input without the internal pull-up
+// enabled.  It would probably be possible to use the internal pull-up on
+// the AVR microcontroller for short-line communication at least, but the
+// datasheet for the part I've used for testing (Maxim DS18B20) calls for a
+// much stronger pull-up, so for simplicity the internal pull-up is disabled.
 void
 owm_init (void);
 
-// Generate a 1-Wire reset.  Return 1 if a presence pulse was detected,
-// or 0 otherwise.  NOTE: this is logically different than the comments for
-// the OWTouchReset() function from Maxim application note AN126 indicate,
-// since those seem backwards and confused.  NOTE: does not handle alarm
-// presence from DS2404/DS1994.
+// Generate a 1-Wire reset.  Return TRUE if a resulting presence pulse is
+// detected, or FALSE otherwise.  NOTE: this is logically different than
+// the comments for the OWTouchReset() function from Maxim application
+// note AN126 indicate, since those seem backwards and confused.  NOTE:
+// does not handle alarm presence from DS2404/DS1994.
 uint8_t
 owm_touch_reset (void);
 
-// Write 1-Wire data byte
+// Write byte
 void
 owm_write_byte (uint8_t data);
 
-// Read 1-Wire data byte and return it
+// Read byte
 uint8_t
 owm_read_byte (void);
 
-// FIXME: do we like this name?
-// Write a 1-Wire data byte and return the sampled result
+// Fancy simultaneous read/write.  Sort of weird.  See Maxim application
+// note AN126. WARNING: FIXME: I haven't tested this.
 uint8_t
 owm_touch_byte (uint8_t data);
 

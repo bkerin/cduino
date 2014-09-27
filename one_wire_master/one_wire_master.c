@@ -18,9 +18,9 @@
 // after proscribed waits of only 9 us requires some care, especially at
 // slower processor frequencies.
 
-// Release (tri-state) the one wire master pin.
-// FIXME: I guess we could DIO_ENABLE_PULLUP, would be harmless if a strong
-// external pullup is used, but might let short-haul lines work without one?
+// Release (tri-state) the one wire master pin.  Note that this dones
+// not enable the internal pullup.  See the commends near omw_init()
+// in one_wire_master.h.
 #define RELEASE_LINE()     \
   DIO_INIT (               \
       ONE_WIRE_MASTER_PIN, \
@@ -82,10 +82,11 @@ owm_touch_reset (void)
   return result; // Return sample presence pulse result
 }
 
-// FIXME: rename these, since they inconsistent with our usual and we've
-// changed everything else.
+// FIXME: perhaps write_bit and read_bit should be exposed (and renamed
+// owm_write_bit and owm_read_bit).
+
 static void
-OWWriteBit (uint8_t value)
+write_bit (uint8_t value)
 {
   // Send a 1-Wire write bit. Provide 10us recovery time.
 
@@ -106,7 +107,7 @@ OWWriteBit (uint8_t value)
 }
 
 static uint8_t
-OWReadBit (void)
+read_bit (void)
 {
   // Read a bit from the 1-Wire bus and return it. Provide 10us recovery time.
 
@@ -126,7 +127,7 @@ owm_write_byte (uint8_t data)
   // Loop to write each bit in the byte, LS-bit first
   for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ )
   {
-    OWWriteBit (data & B00000001);
+    write_bit (data & B00000001);
     data >>= 1;   // Shift to get to next bit
   }
 }
@@ -138,7 +139,7 @@ owm_read_byte (void)
   for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ ) {
     result >>= 1;  // Shift the result to get ready for the next bit
     // If result is one, then set MS bit
-    if ( OWReadBit () ) {
+    if ( read_bit () ) {
       result |= B10000000;
     }
   }
@@ -155,12 +156,12 @@ owm_touch_byte (uint8_t data)
     result >>= 1;
     // If sending a '1' then read a bit, otherwise write a '0'
     if ( data & B00000001 ) {
-      if ( OWReadBit () ) {
+      if ( read_bit () ) {
         result |= B10000000;
       }
     }
     else {
-      OWWriteBit (LOW);
+      write_bit (0);
     }
     // Shift the data byte for the next bit
     data >>= 1;

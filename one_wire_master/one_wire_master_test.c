@@ -6,6 +6,7 @@
 
 
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 
 #include "dio.h"
@@ -16,10 +17,10 @@
 #define DS18B20_SCRATCHPAD_T_LSB 0
 #define DS18B20_SCRATCHPAD_T_MSB 1
 
-static uint8_t spc[DS18B20_SCRATCHPAD_SIZE];   // DS18B20 Scratchpad Contents
+static uint8_t spb[DS18B20_SCRATCHPAD_SIZE];   // DS18B20 Scratchpad Buffer
 
 static uint64_t
-init_ds18b20_and_rom_command (void)
+ds18b20_init_and_rom_command (void)
 {
   // Requies exactly one DS18B20 device to be present on the bus.  Perform the
   // Initialization (Step 1) and ROM Command (Step 2) steps of the transaction
@@ -33,10 +34,10 @@ init_ds18b20_and_rom_command (void)
   uint8_t slave_presence = owm_touch_reset ();
   assert (slave_presence);
 
-  // This test program requires that only one slave is present, so we can
+  // This test program requires that only one slave be present, so we can
   // use the READ ROM command to get the slave's address.
   uint64_t slave_rom;
-  uint8_t const read_rom_command = 0xF0;
+  uint8_t const read_rom_command = 0x33;
   owm_write_byte (read_rom_command);
   for ( uint8_t ii = 0 ; ii < sizeof (slave_rom) ; ii++ ) {
     ((uint8_t *) (&slave_rom))[ii] = owm_read_byte ();
@@ -46,16 +47,16 @@ init_ds18b20_and_rom_command (void)
 }
 
 static void
-get_scratchpad_contents (void)
+ds18b20_get_scratchpad_contents (void)
 {
   // Send the command that causes the DS18B20 to send the scratchpad contents,
-  // then read the result and store it in spc.  This routine must follow an
-  // init_and_rom_command() call.
+  // then read the result and store it in spb.  This routine must follow an
+  // ds18b20_init_and_rom_command() call.
 
   uint8_t const read_scratchpad_command = 0xBE;
   owm_write_byte (read_scratchpad_command);
   for ( uint8_t ii = 0 ; ii < DS18B20_SCRATCHPAD_SIZE ; ii++ ) {
-    spc[ii] = owm_read_byte ();
+    spb[ii] = owm_read_byte ();
   }
 }
 
@@ -64,19 +65,10 @@ main (void)
 {
   owm_init ();   // Initialize the one-wire interface master end
 
-  uint64_t slave_rom = init_ds18b20_and_rom_command ();
-  slave_rom = slave_rom;   // FIXME: debug
-
-  BASSERT_FEEDING_WDT_SHOW_POINT (0);
-
-  void *j1 = get_scratchpad_contents; j1 = j1;
-
-  //BASSERT_FEEDING_WDT_SHOW_POINT (0);
-  /*
+  uint64_t slave_rom = ds18b20_init_and_rom_command ();
 
   uint8_t const convert_t_command = 0x44;
   owm_write_byte (convert_t_command);
-
 
   // The DS18B20 is now supposed to respond with a stream of 0 bits until the
   // conversion completes, after which it's supposed to send 1 bits.  So we
@@ -87,32 +79,45 @@ main (void)
     ;
   }
 
-  BASSERT_FEEDING_WDT_SHOW_POINT (0);
-  for ( ; ; ) {
-    // BLINK_OUT_INTEGER_FEEDING_WDT (42);
-    BASSERT_FEEDING_WDT_SHOW_POINT (0);
-    _delay_ms(2000);
-  }
-
   // We can now read the device scratchpad memory.  This requires us to first
   // perform the initialization and read rom commands again as described in
   // the DS18B20 datasheet.  The slave ROM code better be the same on second
   // reading :)
-  uint64_t slave_rom_2nd_reading = init_and_rom_command ();
+  uint64_t slave_rom_2nd_reading = ds18b20_init_and_rom_command ();
   assert (slave_rom == slave_rom_2nd_reading);
-
-  get_scratchpad_contents ();
+  ds18b20_get_scratchpad_contents ();
 
   // Convenient names for the temperature bytes
-  uint8_t t_lsb = spc[DS18B20_SCRATCHPAD_T_LSB];
-  uint8_t t_msb = spc[DS18B20_SCRATCHPAD_T_MSB];
+  uint8_t t_lsb = spb[DS18B20_SCRATCHPAD_T_LSB];
+  uint8_t t_msb = spb[DS18B20_SCRATCHPAD_T_MSB];
 
-  int16_t temp = (((int16_t) t_msb) << BITS_PER_BYTE) | t_lsb;
+  // Absolute value of temperature (in degrees C) times 2^4.  This is just
+  // what the DS18B20 likes to spit out.  See Fig. 2 of the DS18B20 datasheet.
+  int16_t atemp_t2tt4 = (((int16_t) t_msb) << BITS_PER_BYTE) | t_lsb;
+  if ( t_msb & B10000000 ) {   // If negative...
+    // ...just make it positive (its 2's compliment)
+    atemp_t2tt4 = (~atemp_t2tt4) + 1;
+  }
 
+  // Uncomment some of this to test the the 2's compliment and blinky-output
+  // features themselves, ignoring the real sensor output.  Table 1 of the
+  // DS18B20 datasheet has a number of example values.
+  //
+  //atemp_t2tt4 = INT16_C (0xFF5E);    // Means -10.125 (blinks out 101250)
+  //atemp_t2tt4 = (~atemp_t2tt4) + 1;  // Knowns to be negative so abs it
+  //
+  //atemp_t2tt4 = INT16_C (0x0191);    // Means 25.0625 (blinks out 250625)
 
+  // Absolute value of temperature, in degrees C
+  double atemp = atemp_t2tt4 / (2.0 * 2.0 * 2.0 * 2.0);
 
-  // Need to report the temp somehow.
-  temp = temp;
+  // atemp Times 10000
+  uint32_t att10000 = round(atemp * 10000);
 
-  */
+  // Blink out the absolute value of the current temperate times 10000
+  // (effectively including four decimal places).
+  for ( ; ; ) {
+    // I think feeding the wdt is harmless even when its not initialized.
+    BLINK_OUT_UINT32_FEEDING_WDT (att10000);
+  }
 }
