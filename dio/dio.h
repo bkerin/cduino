@@ -138,25 +138,30 @@
 // pull-up resistor.  However, there is one issue that results from the
 // order in which the initialiazation macros do things.
 //
-// When initializing a pin for input, the pin is first set for input,
-// then the internal pullup resistor enabled if requested.  This means
+// When initializing a pin for input, the pin is first set for input, then
+// the internal pullup resistor enabled if requested.  Due to the fact that
+// the PORTxn bits are recycled and interpreted differently depending on the
+// data direction (as set by the DDxn bits), this order of operations means
 // that the pin might float for a few microseconds (which might possibly
 // result in a spurious pin change interrupt if those are enabled and
 // there is no external pull-up or pull-down resister).  We do things in
 // this order to ensure that we don't have to risk a spurious change to the
 // output value in case the pin is being reconfigured from output to input.
 // When initializing a pin for output, the requested initial value is first
-// set and then the pin direction set for output.  This might likewise
-// result in a momentarily floating input pin (and potential interrupt).
+// set and then the pin direction set for output.  This might likewise result
+// in a momentary deactivation (or activation) of the internal pull-up, and
+// a momentarily floating input pin (and potential interrupt).  See Section
+// 3.2.3 ATmega328P datasheet, Rev. 8271C, for more details and a possible
+// solution if this is an issue.
 //
 // Its presumably possible to use a pin as a digital input (via the dio
 // module or equivalent) sometimes, and as an ADC input other times (via
 // the adc module or equivalent).  Note however that the adc_pin_init()
 // function of the adc module sets the appropriate DIDR0 bit, and this
-// interface doesn't do anything to clear it.  FIXME: should it?  probably or
-// maybe not.  Also a number of the adc pins when using for dio create a
-// bunch of noise on the adc apparently, which deservers a mention here.
-
+// interface doesn't do anything to clear it.  Note also that pins ADC[3..0]
+// generate lots of noise on the ADC if they switch while the ADC is in use
+// (ATmega datasheet, Rev. 8271C, section 3.6.2)
+//
 // FIXME: possibly all the loop_until_bit_is_* calls could be replaced with
 // single *hardware* no-ops.  Recent versions of AVR libc have added a _NOP
 // macro in avr/cpufunc.h that would probably work.
@@ -264,7 +269,7 @@
 
 // Underlying named-argument macro implementing the DIO_INIT() macro.
 // FIXME: "for_input" doesn't do a good job of suggesting that DIO_INPUT
-// or DIO_OUTPUT should be used.  likewise for enable_pullup really.
+// or DIO_OUTPUT should be used.  likewise for enable_pullup sort of.
 #define DIO_INIT_NA( \
     dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
     for_input, enable_pullup, initial_value ) \
