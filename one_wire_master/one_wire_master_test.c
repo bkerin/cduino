@@ -13,6 +13,11 @@
 #include "one_wire_master.h"
 #include "util.h"
 
+// By default this test program expects to find exactly one slave on the
+// one-wire bus, but there is some alternate code included for testing with
+// more slaves.
+//#define OWM_TEST_CONDITION_SINGLE_SLAVE
+
 #define DS18B20_SCRATCHPAD_SIZE  9
 #define DS18B20_SCRATCHPAD_T_LSB 0
 #define DS18B20_SCRATCHPAD_T_MSB 1
@@ -35,15 +40,15 @@ ds18b20_init_and_rom_command (void)
   assert (slave_presence);
 
   // This test program requires that only one slave be present, so we can
-  // use the READ ROM command to get the slave's address.
-  uint64_t slave_rom;
+  // use the READ ROM command to get the slave's ROM ID.
+  uint64_t slave_rid;
   uint8_t const read_rom_command = 0x33;
   owm_write_byte (read_rom_command);
-  for ( uint8_t ii = 0 ; ii < sizeof (slave_rom) ; ii++ ) {
-    ((uint8_t *) (&slave_rom))[ii] = owm_read_byte ();
+  for ( uint8_t ii = 0 ; ii < sizeof (slave_rid) ; ii++ ) {
+    ((uint8_t *) (&slave_rid))[ii] = owm_read_byte ();
   }
 
-  return slave_rom;
+  return slave_rid;
 }
 
 static void
@@ -65,7 +70,7 @@ main (void)
 {
   owm_init ();   // Initialize the one-wire interface master end
 
-  uint64_t slave_rom = ds18b20_init_and_rom_command ();
+  uint64_t slave_rid = ds18b20_init_and_rom_command ();
 
   uint8_t const convert_t_command = 0x44;
   owm_write_byte (convert_t_command);
@@ -83,9 +88,45 @@ main (void)
   // perform the initialization and read rom commands again as described in
   // the DS18B20 datasheet.  The slave ROM code better be the same on second
   // reading :)
-  uint64_t slave_rom_2nd_reading = ds18b20_init_and_rom_command ();
-  assert (slave_rom == slave_rom_2nd_reading);
+  uint64_t slave_rid_2nd_reading = ds18b20_init_and_rom_command ();
+  assert (slave_rid_2nd_reading == slave_rid);
   ds18b20_get_scratchpad_contents ();
+
+#ifndef OWM_TEST_CONDITION_MULTIPLE_SLAVE
+
+  uint64_t rid;   // ROM ID
+
+  uint8_t device_found = owm_read_id ((uint8_t *) &rid);
+  assert (device_found);
+  assert (rid == slave_rid);
+
+  device_found = owm_first ((uint8_t *) &rid);
+  assert (device_found);
+  assert (rid == slave_rid);
+
+  // Verify that owm_next() (following the owm_first() call above) returns
+  // false, since there is only one device on the bus.
+  device_found = owm_next ((uint8_t *) &rid);
+  assert (! device_found);
+
+  // FIXME: WORK POINT: worked to here fine I think
+
+  // owm_verify() should work with either a single or multiple slaves.
+  device_found = owm_verify ((uint8_t *) &rid);
+  assert (device_found);
+  assert (rid == slave_rid);
+
+#else
+
+  uint64_t rid;   // ROM ID
+
+  device_found = owm_next ((uint8_t *) &rid);
+  assert (device_found);
+  // Must put in the real value of the second device ID here
+  uint64_t const second_device_id = 0x4242424242424242;
+  assert (rid == second_device_id);
+
+#endif
 
   // Convenient names for the temperature bytes
   uint8_t t_lsb = spb[DS18B20_SCRATCHPAD_T_LSB];
