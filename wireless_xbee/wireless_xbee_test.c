@@ -245,12 +245,12 @@ main (void)
 
     // Ok, some of the interface macros are long and ugly.  Here's a short
     // ugly alias for our private use: Max Payload Length For Us.
-#define MPLFU WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE
+#  define MPLFU WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE
     // Testing of frames of maximum length, with many escape characters, etc.
     // is handled largely from usb_xbee_test, but in case you want to try to
-    // verify that such frames always work on the C side you can use these
-    // line instead of the above.
-//#define MPLFU WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH
+    // verify that such frames always work on the C side you can use this line
+    // instead of the above.
+//#  define MPLFU WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH
 
     uint8_t rfps;
     char rpyld[MPLFU];   // Received payload
