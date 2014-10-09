@@ -1,3 +1,9 @@
+// One-wire master interface (software interface -- require one IO pin only)
+//
+// Test driver: one_wire_master_test.h    Implementation: one_wire_master.c
+//
+// This interface provides most of the lower-level one-wire functionality,
+// up to byte-at-a-time communication and device search.
 
 #ifndef ONE_WIRE_MASTER_H
 #define ONE_WIRE_MASTER_H

@@ -1,9 +1,17 @@
+// Test/demo for the one_wire_master.h interface.
 //
-// FIXME: describe seperate power assumption
+// By default, this test program requires exactly one slave to be present:
+// a Maxim DS18B20 temperature sensor connected to the chosen one wire master
+// pin of the arduino (by default DIO_PIN_DIGITAL_2 -- see the Makefile for
+// this module to change this value).  The D18B20 is required to be powered
+// externally, not using parasite power.  The DS18B20 must be in its default
+// (factory) state.  A 4.7 kohm pull-up resistor must be used on the Arduino
+// side of the wire.  See Figure 5 of the DS18B20 datasheet, revision 042208.
 //
-// This program assumes that the DS18B20 EEPROM configuration is in the
-// default (factory) state: FIXME; say what that is here
-
+// If everything works correctly, the arduino should blink out the absolute
+// value of the sensed temperature in degrees Celcius multiplied by 10000
+// on the on-board led (connected to PB5).  Single quick blinks are zeros,
+// slower series of blinks are other digits.
 
 #include <assert.h>
 #include <math.h>
@@ -15,9 +23,11 @@
 
 // By default this test program expects to find exactly one slave on the
 // one-wire bus, but there is some alternate code included for testing with
-// more slaves.
-//#define OWM_TEST_CONDITION_SINGLE_SLAVE
+// multiple slaves.
+//#define OWM_TEST_CONDITION_MULTIPLE_SLAVES
 
+// These are properties of the DS18B20 that have nothing to do with the
+// one-wire bus in general.
 #define DS18B20_SCRATCHPAD_SIZE  9
 #define DS18B20_SCRATCHPAD_T_LSB 0
 #define DS18B20_SCRATCHPAD_T_MSB 1
@@ -30,7 +40,9 @@ ds18b20_init_and_rom_command (void)
   // Requies exactly one DS18B20 device to be present on the bus.  Perform the
   // Initialization (Step 1) and ROM Command (Step 2) steps of the transaction
   // sequence described in the DS18B20 datasheet, and return the discovered
-  // ROM code of the slave.
+  // ROM code of the slave.  Note that functions that perform this operation
+  // in a single call are available in the one_wire_master.h interface,
+  // but here we perform them manually as a cross-check.
 
   // Prompt the slave(s) to respond with a "presence pulse".  This corresponds
   // to the "INITIALIZATION" step (Step 1) described in the DS18B20 datasheet.
@@ -78,6 +90,7 @@ main (void)
   // The DS18B20 is now supposed to respond with a stream of 0 bits until the
   // conversion completes, after which it's supposed to send 1 bits.  So we
   // could do this bit-by-bit if our API exposed the bit-by-bit interface.
+  // FIXME: which it now does.  So should we do it that way?
   // But it shouldn't hurt to read a few extra ones.
   uint8_t conversion_complete = 0;
   while ( ! (conversion_complete = owm_read_byte ()) ) {
@@ -92,7 +105,16 @@ main (void)
   assert (slave_rid_2nd_reading == slave_rid);
   ds18b20_get_scratchpad_contents ();
 
-#ifndef OWM_TEST_CONDITION_MULTIPLE_SLAVE
+  // Uncomment this to repeatedly blink out the (decimal) byte values of
+  // the ROM ID for the device instead of continuing the normal test program.
+  //for ( ; ; ) {
+  //  for ( uint8_t ii = 0 ; ii < sizeof (uint64_t) ; ii++ ) {
+  //    BLINK_OUT_UINT32_FEEDING_WDT (((uint8_t *) slave_id)[ii]);
+  //  }
+  //  _delay_ms (4.2);
+  //}
+
+#ifndef OWM_TEST_CONDITION_MULTIPLE_SLAVES
 
   uint64_t rid;   // ROM ID
 
@@ -116,13 +138,15 @@ main (void)
   assert (device_found);
   assert (rid == slave_rid);
 
-#else
+#else // OWM_TEST_CONDITION_MULTIPLE_SLAVES is defined
 
   uint64_t rid;   // ROM ID
 
   device_found = owm_next ((uint8_t *) &rid);
   assert (device_found);
-  // Must put in the real value of the second device ID here
+  // Must put in the real value of the second device ID here.  There is a
+  // commented-out block above that can be used to determine the ROM ID of
+  // a slave (FIXXME: in decimal bytes, unfortunately).
   uint64_t const second_device_id = 0x4242424242424242;
   assert (rid == second_device_id);
 

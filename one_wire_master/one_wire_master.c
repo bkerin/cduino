@@ -1,3 +1,4 @@
+// Implementation of the interface described in one_wire_master.h.
 
 #include <stdlib.h>
 #include <string.h>  // FIXME: for memcpy only, might want to do away with it
