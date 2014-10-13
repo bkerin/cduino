@@ -80,6 +80,7 @@ uart_init (void);
     uint8_t XxX_dummy; \
     while ( UART_BYTE_AVAILABLE() ) { \
       XxX_dummy = UART_GET_BYTE (); \
+      XxX_dummy = XxX_dummy; \
     } \
   } while ( 0 );
 
