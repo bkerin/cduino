@@ -42,7 +42,7 @@ main (void)
     // also, AVR libc doesn't support 64 bit printf/scanf conversions.
     printf ("ID: ");
     for ( uint8_t ii = 0 ; ii < id_size ; ii++ ) {
-      printf ("%" PRIx8, ((uint8_t *) (&id))[ii] );
+      printf ("%02" PRIx8, ((uint8_t *) (&id))[ii] );
     }
     printf ("\n");
 
