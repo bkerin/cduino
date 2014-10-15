@@ -121,6 +121,28 @@ owm_read_bit (void)
   return result;
 }
 
+uint8_t
+owm_read_id (uint8_t *id_buf)
+{
+  uint8_t slave_presence = owm_touch_reset ();
+  if ( ! slave_presence ) {
+    return FALSE;
+  }
+
+  uint8_t const read_rom_command = 0x33;
+  owm_write_byte (read_rom_command);
+  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+    id_buf[ii] = owm_read_byte ();
+  }
+
+  // FIXME: do a check that the ID looks valid somewhere in here
+
+  return TRUE;
+}
+
+// FIXME: WORK POINT: continue cloning in this code, decide to use globals
+// for communication or not
+
 // Global search state
 static uint8_t ROM_NO[OWM_ID_BYTE_COUNT];
 static int     LastDiscrepancy;

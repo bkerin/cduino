@@ -68,10 +68,11 @@ owm_read_bit (void);
 #define OWM_ID_BYTE_COUNT 8
 
 // This function requires that exactly one slave be present on the bus.
-// It returns the discovered ID of that device in id_buf (which must be a
-// pointer to OWM_ID_BYTE_COUNT bytes of space).  Returns TRUE on success.
-// If there is not exactly one device present, FALSE will probably be
-// returned.  But don't do that.  FIXME: why not?  make sure that works
+// It returns the discovered ID of that device in id_buf (which must be
+// a pointer to OWM_ID_BYTE_COUNT bytes of space).  If we discover what
+// looks like a valid id, it is written into id_buf and TRUE is returned.
+// If there is not exactly one device present, FALSE will *probably*
+// be returned.  But don't do that, because the results are undefined.
 uint8_t
 owm_read_id (uint8_t *id_buf);
 

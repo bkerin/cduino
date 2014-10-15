@@ -131,8 +131,6 @@ main (void)
   device_found = owm_next ((uint8_t *) &rid);
   assert (! device_found);
 
-  // FIXME: WORK POINT: worked to here fine I think
-
   // owm_verify() should work with either a single or multiple slaves.
   device_found = owm_verify ((uint8_t *) &rid);
   assert (device_found);
@@ -165,15 +163,17 @@ main (void)
   }
 
   // Uncomment some of this to test the the 2's compliment and blinky-output
-  // features themselves, ignoring the real sensor output.  Table 1 of the
-  // DS18B20 datasheet has a number of example values.
+  // features themselves, ignoring the real sensor output (but assuming
+  // we make it to this point :).  Table 1 of the DS18B20 datasheet has a
+  // number of example values.
   //
   //atemp_t2tt4 = INT16_C (0xFF5E);    // Means -10.125 (blinks out 101250)
   //atemp_t2tt4 = (~atemp_t2tt4) + 1;  // Knowns to be negative so abs it
   //
   //atemp_t2tt4 = INT16_C (0x0191);    // Means 25.0625 (blinks out 250625)
 
-  // Absolute value of temperature, in degrees C
+  // Absolute value of temperature, in degrees C.  These factors of 2.0 are
+  // due to the meaning the DS18B20 assigns to the individual field bits.
   double atemp = atemp_t2tt4 / (2.0 * 2.0 * 2.0 * 2.0);
 
   // atemp Times 10000
