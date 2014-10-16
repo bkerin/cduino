@@ -68,30 +68,30 @@ owm_read_bit (void);
 #define OWM_ID_BYTE_COUNT 8
 
 // This function requires that exactly one slave be present on the bus.
-// It returns the discovered ID of that device in id_buf (which must be
-// a pointer to OWM_ID_BYTE_COUNT bytes of space).  If we discover what
-// looks like a valid id, it is written into id_buf and TRUE is returned.
-// If there is not exactly one device present, FALSE will *probably*
+// If we discover a slave, its ID is written into id_buf (which pust be
+// a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE is returned.
+// If there is not exactly one slave present, FALSE will *probably*
 // be returned.  But don't do that, because the results are undefined.
+// Use owm_first() instead if there is any doubt about the slave population.
 uint8_t
 owm_read_id (uint8_t *id_buf);
 
-// Find the "first" device on the one-wire bus (in the sense of the
-// discovery order of the one-wire search algorithm described in Maxim
-// application note AN187).  Note that this resets any search which is
-// already in progress.  Returns TRUE if a device is found and writes its
-// ID into the OWM_ID_BYTE_COUNT bytes pointed to by id_buf, or FALSE if
-// no device is found.
+// Find the "first" slave on the one-wire bus (in the sense of the discovery
+// order of the one-wire search algorithm described in Maxim application
+// note AN187).  If a slave is discovered, its ID is written into id_buf
+// (which mucst be a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE
+// is returned.  If no slave is discovered, FALSE is returned.  Note that
+// this resets any search which is already in progress.
 uint8_t
 owm_first (uint8_t *id_buf);
 
-// Require an immediately preceeding call to owm_first() or owm_next()
-// to have occurred.  Find the "next" device on the one-wire bus (in the
-// sense of the discovery order of the one-wire search algorithm described
-// in Maxim application note AN187).  This continues a search begun by a
-// previous call to owm_first().  Returns TRUE if another device is found
-// and writes its ID into the OWM_ID_BYTE_COUNT bytes pointed to by id_buf,
-// or FALSE if no additional device is found.
+// Require an immediately preceeding call to owm_first() or owm_next() to
+// have occurred.  Find the "next" slave on the one-wire bus (in the sense of
+// the discovery order of the one-wire search algorithm described in Maxim
+// application note AN187).  This continues a search begun by a previous
+// call to owm_first().  If another slave is found, its ID is written into
+// id_buf (which must be a pointer to OWM_ID_BYTE_COUNT bytes of space and
+// TRUE is returned.  If no additional slave is found, FALSE is returned.
 uint8_t
 owm_next (uint8_t *id_buf);
 

@@ -144,210 +144,210 @@ owm_read_id (uint8_t *id_buf)
 // for communication or not
 
 // Global search state
-static uint8_t ROM_NO[OWM_ID_BYTE_COUNT];
+static uint8_t rom_id[OWM_ID_BYTE_COUNT];   // Current ROM device ID
 static int     LastDiscrepancy;
 static int     LastFamilyDiscrepancy;
 static int     LastDeviceFlag;
 static uint8_t crc8;
 
-//--------------------------------------------------------------------------
+// Length of slave ROM IDs, in bits
+#define ID_BIT_COUNT 64
+
 // Perform the 1-Wire Search Algorithm on the 1-Wire bus using the existing
 // search state.
-// Return TRUE : device found, ROM number in ROM_NO buffer
+// Return TRUE : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 //
-int OWSearch(void);   // FIXME: change to match API prototype
-int OWSearch(void)
+static int
+search (void)
 {
-   int id_bit_number;
-   int last_zero, rom_byte_number, search_result;
-   int id_bit, cmp_id_bit;
-   unsigned char rom_byte_mask, search_direction;
-   // initialize for search
-   id_bit_number = 1;
-   last_zero = 0;
-   rom_byte_number = 0;
-   rom_byte_mask = 1;
-   search_result = 0;
-   crc8 = 0;
-   // if the last call was not the last one
-   if (!LastDeviceFlag)
-   {
-      // 1-Wire reset
-      if (!owm_touch_reset ())
-      {
-         // reset the search
-         LastDiscrepancy = 0;
-         LastDeviceFlag = FALSE;
-         LastFamilyDiscrepancy = 0;
-         return FALSE;
-      }
-      // issue the search command  FIXME: remove this comment?
-      owm_write_byte (SEARCH_ROM_COMMAND);
-      // loop to do the search
-      do
-      {
-         // read a bit and its complement
-         id_bit = owm_read_bit ();
-         cmp_id_bit = owm_read_bit ();
-         // check for no devices on 1-wire
-         if ((id_bit == 1) && (cmp_id_bit == 1))
-            break;
-         else
-         {
-            // all devices coupled have 0 or 1
-            if (id_bit != cmp_id_bit)
-               search_direction = id_bit; // bit write value for search
-            else
-            {
-               // if this discrepancy if before the Last Discrepancy
-               // on a previous next then pick the same as last time
-               if (id_bit_number < LastDiscrepancy)
-                   search_direction
-                     = ((ROM_NO[rom_byte_number] & rom_byte_mask) > 0);
-               else
-                   // if equal to last pick 1, if not then pick 0
-                   search_direction = (id_bit_number == LastDiscrepancy);
-               // if 0 was picked then record its position in LastZero
-               if (search_direction == 0)
-               {
-                   last_zero = id_bit_number;
-                   // check for Last discrepancy in family
-                   if (last_zero < 9)
-                      LastFamilyDiscrepancy = last_zero;
-               }
-            }
-            // set or clear the bit in the ROM byte rom_byte_number
-            // with mask rom_byte_mask
-            if (search_direction == 1)
-              ROM_NO[rom_byte_number] |= rom_byte_mask;
-            else
-              ROM_NO[rom_byte_number] &= ~rom_byte_mask;
-            // serial number search direction write bit
-            owm_write_bit (search_direction);
-            // increment the byte counter id_bit_number
-            // and shift the mask rom_byte_mask
-            id_bit_number++;
-            rom_byte_mask <<= 1;
-            // if the mask is 0 then go to new SerialNum byte rom_byte_number
-            // and reset mask
-            if (rom_byte_mask == 0)
-            {
-                 // Incrementally update CRC
-                 crc8 = _crc_ibutton_update (crc8, ROM_NO[rom_byte_number]);
-                 rom_byte_number++;
-                 rom_byte_mask = 1;
-            }
-         }
-      }
-      while(rom_byte_number < 8);   // loop until through all ROM bytes 0-7
-      // if the search was successful then
-      if (!((id_bit_number < 65) || (crc8 != 0)))
-      {
-        // search successful so set LastDiscrepancy,LastDeviceFlag,search_result
-        LastDiscrepancy = last_zero;
-        // check for last device
-        if (LastDiscrepancy == 0)
-           LastDeviceFlag = TRUE;
-        search_result = TRUE;
-      }
-    }
-    // if no device found then reset counters so next 'search' will be like
-    // a first
-    if (!search_result || !ROM_NO[0])
-    {
+  int id_bit_number;
+  int last_zero, rom_byte_number, search_result;
+  int id_bit, cmp_id_bit;
+  unsigned char rom_byte_mask, search_direction;
+
+  // Initialize for search
+  id_bit_number = 1;
+  last_zero = 0;
+  rom_byte_number = 0;
+  rom_byte_mask = 1;
+  search_result = FALSE;
+  crc8 = 0;
+
+  // If the last call was not the last one
+  if ( !LastDeviceFlag )
+  {
+    // 1-Wire reset
+    if ( !owm_touch_reset () ) {
+      // Reset the search
       LastDiscrepancy = 0;
       LastDeviceFlag = FALSE;
       LastFamilyDiscrepancy = 0;
-      search_result = FALSE;
+      return FALSE;
     }
+    // Issue the search command
+    owm_write_byte (SEARCH_ROM_COMMAND);   // Issue the search command
+    // Loop to do the search
+    do {
+      // Read a bit and its complement
+      id_bit = owm_read_bit ();
+      cmp_id_bit = owm_read_bit ();
+      // Check for no devices on 1-wire
+      if ( (id_bit == 1) && (cmp_id_bit == 1) ) {
+        break;
+      }
+      else {
+        // All devices coupled have 0 or 1
+        if ( id_bit != cmp_id_bit ) {
+           search_direction = id_bit;   // Bit write value for search
+        }
+        else {
+          // If this discrepancy is before the Last Discrepancy
+          // on a previous next then pick the same as last time
+          if ( id_bit_number < LastDiscrepancy ) {
+            search_direction = ((rom_id[rom_byte_number] & rom_byte_mask) > 0);
+          }
+          else {
+            // If equal to last pick 1, otherwire pick 0
+            search_direction = (id_bit_number == LastDiscrepancy);
+          }
+          // If 0 was picked then record its position in LastZero
+          if ( search_direction == 0 ) {
+            last_zero = id_bit_number;
+            // Check for Last discrepancy in family
+            if ( last_zero < 9 ) {
+              LastFamilyDiscrepancy = last_zero;
+            }
+          }
+        }
+        // Set or clear the bit in the ROM byte rom_byte_number with mask
+        // rom_byte_mask
+        if (search_direction == 1) {
+          rom_id[rom_byte_number] |= rom_byte_mask;
+        }
+        else {
+          rom_id[rom_byte_number] &= ~rom_byte_mask;
+        }
+        // Serial number search direction write bit
+        owm_write_bit (search_direction);
+        // Increment the byte counter id_bit_number and shift the mask
+        // rom_byte_mask
+        id_bit_number++;
+        rom_byte_mask <<= 1;
+        // If the mask is 0 then go to new SerialNum byte rom_byte_number
+        // and reset mask
+        if (rom_byte_mask == 0) {
+             // Incrementally update CRC
+             crc8 = _crc_ibutton_update (crc8, rom_id[rom_byte_number]);
+             rom_byte_number++;
+             rom_byte_mask = 1;
+        }
+      }
+    }
+    while ( rom_byte_number < OWM_ID_BYTE_COUNT );
 
-    return search_result;
+    // If the search was successful...
+    if ( !((id_bit_number <= ID_BIT_COUNT) || (crc8 != 0)) ) {
+      LastDiscrepancy = last_zero;
+      // If this was the last device...
+      if ( LastDiscrepancy == 0 ) {
+         LastDeviceFlag = TRUE;
+      }
+      search_result = TRUE;
+    }
+  }
+
+  // If no device found, then reset counters so next 'search' will be like
+  // a first
+  if ( !search_result || !rom_id[0] ) {
+    LastDiscrepancy = 0;
+    LastDeviceFlag = FALSE;
+    LastFamilyDiscrepancy = 0;
+    search_result = FALSE;
+  }
+
+  return search_result;
 }
 
-// FIXME: rename these functions to match the API presentation
-
-int OWFirst(void);   // FIXME: change to use API prototype
-int OWFirst(void)
+static int
+first (void)
 {
   // Reset the search state
   LastDiscrepancy = 0;
   LastDeviceFlag = FALSE;
   LastFamilyDiscrepancy = 0;
-  return OWSearch();
+
+  return search();
 }
 
 
-//--------------------------------------------------------------------------
 // Find the 'next' devices on the 1-Wire bus
-// Return TRUE : device found, ROM number in ROM_NO buffer
+// Return TRUE : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 //
-int OWNext(void);  // FIXME: change to use API prototype
-int OWNext(void)
+static int
+next (void)
 {
-   // leave the search state alone
-   return OWSearch();
+  return search();
 }
 
-//--------------------------------------------------------------------------
-// Verify the device with the ROM number in ROM_NO buffer is present.
+// Verify the device with the ROM number in rom_id buffer is present.
 // Return TRUE : device verified present
-//         FALSE : device not present
+//        FALSE : device not present
 //
-int
-OWVerify(void);
-int
-OWVerify(void)
+static int
+verify (void)
 {
-  unsigned char rom_backup[8];
-  int i,rslt,ld_backup,ldf_backup,lfd_backup;
+  unsigned char rom_backup[OWM_ID_BYTE_COUNT];
+  int ii, result, ld_backup, ldf_backup, lfd_backup;
 
-  // keep a backup copy of the current state
-  for (i = 0; i < 8; i++)
-     rom_backup[i] = ROM_NO[i];
+  // Keep a backup copy of the current state
+  for ( ii = 0 ; ii < 8 ; ii++ ) {
+     rom_backup[ii] = rom_id[ii];
+  }
   ld_backup = LastDiscrepancy;
   ldf_backup = LastDeviceFlag;
   lfd_backup = LastFamilyDiscrepancy;
 
-  // set search to find the same device
-  LastDiscrepancy = 64;
+  // Set search to find the same device
+  LastDiscrepancy = ID_BIT_COUNT;
   LastDeviceFlag = FALSE;
 
-  if (OWSearch())
-  {
-     // check if same device found
-     rslt = TRUE;
-     for (i = 0; i < 8; i++)
+  if ( search() ) {
+     // Check if same device found
+     result = TRUE;
+     for ( ii = 0 ; ii < 8 ; ii++)
      {
-        if (rom_backup[i] != ROM_NO[i])
+        if ( rom_backup[ii] != rom_id[ii] )
         {
-            rslt = FALSE;
+            result = FALSE;
             break;
         }
      }
   }
-  else
-    rslt = FALSE;
+  else {
+    result = FALSE;
+  }
 
-  // restore the search state
-  for (i = 0; i < 8; i++)
-     ROM_NO[i] = rom_backup[i];
+  // Restore the search state
+  for ( ii = 0 ; ii < 8 ; ii++ ) {
+     rom_id[ii] = rom_backup[ii];
+  }
   LastDiscrepancy = ld_backup;
   LastDeviceFlag = ldf_backup;
   LastFamilyDiscrepancy = lfd_backup;
 
-  // return the result of the verify
-  return rslt;
+  // Return the result of the verify
+  return result;
 }
 
 uint8_t
 owm_first (uint8_t *id_buf)
 {
-  int result = OWFirst ();
+  int result = first ();
 
   if ( result ) {
-    memcpy (id_buf, ROM_NO, OWM_ID_BYTE_COUNT);
+    memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
   }
 
   return result;
@@ -356,9 +356,9 @@ owm_first (uint8_t *id_buf)
 uint8_t
 owm_next (uint8_t *id_buf)
 {
-  int result = OWNext ();
+  int result = next ();
   if ( result ) {
-    memcpy (id_buf, ROM_NO, OWM_ID_BYTE_COUNT);
+    memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
   }
 
   return result;
@@ -367,8 +367,8 @@ owm_next (uint8_t *id_buf)
 uint8_t
 owm_verify (uint8_t *id_buf)
 {
-  memcpy (ROM_NO, id_buf, OWM_ID_BYTE_COUNT);
-  uint8_t result = OWVerify ();
+  memcpy (rom_id, id_buf, OWM_ID_BYTE_COUNT);
+  uint8_t result = verify ();
   return result;
 }
 
