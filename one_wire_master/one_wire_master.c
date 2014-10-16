@@ -135,17 +135,14 @@ owm_read_id (uint8_t *id_buf)
     id_buf[ii] = owm_read_byte ();
   }
 
-  // FIXME: do a check that the ID looks valid somewhere in here
+  // FIXME: do a check that the ID looks valid somewhere in here?
 
   return TRUE;
 }
 
-// FIXME: WORK POINT: continue cloning in this code, decide to use globals
-// for communication or not
-
 // Global search state
 static uint8_t rom_id[OWM_ID_BYTE_COUNT];   // Current ROM device ID
-static int     LastDiscrepancy;
+static int     LastDiscrepancy;             // Bit position of last discrepancy
 static int     LastFamilyDiscrepancy;
 static int     LastDeviceFlag;
 static uint8_t crc8;
@@ -299,24 +296,25 @@ static int
 verify (void)
 {
   unsigned char rom_backup[OWM_ID_BYTE_COUNT];
-  int ii, result, ld_backup, ldf_backup, lfd_backup;
+  int result, ld_backup, ldf_backup, lfd_backup;
 
   // Keep a backup copy of the current state
-  for ( ii = 0 ; ii < 8 ; ii++ ) {
+  for ( int ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
      rom_backup[ii] = rom_id[ii];
   }
   ld_backup = LastDiscrepancy;
   ldf_backup = LastDeviceFlag;
   lfd_backup = LastFamilyDiscrepancy;
 
-  // Set search to find the same device
+  // FIXME: WORK POINT: what this comment mean?  Improve it understand this
+  // code Set search to find the same device
   LastDiscrepancy = ID_BIT_COUNT;
   LastDeviceFlag = FALSE;
 
   if ( search() ) {
      // Check if same device found
      result = TRUE;
-     for ( ii = 0 ; ii < 8 ; ii++)
+     for ( int ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++)
      {
         if ( rom_backup[ii] != rom_id[ii] )
         {
@@ -330,14 +328,13 @@ verify (void)
   }
 
   // Restore the search state
-  for ( ii = 0 ; ii < 8 ; ii++ ) {
+  for ( int ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
      rom_id[ii] = rom_backup[ii];
   }
   LastDiscrepancy = ld_backup;
   LastDeviceFlag = ldf_backup;
   LastFamilyDiscrepancy = lfd_backup;
 
-  // Return the result of the verify
   return result;
 }
 
