@@ -57,12 +57,12 @@ owm_read_bit (void);
 // or the bus searched for all slaves.
 //
 
-// The slaves interpret these bytes as directions to begin participating
-// in various ID search/discovery commands.  See the DS18B20 datasheet and
-// Maxim application note AN187 for details.
-// FIXME: these need OWM_ prefix
-#define READ_ROM_COMMAND   0x33
-#define SEARCH_ROM_COMMAND 0xF0
+// When these commands occur after a reset, the slaves interpret them as
+// directions to begin participating in various ID search/discovery commands.
+// Note that clients don't generally need to use these macros directly.
+// See the DS18B20 datasheet and Maxim application note AN187 for details.
+#define OWM_READ_ROM_COMMAND   0x33
+#define OWM_SEARCH_ROM_COMMAND 0xF0
 
 // One wire ID size in bytes
 #define OWM_ID_BYTE_COUNT 8
@@ -98,9 +98,22 @@ owm_next (uint8_t *id_buf);
 // Return true iff device with ID equal to the value in the OWM_ID_BYTE_COUNT
 // bytes pointed to by id_buf is present on the bus, or FALSE otherwise.
 // Note that unlike owm_read_id(), this function is safe to use when there
-// are multiple devices on the bus.
+// are multiple devices on the bus.  When this function returns, the global
+// search state is restored (so for example the next call to owm_next()
+// should behave as if the call to this routine never occurred).
 uint8_t
 owm_verify (uint8_t *id_buf);
+
+// Cause the next search begun with owm_first() or owm_verify() to find
+// only slaves with IDs beginning with family_code.
+void
+owm_target_setup (uint8_t family_code);
+
+// Cause the next search continuation performed with owm_next() to skip all
+// slaves with ID beginning with the family code equal the the family code
+// of the device discovered by the last owm_first() or owm_next() call.
+void
+owm_skip_setup (void);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -116,7 +129,8 @@ uint8_t
 owm_read_byte (void);
 
 // Fancy simultaneous read/write.  Sort of.  I guess, I haven't used it. See
-// Maxim application note AN126. WARNING: FIXME: I haven't tested this.
+// Maxim application note AN126. WARNING: FIXME: This comes straight from
+// AN126, bu I haven't tested it.
 uint8_t
 owm_touch_byte (uint8_t data);
 

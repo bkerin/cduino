@@ -21,10 +21,9 @@
 #include "one_wire_master.h"
 #include "util.h"
 
-// By default this test program expects to find exactly one slave on the
-// one-wire bus, but there is some alternate code included for testing with
-// multiple slaves.
-//#define OWM_TEST_CONDITION_MULTIPLE_SLAVES
+// The default incarnation of this test program expects a single slave,
+// but it can also be compiled and tweaked slightly to test a multi-slave bus.
+#ifndef OWM_TEST_CONDITION_MULTIPLE_SLAVES
 
 // These are properties of the DS18B20 that have nothing to do with the
 // one-wire bus in general.
@@ -54,8 +53,7 @@ ds18b20_init_and_rom_command (void)
   // This test program requires that only one slave be present, so we can
   // use the READ ROM command to get the slave's ROM ID.
   uint64_t slave_rid;
-  uint8_t const read_rom_command = 0x33;
-  owm_write_byte (read_rom_command);
+  owm_write_byte (OWM_READ_ROM_COMMAND);
   for ( uint8_t ii = 0 ; ii < sizeof (slave_rid) ; ii++ ) {
     ((uint8_t *) (&slave_rid))[ii] = owm_read_byte ();
   }
@@ -77,9 +75,14 @@ ds18b20_get_scratchpad_contents (void)
   }
 }
 
+#endif
+
 int
 main (void)
 {
+
+#ifndef OWM_TEST_CONDITION_MULTIPLE_SLAVES
+
   owm_init ();   // Initialize the one-wire interface master end
 
   uint64_t slave_rid = ds18b20_init_and_rom_command ();
@@ -114,10 +117,9 @@ main (void)
   //  _delay_ms (4.2);
   //}
 
-#ifndef OWM_TEST_CONDITION_MULTIPLE_SLAVES
-
   uint64_t rid;   // ROM ID
 
+  // We can use owm_read_id() because we know we have exactly one slave.
   uint8_t device_found = owm_read_id ((uint8_t *) &rid);
   assert (device_found);
   assert (rid == slave_rid);
@@ -135,20 +137,6 @@ main (void)
   device_found = owm_verify ((uint8_t *) &rid);
   assert (device_found);
   assert (rid == slave_rid);
-
-#else // OWM_TEST_CONDITION_MULTIPLE_SLAVES is defined
-
-  uint64_t rid;   // ROM ID
-
-  device_found = owm_next ((uint8_t *) &rid);
-  assert (device_found);
-  // Must put in the real value of the second device ID here.  There is a
-  // commented-out block above that can be used to determine the ROM ID of
-  // a slave (FIXXME: in decimal bytes, unfortunately).
-  uint64_t const second_device_id = 0x4242424242424242;
-  assert (rid == second_device_id);
-
-#endif
 
   // Convenient names for the temperature bytes
   uint8_t t_lsb = spb[DS18B20_SCRATCHPAD_T_LSB];
@@ -185,4 +173,33 @@ main (void)
     // I think feeding the wdt is harmless even when its not initialized.
     BLINK_OUT_UINT32_FEEDING_WDT (att10000);
   }
+
+#else // OWM_TEST_CONDITION_MULTIPLE_SLAVES is defined
+
+  // Must put in the real value of the second device ID here.  There is a
+  // commented-out block in the default single-slave version of this test
+  // program above that can be used to determine the ROM ID of a slave
+  // (FIXXME: in decimal bytes, unfortunately).
+  uint64_t first_device_id = 0x4242424242424242;
+  uint64_t second_device_id = 0x4242424242424242;
+
+  // FIXME: remove these once we know our device IDs so can comment out
+  // the asserts.
+  first_device_id = first_device_id;
+  second_device_id = second_device_id;
+
+  uint64_t rid;   // ROM ID
+
+  uint8_t device_found = owm_first ((uint8_t *) &rid);
+  assert (device_found);
+  //assert (rid == first_device_id);
+
+  //BTRAP ();
+  device_found = owm_next ((uint8_t *) &rid);
+  assert (device_found);
+  BTRAP ();
+  //assert (rid == second_device_id);
+
+#endif
+
 }
