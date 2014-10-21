@@ -10,8 +10,8 @@
 
 #include "dio.h"
 
-#ifndef ONE_WIRE_MASTER_PIN
-#  error ONE_WIRE_MASTER_PIN not defined (it must be explicitly set to one of \
+#ifndef OWM_PIN
+#  error OWM_PIN not defined (it must be explicitly set to one of \
          the DIO_PIN_* tuple macros before this header is included)
 #endif
 

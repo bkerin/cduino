@@ -24,22 +24,22 @@
 // Release (tri-state) the one wire master pin.  Note that this does
 // not enable the internal pullup.  See the commends near omw_init()
 // in one_wire_master.h.
-#define RELEASE_LINE()     \
-  DIO_INIT (               \
-      ONE_WIRE_MASTER_PIN, \
-      DIO_INPUT,           \
-      DIO_DISABLE_PULLUP,  \
+#define RELEASE_LINE()    \
+  DIO_INIT (              \
+      OWM_PIN,            \
+      DIO_INPUT,          \
+      DIO_DISABLE_PULLUP, \
       DIO_DONT_CARE )
 
 // Drive the line of the one wire master pin low.
-#define DRIVE_LINE_LOW()   \
-  DIO_INIT (               \
-      ONE_WIRE_MASTER_PIN, \
-      DIO_OUTPUT,          \
-      DIO_DONT_CARE,       \
+#define DRIVE_LINE_LOW() \
+  DIO_INIT (             \
+      OWM_PIN,           \
+      DIO_OUTPUT,        \
+      DIO_DONT_CARE,     \
       LOW )
 
-#define SAMPLE_LINE() DIO_READ (ONE_WIRE_MASTER_PIN)
+#define SAMPLE_LINE() DIO_READ (OWM_PIN)
 
 // We support only standard speed, not overdrive speed, so we make our tick
 // 1 us.
