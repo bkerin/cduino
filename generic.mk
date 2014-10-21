@@ -314,13 +314,13 @@ OPTLEVEL := s
 CPPFLAGS += $(CPP_DEBUG_DEFINE_FLAGS) $(CPU_FREQ_DEFINE) -I.
 
 # See comments near CPPFLAGS, above.
-CFLAGS += -std=gnu99 -fshort-enums -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) \
+CFLAGS += -std=gnu11 -fshort-enums -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) \
           -Werror -Wall -Wextra -Winline -Wmissing-prototypes \
           -Wredundant-decls -Winit-self -Wstrict-prototypes
 
 # There are a number of C compiler flags that the C++ compiler doesn't like, or
 # that the standard arduino libs dont satisfy.
-NONCXXFLAGS = -std=gnu99 \
+NONCXXFLAGS = -std=gnu11 \
               -Wimplicit-int \
               -Winline \
               -Wmissing-prototypes \
