@@ -22,6 +22,7 @@
 
 #include "dio.h"
 #include "one_wire_master.h"
+#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 #include "util.h"
 
@@ -84,6 +85,13 @@ ds18b20_get_scratchpad_contents (void)
 int
 main (void)
 {
+  // This isn't what we're testing exactly, but we need to know if its
+  // working or not to interpret other results.
+  term_io_init ();
+  PFP ("\n");
+  PFP ("\n");
+  PFP ("term_io_init() worked.\n");
+  PFP ("\n");
 
 #ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
 
@@ -188,10 +196,6 @@ main (void)
 #ifndef OWM_SECOND_SLAVE_ID
 #  error OWM_SECOND_SLAVE_ID is not defined
 #endif
-
-  // FIXME: migrate since used for all test conditions
-  term_io_init ();
-  printf ("foo foo\n");
 
   // Account for endianness by swapping the bytes of the literal ID values.
   uint64_t first_device_id
