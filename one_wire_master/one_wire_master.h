@@ -29,7 +29,7 @@ owm_init (void);
 // Individual Bit Functions
 //
 // These function perform bit-at-a-time operations.  All the fundamental
-// timing used in the one-wire protocol are implemented in these functions,
+// timing used in the one-wire protocol is implemented in these functions,
 // other functions in this interface are implemented in terms of these.
 //
 
@@ -54,7 +54,8 @@ owm_read_bit (void);
 // Device Presense Confirmation/Discovery
 //
 // These functions allow the presence of particular slaves to be confirmed,
-// or the bus searched for all slaves.
+// or the bus searched for all slaves, slave from or not from of a particular
+// family, or slaves with an active alarm condition.
 //
 
 // When these commands occur after a reset, the slaves interpret them as
@@ -112,8 +113,12 @@ owm_target_setup (uint8_t family_code);
 // Cause the next search continuation performed with owm_next() to skip all
 // slaves with ID beginning with the family code equal the the family code
 // of the device discovered by the last owm_first() or owm_next() call.
+// FIXME: the test code for this function is inadequate: see the comments
+// in one_wire_master_test.c for details.
 void
 owm_skip_setup (void);
+
+// FIXME: would be nice to add a filter for alarm search (EC command)
 
 ///////////////////////////////////////////////////////////////////////////////
 //

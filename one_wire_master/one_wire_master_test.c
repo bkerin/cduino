@@ -13,12 +13,16 @@
 // on the on-board led (connected to PB5).  Single quick blinks are zeros,
 // slower series of blinks are other digits.
 
+// FIXME: add comments about term_io.h only being needed for test somewhere,
+// as I think we did in some other module?
+
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
 
 #include "dio.h"
 #include "one_wire_master.h"
+#include "term_io.h"
 #include "util.h"
 
 // The default incarnation of this test program expects a single slave,
@@ -81,7 +85,7 @@ int
 main (void)
 {
 
-#ifndef OWM_TEST_CONDITION_MULTIPLE_SLAVES
+#ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
 
   owm_init ();   // Initialize the one-wire interface master end
 
@@ -174,31 +178,76 @@ main (void)
     BLINK_OUT_UINT32_FEEDING_WDT (att10000);
   }
 
-#else // OWM_TEST_CONDITION_MULTIPLE_SLAVES is defined
+#endif
 
-  // Must put in the real value of the second device ID here.  There is a
-  // commented-out block in the default single-slave version of this test
-  // program above that can be used to determine the ROM ID of a slave
-  // (FIXXME: in decimal bytes, unfortunately).
-  uint64_t first_device_id = 0x4242424242424242;
-  uint64_t second_device_id = 0x4242424242424242;
+#ifdef OWM_TEST_CONDITION_MULTIPLE_SLAVES
 
-  // FIXME: remove these once we know our device IDs so can comment out
-  // the asserts.
-  first_device_id = first_device_id;
-  second_device_id = second_device_id;
+#ifndef OWM_FIRST_SLAVE_ID
+#  error OWM_FIRST_SLAVE_ID is not defined
+#endif
+#ifndef OWM_SECOND_SLAVE_ID
+#  error OWM_SECOND_SLAVE_ID is not defined
+#endif
+
+  // FIXME: migrate since used for all test conditions
+  term_io_init ();
+  printf ("foo foo\n");
+
+  // Account for endianness by swapping the bytes of the literal ID values.
+  uint64_t first_device_id
+    = __builtin_bswap64 (UINT64_C (OWM_FIRST_SLAVE_ID));
+  uint64_t second_device_id
+    = __builtin_bswap64 (UINT64_C (OWM_SECOND_SLAVE_ID));
 
   uint64_t rid;   // ROM ID
 
   uint8_t device_found = owm_first ((uint8_t *) &rid);
   assert (device_found);
-  //assert (rid == first_device_id);
+  assert (rid == first_device_id);
+
+  // FIXME: cleanup, merge with about to be real test output
+  printf ("first ID: ");
+  for ( uint8_t ii = 0 ; ii < sizeof (rid) ; ii++ ) {
+    printf ("%02" PRIx8, ((uint8_t *) (&rid))[ii] );
+  }
+  printf ("\n");
 
   //BTRAP ();
   device_found = owm_next ((uint8_t *) &rid);
   assert (device_found);
-  BTRAP ();
-  //assert (rid == second_device_id);
+  assert (rid == second_device_id);
+
+  printf ("second ID: ");
+  for ( uint8_t ii = 0 ; ii < sizeof (rid) ; ii++ ) {
+    printf ("%02" PRIx8, ((uint8_t *) (&rid))[ii] );
+  }
+  printf ("\n");
+
+  // FIXME: I think client libs should link to the headers in the lib they
+  // use (e.g. in term_io), no the ultimate ones (e.g. not the ones in uart).
+
+  // The family code is the first byte of the slave ID (which according to
+  // our test setup should be the same for both slaves, since they are both
+  // supposed to be DS18B20 devicse).
+  uint8_t family_code = ((uint8_t *) (&rid))[0];
+  owm_target_setup (family_code);
+  device_found = owm_first ((uint8_t *) &rid);
+  assert (rid == first_device_id);
+  assert (device_found);
+  device_found = owm_next ((uint8_t *) &rid);
+  assert (device_found);
+  assert (rid == second_device_id);
+  printf ("Found both slaves after owm_target_setup(family_code)\n");
+
+  // FIXME: this test is too weak: it doesn't ensure that we *can* find
+  // slaves from other families after calling owm_skip_setup().
+  device_found = owm_first ((uint8_t *) &rid);
+  assert (rid == first_device_id);
+  assert (device_found);
+  owm_skip_setup ();
+  device_found = owm_next ((uint8_t *) &rid);
+  assert (!device_found);
+  printf ("Second slave invisible after owm_skip_setup() (as expected)\n");
 
 #endif
 
