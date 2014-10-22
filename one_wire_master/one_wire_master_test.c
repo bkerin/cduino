@@ -8,13 +8,22 @@
 // (factory) state.  A 4.7 kohm pull-up resistor must be used on the Arduino
 // side of the wire.  See Figure 5 of the DS18B20 datasheet, revision 042208.
 //
-// If everything works correctly, the arduino should blink out the absolute
-// value of the sensed temperature in degrees Celcius multiplied by 10000
-// on the on-board led (connected to PB5).  Single quick blinks are zeros,
-// slower series of blinks are other digits.
-
-// FIXME: add comments about term_io.h only being needed for test somewhere,
-// as I think we did in some other module?
+// Test results are ouput via the term_io.h interface (which is not required
+// by the module itself).  If the USB cable used for programming the Arduino
+// is still connected, it should be possible to run
+//
+//   make -rR run_screen
+//
+// or so from the module directory to see the test results.
+//
+// If everything works correctly, the Arduino should also blink out the
+// absolute value of the sensed temperature in degrees Celcius multiplied
+// by 10000 on the on-board led (connected to PB5).  Single quick blinks
+// are zeros, slower series of blinks are other digits.
+//
+// Its also possible to compile this module differently to test its
+// performance with multiple slaves.  See the notes in the Makefile for
+// this module for details.
 
 #include <assert.h>
 #include <math.h>
@@ -28,13 +37,18 @@
 
 // The default incarnation of this test program expects a single slave,
 // but it can also be compiled and tweaked slightly to test a multi-slave bus.
-#ifndef OWM_TEST_CONDITION_MULTIPLE_SLAVES
+
+// The functions that perform DS18B20-specific operations are only used in
+// the single-slave test condition.
+#ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
+
+#  define DS18B20_FAMILY_CODE UINT8_C (0x28)
 
 // These are properties of the DS18B20 that have nothing to do with the
 // one-wire bus in general.
-#define DS18B20_SCRATCHPAD_SIZE  9
-#define DS18B20_SCRATCHPAD_T_LSB 0
-#define DS18B20_SCRATCHPAD_T_MSB 1
+#  define DS18B20_SCRATCHPAD_SIZE  9
+#  define DS18B20_SCRATCHPAD_T_LSB 0
+#  define DS18B20_SCRATCHPAD_T_MSB 1
 
 static uint8_t spb[DS18B20_SCRATCHPAD_SIZE];   // DS18B20 Scratchpad Buffer
 
@@ -63,6 +77,9 @@ ds18b20_init_and_rom_command (void)
     ((uint8_t *) (&slave_rid))[ii] = owm_read_byte ();
   }
 
+  // We should have gotten the fixed family code as the first byte of the ID.
+  assert (((uint8_t *) (&slave_rid))[0] == DS18B20_FAMILY_CODE);
+
   return slave_rid;
 }
 
@@ -82,6 +99,17 @@ ds18b20_get_scratchpad_contents (void)
 
 #endif
 
+static void
+print_slave_id (uint64_t id)
+{
+   // Output the given slave id as a 64 bit hex number, using printf().
+
+  printf ("0x");
+  for ( uint8_t ii = 0 ; ii < sizeof (id) ; ii++ ) {
+    printf ("%02" PRIx8, ((uint8_t *) (&id))[ii] );
+  }
+}
+
 int
 main (void)
 {
@@ -93,32 +121,24 @@ main (void)
   PFP ("term_io_init() worked.\n");
   PFP ("\n");
 
-#ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
-
   owm_init ();   // Initialize the one-wire interface master end
 
-  uint64_t slave_rid = ds18b20_init_and_rom_command ();
-
-  uint8_t const convert_t_command = 0x44;
-  owm_write_byte (convert_t_command);
-
-  // The DS18B20 is now supposed to respond with a stream of 0 bits until the
-  // conversion completes, after which it's supposed to send 1 bits.  So we
-  // could do this bit-by-bit if our API exposed the bit-by-bit interface.
-  // FIXME: which it now does.  So should we do it that way?
-  // But it shouldn't hurt to read a few extra ones.
-  uint8_t conversion_complete = 0;
-  while ( ! (conversion_complete = owm_read_byte ()) ) {
-    ;
+  PFP ("Trying owm_touch_reset()... ");
+  uint8_t slave_presence = owm_touch_reset ();
+  if ( ! slave_presence ) {
+    PFP ("failed: non-true was returned");
+    assert (FALSE);
   }
+  PFP ("ok, got slave presence pulse.\n");
 
-  // We can now read the device scratchpad memory.  This requires us to first
-  // perform the initialization and read rom commands again as described in
-  // the DS18B20 datasheet.  The slave ROM code better be the same on second
-  // reading :)
-  uint64_t slave_rid_2nd_reading = ds18b20_init_and_rom_command ();
-  assert (slave_rid_2nd_reading == slave_rid);
-  ds18b20_get_scratchpad_contents ();
+#ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
+
+  PFP ("Trying DS18B20 initialization... ");
+  uint64_t slave_rid = ds18b20_init_and_rom_command ();
+  PFP ("ok, succeeded.  Slave ID: ");
+  print_slave_id (slave_rid);
+  PFP ("\n");
+
 
   // Uncomment this to repeatedly blink out the (decimal) byte values of
   // the ROM ID for the device instead of continuing the normal test program.
@@ -132,32 +152,76 @@ main (void)
   uint64_t rid;   // ROM ID
 
   // We can use owm_read_id() because we know we have exactly one slave.
+  PFP ("Trying owm_read_id()... ");
   uint8_t device_found = owm_read_id ((uint8_t *) &rid);
-  assert (device_found);
-  assert (rid == slave_rid);
+  if ( (! device_found) || rid != slave_rid ) {
+    PFP ("failed: didn't find slave with previously discovered ID");
+    assert (FALSE);
+  }
+  PFP ("ok, found slave with previously discovered ID.\n");
 
+  PFP ("Trying owm_first()... ");
   device_found = owm_first ((uint8_t *) &rid);
-  assert (device_found);
-  assert (rid == slave_rid);
+  if ( (! device_found) || rid != slave_rid ) {
+    PFP ("failed: didn't find slave with previously discovered ID");
+    assert (FALSE);
+  }
+  PFP ("ok, found slave with previously discovered ID.\n");
 
   // Verify that owm_next() (following the owm_first() call above) returns
   // false, since there is only one device on the bus.
+  PFP ("Trying owm_next()... ");
   device_found = owm_next ((uint8_t *) &rid);
-  assert (! device_found);
+  if ( device_found ) {
+    PFP ("failed: unexpectedly returned true");
+    assert (FALSE);
+  }
+  PFP ("ok, no next device found.\n");
 
   // owm_verify() should work with either a single or multiple slaves.
+  PFP ("Trying owm_verify() with previously discoved ID... ");
   device_found = owm_verify ((uint8_t *) &rid);
-  assert (device_found);
-  assert (rid == slave_rid);
+  if ( ! device_found ) {
+    PFP ("failed: unexpectedly returned false");
+    assert (FALSE);
+  }
+  PFP ("ok, ID verified.\n");
+
+  PFP ("Starting temperature conversion... ");
+  uint8_t const convert_t_command = 0x44;
+  owm_write_byte (convert_t_command);
+
+  // The DS18B20 is now supposed to respond with a stream of 0 bits until the
+  // conversion completes, after which it's supposed to send 1 bits.  So we
+  // could do this bit-by-bit if our API exposed the bit-by-bit interface.
+  // FIXME: which it now does.  So should we do it that way?
+  // But it shouldn't hurt to read a few extra ones.
+  uint8_t conversion_complete = 0;
+  while ( ! (conversion_complete = owm_read_byte ()) ) {
+    ;
+  }
+  PFP ("conversion complete.\n");
+
+  // We can now read the device scratchpad memory.  This requires us to first
+  // perform the initialization and read rom commands again as described in
+  // the DS18B20 datasheet.  The slave ROM code better be the same on second
+  // reading :)
+  PFP ("Reading DS18B20 scratchpad memory... ");
+  uint64_t slave_rid_2nd_reading = ds18b20_init_and_rom_command ();
+  assert (slave_rid_2nd_reading == slave_rid);
+  ds18b20_get_scratchpad_contents ();
+  PFP ("done.\n");
 
   // Convenient names for the temperature bytes
   uint8_t t_lsb = spb[DS18B20_SCRATCHPAD_T_LSB];
   uint8_t t_msb = spb[DS18B20_SCRATCHPAD_T_MSB];
 
+  uint8_t tin = (t_msb & B10000000);   // Temperature Is Negative
+
   // Absolute value of temperature (in degrees C) times 2^4.  This is just
   // what the DS18B20 likes to spit out.  See Fig. 2 of the DS18B20 datasheet.
   int16_t atemp_t2tt4 = (((int16_t) t_msb) << BITS_PER_BYTE) | t_lsb;
-  if ( t_msb & B10000000 ) {   // If negative...
+  if ( tin ) {   // If negative...
     // ...just make it positive (its 2's compliment)
     atemp_t2tt4 = (~atemp_t2tt4) + 1;
   }
@@ -176,13 +240,25 @@ main (void)
   // due to the meaning the DS18B20 assigns to the individual field bits.
   double atemp = atemp_t2tt4 / (2.0 * 2.0 * 2.0 * 2.0);
 
+  // NOTE: I think avrlibc doesn't suppor the # printf flag.  No big loss, but
+  // it means the blinked-out output might have a different number of digits
+  PFP ("Temperature reading: %#.6g degrees C\n", (tin ? -1.0 : 1.0) * atemp);
+
+  PFP ("All tests succeeded (assuming temperature looks sane :).\n");
+  PFP ("\n");
+  PFP (
+      "Will now blink out abs(temperature) forever. Note that due to\n"
+      "rounding/formatting issues the number of blinked-out digits or values\n"
+      "of those digits might differ slightly from the printf()-generated\n"
+      "version.\n" );
+
   // atemp Times 10000
   uint32_t att10000 = round(atemp * 10000);
 
   // Blink out the absolute value of the current temperate times 10000
   // (effectively including four decimal places).
   for ( ; ; ) {
-    // I think feeding the wdt is harmless even when its not initialized.
+    // Feeding the wdt is harmless even when its not initialized.
     BLINK_OUT_UINT32_FEEDING_WDT (att10000);
   }
 
@@ -196,6 +272,9 @@ main (void)
 #ifndef OWM_SECOND_SLAVE_ID
 #  error OWM_SECOND_SLAVE_ID is not defined
 #endif
+
+  // FIXME: WORK POINT: add clean debugging output for the rest of these
+  // tests, and perhaps add a test condition for the alarm stuff?
 
   // Account for endianness by swapping the bytes of the literal ID values.
   uint64_t first_device_id
@@ -216,7 +295,6 @@ main (void)
   }
   printf ("\n");
 
-  //BTRAP ();
   device_found = owm_next ((uint8_t *) &rid);
   assert (device_found);
   assert (rid == second_device_id);
@@ -243,8 +321,8 @@ main (void)
   assert (rid == second_device_id);
   printf ("Found both slaves after owm_target_setup(family_code)\n");
 
-  // FIXME: this test is too weak: it doesn't ensure that we *can* find
-  // slaves from other families after calling owm_skip_setup().
+  // FIXME: this test is weak: it doesn't ensure that we *can* find slaves
+  // from other families after calling owm_skip_setup().
   device_found = owm_first ((uint8_t *) &rid);
   assert (rid == first_device_id);
   assert (device_found);

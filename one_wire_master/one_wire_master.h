@@ -71,9 +71,8 @@ owm_read_bit (void);
 // This function requires that exactly one slave be present on the bus.
 // If we discover a slave, its ID is written into id_buf (which pust be
 // a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE is returned.
-// If there is not exactly one slave present, FALSE will *probably*
-// be returned.  But don't do that, because the results are undefined.
-// Use owm_first() instead if there is any doubt about the slave population.
+// If there is not exactly one slave present, the results of this function
+// are undefined (later calls to this interface might behave strangely).
 uint8_t
 owm_read_id (uint8_t *id_buf);
 
