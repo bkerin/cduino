@@ -1,4 +1,6 @@
 
+include run_screen.mk
+
 # Defining this variable at compile time will cause the term_io module
 # to be used from timer0_stopwatch_test.c (and possibly elsewhere) for
 # debug logging.
@@ -9,4 +11,3 @@ ifdef TIMER0_STOPWATCH_DEBUG
 endif
 
 include generic.mk
-include run_screen.mk
