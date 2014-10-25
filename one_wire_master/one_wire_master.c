@@ -1,7 +1,7 @@
 // Implementation of the interface described in one_wire_master.h.
 
 #include <stdlib.h>
-#include <string.h>  // FIXME: for memcpy only, might want to do away with it
+#include <string.h>
 #include <util/crc16.h>
 #include <util/delay.h>
 
@@ -135,14 +135,12 @@ owm_read_id (uint8_t *id_buf)
     id_buf[ii] = owm_read_byte ();
   }
 
-  // FIXME: do a check that the ID looks valid somewhere in here?
-
   return TRUE;
 }
 
 // Global search state
 static uint8_t rom_id[OWM_ID_BYTE_COUNT];   // Current ROM device ID
-static int     last_discrep;             // Bit position of last discrepancy
+static uint8_t last_discrep;             // Bit position of last discrepancy
 static int     last_family_discrep;
 static int     last_device_flag;
 static uint8_t crc8;
@@ -161,7 +159,7 @@ static uint8_t crc8;
 static int
 search (void)
 {
-  int id_bit_number;
+  uint8_t id_bit_number;
   int last_zero, rom_byte_number, search_result;
   int id_bit, cmp_id_bit;
   unsigned char rom_byte_mask, search_direction;
@@ -247,7 +245,7 @@ search (void)
     while ( rom_byte_number < OWM_ID_BYTE_COUNT );
 
     // If the search was successful...
-    if ( !((id_bit_number <= ID_BIT_COUNT) || (crc8 != 0)) ) {
+    if ( ! ((id_bit_number <= ID_BIT_COUNT) || (crc8 != 0)) ) {
       last_discrep = last_zero;
       // If this was the last device...
       if ( last_discrep == 0 ) {
@@ -259,7 +257,7 @@ search (void)
 
   // If no device found, then reset counters so next 'search' will be like
   // a first
-  if ( !search_result || !rom_id[0] ) {
+  if ( (! search_result) || (! (rom_id[0])) ) {
     last_discrep = 0;
     last_device_flag = FALSE;
     last_family_discrep = 0;
@@ -269,7 +267,8 @@ search (void)
   return search_result;
 }
 
-static int
+// FIXME: these sentinels should return uint8_t rather than int
+static uint8_t
 first (void)
 {
   // Reset the search state
@@ -285,7 +284,7 @@ first (void)
 // Return TRUE : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 //
-static int
+static uint8_t
 next (void)
 {
   return search();
@@ -299,10 +298,12 @@ static int
 verify (void)
 {
   unsigned char rom_backup[OWM_ID_BYTE_COUNT];
-  int result, ld_backup, ldf_backup, lfd_backup;
+  uint8_t result;
+  uint8_t ld_backup;
+  int ldf_backup, lfd_backup;
 
   // Keep a backup copy of the current state
-  for ( int ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
      rom_backup[ii] = rom_id[ii];
   }
   ld_backup = last_discrep;
@@ -343,7 +344,7 @@ verify (void)
 uint8_t
 owm_first (uint8_t *id_buf)
 {
-  int result = first ();
+  uint8_t result = first ();
 
   if ( result ) {
     memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
@@ -355,7 +356,7 @@ owm_first (uint8_t *id_buf)
 uint8_t
 owm_next (uint8_t *id_buf)
 {
-  int result = next ();
+  uint8_t result = next ();
   if ( result ) {
     memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
   }
@@ -382,29 +383,36 @@ owm_write_byte (uint8_t data)
   }
 }
 
-void
-owm_target_setup (uint8_t family_code)
-{
-  rom_id[0] = family_code;
-  for ( int ii = 1; ii < FAMILY_ID_BIT_COUNT ; ii++ ) {
-    rom_id[ii] = 0;
-  }
-  last_discrep = ID_BIT_COUNT;
-  last_family_discrep = 0;
-  last_device_flag = FALSE;
-}
-
-void
-owm_skip_setup (void)
-{
-  last_discrep = last_family_discrep;
-  last_family_discrep = 0;
-
-  // If there are no devices or other families left...
-  if ( last_discrep == 0 ) {
-     last_device_flag = TRUE;
-  }
-}
+// Like the other functions, these come from Maxim Application Note AN187.
+// But they didn't seem to work right for me, I think just because their
+// interaction with owm_first()/owm_next() is weird.  And they seem sort
+// of pointless: surely clients can just remember things by family for
+// themsleves after the initial scan if the need to?  I guess it could
+// make things a tiny bit faster in the presence of hot-plug devices or
+// something but I have difficulty imagining caring.
+//void
+//owm_target_setup (uint8_t family_code)
+//{
+//  rom_id[0] = family_code;
+//  for ( uint8_t ii = 1; ii < FAMILY_ID_BIT_COUNT ; ii++ ) {
+//    rom_id[ii] = 0;
+//  }
+//  last_discrep = ID_BIT_COUNT;
+//  last_family_discrep = 0;
+//  last_device_flag = FALSE;
+//}
+//
+//void
+//owm_skip_setup (void)
+//{
+//  last_discrep = last_family_discrep;
+//  last_family_discrep = 0;
+//
+//  // If there are no devices or other families left...
+//  if ( last_discrep == 0 ) {
+//     last_device_flag = TRUE;
+//  }
+//}
 
 uint8_t
 owm_read_byte (void)

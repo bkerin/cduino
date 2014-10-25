@@ -22,6 +22,7 @@
 // are zeros, slower series of blinks are other digits.
 //
 // Its also possible to compile this module differently to test its
+//
 // performance with multiple slaves.  See the notes in the Makefile for
 // this module for details.
 
@@ -244,7 +245,7 @@ main (void)
   // it means the blinked-out output might have a different number of digits
   PFP ("Temperature reading: %#.6g degrees C\n", (tin ? -1.0 : 1.0) * atemp);
 
-  PFP ("All tests succeeded (assuming temperature looks sane :).\n");
+  PFP ("All tests passed (assuming temperature looks sane :).\n");
   PFP ("\n");
   PFP (
       "Will now blink out abs(temperature) forever. Note that due to\n"
@@ -273,9 +274,6 @@ main (void)
 #  error OWM_SECOND_SLAVE_ID is not defined
 #endif
 
-  // FIXME: WORK POINT: add clean debugging output for the rest of these
-  // tests, and perhaps add a test condition for the alarm stuff?
-
   // Account for endianness by swapping the bytes of the literal ID values.
   uint64_t first_device_id
     = __builtin_bswap64 (UINT64_C (OWM_FIRST_SLAVE_ID));
@@ -284,52 +282,61 @@ main (void)
 
   uint64_t rid;   // ROM ID
 
+  PFP ("Trying owm_first()... ");
   uint8_t device_found = owm_first ((uint8_t *) &rid);
-  assert (device_found);
-  assert (rid == first_device_id);
-
-  // FIXME: cleanup, merge with about to be real test output
-  printf ("first ID: ");
-  for ( uint8_t ii = 0 ; ii < sizeof (rid) ; ii++ ) {
-    printf ("%02" PRIx8, ((uint8_t *) (&rid))[ii] );
+  if ( ! device_found ) {
+    PFP ("failed: didn't discover any slave devices");
+    assert (FALSE);
   }
-  printf ("\n");
+  if ( rid != first_device_id ) {
+    PFP ("failed: discovered first device ID was ");
+    print_slave_id (rid);
+    PFP (", not the expected ");
+    print_slave_id (first_device_id);
+    assert (FALSE);
+  }
+  PFP ("ok, found 1st device with expected ID ");
+  print_slave_id (rid);
+  PFP (".\n");
 
+  PFP ("Trying owm_next()... ");
   device_found = owm_next ((uint8_t *) &rid);
-  assert (device_found);
-  assert (rid == second_device_id);
-
-  printf ("second ID: ");
-  for ( uint8_t ii = 0 ; ii < sizeof (rid) ; ii++ ) {
-    printf ("%02" PRIx8, ((uint8_t *) (&rid))[ii] );
+  if ( ! device_found ) {
+    PFP ("failed: didn't discover a second slave device");
+    assert (FALSE);
   }
-  printf ("\n");
+  if ( rid != second_device_id ) {
+    PFP ("failed: discovered second device ID was ");
+    print_slave_id (rid);
+    PFP (", not the expected ");
+    print_slave_id (second_device_id);
+    assert (FALSE);
+  }
+  PFP ("ok, found 2nd device with expected ID ");
+  print_slave_id (rid);
+  PFP (".\n");
+
+  PFP("Trying owm_verify(first_device_id)... ");
+  device_found = owm_verify ((uint8_t *) &rid);
+  if ( ! device_found ) {
+    PFP ("failed: didn't find device");
+    assert (FALSE);
+  }
+  PFP ("ok, found it.\n");
+
+  PFP("Trying owm_verify(second_device_id)... ");
+  device_found = owm_verify ((uint8_t *) &rid);
+  if ( ! device_found ) {
+    PFP ("failed: didn't find device");
+    assert (FALSE);
+  }
+  PFP ("ok, found it.\n");
+
+  PFP ("All tests passed.\n");
+  PFP ("\n");
 
   // FIXME: I think client libs should link to the headers in the lib they
   // use (e.g. in term_io), no the ultimate ones (e.g. not the ones in uart).
-
-  // The family code is the first byte of the slave ID (which according to
-  // our test setup should be the same for both slaves, since they are both
-  // supposed to be DS18B20 devicse).
-  uint8_t family_code = ((uint8_t *) (&rid))[0];
-  owm_target_setup (family_code);
-  device_found = owm_first ((uint8_t *) &rid);
-  assert (rid == first_device_id);
-  assert (device_found);
-  device_found = owm_next ((uint8_t *) &rid);
-  assert (device_found);
-  assert (rid == second_device_id);
-  printf ("Found both slaves after owm_target_setup(family_code)\n");
-
-  // FIXME: this test is weak: it doesn't ensure that we *can* find slaves
-  // from other families after calling owm_skip_setup().
-  device_found = owm_first ((uint8_t *) &rid);
-  assert (rid == first_device_id);
-  assert (device_found);
-  owm_skip_setup ();
-  device_found = owm_next ((uint8_t *) &rid);
-  assert (!device_found);
-  printf ("Second slave invisible after owm_skip_setup() (as expected)\n");
 
 #endif
 

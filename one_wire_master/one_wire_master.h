@@ -104,20 +104,15 @@ owm_next (uint8_t *id_buf);
 uint8_t
 owm_verify (uint8_t *id_buf);
 
-// Cause the next search begun with owm_first() or owm_verify() to find
-// only slaves with IDs beginning with family_code.
-void
-owm_target_setup (uint8_t family_code);
-
-// Cause the next search continuation performed with owm_next() to skip all
-// slaves with ID beginning with the family code equal the the family code
-// of the device discovered by the last owm_first() or owm_next() call.
-// FIXME: the test code for this function is inadequate: see the comments
-// in one_wire_master_test.c for details.
-void
-owm_skip_setup (void);
-
-// FIXME: would be nice to add a filter for alarm search (EC command)
+// FIXXME: it would be nice to add a filter for alarm search (EC command).
+// This command might actually be useful, since it makes it possible to scan
+// an entire bus for any devices needing immediate attention.  It wouldn't
+// be too hard to add support for this either: I think all that would be
+// required would be for the search() function in one_wire_master.c to
+// take a alarm_only argument, and then issue an EC command instead of an
+// OWM_SEARCH_ROM_COMMAND if that argument was true.  It could be tested
+// using the DS18B20 temperature alarm functionality, but setting those
+// alarms up is somewhat of a hassle, so we haven't bothered yet.
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -132,9 +127,9 @@ owm_write_byte (uint8_t data);
 uint8_t
 owm_read_byte (void);
 
-// Fancy simultaneous read/write.  Sort of.  I guess, I haven't used it. See
-// Maxim application note AN126. WARNING: FIXME: This comes straight from
-// AN126, bu I haven't tested it.
+// Fancy simultaneous read/write.  Sort of.  I guess, I haven't used it. It's
+// supposed to be more efficient.  See Maxim Application Note AN126. WARNING:
+// FIXXME: This comes straight from AN126, but I haven't tested it.
 uint8_t
 owm_touch_byte (uint8_t data);
 
