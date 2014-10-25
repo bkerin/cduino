@@ -316,6 +316,16 @@ main (void)
   print_slave_id (rid);
   PFP (".\n");
 
+  // Verify that owm_next() (following the owm_first() call above) returns
+  // false, since there are only two devices on the bus.
+  PFP ("Trying owm_next() again... ");
+  device_found = owm_next ((uint8_t *) &rid);
+  if ( device_found ) {
+    PFP ("failed: unexpectedly returned true");
+    assert (FALSE);
+  }
+  PFP ("ok, no next device found.\n");
+
   PFP("Trying owm_verify(first_device_id)... ");
   device_found = owm_verify ((uint8_t *) &rid);
   if ( ! device_found ) {
