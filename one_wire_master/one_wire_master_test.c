@@ -14,15 +14,14 @@
 //
 //   make -rR run_screen
 //
-// or so from the module directory to see the test results.
+// from the module directory to see the test results.
 //
 // If everything works correctly, the Arduino should also blink out the
 // absolute value of the sensed temperature in degrees Celcius multiplied
 // by 10000 on the on-board led (connected to PB5).  Single quick blinks
 // are zeros, slower series of blinks are other digits.
 //
-// Its also possible to compile this module differently to test its
-//
+// It's also possible to compile this module differently to test its
 // performance with multiple slaves.  See the notes in the Makefile for
 // this module for details.
 
@@ -40,7 +39,7 @@
 // but it can also be compiled and tweaked slightly to test a multi-slave bus.
 
 // The functions that perform DS18B20-specific operations are only used in
-// the single-slave test condition.
+// the default single-slave test condition.
 #ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
 
 #  define DS18B20_FAMILY_CODE UINT8_C (0x28)
@@ -114,7 +113,7 @@ print_slave_id (uint64_t id)
 int
 main (void)
 {
-  // This isn't what we're testing exactly, but we need to know if its
+  // This isn't what we're testing exactly, but we need to know if it's
   // working or not to interpret other results.
   term_io_init ();
   PFP ("\n");

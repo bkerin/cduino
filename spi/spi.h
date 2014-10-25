@@ -11,7 +11,7 @@
 #include "dio.h"
 
 ///////////////////////////////////////////////////////////////////////////////
-// 
+//
 // How This Interface Works
 //
 // You have to ensure that the slave select line for the device you want to
@@ -112,13 +112,13 @@ typedef enum {
 
 // Clock divider to use for communication
 typedef enum {
-  SPI_CLOCK_DIVIDER_DIV4 = 0x00,
-  SPI_CLOCK_DIVIDER_DIV16 = 0x01,
-  SPI_CLOCK_DIVIDER_DIV64 = 0x02,
+  SPI_CLOCK_DIVIDER_DIV4   = 0x00,
+  SPI_CLOCK_DIVIDER_DIV16  = 0x01,
+  SPI_CLOCK_DIVIDER_DIV64  = 0x02,
   SPI_CLOCK_DIVIDER_DIV128 = 0x03,
-  SPI_CLOCK_DIVIDER_DIV2 = 0x04,
-  SPI_CLOCK_DIVIDER_DIV8 = 0x05,
-  SPI_CLOCK_DIVIDER_DIV32 = 0x06
+  SPI_CLOCK_DIVIDER_DIV2   = 0x04,
+  SPI_CLOCK_DIVIDER_DIV8   = 0x05,
+  SPI_CLOCK_DIVIDER_DIV32  = 0x06
 } spi_clock_divider_t;
 
 // Clock polarity and phase (often called CPOL and CPHA) expected
@@ -176,7 +176,7 @@ typedef enum {
 //   * A SPI clock frequency of F_CPU / 4 is used (SPR1, SPR0, and ~SPI2X)
 //
 // These are the default settings for the SPCR and SPSR registers, except that
-// that SPI is enabled (SPE) and set to master mode (MSTR).  Its possible
+// that SPI is enabled (SPE) and set to master mode (MSTR).  It's possible
 // to change the data order, data mode, and SPI clock frequency using other
 // methods in this interface.
 //

@@ -34,7 +34,7 @@ uart_init (void)
 #define BAUD UART_BAUD
 
 // This is a special calculation-only header that can be included anywhere.
-// Its going to give us back some macros that help set up the serial port
+// It's going to give us back some macros that help set up the serial port
 // control registers: UBRRH_VALUE, UBRRL_VALUE, and USE_2X.
 #include <util/setbaud.h>
 

@@ -240,7 +240,7 @@
 // WARNING: this macro suffers from the problem afflicting
 // BLINK_OUT_UINT32_FEEDING_WDT().
 //
-// Its usually better to use term_io.h (see the TERM_IO_PTP macro
+// It's usually better to use term_io.h (see the TERM_IO_PTP macro
 // in particular) or maybe wireless_xbee.h to sort out what's going on.
 // But if you can't do that (perhaps because the serial port is being used
 // to talk to something else) this can be useful.

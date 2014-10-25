@@ -53,11 +53,11 @@ timer0_stopwatch_init (void)
 
   TCCR0A = TCCR0A_DEFAULT_VALUE;
   TCCR0B = TCCR0B_DEFAULT_VALUE;
-  
+
   // Reset the timer, in case it currently has some strange value that might
   // cause it to overflow (possibly triggering a deferred overflow interrupt)
   // as soon as we start it running.
-  TCNT0 = 0;  
+  TCNT0 = 0;
 
   // Ensure that timer/counter0 is in normal mode (timer counts upwards and
   // simply overruns when it passes its maximum 8-bit value).
@@ -69,13 +69,13 @@ timer0_stopwatch_init (void)
   // cycles before we reset everything and start handling interrupts, but
   // it shouldn't matter.
   TCCR0B &= ~(_BV (CS02));
-  TCCR0B |= _BV (CS01) | _BV (CS00); 
+  TCCR0B |= _BV (CS01) | _BV (CS00);
 
   TIMSK0 |= _BV (TOIE0);   // Enable overflow interrupts for timer/counter0.
 
   timer0_stopwatch_oc = 0;
 
-  // FIXME: Its possible that we should be using the TSM bit of GTCCR here
+  // FIXME: It's possible that we should be using the TSM bit of GTCCR here
   // to truly sync up the counter and the prescaler, I dunno if its worth
   // dealing with though.
 
@@ -113,7 +113,7 @@ timer0_stopwatch_ticks (void)
     // Save timer/counter value in case it overflows while we're checking
     // for overflow (note that timers run parallel to everything, including
     // interrupt handlers).
-    register uint8_t tcv = TCNT0;  
+    register uint8_t tcv = TCNT0;
 
     // If we have an uncleared overflow flag...
     if ( TIFR0 & _BV (TOV0) ) {
@@ -125,7 +125,7 @@ timer0_stopwatch_ticks (void)
     }
     else {
       // Otherwise, the computation is as expected.
-      result = timer0_stopwatch_oc * TIMER0_VALUE_COUNT + tcv; 
+      result = timer0_stopwatch_oc * TIMER0_VALUE_COUNT + tcv;
     }
   }
 

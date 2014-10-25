@@ -6,7 +6,7 @@
 #include <util/delay.h>
 // FIXME: We neeed this because assert.h doesn't include it.  When that is
 // fixed this include could go.
-#include <stdlib.h>  
+#include <stdlib.h>
 
 #include "dio.h"
 
@@ -18,7 +18,7 @@ signal_checkpoint_with_pb5_blinks (void) __attribute__ ((unused));
 void
 signal_checkpoint_with_pb5_blinks (void)
 // {{{1
-{ 
+{
   DIO_INIT_PB5 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
 
   const int blink_count = 3, blinks_per_second = 4;
@@ -41,7 +41,7 @@ signal_checkpoint_with_pb0_blinks (void) __attribute__ ((unused));
 void
 signal_checkpoint_with_pb0_blinks (void)
 // {{{1
-{ 
+{
   DIO_INIT_PB0 (DIO_OUTPUT, DIO_DONT_CARE, LOW);
 
   const int blink_count = 3, blinks_per_second = 4;
@@ -71,7 +71,7 @@ signal_checkpoint_with_pb0_blinks (void)
 int
 main (void)
 {
-  // Its a sin in my book to distribute untested code without clearly
+  // It's a sin in my book to distribute untested code without clearly
   // acknowledging the fact.
 #ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
 #  error The PB6, PB7, and PC6 control macros are identical in form to the \
@@ -82,7 +82,7 @@ main (void)
    Makefile.
 #endif
 
-// Its a sin in my book to distribute untested code without clearly
+// It's a sin in my book to distribute untested code without clearly
 // acknowledging the fact.
 #ifndef UNDERSTAND_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED
 #  error It is not possible to test the operation of PB5, PD0, or PD1 with a \
@@ -166,7 +166,7 @@ main (void)
 
   value = DIO_READ_PB4 ();
   assert (value);
-  
+
   // NOTE: on the Arduino Duemilanove, PB5 is pulled towards ground via
   // one or two 1 kohm resistors in parallel and a LED.  This is a stronger
   // pull than that exerted by the internal pull-up resistor (which is at
@@ -194,16 +194,16 @@ main (void)
 
   value = DIO_READ_PC0 ();
   assert (value);
-  
+
   value = DIO_READ_PC1 ();
   assert (value);
-  
+
   value = DIO_READ_PC2 ();
   assert (value);
-  
+
   value = DIO_READ_PC3 ();
   assert (value);
-  
+
   value = DIO_READ_PC4 ();
   assert (value);
 
@@ -213,11 +213,11 @@ main (void)
 #  ifdef TEST_SERIAL_PINS
   value = DIO_READ_PD0 ();
   assert (value);
-  
+
   value = DIO_READ_PD1 ();
   assert (value);
 #  endif
-  
+
   value = DIO_READ_PD2 ();
   assert (value);
 
@@ -235,7 +235,7 @@ main (void)
 
   value = DIO_READ_PD7 ();
   assert (value);
-  
+
   SIGNAL_CHECKPOINT ();
   return 0;   // Success;
 
@@ -251,145 +251,145 @@ main (void)
     defined(TEST_CONDITION_PB0_LOW_OTHERS_NC) || \
     defined(TEST_CONDITION_PB0_WEAK_LOW_470_KOHM_OTHERS_NC) || \
     defined(TEST_CONDITION_PB0_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PB0 
-#  define SET DIO_SET_PB0 
-#  define READ DIO_READ_PB0 
+#  define INIT DIO_INIT_PB0
+#  define SET DIO_SET_PB0
+#  define READ DIO_READ_PB0
 #elif defined(TEST_CONDITION_PB1_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PB1_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PB1_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PB1_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PB1 
-#  define SET DIO_SET_PB1 
-#  define READ DIO_READ_PB1 
+#  define INIT DIO_INIT_PB1
+#  define SET DIO_SET_PB1
+#  define READ DIO_READ_PB1
 #elif defined(TEST_CONDITION_PB2_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PB2_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PB2_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PB2_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PB2 
-#  define SET DIO_SET_PB2 
-#  define READ DIO_READ_PB2 
+#  define INIT DIO_INIT_PB2
+#  define SET DIO_SET_PB2
+#  define READ DIO_READ_PB2
 #elif defined(TEST_CONDITION_PB3_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PB3_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PB3_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PB3_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PB3 
-#  define SET DIO_SET_PB3 
-#  define READ DIO_READ_PB3 
+#  define INIT DIO_INIT_PB3
+#  define SET DIO_SET_PB3
+#  define READ DIO_READ_PB3
 #elif defined(TEST_CONDITION_PB4_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PB4_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PB4_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PB4_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PB4 
-#  define SET DIO_SET_PB4 
-#  define READ DIO_READ_PB4 
+#  define INIT DIO_INIT_PB4
+#  define SET DIO_SET_PB4
+#  define READ DIO_READ_PB4
 #elif \
   defined(TEST_CONDITION_PB5_HIGH_PB0_SIGNAL_LED_OTHERS_NC) || \
   defined(TEST_CONDITION_PB5_LOW_PB0_SIGNAL_LED_OTHERS_NC) || \
   defined(TEST_CONDITION_PB5_WEAK_LOW_470_KOHM_PB0_SIGNAL_LED_OTHERS_NC) || \
   defined(TEST_CONDITION_PB5_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PB5 
-#  define SET DIO_SET_PB5 
-#  define READ DIO_READ_PB5 
+#  define INIT DIO_INIT_PB5
+#  define SET DIO_SET_PB5
+#  define READ DIO_READ_PB5
 
 #elif defined(TEST_CONDITION_PC0_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PC0_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PC0_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PC0_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PC0 
-#  define SET DIO_SET_PC0 
-#  define READ DIO_READ_PC0 
+#  define INIT DIO_INIT_PC0
+#  define SET DIO_SET_PC0
+#  define READ DIO_READ_PC0
 #elif defined(TEST_CONDITION_PC1_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PC1_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PC1_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PC1_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PC1 
-#  define SET DIO_SET_PC1 
-#  define READ DIO_READ_PC1 
+#  define INIT DIO_INIT_PC1
+#  define SET DIO_SET_PC1
+#  define READ DIO_READ_PC1
 #elif defined(TEST_CONDITION_PC2_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PC2_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PC2_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PC2_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PC2 
-#  define SET DIO_SET_PC2 
-#  define READ DIO_READ_PC2 
+#  define INIT DIO_INIT_PC2
+#  define SET DIO_SET_PC2
+#  define READ DIO_READ_PC2
 #elif defined(TEST_CONDITION_PC3_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PC3_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PC3_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PC3_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PC3 
-#  define SET DIO_SET_PC3 
-#  define READ DIO_READ_PC3 
+#  define INIT DIO_INIT_PC3
+#  define SET DIO_SET_PC3
+#  define READ DIO_READ_PC3
 #elif defined(TEST_CONDITION_PC4_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PC4_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PC4_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PC4_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PC4 
-#  define SET DIO_SET_PC4 
-#  define READ DIO_READ_PC4 
+#  define INIT DIO_INIT_PC4
+#  define SET DIO_SET_PC4
+#  define READ DIO_READ_PC4
 #elif defined(TEST_CONDITION_PC5_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PC5_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PC5_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PC5_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PC5 
-#  define SET DIO_SET_PC5 
-#  define READ DIO_READ_PC5 
+#  define INIT DIO_INIT_PC5
+#  define SET DIO_SET_PC5
+#  define READ DIO_READ_PC5
 
 #elif defined(TEST_CONDITION_PD0_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PD0_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PD0_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PD0_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PD0 
-#  define SET DIO_SET_PD0 
-#  define READ DIO_READ_PD0 
+#  define INIT DIO_INIT_PD0
+#  define SET DIO_SET_PD0
+#  define READ DIO_READ_PD0
 #elif defined(TEST_CONDITION_PD1_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PD1_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PD1_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PD1_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PD1 
-#  define SET DIO_SET_PD1 
-#  define READ DIO_READ_PD1 
+#  define INIT DIO_INIT_PD1
+#  define SET DIO_SET_PD1
+#  define READ DIO_READ_PD1
 #elif defined(TEST_CONDITION_PD2_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PD2_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PD2_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PD2_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PD2 
-#  define SET DIO_SET_PD2 
-#  define READ DIO_READ_PD2 
+#  define INIT DIO_INIT_PD2
+#  define SET DIO_SET_PD2
+#  define READ DIO_READ_PD2
 #elif defined(TEST_CONDITION_PD3_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PD3_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PD3_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PD3_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PD3 
-#  define SET DIO_SET_PD3 
-#  define READ DIO_READ_PD3 
+#  define INIT DIO_INIT_PD3
+#  define SET DIO_SET_PD3
+#  define READ DIO_READ_PD3
 #elif defined(TEST_CONDITION_PD4_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PD4_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PD4_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PD4_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PD4 
-#  define SET DIO_SET_PD4 
-#  define READ DIO_READ_PD4 
+#  define INIT DIO_INIT_PD4
+#  define SET DIO_SET_PD4
+#  define READ DIO_READ_PD4
 #elif defined(TEST_CONDITION_PD5_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PD5_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PD5_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PD5_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PD5 
-#  define SET DIO_SET_PD5 
-#  define READ DIO_READ_PD5 
+#  define INIT DIO_INIT_PD5
+#  define SET DIO_SET_PD5
+#  define READ DIO_READ_PD5
 #elif defined(TEST_CONDITION_PD6_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PD6_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PD6_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PD6_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PD6 
-#  define SET DIO_SET_PD6 
-#  define READ DIO_READ_PD6 
+#  define INIT DIO_INIT_PD6
+#  define SET DIO_SET_PD6
+#  define READ DIO_READ_PD6
 #elif defined(TEST_CONDITION_PD7_HIGH_OTHERS_NC) || \
       defined(TEST_CONDITION_PD7_LOW_OTHERS_NC) || \
       defined(TEST_CONDITION_PD7_WEAK_LOW_470_KOHM_OTHERS_NC) || \
       defined(TEST_CONDITION_PD7_LED_OTHERS_NC)
-#  define INIT DIO_INIT_PD7 
-#  define SET DIO_SET_PD7 
-#  define READ DIO_READ_PD7 
+#  define INIT DIO_INIT_PD7
+#  define SET DIO_SET_PD7
+#  define READ DIO_READ_PD7
 #endif
 
   // }}}1
@@ -480,7 +480,7 @@ main (void)
     defined(TEST_CONDITION_PD5_LED_OTHERS_NC) || \
     defined(TEST_CONDITION_PD6_LED_OTHERS_NC) || \
     defined(TEST_CONDITION_PD7_LED_OTHERS_NC)
-#  define OUTPUT_LED 
+#  define OUTPUT_LED
 #endif
   // }}}1
 
@@ -494,7 +494,7 @@ main (void)
   // indicated by the test condition name.
 
   // Test pin as input with pull-up enabled.
-  INIT (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE); 
+  INIT (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
   _delay_ms (settling_time_ms);
 
   value = READ ();
@@ -507,9 +507,9 @@ main (void)
 #  endif
 
   // Test pin again as input but this time with pull-up disabled.
-  INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE); 
+  INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
   _delay_ms (settling_time_ms);
-  
+
   value = READ ();
 #  if defined(INPUT_HIGH)
   assert (value == HIGH);
@@ -525,16 +525,16 @@ main (void)
   // indicated by the test condition name.
 
   // Test pin as input with pull-up enabled.
-  INIT (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE); 
+  INIT (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
   _delay_ms (settling_time_ms);
 
   value = READ ();
   assert (value == HIGH);
 
   // Test pin again as input but this time with pull-up disabled.
-  INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE); 
+  INIT (DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE);
   _delay_ms (settling_time_ms);
-  
+
   value = READ ();
   assert (value == LOW);
 
@@ -561,7 +561,7 @@ main (void)
   _delay_ms (second_in_ms);
   SET (HIGH);
   _delay_ms (second_in_ms);
-  
+
 #elif defined(TEST_CONDITION_ALL_PINS_NC)
 #else
 #  error Should not be here

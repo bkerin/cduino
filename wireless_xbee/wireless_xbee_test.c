@@ -188,7 +188,7 @@ main (void)
   // before receiving a full frame.  This is expected and correct behavior.
   // Just try starting it again.  It might also fail later if there is
   // non-frame radio data floating around on the network/channel in use.
-  // Its supposed to do that.
+  // It's supposed to do that.
 
   while ( 1 ) {
 

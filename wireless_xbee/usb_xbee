@@ -53,7 +53,7 @@ prefixes (if --command-mode), or data (if --raw-mode), or lines of input (if
 --packetized-lines-mode of --framed-lines-mode).  Of course you can also use
 pipes or shell redirects to supply data and store output.
 
-Its possible to plug in multiple devices (which will get different dev file
+It's possible to plug in multiple devices (which will get different dev file
 names, e.g. /dev/ttyUSB0 and /dev/ttyUSB1) and make them talk to each other,
 but when the second device is plugged in, an copy of this program which is
 communicating with the first device will probably experience an error, since
@@ -458,16 +458,16 @@ if ( $xbro == 0x00 and ($plm or $flm) ) {
         "--xbee-ro=0x00";
 }
 
-# FIXXME: --single-packet-mode worked as far as it goes last time it was,
-# but we currently don't document it or recognize it as a valid mode when
-# processing the command line.  Its a good start on a way to move binary data
-# though.  But it's incomplete: it doesn't listen for an answering packet.
-# Also, to be useful it should probably really send/listem for a frame
-# (send-one-listen-for-one-exit would be sensible operation for this mode,
-# I think).  Since I'm planning to use text and not binary for communication,
-# I'm not going to implement this at the moment.
+# FIXXME: --single-packet-mode worked as far as it goes last time it was
+# tried, but we currently don't document it or recognize it as a valid
+# mode when processing the command line.  It's a good start on a way
+# to move binary data though.  But it's incomplete: it doesn't listen
+# for an answering packet.  Also, to be useful it should probably really
+# send/listen for a frame (send-one-listen-for-one-exit would be sensible
+# operation for this mode, I think).  Since I'm planning to use text and
+# not binary for communication, I'm not going to implement this at the moment.
 not $spm
-    or die "--single-packet-mode workes when last checked but isn't done";
+    or die "--single-packet-mode worked when last checked but isn't done";
 
 ($cm xor $rm xor $plm xor $flm )
     or die "exactly one of the --command-mode, --raw-mode, ".
@@ -485,7 +485,7 @@ sub configure_tty # {{{1
     # argument st we can send it raw data and it will get through to the
     # XBee unmolested.
     #
-    # Its important to undertand that when the stdin and/or stdout of this
+    # It's important to undertand that when the stdin and/or stdout of this
     # program are connected to a terminal, the existing settings for that
     # terminal still apply.  We're configuring the settings for the serial
     # connection to the XBee, NOT the ones for the terminal you type into.
@@ -749,7 +749,7 @@ sub send_single_packet # {{{1
 
     # Now we want to delay long enough to make sure a transmission is forced.
     # Here the factor of safety works the opposite direction of the one above,
-    # since we want to ensure that a transmission does happen.  Its also
+    # since we want to ensure that a transmission does happen.  It's also
     # more conservative, since our estimation of what constitutes a single
     # "character time" is a bit on the conservative side.
     my $usps = 1000000;   # microSeconds Per Second
@@ -960,7 +960,7 @@ sub byte_available # {{{1
 
 sub get_byte # {{{1
 {
-    # Read exactly one byte from the serial device.  Its wise to call
+    # Read exactly one byte from the serial device.  It's wise to call
     # byte_available() first, to avoid potentially hanging forever.
     # Return the read byte as an integer.
 
@@ -1026,7 +1026,7 @@ sub get_frame # {{{1
     my $lxorfb;                 # Length XOR'ed Flag Byte
 
     # Note that we don't count the time executing code, just the time spent
-    # sleeping between polls.  Its very close though.
+    # sleeping between polls.  It's very close though.
     while ( $et < $to ) {
 
         if ( byte_available() ) {

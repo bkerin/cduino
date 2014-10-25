@@ -201,7 +201,7 @@ AVRLIBC_PRINTF_LDFLAGS ?=
 
 ##### Debugging Macro CPP Flag (Overridable) {{{1
 
-# Its often convenient to compile code slightly differently when debugging
+# It's often convenient to compile code slightly differently when debugging
 # will be done, this variable gets put in CPPFLAGS so you can set it to
 # something like '-DDEBUG' then say '#ifdef DEBUG' in the code to do logging
 # and such.
@@ -348,7 +348,7 @@ ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   # the upload method is changed.  And it makes the uploads take longer.  And
   # it doesn't seem necessary.  And I originally thought it might be useful to
   # avoid nuking the bootloader when using AVRISPmkII programming, but it turns
-  # out its impossible to prevent that.  So Its not enabled at the moment.
+  # out its impossible to prevent that.  So it's not enabled at the moment.
   # FIXME: so get rid of this garbage
 
   #LDFLAGS += -Wl,--section-start=.text=0x7800

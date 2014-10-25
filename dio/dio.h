@@ -154,7 +154,7 @@
 // 3.2.3 ATmega328P datasheet, Rev. 8271C, for more details and a possible
 // solution if this is an issue.
 //
-// Its presumably possible to use a pin as a digital input (via the dio
+// It's presumably possible to use a pin as a digital input (via the dio
 // module or equivalent) sometimes, and as an ADC input other times (via
 // the adc module or equivalent).  Note however that the adc_pin_init()
 // function of the adc module sets the appropriate DIDR0 bit, and this

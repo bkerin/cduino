@@ -4,7 +4,7 @@
 #include <avr/pgmspace.h>
 // FIXME: here only cause assert.h wrongly needs, remove when that bug is
 // fixed (which it is in most recent upstream AVR libc
-#include <stdlib.h>   
+#include <stdlib.h>
 #include <string.h>
 #include <util/delay.h>
 
@@ -55,10 +55,10 @@ lcd_keypad_button_name (lcd_keypad_button_t button, char *name)
 // NOTE: this poll interval is probably on the paranoid side.  I don't know
 // of any good source of information for guidance on this, so this value
 // is a combination of trial and paranoia.
-static const double poll_interval_us = 100; 
- 
+static const double poll_interval_us = 100;
+
 #define BUTTON_COUNT 5
-  
+
 static lcd_keypad_button_t
 button_band (uint16_t raw_adc_reading)
 {
@@ -97,11 +97,11 @@ lcd_keypad_check_buttons (void)
   uint16_t reading1, reading2;
   lcd_keypad_button_t band1, band2;
   reading1 = adc_read_raw (0);
-  _delay_us (poll_interval_us);  
+  _delay_us (poll_interval_us);
   reading2 = adc_read_raw (0);
   band1 = button_band (reading1);
   band2 = button_band (reading2);
- 
+
   // Uncomment these lines to take a look at the raw reading values returned
   // by the ADC.  Note that you only get to see the readings for the buttons
   // while the button is held down, since afterwords the value reverts to
@@ -127,7 +127,7 @@ lcd_keypad_wait_for_button (void)
     result_button = lcd_keypad_check_buttons ();
     _delay_us (poll_interval_us);
   }
-  
+
   lcd_keypad_button_t no_button = result_button;
 
   // Note that overlapping button presses can't be handled using the
@@ -137,7 +137,7 @@ lcd_keypad_wait_for_button (void)
     _delay_us (poll_interval_us);
   }
 
-  return result_button; 
+  return result_button;
 }
 
 // Update a value display displayed on the second line of the LCD.
@@ -177,7 +177,7 @@ timed_wait_for_button_none (double stw)
   lcd_keypad_button_t button = lcd_keypad_check_buttons ();
 
   while ( button != LCD_KEYPAD_BUTTON_NONE && (stw < 0 || sw < stw)) {
-    const double seconds_per_us = 1000000.0; 
+    const double seconds_per_us = 1000000.0;
     // These constants are due to the way the ADC works (13 ADC clock cycles
     // per sample), the way the adc_read_raw() function is implemented
     // (assumes 125 kHz ADC clock) and the way the check_buttons method is
@@ -186,7 +186,7 @@ timed_wait_for_button_none (double stw)
     // speeds, small changes to the adc_read_raw implementation, etc.
     // But we don't promise anything about the exact delays in the lcd_keypad
     // interface anyway.
-    const double 
+    const double
       adc_cycles_per_sample            = 13.0,
       adc_frequency                    = 125000.0,
       adc_reads_per_check_buttons_call = 2.0,
@@ -218,8 +218,8 @@ lcd_keypad_set_value (const char *name, double *value, double step)
 
   // Timing parameters for button hold-down repeating: Time till repeat
   // starts, repeat frequency, and screen update frequency during repeat.
-  // The suf value is intended to help us cope with the fact that the LCD
-  // doesn't refresh very quickly and would be unreadable much if updated
+  // The suf value is intended to help us cope with the fact that the
+  // LCD doesn't refresh very quickly and would be unreadable if updated
   // continually.  The better way would be to update just the changing digits,
   // but this is quite a pain in the neck and would waste code space.  NOTE:
   // we could expose rf in this function's interface to allow clients to get
@@ -257,7 +257,7 @@ lcd_keypad_set_value (const char *name, double *value, double step)
     else {
       assert (0);   // Shouldn't be here.
     }
-    
+
     if ( not_repeating ) {
       update_value_on_lcd (*value);
       int released = timed_wait_for_button_none (ttr);
@@ -284,7 +284,7 @@ lcd_keypad_set_value (const char *name, double *value, double step)
       }
     }
   }
-       
+
   // If we were a ! not_repeating state we might need one last update here.
   // A bit of paranoia to make sure we end up displaying the true *value.
   update_value_on_lcd (*value);

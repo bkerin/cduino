@@ -27,11 +27,11 @@ term_io_putchar (char ch, FILE *stream)
 static int
 term_io_getchar (FILE *stream)
 {
-  // Wierdo routine.  // Satisfies avrlibc's requirements for a stream
-  // implementation function.  Its actually line buffered, might propagate
+  // Wierdo routine.  Satisfies avrlibc's requirements for a stream
+  // implementation function.  It's actually line buffered, might propagate
   // errors upwards when trying to receive bytes from the serial port,
   // and might term_io_putchar() bytes in response to the byte it reads.
-  // Its doing all this crazy stuff in order to help us get somewhat
+  // It's doing all this crazy stuff in order to help us get somewhat
   // terminal-like command line editing.  In more detail:
   //
   // This features a simple line-editor that allows to delete and re-edit the
@@ -174,7 +174,7 @@ int
 term_io_getline (char *linebuf)
 {
   char *lbp = linebuf;
-    
+
   size_t char_count = 0;
 
   for ( ; ; ) {
@@ -210,5 +210,5 @@ term_io_getline (char *linebuf)
         }
         break;
     }
-  }  
+  }
 }

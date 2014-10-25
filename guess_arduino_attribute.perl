@@ -27,7 +27,7 @@ use Data::Dumper;
 use Getopt::Long;
 
 # We require an option saying what attribute we're guessing.
-my ($model, $device, $baud, $bootloader) = (0, 0, 0, 0);  
+my ($model, $device, $baud, $bootloader) = (0, 0, 0, 0);
 
 GetOptions(
     "model" => \$model,
@@ -55,20 +55,20 @@ sub find_usb_tty_devices # {{{1
               'bash -c '.
                   '"grep --quiet -e '.$pid.' {} && '.
                        'echo {}" \;';
-    
+
     my $id_files = `$finder_command`;
     $? == 0 or die "find command failed";
-    
+
     my @ifl = split("\n", $id_files);   # ID file lines
 
     if ( @ifl == 0 ) {
         return ();
     }
-    
+
     my @results = ();
 
-    foreach ( @ifl ) { 
-    
+    foreach ( @ifl ) {
+
         my $dpd = `dirname $_`;   # Device path directory.
         $? == 0 or die "dirname command failed";
         chomp($dpd);
@@ -78,9 +78,9 @@ sub find_usb_tty_devices # {{{1
         $? == 0 or die "cat command failed";
         chomp($dvid);
         $dvid eq $vid
-            or (print "unexpected vendor ID '$dvid' (expected '$vid')\n" 
+            or (print "unexpected vendor ID '$dvid' (expected '$vid')\n"
                 and next);
-     
+
         # We expect to find exactly one directory called 'tty' under $dpd
         my $ttydfc = "find $dpd -name tty -type d";   # TTY dir finder command
         my $ttyd = `$ttydfc`;
@@ -103,7 +103,7 @@ sub find_usb_tty_devices # {{{1
 
         push(@results, "/dev/$ttydn");
     }
-    
+
     # Cross-check the number of Unos we found with what lsusb shows.  It would
     # be nice if we could just use lsusb for all this, but so far as I can
     # tell it doesn't give us any way to figure out which /dev file we want.
@@ -137,7 +137,7 @@ sub find_duemilanove_devices # {{{1
     # haven't had a chance to test it.
 
     # Duemilanove vendor and product IDs
-    my ($duevid, $duepid) = ('0403', '6001');  
+    my ($duevid, $duepid) = ('0403', '6001');
 
     return find_usb_tty_devices($duevid, $duepid);
 } # }}}1
@@ -196,7 +196,7 @@ elsif ( @uno_rev3_devs == 0 and @duemilanove_devs == 0 ) {
     die <<END_DID_NOT_DETECT_ARDUINOS_MESSAGE;
 
 $0 failed: Didn't detect any Arduinos on USB :(.
-Is the Arduino plugged in?  Its quite possible that automatic detection has
+Is the Arduino plugged in?  It's quite possible that automatic detection has
 failed somehow even though the Arduino is there.  Another thing to try is to
 unplug the Arduino and do 'ls /dev/tty*', then plug it back in and try
 'ls /dev/tty*' again and see if a file like /dev/ttyUSB0 or /dev/ttyACM0 has
@@ -216,11 +216,11 @@ were detected, including:
 $uno_rev3_devs_multiline
 $duemilanove_devs_multiline
 
-Its possible that other devices that use the FTDI FT232R chip are on the
+It's possible that other devices that use the FTDI FT232R chip are on the
 USB bus, and are indistinguishable from older Arduinos which also use
 this chip (e.g. the Duemilanove).
 
-Its also possible that you're a gadget-happy nut who connects and programs
+It's also possible that you're a gadget-happy nut who connects and programs
 multiple Arduinos at the same time :)
 
 Either way, the thing to do is to set the Make variables ARDUINO_PORT,

@@ -14,7 +14,7 @@
 //
 // Though this module should not be dependent on any particular shield,
 // the Sparkfun XBee Shield (Sparkfun part number WRL-10854) was used for
-// development.  Its available on its own, or as part of the Sparkfun "XBee
+// development.  It's available on its own, or as part of the Sparkfun "XBee
 // Wireless Kit Retail" (Sparkfun part number RTL-11445), which also includes
 // the actual XBee modules and a stand-alone miniature USB XBee interface
 // board known as an "XBee Explorer USB" (Sparkfun part number WRL-08687)
@@ -25,14 +25,14 @@
 // the cable.  There is another different Sparkfun USB dongle that didn't
 // work for me: see the paragraph on the WRL-09819 in usb_xbee for details.
 //
-// Its important to realize that pushing the reset button on the XBee shield
+// It's important to realize that pushing the reset button on the XBee shield
 // only resets the Arduino, not the XBee itself.  Same with reprogramming
-// the Arduino.  Its possible to wedge the XBee. If things work the first
+// the Arduino.  It's possible to wedge the XBee. If things work the first
 // time through but not on subsequent attempts, you may need to power
 // everything down (or run a line to the XBee RESET input as described
 // below and make your program reset the XBee on startup).
 //
-// Its possible to use an XBee shield without using the XBee SLEEP_RQ
+// It's possible to use an XBee shield without using the XBee SLEEP_RQ
 // or RESET or signals, but in battery powered designs at least you'll
 // want to use both.  SLEEP_RQ lets you save power, and RESET is useful
 // for ensuring that the XBee always gets reset whenever the ATMega does.
@@ -93,7 +93,7 @@
 // for some other purpose, so its something to be aware of.
 //
 // This module doesn't do anything with the DTR/RTS lines of the XBee.
-// Sending data too fast can overwhelm the XBee.  Its always possible to
+// Sending data too fast can overwhelm the XBee.  It's always possible to
 // send an entire frame without causing any overflow though (assuming the
 // queue was clear to start with).  See the XBee datasheet for details.
 
@@ -497,22 +497,22 @@ wx_put_string_frame_printf (char const *format, ...)
 //     data.  A data overrun can easily occur after such a failure,
 //     which will leave WX_UART_RX_ERROR() true, which might confuse
 //     other functions that check for errors when a byte is available.
-//     Well-written functions should flush the buffer themselves when they
-//     encounter a UART receiver error, but the results can still be confusing
-//     since that other function will be seeing an error that's left over
-//     from the aftermath of a call to this function.  Note that the actual
-//     return from this function doesn't take much time on success or failure
-//     (its fast enough that successive calls can pick up successive frames
-//     sent in the same radio packet).  Its just that when failure occurs,
-//     other things tend to be need doing that cause enough delay that a
-//     serial overrun occurs.  The same thing can happen with success if
-//     there's extra radio data floating around and your polling loop isn't
-//     tight enough.  In other words, this is just a particularly likely
-//     instance of the general class of problems that can occurn when you
-//     don't poll fast enough and fail to flush the receiver buffer and
-//     clear error flags after a failure.
+//     Well-written functions should flush the buffer themselves when
+//     they encounter a UART receiver error, but the results can still
+//     be confusing since that other function will be seeing an error
+//     that's left over from the aftermath of a call to this function.
+//     Note that the actual return from this function doesn't take much
+//     time on success or failure (its fast enough that successive calls
+//     can pick up successive frames sent in the same radio packet).
+//     It's just that when failure occurs, other things tend to be need
+//     doing that cause enough delay that a serial overrun occurs.  The same
+//     thing can happen with success if there's extra radio data floating
+//     around and your polling loop isn't tight enough.  In other words,
+//     this is just a particularly likely instance of the general class of
+//     problems that can occurn when you don't poll fast enough and fail
+//     to flush the receiver buffer and clear error flags after a failure.
 //
-//   * Its reasonable to first use WX_BYTE_AVAILABLE() from a polling loop to
+//   * It's reasonable to first use WX_BYTE_AVAILABLE() from a polling loop to
 //     determine when it might be worthwhile to call this routine.
 //
 // Using short timeout values is asking for trouble.  Although the serial
@@ -556,8 +556,8 @@ wx_get_string_frame (uint8_t msl, char *str, uint16_t timeout);
 // "AT" prefix and "\r" postfix implicitly added (e.g. "BD9600" becomes
 // "ATBD9600"), place the command output in output, stip the trailing carriage
 // return ("\r") from output, and finally return TRUE if all that succeeded.
-// Both command and output should be pointers to at least WX_MCOSL bytes
-// of storage.  Its ok to pass the same pointer for both command and output,
+// Both command and output should be pointers to at least WX_MCOSL bytes of
+// storage.  It's ok to pass the same pointer for both command and output,
 // in which case the command string is overwritten with the command output
 // (saving a few bytes of RAM).  The command string should be NUL-terminated,
 // and the output will be NUL-terminated.

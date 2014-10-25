@@ -79,14 +79,14 @@ dc_motor_set_speed (dc_motor_channel_t channel, int8_t speed);
 //dc_motor_brake (dc_motor_channel_t channel);
 
 // For the ADC-based load current calculations, we assume that the ADC
-// reference voltage has this value.  Note that even if a high-voltage power
-// supply is being used (to drive a more powerful motor), the Arduino will
-// still have its internal voltage-regulator-generated VCC connected to AVCC.
-// Its possible for this to be 3.3V under some circumstances, in which case
-// this assumption will be wrong (FIXXME: arduino has a jumper or something
-// to detect this, read it?).  But if you're driving motors chances are
-// you have at least a 5V supply lurking somewhere, and hopefully you're
-// running the CPU off 5V as well as the motor...
+// reference voltage has this value.  Note that even if a high-voltage
+// power supply is being used (to drive a more powerful motor), the Arduino
+// will still have its internal voltage-regulator-generated VCC connected
+// to AVCC.  It's possible for this to be 3.3V under some circumstances,
+// in which case this assumption will be wrong (FIXXME: arduino has a
+// jumper or something to detect this, read it?).  But if you're driving
+// motors chances are you have at least a 5V supply lurking somewhere,
+// and hopefully you're running the CPU off 5V as well as the motor...
 #define DC_MOTOR_ADC_REFERENCE_VOLTAGE 5.0
 
 // The Arduino Motor Shield Model R3 features a current sensing resistor

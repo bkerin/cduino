@@ -30,9 +30,9 @@
 // (http://arduino.cc/en/Main/ArduinoEthernetShield).
 //
 // This module always checks for card support of supply voltages in the 2.7V
-// - 3.6V range.  Its possible that incorrect support for a lower voltage
-// might be indicated (though for the test hardware mentioned above this
-// isn't an issue of course).
+// - 3.6V range.  It's possible that incorrect support for a lower voltage
+// might be indicated (though of course for the test hardware mentioned
+// above this isn't an issue).
 //
 // This interface supports using the card simply as a large memory.
 // FAT filesystem support belongs in a seperate module (FIXXME: not done yet).
@@ -40,7 +40,7 @@
 // Basic use looks about like this:
 //
 //   // Specify the IO pin which is being used for SD card SPI slave selection
-//   #define SD_CARD_SPI_SLAVE_SELEC_PIN DIO_PIN_DIGITAL_4 
+//   #define SD_CARD_SPI_SLAVE_SELEC_PIN DIO_PIN_DIGITAL_4
 //
 //   #define SAMPLE_COUNT 42
 //   uint8_t buf[SAMPLE_COUNT];
@@ -165,7 +165,7 @@ sd_card_last_error (void);
 uint8_t
 sd_card_last_error_data (void);
 
-// Its potentially convenient to be able to retrieve a textual description
+// It's potentially convenient to be able to retrieve a textual description
 // of an error, but it burns about 1k or program memory space so we don't
 // build it unless requested.
 #ifdef SD_CARD_BUILD_ERROR_DESCRIPTION_FUNCTION
@@ -215,7 +215,7 @@ sd_card_init (sd_card_spi_speed_t speed);
 uint32_t
 sd_card_size (void);
 
-// Card types. 
+// Card types.
 typedef enum {
   SD_CARD_TYPE_INDETERMINATE = 0,   // Card type not known (yet).
   SD_CARD_TYPE_SD1           = 1,   // SD V1
