@@ -276,7 +276,7 @@ uint8_t
 sd_card_write_partial_block (uint32_t block, uint16_t cnt, uint8_t const *src);
 
 // Returns TRUE iff the SD card provides an erase operation for individual
-// blocks.  Note that its always possible to simply overwrite blocks.
+// blocks.  Note that it's always possible to simply overwrite blocks.
 uint8_t
 sd_card_single_block_erase_supported (void);
 

@@ -100,7 +100,7 @@ sub almost_random_payload # {{{1
     # single one as the last byte.
 
     my $result = '';
-   
+
     # Constants as dictated by our frame format and documented in usb_xbee
     my $fsspl = 89;   # Frame Safe Safe Payload Length
     my $fsapl = 44;   # Frame Safe Arbitrary Payload Length
@@ -155,7 +155,7 @@ sub almost_random_payload # {{{1
 } # }}}1
 
 sub rotate_byte # {{{1
-{ 
+{
     # Given a byte value (as an integer), a rotation direction which must
     # be either +1 or -1, and a rotation distance, return the byte value
     # produced by rotating the given value on the ring formed by the unsigned
@@ -195,7 +195,7 @@ sub maybe_almost_rotate_bytes # {{{1
     for ( my $ii = 0 ; $ii < length($bytes) ; $ii++ ) {
 
         my $cb = ord(substr($bytes, $ii, 1));   # Current Byte
-        
+
         my $prv = rotate_byte($cb, $dir, $rd);   # Prospective Rotated Value
 
         if ( $cb == ord("\n") or $prv == ord("\n") ) {
@@ -269,7 +269,7 @@ sub byte_string_dump # {{{1
     my ($frame_delimiter, $escape, $xon, $xoff) = (0x7e, 0x7d, 0x11, 0x13);
     for ( my $ii = 0 ; $ii < length($bs) ; $ii++ ) {
         my $cb = substr($bs, $ii, 1);
-        if ( 
+        if (
             ord($cb) == $frame_delimiter or
             ord($cb) == $escape or
             ord($cb) == $xon or
@@ -299,8 +299,8 @@ if ( $qm ) {   # --query-mode {{{1
                 die "read timeout waiting for response (got nothing back)"; };
                 #die "read timeout waiting for response after sending:\n".
                 #    byte_string_dump($arp); };
-        # NOTE: this next setting isn't quite arbitrary: its a good bit
-        # larger than the value of the tpra_ms variable used when the
+        # NOTE: this next setting isn't quite arbitrary: it's a good
+        # bit larger than the value of the tpra_ms variable used when the
         # wireless_xbee_test.c file is compiled for testing with this program
         # (when AUTOMATIC_TESTING_WITH_USB_XBEE_TEST is defined).  See the
         # notes there for the why of it.

@@ -79,7 +79,7 @@ main (void) {
   // and calling wdt_enable() is not needed.
   wdt_enable (WDTO_2S);
 
-  // This delay doesn't cause a problem, since its shorter than the watchdog
+  // This delay doesn't cause a problem, since it's shorter than the watchdog
   // timeout value set above.
   _delay_ms (1500);
 

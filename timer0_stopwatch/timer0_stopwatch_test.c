@@ -33,7 +33,7 @@ main (void)
 #ifdef TIMER0_STOPWATCH_DEBUG
   term_io_init ();   // For debugging
 #endif
-       
+
   DEBUG_LOG ("\n");
 
   DEBUG_LOG ("CPU Frequency: %lu\n", F_CPU);
@@ -47,7 +47,7 @@ main (void)
   timer0_stopwatch_init ();
 
   // Time between tripple-blinks, in us.
-  const uint32_t tbtbus = 3 * 1000000;   
+  const uint32_t tbtbus = 3 * 1000000;
 
   uint8_t trippleblinks = 0;
 
@@ -68,7 +68,7 @@ main (void)
 
   // Test that the timer is monotonic and always counts at least as fast as
   // _delay_us() using some small out-of-phase delays thrown in.
-  uint8_t max_delay_us = 242;   // Because its not 256, and ends in 42 :)
+  uint8_t max_delay_us = 242;   // Because it's not 256, and ends in 42 :)
   mtc = 1042;   // These tests are not so fast, we'll do fewer.
   old_ticks = 0;
   double delay_us = 0.0;
@@ -90,7 +90,7 @@ main (void)
   // slightly faster code, but it doesn't necessarily, since what the
   // optimizer does depends on how the value is referenced elsewhere.  Since
   // we want consistent worst-case behavior, we declare this value volatile.
-  volatile uint32_t overhead_ticks;   
+  volatile uint32_t overhead_ticks;
   timer0_stopwatch_reset ();
   for ( ii = 0 ; ii < omrc ; ii++ ) {
     TIMER0_STOPWATCH_TICKS (overhead_ticks);
@@ -102,7 +102,7 @@ main (void)
       "%f\n",
       (double) overhead_ticks / omrc );
 
-  // Now we'll measure the overhead of the timer0_stopwatch_ticks() function. 
+  // Now we'll measure the overhead of the timer0_stopwatch_ticks() function.
   timer0_stopwatch_reset ();
   for ( ii = 0 ; ii < omrc ; ii++ ) {
     overhead_ticks = timer0_stopwatch_ticks ();
@@ -113,7 +113,7 @@ main (void)
       "timer0_stopwatch_ticks() function approx. overhead ticks per read: "
       "%f\n",
       (double) overhead_ticks / omrc );
-  
+
   // Now we'll measure the overhead of the timer0_stopwatch_microseconds()
   // function.
   volatile uint32_t overhead_microseconds;
@@ -157,11 +157,11 @@ main (void)
   timer0_stopwatch_reset ();
 
   int no_reset_yet = 1;   // Flag true iff we haven't tested reset yet.
-    
+
   uint64_t ous = 0;  // Old elapsed microseconds reading (on last iteration)
 
   for ( ; ; ) {
-    
+
     uint64_t eus
       = timer0_stopwatch_microseconds ();   // Elapsed us
 
@@ -189,7 +189,7 @@ main (void)
     assert (eticks - eus / uspt < tick_slop);
 
     if ( eus >= tbtbus ) {
-                
+
       if ( trippleblinks == 1 ) {
         CHKP ();
         trippleblinks++;

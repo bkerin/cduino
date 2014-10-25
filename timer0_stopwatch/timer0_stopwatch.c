@@ -76,7 +76,7 @@ timer0_stopwatch_init (void)
   timer0_stopwatch_oc = 0;
 
   // FIXME: It's possible that we should be using the TSM bit of GTCCR here
-  // to truly sync up the counter and the prescaler, I dunno if its worth
+  // to truly sync up the counter and the prescaler, I dunno if it's worth
   // dealing with though.
 
   TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it

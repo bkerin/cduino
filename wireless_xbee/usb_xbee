@@ -198,7 +198,7 @@ FIXXME: there is at least one XBee command for which this program doesn't work
 right: the ED (energy scan) command.  This is because this command takes too
 long to run and a timeout occurs during the wait for the keep-alive command
 response.  You can work around this somewhat by continuing to send junk while
-watching the output but its ugly and eventually an error happens.  To really
+watching the output but it's ugly and eventually an error happens.  To really
 fix this an option to disable the keep-alive commands would need to be added.
 
 =item B<-r>, B<--raw-mode>
@@ -275,16 +275,16 @@ to decide when to packetize and transmit an RF packet.  They do so every time
 they get 100 bytes, or when some particular (configurable) amount of time
 passes without any additional bytes being queued for transmission.
 
-In a microcontroller context this is a reasonable approach: its easy to ensure
+In a microcontroller context this is a reasonable approach: it's easy to ensure
 that all the bytes in a short message are transmitted in quick succession,
 thereby guaranteeing that they will be grouped into a single atomic RF packet
 and make it to the receivers without being interleaved with other data.
-For an XBee connected to a computer via USB, it's more problematic because its
+For an XBee connected to a computer via USB, it's more problematic because it's
 more difficult to ensure that the byte stream for a packet is continuous.
 
 In raw mode, this program normally ignores the problem.  Data coming from stdin
 is line buffered (mainly for convenience when testing things out from the
-terminal), so its likely to end up packetized into individual lines, but
+terminal), so it's likely to end up packetized into individual lines, but
 there's no guarantee of this.  For simple testing with a single transmitter and
 no possibility of collisions, this doesn't matter.
 
@@ -302,7 +302,7 @@ RO, e.g. "ROFF" probably followed by "WR" in command mode), and use one of the
 When attempting to transmit a single packet, this program measures the time
 required to send an entire prospective packet of up to 100 bytes using perl's
 Time::Hires module.  If the entire transmission took less than 0xFF (256)
-"character times" (as the XBee Manual likes to call them), then its probably
+"character times" (as the XBee Manual likes to call them), then it's probably
 reasonable to assume the entire chunk of data was successfully lumped into a
 single RF packet.  One "character time" at 9600 baud is probably at least 833
 microseconds:
@@ -335,7 +335,7 @@ has a buffer of its own that is capable of absorbing high-speed bursts of data
 from the USB side.
 
 The FT232RL has no reason to hang onto the data, and if it makes it that far
-its probably safe to assume in gets to the XBee fast enough to meet the timing
+it's probably safe to assume in gets to the XBee fast enough to meet the timing
 requirements.
 
 Then again, perhaps the OS-side kernel squirrels the data away in a buffer of
@@ -534,7 +534,7 @@ sub flush_data_from_xbee_for_a_short_time # {{{1
     # UGLY HACK WARNING.  The problem is that when we first enter command
     # mode in the presence of chatter on the network_id/channel, we don't
     # necessarilly ever get a clean "OK\n" response as far as I can tell,
-    # even if we throw away leading data.  Unless its outracing our read
+    # even if we throw away leading data.  Unless it's outracing our read
     # for it, which I think is highly unlikely.  Anyway, what we want to
     # do is throw away any incoming garbage for "a while" after we send the
     # sequence that's supposed to initiate command mode.  Then we can try a
@@ -542,7 +542,7 @@ sub flush_data_from_xbee_for_a_short_time # {{{1
     # junk we will get, of course.  So we just read stuff while waiting
     # for a timer to go off.  Of course, the scaler we set to detect the
     # alarm in the SIGALRM handler might not be truly atomic.  Something on
-    # the internet said if its an operation supported by tie, its atomic,
+    # the internet said if it's an operation supported by tie, it's atomic,
     # which I think scalar assignment probably is :)
 
     my $ft = 300042;
@@ -1322,7 +1322,7 @@ elsif ( $rm or $plm or $flm ) {   # One of the non-command modes {{{1
                 # and possibly other input functions with respect to EOF
                 # (Cntrl-D) inputs: when Cntrl-D is typed on a non-empty line,
                 # nothing whatsoever happens (rather than the existing text
-                # on the line getting returned).  On empty lines its behaves
+                # on the line getting returned).  On empty lines it behaves
                 # is as expected.  Not worth fixing.
                 my $il = STDIN->getline();   # Input Line
                 not STDIN->error() or die "error reading line from STDIN";

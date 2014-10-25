@@ -25,31 +25,30 @@
 # For example:
 #
 #   $ ./lock_and_fuse_bits_to_avrdude_options.perl -- m328p LB2=0 LB1=0
-#   -U lock:w:0xFC:m 
+#   -U lock:w:0xFC:m
 #
 #   $ ./lock_and_fuse_bits_to_avrdude_options.perl -- m328p LB2=0 LB1=0 DWEN=0
 #   -U lock:w:0xFC:m -U hfuse:w:0x99:m
 #
 # If the --reverse option is given, this program instead takes the processor
-# name and one or more argument like for example "-U efuse:w:0x05:m", and
-# prints out the bit settngs represented by the hexadecimal values, one per
-# line.  Note that the default bit values for bytes for which no corresponding
-# -U option is supplied aren't printed.  Note also that when hexadecimal values
-# which would set unused bits are encountered, the output doesn't capture this
-# fact, possibly resulting in a (harmless) asymmetry if the output if fed back
-# into a forward run of this program.  NOTE: at present we generate avrdude
-# options that set unused bits to zero, since avrdude seems to expect this.
-# The datasheets seem to expect one, but it apparently doesn't matter.  So at
-# the moment, its feeding one values for unused bits into a reverse run that
-# results in asymmetrical behavior if fed back to a forward run.
+# name and one or more argument like for example "-U efuse:w:0x05:m",
+# and prints out the bit settngs represented by the hexadecimal values,
+# one per line.  Note that the default bit values for bytes for which no
+# corresponding -U option is supplied aren't printed.  Note also that
+# when hexadecimal values which would set unused bits are encountered,
+# the output doesn't capture this fact, possibly resulting in a (harmless)
+# asymmetry if the output if fed back into a forward run of this program.
+# NOTE: at present we generate avrdude options that set unused bits to zero,
+# since avrdude seems to expect this.  The datasheets seem to expect one,
+# but it apparently doesn't matter.  So at the moment, it's feeding one
+# values for unused bits into a reverse run that results in asymmetrical
+# behavior if fed back to a forward run.
 #
 # For example:
 #
 #   $ ./lock_and_fuse_bits_to_avrdude_options.perl --reverse -- m328p \
 #       -U efuse:w:0xFE:m
-#   BODLEVEL0=0
-#   BODLEVEL1=1
-#   BODLEVEL2=1
+#   BODLEVEL0=0 BODLEVEL1=1 BODLEVEL2=1
 
 use strict;
 # FIXXME: test that fatal warnings work ok when we next program fuses and
@@ -73,7 +72,7 @@ my $chip_model = shift(@ARGV);
 my %bit_descriptions;
 
 if ( $chip_model eq 'm328p' ) {
-    %bit_descriptions = ( 
+    %bit_descriptions = (
         lock_bits_byte => {
             BLB12 => { position => 5, default => 1 },
             BLB11 => { position => 4, default => 1 },
@@ -156,7 +155,7 @@ if ( $reverse ) {
         my $bd = $bit_descriptions{$obn};   # Bit descriptions for this byte
 
         # Get the byte value in decimal.
-        my $bvd = 0; 
+        my $bvd = 0;
         for ( my $ii = 0 ; $ii < 2 ; $ii++ ) {
             my $nc = substr($bv, $ii, 1);   # Nibble value as hex character.
             my $cpdnv;   # Current position decimal nibble value.
@@ -205,14 +204,14 @@ if ( $reverse ) {
 my @bit_settings_strings = @ARGV;
 
 # Byte lookup table (map from bit names back to their containing bytes).
-my %blt 
-  = map { 
+my %blt
+  = map {
       my $byte = $_;
-      map { 
+      map {
         ($_ => $byte)
-      } 
+      }
       keys(%{$bit_descriptions{$_}}) => $_
-    } 
+    }
     keys(%bit_descriptions);
 
 my @bit_settings;
@@ -250,12 +249,12 @@ foreach my $byte_name ( keys(%byte_values) ) {
             defined($bit_desc->{position}) or die "undef position";
             defined($bit_desc->{default}) or die "undef default";
             $byte_values{$byte_name}
-                += $bit_desc->{default} * 2 ** $bit_desc->{position}; 
+                += $bit_desc->{default} * 2 ** $bit_desc->{position};
         }
     }
-} 
+}
 
-# NOTE: for now we put in zero values for unused bits, to keep avrdude happy 
+# NOTE: for now we put in zero values for unused bits, to keep avrdude happy
 # (since that seems to be what it expects to see when it does its verification)
 # The datasheets for the parts seem to think it should be one, but setting them
 # to zero presumably doesn't cause any problems since avrdude expects it.

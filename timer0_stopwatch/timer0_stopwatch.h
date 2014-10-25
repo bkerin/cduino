@@ -18,11 +18,11 @@
 // the overhead imposed by keeping track of the software overflow counter.
 //
 // Note that this is NOT the interface to use for timer-driven alarms, output
-// compare pin control, pulse width modulation, or other applications of
-// the timer/counter0 hardware.  The hardware underlying this module can be
-// used for variety of different purposes, and we don't try to support them
-// all in one large, confusing interface.  Pick the software module that
-// uses the hardware in the way you want (assuming its been written yet :).
+// compare pin control, pulse width modulation, or other applications of the
+// timer/counter0 hardware.  The hardware underlying this module can be used
+// for variety of different purposes, and we don't try to support them all
+// in one large, confusing interface.  Pick the software module that uses
+// the hardware in the way you want (assuming it has been written yet :).
 
 #ifndef TIMER0_STOPWATCH_H
 #define TIMER0_STOPWATCH_H
@@ -86,7 +86,7 @@ timer0_stopwatch_reset (void);
 
 // An interface macro or function should be used to access this variable.
 // This is the overflow counter that gets incremented in the interrupt handler
-// when TCNT0 overflows.  Note: its possible to use narrower or wider integer
+// when TCNT0 overflows.  Note: it's possible to use narrower or wider integer
 // types here (and in the appropriate places in the implementation file).
 // But there seems to be little advantage to doing so.  Using a 64 bit types
 // results in a lot more overhead per read, and using a narrower type gives

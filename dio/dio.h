@@ -37,8 +37,8 @@
 //   DIO_SET_PB0 (pb0_value);
 //   uint8_t pb1_value = DIO_READ_PB1 ();
 //
-// When setting a pin to a value known at compile time, its a tiny bit faster
-// (and smaller code) to set the value like this:
+// When setting a pin to a value known at compile time, it's a tiny bit
+// faster (and smaller code) to set the value like this:
 //
 //   DIO_SET_PB0_HIGH ();
 //
@@ -57,10 +57,10 @@
 //
 // All caveats described for the underlying macros apply.
 //
-// There are also macros that expand to tuples of the various register and
-// bit macros associated with each pin, and variadic macros which can accept
-// these tuple macros as arguments.  So its also possible to write things like
-// this:
+// There are also macros that expand to tuples of the various register
+// and bit macros associated with each pin, and variadic macros which can
+// accept these tuple macros as arguments.  So it's also possible to write
+// things like this:
 //
 //   DIO_INIT (DIO_PIN_PB0, DIO_OUTPUT, DIO_DONT_CARE, LOW);
 //   DIO_SET (DIO_PIN_PB0, HIGH);
@@ -536,7 +536,7 @@
 // The bit shifts are only included so that the results will work in case
 // the user actually compares the result to the value of the 'HIGH' macro.
 // We probably waste an instruction doing this, but the Arduino libraries
-// define HIGH this way and its kind of nice to keep everything symbolic,
+// define HIGH this way and it's kind of nice to keep everything symbolic,
 // so we do the same.
 #define DIO_READ_NA(dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit) \
   ((pin_reg & _BV (pin_bit)) >> pin_bit)

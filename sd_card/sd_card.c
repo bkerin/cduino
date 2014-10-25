@@ -127,7 +127,7 @@ error (sd_card_error_t code)
 static uint8_t
 #if SD_CARD_USE_TIMER0_FOR_TIMEOUTS
 wait_not_busy (uint16_t timeout_ms)
-#else 
+#else
 wait_not_busy (uint32_t timeout_iterations)
 #endif
 {
@@ -156,7 +156,7 @@ wait_not_busy (uint32_t timeout_iterations)
     }
   } while ( iteration_count < timeout_iterations );
 #endif // SD_CARD_USE_TIMER0_FOR_TIMEOUTS
-  
+
   return FALSE;
 }
 
@@ -292,7 +292,7 @@ wait_start_block (void)
     if ( iteration_count >= SD_CARD_READ_TIMEOUT_ITERATIONS ) {
       error (SD_CARD_ERROR_READ_TIMEOUT);
       goto fail;
-    }    
+    }
     iteration_count++;
   }
 #endif // SD_CARD_USE_TIMER0_FOR_TIMEOUTS
@@ -536,7 +536,7 @@ card_application_command (uint8_t cmd, uint32_t arg)
 }
 
 uint8_t
-sd_card_init (sd_card_spi_speed_t speed) 
+sd_card_init (sd_card_spi_speed_t speed)
 {
 #ifdef SD_CARD_USE_TIMER0_FOR_TIMEOUTS
   timer0_stopwatch_init ();
@@ -619,7 +619,7 @@ sd_card_init (sd_card_spi_speed_t speed)
     }
     card_type = SD_CARD_TYPE_SD2;
   }
-  
+
   uint32_t arg;   // Argument to pass to card commands
 
   // We will initialize the card with ACMD41.  If we have an SD2 card, we want
@@ -631,15 +631,15 @@ sd_card_init (sd_card_spi_speed_t speed)
     arg = SD_CARD_ACMD41_NOTHING_MASK;
   }
 
-  // Wait for card to say its ready FIXXME: section 7.2.2 of the SD Physical
-  // Layer Simplified Specification Version 4.10 says we should ensure that
-  // CRC is on (using CMD59 CRC_ON_OFF) before issuing ACMD41.  We don't.
-  // I suppose this makes it possible or more likely that we get an early
-  // false ready which somehow ends up locking up the card.  But if we're
-  // getting noise on the line we're going to have problems anyway, since
-  // there isn't any other error checking going on anywhere (unless the
-  // client is doing it themselves, in which case they should also be using
-  // the hardware watchdog :).
+  // Wait for card to say it's ready FIXXME: section 7.2.2 of the SD
+  // Physical Layer Simplified Specification Version 4.10 says we should
+  // ensure that CRC is on (using CMD59 CRC_ON_OFF) before issuing ACMD41.
+  // We don't.  I suppose this makes it possible or more likely that we
+  // get an early false ready which somehow ends up locking up the card.
+  // But if we're getting noise on the line we're going to have problems
+  // anyway, since there isn't any other error checking going on anywhere
+  // (unless the client is doing it themselves, in which case they should
+  // also be using the hardware watchdog :).
 #ifdef SD_CARD_USE_TIMER0_FOR_TIMEOUTS
   while ( (status = card_application_command (SD_CARD_ACMD41, arg))
           != SD_CARD_R1_READY_STATE ) {

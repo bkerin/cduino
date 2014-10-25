@@ -3,7 +3,7 @@
 # vim:foldmethod=marker
 
 # Given an HTML file name including the xlinked_source_html/ directory part,
-# veryify that if its a test driver, interface, or implementation file,
+# veryify that if it's a test driver, interface, or implementation file,
 # it has the crosslinks that we like to support.  This is a helper script
 # for a recipe in Makefile, and should be understood in that context.
 

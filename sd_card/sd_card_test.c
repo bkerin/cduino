@@ -26,7 +26,7 @@
 #include "term_io.h"
 
 // An option exists to not build the function that generates the string
-// descriptions of error values, since its kind of large.  But this test
+// descriptions of error values, since it's kind of large.  But this test
 // program requires this function, hence this test.
 #ifndef SD_CARD_BUILD_ERROR_DESCRIPTION_FUNCTION
 #  error This test program requires SD_CARD_BUILD_ERROR_DESCRIPTION_FUNCTION
@@ -76,7 +76,7 @@ test_write_read (void)
     }
   }
   PFP ("ok.\n");
- 
+
   // Re-zero the reread data buffer to give the next tests a better chance
   // of catching problems.
   for ( ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
@@ -127,7 +127,7 @@ speed_test_1000_blocks (void)
     check_maybe_print_possible_failure_message (return_code);
     assert (return_code);
     // Here we double check that we're getting back the correct values,
-    // which makes the speed test take slightly longer, but its not going
+    // which makes the speed test take slightly longer, but it's not going
     // to be much compared to the read itself at hight F_CPU at least.
     for ( int ii = 0 ; ii < SD_CARD_BLOCK_SIZE ; ii++ ) {
       if ( data_block[ii] != 42 ) {
@@ -169,7 +169,7 @@ per_speed_tests (sd_card_spi_speed_t speed, char const *speed_string)
       break;
     case SD_CARD_TYPE_SD1:
       PFP ("SD1.\n");
-      PFP ( 
+      PFP (
           "SD1 type cards haven't been tested (only SDHC cards have).\n"
           "Disable this trap and try it :)  Other tests that don't work\n"
           "for this card type might also need to be disabled.\n" );
@@ -265,6 +265,6 @@ main (void)
   per_speed_tests (SD_CARD_SPI_SPEED_QUARTER, "SD_CARD_SPI_SPEED_QUARTER");
   PFP ("\n");
 
-  PFP ("Everything worked!\n"); 
+  PFP ("Everything worked!\n");
   PFP ("\n");
 }

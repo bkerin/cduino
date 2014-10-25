@@ -222,7 +222,7 @@ main (void)
   // what the DS18B20 likes to spit out.  See Fig. 2 of the DS18B20 datasheet.
   int16_t atemp_t2tt4 = (((int16_t) t_msb) << BITS_PER_BYTE) | t_lsb;
   if ( tin ) {   // If negative...
-    // ...just make it positive (its 2's compliment)
+    // ...just make it positive (it's 2's compliment)
     atemp_t2tt4 = (~atemp_t2tt4) + 1;
   }
 
@@ -258,7 +258,7 @@ main (void)
   // Blink out the absolute value of the current temperate times 10000
   // (effectively including four decimal places).
   for ( ; ; ) {
-    // Feeding the wdt is harmless even when its not initialized.
+    // Feeding the wdt is harmless even when it's not initialized.
     BLINK_OUT_UINT32_FEEDING_WDT (att10000);
   }
 

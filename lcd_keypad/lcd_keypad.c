@@ -182,7 +182,7 @@ timed_wait_for_button_none (double stw)
     // per sample), the way the adc_read_raw() function is implemented
     // (assumes 125 kHz ADC clock) and the way the check_buttons method is
     // implemented (2 ADC reads per call).  The fudge factor would ideally
-    // be zero since its probably somewhat wrong for non-default processor
+    // be zero since it's probably somewhat wrong for non-default processor
     // speeds, small changes to the adc_read_raw implementation, etc.
     // But we don't promise anything about the exact delays in the lcd_keypad
     // interface anyway.

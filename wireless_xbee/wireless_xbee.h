@@ -90,7 +90,7 @@
 // Arduino pins (PD2 and PD3 on the ATMega328P).  This isn't useful for this
 // library, since it doesn't support over-the-air programming of the Arduino.
 // But of course it can screw things up if you're trying to use those pins
-// for some other purpose, so its something to be aware of.
+// for some other purpose, so it's something to be aware of.
 //
 // This module doesn't do anything with the DTR/RTS lines of the XBee.
 // Sending data too fast can overwhelm the XBee.  It's always possible to
@@ -131,7 +131,7 @@
 // anywhere.  In the default point-to-multipoint XBee configuration, all
 // nearby modules with the same network ID (see wx_ensure_network_id_set_to())
 // and channel (see wx_ensure_channel_set_to()) will hopefully receive
-// the transmission, but its up to you to arrange for them to send back
+// the transmission, but it's up to you to arrange for them to send back
 // something saying they have if you really want to know.  No radio system
 // is entirely immune to noise.  Also, in the default configuration the
 // RF data rate is greater than the serial interface data rate, and all
@@ -158,7 +158,7 @@
    // sure they don't waste power, but not the sleep request line that's
    // responsible for putting the XBee to sleep.  We want that configured
    // as an output always.  We may not really need to delay after setting
-   // the line (using WX_WAKE() for convenience), but its a conservative
+   // the line (using WX_WAKE() for convenience), but it's a conservative
    // thing to do.
 #  define WX_SLEEP_RQ_CONTROL_PIN_INIT() \
      do { \
@@ -304,7 +304,7 @@ wx_restore_defaults (void);
 // I don't think the Sparkfun WRL-10854 gives us any connection to the
 // SLEEP_RQ pin of the XBee module, so FIXXME: this is unimplemented.
 // However, hibernating is probably the first thing you'll want to do for
-// a battery operated device, so its too bad we can't easily prototype it
+// a battery operated device, so it's too bad we can't easily prototype it
 // using the Arduino.  A few hints:
 //
 //   * Setting the SM parameter to 1 (using wx_com_expect_ok() once to set
@@ -517,7 +517,7 @@ wx_put_string_frame_printf (char const *format, ...)
 //
 // Using short timeout values is asking for trouble.  Although the serial
 // connection to the XBee goes at about one byte per millisecond, and
-// the XBee to XBee RF link is theoretically even faster, its probably
+// the XBee to XBee RF link is theoretically even faster, it's probably
 // a bad idea to depend on these rates.  Who knows what the XBee does?
 // It may be laggy at the start of transmissions, or have RF packetization
 // overhead, or take longer when there's noise.  Using WX_BYTE_AVAILABLE()

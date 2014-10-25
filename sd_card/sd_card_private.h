@@ -20,7 +20,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-// vim:foldmethod=marker 
+// vim:foldmethod=marker
 
 // FIXME: rename this header to sd_card_private.h or so?
 

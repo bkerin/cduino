@@ -21,7 +21,7 @@
 static void
 set_pin_pb5_for_output (uint8_t initial_value)
 {
-  DDRB |= _BV (DDB5);  
+  DDRB |= _BV (DDB5);
   loop_until_bit_is_set (DDRB, DDB5);
 
   if ( initial_value == HIGH ) {

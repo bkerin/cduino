@@ -65,7 +65,7 @@ main (void)
   // NOTE: you almost certainly want to use the RESET line on the XBee to
   // reset it at startup.  It's theoretically possible not to do this, and
   // since additional hardware lines are required this test program doesn't
-  // do it.  But its also easy to get the XBee wedged, and resetting the
+  // do it.  But it's also easy to get the XBee wedged, and resetting the
   // Arduino doesn't reset the XBee, so a power cycle is required, which
   // gets inconvenient fast.  The wireless_xbee.h header has more details,
   // but the ritual looks something like this:

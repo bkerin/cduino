@@ -31,7 +31,7 @@ wx_init (void)
 
 // Define a HANDLE_ERRORS macro that either asserts the given condition, or
 // simply returns FALSE depending on a compile-time setting.  We guarantee
-// that this macro will evaluate its argument only once, so its safe to
+// that this macro will evaluate its argument only once, so it's safe to
 // use around a function that has other effects.
 #ifdef WX_ASSERT_SUCCESS
 #  define HANDLE_ERRORS(condition) assert (condition)
@@ -53,7 +53,7 @@ get_char (char *dest, uint32_t timeout)
   // if a UART receive error or timeout occurs.
 
   // Long enough to be longish relative to the loop overhead in the loop
-  // where its used.  More than that we cannot say.
+  // where it's used.  More than that we cannot say.
   uint8_t const poll_interval_us = 142;
 
   uint32_t elapsed_time_us = 0;
@@ -753,11 +753,11 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
 
     else {
       // If there isn't any data ready to read, wait a little bit and
-      // try again.  1 ms is reasonably here since its about the time the
+      // try again.  1 ms is reasonably here since it's about the time the
       // serial port takes to receive a character at 9600 baud (see the BUGS
       // AND POTENTIAL WORK-AROUNDS section of the POD text in the usb_xbee
       // perl script for the timing calculations).  Not that it matters much,
-      // since its a busy wait anyway.
+      // since it's a busy wait anyway.
       uint16_t const poll_interval_ms = 1;
       _delay_ms (poll_interval_ms);
       et += poll_interval_ms;    // Elapsed Time

@@ -23,7 +23,7 @@
 //
 // 	- Note that there are a variety of hardware techniques that can be used
 // 	  to improve the resolution and noise resistance of the ADC; the
-// 	  ATMega328P datasheet discusses these.  For simplicity, we assume 
+// 	  ATMega328P datasheet discusses these.  For simplicity, we assume
 // 	  that they aren't needed here.
 
 #include <avr/io.h>
@@ -46,19 +46,19 @@ initialize_adc (void)
   // REFS1). The MUX[3:0] bit setting used here indicate that we should
   // sample the ground (0.0V) (we'll change this before each actual ADC read).
   ADMUX |= _BV (REFS0) | _BV (MUX3) | _BV (MUX2) | _BV (MUX1) | _BV (MUX0);
-  
+
   // Restore the default settings for ADC status register A.
   ADCSRA = 0x00;
-  
+
   // Restore the default settings for ADC status register B.
   ADCSRB = 0x00;
-  
+
   // Enable the ADC system, use 128 as the clock divider on a 16MHz arduino
   // (ADC needs a 50 - 200kHz clock) and start a sample.  The ATmega329P
   // datasheet specifies that the first sample taken after the voltage
   // reference is changed should be discarded.
   ADCSRA |= _BV (ADEN) | _BV (ADPS2) | _BV (ADPS1) | _BV (ADPS0) | _BV (ADSC);
-  
+
   // Wait for the ADC to return a sample (and discard it).
   loop_until_bit_is_clear (ADCSRA, ADSC);
 }
@@ -85,7 +85,7 @@ adc_read (uint8_t pin)
   uint8_t admux_value = (ADMUX & 0xf0) | (pin & 0x0f);
   ADMUX = admux_value;
 
-  // Start a sample and wait until its done.
+  // Start a sample and wait until it's done.
   ADCSRA |= _BV (ADSC);
   loop_until_bit_is_clear (ADCSRA, ADSC);
 

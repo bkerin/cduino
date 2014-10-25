@@ -71,7 +71,7 @@ adc_read_raw (uint8_t pin)
   uint8_t admux_byte = (ADMUX & 0xf0) | (pin & 0x0f);
   ADMUX = admux_byte;
 
-  // Start a sample and wait until its done.
+  // Start a sample and wait until it's done.
   ADCSRA |= _BV (ADSC);
   loop_until_bit_is_clear (ADCSRA, ADSC);
 

@@ -49,7 +49,7 @@ main (void)
 
   accelerometer_init ();
   PFP ("accelerometer_init() completed.\n");
-  
+
   // After power-up, control register 1 should consist of its default
   // value (0x07) or'ed with the bits that indicate normal mode (0x20).
   // NOTE that since the accelerometer isn't reset when the ATmega328P is,
@@ -75,7 +75,7 @@ main (void)
 
   accelerometer_set_fullscale (ACCELEROMETER_FULLSCALE_TYPE_6G);
   PFP ("Fullscale set to 24 gravities.\n");
-  
+
   accelerometer_set_data_rate (ACCELEROMETER_DATA_RATE_1000HZ);
   PFP ("Date rate set to 1000 Hz.\n");
 
@@ -95,8 +95,8 @@ main (void)
   LIS331DLH_SetHPFCutOFF(LIS331DLH_HPFCF_3);
 
   // It's totally unclear from the datasheed what the REFERENCE register is
-  // for or how its interpreted.  It definitely has an effect, but I can't
-  // tell what its doing.
+  // for or how it's interpreted.  It definitely has an effect, but I can't
+  // tell what it's doing.
   LIS331DLH_SetReference (42);
   */
 
@@ -115,7 +115,7 @@ main (void)
       total_ay += ay[ii];
       total_az += az[ii];
       float cur_a
-        = sqrt (pow(ax[ii], 2.0) + pow (ay[ii], 2.0) + pow (az[ii], 2.0)); 
+        = sqrt (pow(ax[ii], 2.0) + pow (ay[ii], 2.0) + pow (az[ii], 2.0));
       if ( cur_a > peak_abs_a ) {
         peak_ax = ax[ii];
         peak_ay = ay[ii];

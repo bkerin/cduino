@@ -6,7 +6,7 @@
 ##### Make Settings and Sanity Measures {{{1
 
 # This is sensible stuff for use but could confuse an experienced Make
-# programmer so its out front here.
+# programmer, so it's out front here.
 
 # Delete files produced by rules the commands of which return non-zero.
 .DELETE_ON_ERROR:
@@ -348,7 +348,7 @@ ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   # the upload method is changed.  And it makes the uploads take longer.  And
   # it doesn't seem necessary.  And I originally thought it might be useful to
   # avoid nuking the bootloader when using AVRISPmkII programming, but it turns
-  # out its impossible to prevent that.  So it's not enabled at the moment.
+  # out it's impossible to prevent that.  So it's not enabled at the moment.
   # FIXME: so get rid of this garbage
 
   #LDFLAGS += -Wl,--section-start=.text=0x7800
@@ -453,8 +453,8 @@ endif
 #
 # The write_random_id_to_eeprom target requires UPLOAD_METHOD to
 # be AVRISPmkII, because I don't know how to program the EEPROM using
-# the arduino bootloader upload method, assuming its even supported.
-# Note that its fine to use bootloader programming for the program upload
+# the arduino bootloader upload method, assuming it's even supported.
+# Note that it's fine to use bootloader programming for the program upload
 # (writeflash target) while using the AVRISPmkII upload method for the
 # write_random_id_to_eeprom target (see below).
 #
@@ -485,7 +485,7 @@ endif
 # (or other integer) type.
 #
 # This isn't rolled into writeflash like the lock and fuse settings are
-# because its probably something we want to do only once and not change
+# because it's probably something we want to do only once and not change
 # all the time.
 #
 # Random Id File
@@ -495,7 +495,7 @@ DUMP_RANDOM_ID = \
   od --format=x1 $(1) | cut -f 2-9 -d' ' | head -n 1 | perl -p -e 's/ //g'
 .PHONY: new_random_id
 new_random_id:
-# Because its sometimes nice to be able to hard-wire things to use a
+# Because it's sometimes nice to be able to hard-wire things to use a
 # particular id, we have this variable that can be defined non-empty to
 # reuse an existing random id file.  This is useful for example during
 # testing when programming with the AVRISPmkII and you want to embed a

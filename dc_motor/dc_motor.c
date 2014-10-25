@@ -2,7 +2,7 @@
 
 #include <avr/io.h>
 #include <assert.h>
-// FIXME: remove this if all its needed for is assert once assert.h is fixed
+// FIXME: remove this if all it's needed for is assert once assert.h is fixed
 #include <stdlib.h>
 
 #include "adc.h"

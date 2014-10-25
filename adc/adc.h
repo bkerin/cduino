@@ -14,9 +14,7 @@
 // Possible reference sources for the ADC.  See section 23.5.2 of ATMegs328P
 // datasheet Rev. 8271C.  Note that Arduinos connect AVCC to VCC, so both
 // ADC_REFERENCE_AVCC and ADC_REFERENCE_INTERNAL are pretty easy to use
-// (but see the warning below regarding ADC_REFERENCE_INTERNAL).  FIXME:
-// ADC_REFERENCE_AREF hasn't been tested (though its a dead-simple difference
-// from the tested paths).
+// (but see the warning below regarding ADC_REFERENCE_INTERNAL).
 typedef enum {
   ADC_REFERENCE_AREF,
   ADC_REFERENCE_AVCC,

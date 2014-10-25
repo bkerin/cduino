@@ -135,12 +135,12 @@ typedef enum {
 
 // The SS pin (aka PB2, aka DIGITAL_10) will *always* be initialized for
 // output with a HIGH value, even it it isn't used as a slave select line
-// (usually its reasonable to use it as a slave select line).  The ATMega
+// (usually it's reasonable to use it as a slave select line).  The ATMega
 // requires this in order for SPI master mode to operate correctly.
 // See comments at the top of this file for details on how to use other
 // pins instead of or in addition to SS as slave select pins.
 #define SPI_SS_PIN DIO_PIN_DIGITAL_10
-// Note that its possible to use pins other than DIGITAL_10 for the SS line
+// Note that it's possible to use pins other than DIGITAL_10 for the SS line
 // (see comment above).
 #define SPI_SS_INIT DIO_INIT_DIGITAL_10
 #define SPI_SS_SET_LOW DIO_SET_DIGITAL_10_LOW

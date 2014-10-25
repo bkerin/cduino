@@ -19,7 +19,7 @@ CPPFLAGS += -DSD_CARD_SPI_SLAVE_SELECT_PIN=DIO_PIN_DIGITAL_4
 # still work in the case where SPI communication slows to a crawl (due to
 # contention for the SPI bus perhaps).  However, if SPI communication locks up
 # entirely, the timer still won't get checked and a lockup will result.  So in
-# general I think its not worth using the timer0 hardware for this purpose.
+# general I think it's not worth using the timer0 hardware for this purpose.
 #CPPFLAGS += -DSD_CARD_USE_TIMER0_FOR_TIMEOUTS
 
 # If this is uncommented, we build a function which fetches a text description
