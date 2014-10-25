@@ -1,6 +1,0 @@
-Pyrocon AVR library has a lot of interesting modules that could probably be
-slurped in without too much trouble: pulse.h uart.h timerx8.h timer.h a2d.h
-bitbuf.h buffer.h extint.h avrlibtypes.h avrlibdefs.h param.h port128.h
-uart2.h lcd.h debug.h i2c.h i2csw.h ks0108.h font5x7.h fontgr.h lis3l02.h
-servo.h timer128.h stxetx.h.  Of course its unclear how tested this stuff
-is and some is redundant with AVR libc.
