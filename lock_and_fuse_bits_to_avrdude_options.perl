@@ -48,7 +48,9 @@
 #
 #   $ ./lock_and_fuse_bits_to_avrdude_options.perl --reverse -- m328p \
 #       -U efuse:w:0xFE:m
-#   BODLEVEL0=0 BODLEVEL1=1 BODLEVEL2=1
+#   BODLEVEL0=0
+#   BODLEVEL1=1
+#   BODLEVEL2=1
 
 use strict;
 # FIXXME: test that fatal warnings work ok when we next program fuses and
