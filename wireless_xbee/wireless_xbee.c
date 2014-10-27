@@ -54,7 +54,7 @@ get_char (char *dest, uint32_t timeout)
 
   // Long enough to be longish relative to the loop overhead in the loop
   // where it's used.  More than that we cannot say.
-  uint8_t const poll_interval_us = 142;
+  double const poll_interval_us = 142.0;
 
   uint32_t elapsed_time_us = 0;
 
@@ -113,7 +113,7 @@ wx_enter_at_command_mode (void)
   // mode for up to 10 seconds (or until exit_at_command_mode() is called.
 
   // This magic sequence should send us into AT command mode
-  float const dwmms = 1042;   // Delay With Margin (in ms) -- AT requires 1 s
+  double const dwmms = 1042;   // Delay With Margin (in ms) -- AT requires 1 s
   _delay_ms (dwmms);
   WX_PUT_BYTE ('+');
   WX_PUT_BYTE ('+');
@@ -128,9 +128,9 @@ wx_enter_at_command_mode (void)
   // of radio chatter (in fact I strongly suspect that that string can get
   // interspersed with radio data), we want to thouroughly flush things
   // before we try a command to make sure we're in command mode.
-  float const flushing_time_ms = 300.42;   // Total time to spend flushing
-  float const ms_per_flush     = 4.2;      // Plenty Time for 2 byte buf fill
-  float       et_us            = 0.0;      // Elapsed Time in microseconds
+  double const flushing_time_ms = 300.42;   // Total time to spend flushing
+  double const ms_per_flush     = 4.2;      // Plenty Time for 2 byte buf fill
+  double       et_us            = 0.0;      // Elapsed Time in microseconds
   while ( et_us < flushing_time_ms ) {
     WX_UART_FLUSH_RX_BUFFER ();
     _delay_ms (ms_per_flush);
@@ -141,7 +141,7 @@ wx_enter_at_command_mode (void)
   // buffer for a short time, we help ensure that the command we're going to
   // try next will not end up with the expected response if there is still
   // chatter on the line.  Yes, I'm paranoid.
-  float const magic_guard_time = 4.2;
+  double const magic_guard_time = 4.2;
   _delay_ms (magic_guard_time);
 
   // Now try a command to ensure that we've made in into command mode.
@@ -759,7 +759,11 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout)
       // perl script for the timing calculations).  Not that it matters much,
       // since it's a busy wait anyway.
       uint16_t const poll_interval_ms = 1;
-      _delay_ms (poll_interval_ms);
+      // Because _delay_ms() requires double arguments that are known constant
+      // at compile-time to avoid possibly silently working wrong, and I'm
+      // paranoid, we get this variable also:
+      double const poll_interval_ms_double = 1.0;
+      _delay_ms (poll_interval_ms_double);
       et += poll_interval_ms;    // Elapsed Time
     }
 
@@ -777,7 +781,7 @@ wx_get_string_frame (uint8_t msl, char *str, uint16_t timeout)
     return FALSE;
   }
   if ( str[bytes_received - 1] != '\0' ) {
-    if ( bytes_received == msl ) {
+    if ( bytes_received > msl ) {
       return FALSE;   // Client hasn't provided a big enough buffer str
     }
     str[bytes_received] = '\0';
