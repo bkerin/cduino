@@ -467,17 +467,17 @@ uint8_t
 wx_put_string_frame_printf (char const *format, ...)
   __attribute__ ((format (printf, 1, 2)));
 
-// Spend about timeout milliseconds trying to receive a frame with up to mfps
-// (Maximum Frame Payload Size) unescaped payload bytes into buf.  The size of
-// the payload received is returned in *rfps (Received Frame Payload Size).
-// Regardless of the definedness of WX_ASSERT_SUCCESS, this routine returns
-// TRUE if a full frame is successfully received, and false otherwise.
-// Any partial or corrupt frame data received from the XBee is effectively
-// discarded, though some of it might end up getting written into *buf.
-// This function grabs a slice of incoming data starting when called and
-// ending when either a valid frame is received, or a frame that has been
-// started (due to the appearance of a frame delimiter in the data stream)
-// turns out to be invalid or times out.  Therefore:
+// Spend up to about timeout milliseconds trying to receive a frame with up
+// to mfps (Maximum Frame Payload Size) unescaped payload bytes into buf.
+// The size of the payload received is returned in *rfps (Received Frame
+// Payload Size).  Regardless of the definedness of WX_ASSERT_SUCCESS,
+// this routine returns TRUE if a full frame is successfully received,
+// and false otherwise.  Any partial or corrupt frame data received from
+// the XBee is effectively discarded, though some of it might end up getting
+// written into *buf.  This function grabs a slice of incoming data starting
+// when called and ending when either a valid frame is received, or a frame
+// that has been started (due to the appearance of a frame delimiter in
+// the data stream) turns out to be invalid or times out.  Therefore:
 //
 //   * Callers must be prepared to retry.  A frame could cross the
 //     timeout boundry, or be corrupted.
@@ -528,7 +528,7 @@ wx_put_string_frame_printf (char const *format, ...)
 uint8_t
 wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout);
 
-// Spend about timeout milliseconds trying to receive a frame containing
+// Spend up to about timeout milliseconds trying to receive a frame containing
 // a string of up to msl characters into str.  A trailing NUL byte is
 // automatically added if the incoming string doesn't already end with one.
 // The memory pointed to by str should be at least msl + 1 bytes long (for
