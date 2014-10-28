@@ -92,6 +92,32 @@
 
         <ul>
 
+          <!-- FIXME: WORK POINT: test out the new html docs -->
+
+          <li> Support for using multiple AVRISPmkII programmers
+          simultaneously.  See the definition of AVRISPMKII_PORT in generic.mk
+          in the top-level project directory.</li>
+
+          <li> New software implementation of Msxim one-wire master protocol:
+          <a
+            href="xlinked_source_html/one_wire_master.h.html">one_wire_master.h
+          </a>.
+          </li>
+
+          <li> New build system support for creating a random 64 bit device ID
+          and loading it into the AVR EEPROM.  See the new_random_id target
+          in generic.mk in the top-level project directory and the <a
+            href="xlinked_source_html/random_id_test.c.html">random_id_test.c
+          </a>.
+          test program.
+          </li>
+
+          <li> Numerous improvements and fixes to <a
+            href="xlinked_source_html/wireless_xbee.h.html"> wireless_xbee.h
+          </a>, including SLEEP_RQ and RESET support.
+          </li>
+
+
           <li> New module for ST Microelectronics LIS331HH accelerometer (and
           sibling devices): <a
             href="xlinked_source_html/accelerometer.h.html">accelerometer.h</a>.

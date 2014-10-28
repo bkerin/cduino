@@ -143,10 +143,13 @@ generic.mk behaves.  These occur in sections marked "Overridable" in that file.
 
 <h3>Variable Overview</h3>
 
+FIXME: is it right to list command line and environment as ways here?  It used
+to be just command line.  Double check
+
 There are a number of variables that have default values which can be
-completely overridden by assigned your own values before
-<code>generic.mk</code> is included or as variable assignment arguments to
-make:
+completely overridden by assigning your own values before
+<code>generic.mk</code> is included or as environment variable or variable
+assignment arguments to make:
 
 <ul>
 
@@ -199,6 +202,10 @@ make:
   essential (so the perl modules used to do it aren't required).  Of course,
   now you will have to push the reset button all the time.</li>
 
+  <li><code>AVRISPMKII_PORT</code> -- useful if you want to keep multiple
+  programmers connected at the same time.  See the comments near the definition
+  of this variable in <code>generic.mk</code>.</li>
+
   <li>build and upload program variables -- a number of variables exist which
   allow the compiler, uploader, etc. programs to be set (e.g. CC, AVRDUDE,
   etc.).  These are useful if you want to test the effects of different
@@ -228,8 +235,9 @@ make:
 
 </ul>
 
-There are also variables that can usefully be augmented by adding your own
-values to them somewhere:
+There are also variables that <code>generic.mk</code> always sets explicity,
+that can usefully be augmented by adding your own values to them after
+<code>include generic.mk</code>:
 
 <ul>
 
@@ -241,16 +249,24 @@ values to them somewhere:
 
   <li><code>CXXFLAGS</code> -- Add your own C++ compiler flags.</li>
 
-  <li><code>VALID_ARDUINOLESS_TARGET_PATTERNS</code> -- Add new files or file
-  patterns which should be buildable even when no Arduino is connected (so you
-  can for example get syntax fixes finished without an Arduino).  Note that
-  many normal patterns are already included (%.o, %.out, etc.), but this can
-  be useful if you are adding your own rules for different file types.  This
-  variable must be assigned to before <code>generic.mk</code> is included (or
-  given as a variable assignment argument to make at the command line). </li>
-
 </ul>
 
+Finally, there's at least one weird variable that doesn't work like the others:
+
+<ul>
+
+  FIXME: is it right to list command line as a way but not environment here?
+
+  <li><code>VALID_ARDUINOLESS_TARGET_PATTERNS</code> -- Add new files or file
+  patterns which should be buildable even when no Arduino is connected (so you
+  can for example get syntax fixes finished without an Arduino).  Many normal
+  patterns are appended to any client-supplied setting of this variable
+  automatically (%.o, %.out, etc.).  Because generic.mk requeires this variable
+  to be set as needed at make-compile-time, it must be assigned to before
+  <code>generic.mk</code> is included (or given as a variable assignment
+  argument to make at the command line). </li>
+
+</ul>
 
 </body>
 

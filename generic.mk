@@ -126,12 +126,15 @@ UPLOAD_METHOD ?= arduino_bl
 # reason, it is not considered a fatal error (but the user will then have to
 # push the reset button on the arduino immediately after the avrdude
 # programming command goes off to program the device).
+# FIXME: is this crud still required in the rev3 days?  maybe should be true?
 DTR_PULSE_NOT_REQUIRED ?= false
 
 # Uploader program.
 AVRDUDE ?= avrdude
 
-# The programmer type being used as understood by avrdude.
+# The programmer type being used as understood by avrdude.  This should
+# probably always be "arduino" when the UPLOAD_METHOD is arduino_bl, unless
+# you've for some reason modified you avrdude.conf to include an alternate ID.
 AVRDUDE_ARDUINO_PROGRAMMERID ?= arduino
 
 # Location and characteristics of the Arduino on the USB.  Note that this
@@ -152,6 +155,29 @@ ARDUINO_BAUD ?= autoguess
 #ARDUINO_BAUD ?= 115200
 #ARDUINO_BAUD ?= 57600
 
+# When using UPLOAD_METHOD = AVRISPmkII, this default argument value for the
+# -P ("port") option to avrdude works nicely if there's only one AVRISPmkII
+# attached.  If there are multiple AVRISPmkII devices attached, you'll need
+# to add a colon and a serial number to specify which one you want this
+# build system to use.  See the next few commented-out lines for a way to
+# discover the serial numbers and use them to specify the correct programmer.
+AVRISPMKII_PORT ?= usb
+
+# Arrange for AVRISPMKII_PORT to be set like this instead of the above
+# default setting for AVRISPMKII_PORT to cause the writeflash target (and
+# others) to fail but output a list of the usb-connected AVRISPmkII devices.
+# Look for lines like something like this:
+#
+#   avrdude: usbdev_open(): Found AVRISP mkII, serno: 000200198321
+#   avrdude: usbdev_open(): Found AVRISP mkII, serno: 000200198577
+#
+# This works by using a "port" value that won't match anything, and squeaking
+# a -v avrdude option in with it to cause avrdude to output diagnostics.
+#AVRISPMKII_PORT ?= usb:xxx -v
+
+# Once you know the serial number of the device you want to use you can use
+# something like this:
+#AVRISPMKII_PORT ?= usb:000200198321
 
 ##### Compilers, Assemblers, etc. (Overridable) {{{1
 
@@ -437,7 +463,7 @@ ifeq ($(UPLOAD_METHOD), arduino_bl)
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   writeflash: binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII \
-                   -p $(PROGRAMMER_MCU) -P usb \
+                   -p $(PROGRAMMER_MCU) -P $(AVRISPMKII_PORT) \
                    -U flash:w:$(HEXROMTRG) \
                    $(LOCK_AND_FUSE_AVRDUDE_OPTIONS) || \
           ( $(PRINT_AVRISPMKII_PROGRAMMING_FAILED_MESSAGE) && \
@@ -524,7 +550,7 @@ ifeq ($(UPLOAD_METHOD), arduino_bl)
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   write_random_id_to_eeprom: binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII \
-                   -p $(PROGRAMMER_MCU) -P usb \
+                   -p $(PROGRAMMER_MCU) -P $(AVRISPMKII_PORT) \
                    -U eeprom:w:$(RIF)
 	@echo $(IRS)
 else
@@ -543,7 +569,7 @@ ifeq ($(UPLOAD_METHOD), arduino_bl)
 else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   read_id_from_eeprom: binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII \
-                   -p $(PROGRAMMER_MCU) -P usb \
+                   -p $(PROGRAMMER_MCU) -P $(AVRISPMKII_PORT) \
                    -U eeprom:r:$(IDF):r
 	@echo -n "The ID at byte 0 of the EEPROM appears to be 0x"
 	@$(call DUMP_RANDOM_ID, $(RIF))
@@ -569,7 +595,7 @@ endif
 # would seem to be stomping a reserved state.  Why not just leave in (1, 0)
 # (meaning slowly rising power)?
 replace_bootloader: $(ACTUAL_ARDUINO_BOOTLOADER)  binaries_suid_root_stamp
-	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
+	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P $(AVRISPMKII_PORT) \
                    -e -u \
                    `./lock_and_fuse_bits_to_avrdude_options.perl -- \
                       $(PROGRAMMER_MCU) \
@@ -581,7 +607,7 @@ replace_bootloader: $(ACTUAL_ARDUINO_BOOTLOADER)  binaries_suid_root_stamp
                       CKSEL3=1 CKSEL2=1 CKSEL1=1 CKSEL0=1` || \
           ( $(PRINT_AVRISPMKII_PROGRAMMING_FAILED_MESSAGE) && \
             false ) 1>&2
-	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P usb \
+	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P $(AVRISPMKII_PORT) \
                    -U flash:w:$< \
                    `./lock_and_fuse_bits_to_avrdude_options.perl -- \
                       $(PROGRAMMER_MCU) \
