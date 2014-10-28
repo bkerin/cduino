@@ -140,9 +140,9 @@ owm_read_id (uint8_t *id_buf)
 
 // Global search state
 static uint8_t rom_id[OWM_ID_BYTE_COUNT];   // Current ROM device ID
-static uint8_t last_discrep;             // Bit position of last discrepancy
-static int     last_family_discrep;
-static int     last_device_flag;
+static uint8_t last_discrep;                // Bit position of last discrepancy
+static uint8_t last_family_discrep;
+static uint8_t last_device_flag;            // True iff we got last slave
 static uint8_t crc8;
 
 // Length of slave ROM IDs, in bits
@@ -156,13 +156,13 @@ static uint8_t crc8;
 // Return TRUE : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 //
-static int
+static uint8_t
 search (void)
 {
   uint8_t id_bit_number;
-  int last_zero, rom_byte_number, search_result;
-  int id_bit, cmp_id_bit;
-  unsigned char rom_byte_mask, search_direction;
+  uint8_t last_zero, rom_byte_number, search_result;
+  uint8_t id_bit, cmp_id_bit;
+  uint8_t rom_byte_mask, search_direction;
 
   // Initialize for search
   id_bit_number = 1;
@@ -267,7 +267,6 @@ search (void)
   return search_result;
 }
 
-// FIXME: these sentinels should return uint8_t rather than int
 static uint8_t
 first (void)
 {
@@ -294,13 +293,12 @@ next (void)
 // Return TRUE : device verified present
 //        FALSE : device not present
 //
-static int
+static uint8_t
 verify (void)
 {
   unsigned char rom_backup[OWM_ID_BYTE_COUNT];
   uint8_t result;
-  uint8_t ld_backup;
-  int ldf_backup, lfd_backup;
+  uint8_t ld_backup, ldf_backup, lfd_backup;
 
   // Keep a backup copy of the current state
   for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
@@ -317,7 +315,7 @@ verify (void)
   if ( search() ) {
      // Check if same device found
      result = TRUE;
-     for ( int ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++)
+     for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++)
      {
         if ( rom_backup[ii] != rom_id[ii] )
         {
@@ -331,7 +329,7 @@ verify (void)
   }
 
   // Restore the search state
-  for ( int ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
      rom_id[ii] = rom_backup[ii];
   }
   last_discrep = ld_backup;

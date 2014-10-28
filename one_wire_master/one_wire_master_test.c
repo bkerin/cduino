@@ -190,14 +190,11 @@ main (void)
   PFP ("Starting temperature conversion... ");
   uint8_t const convert_t_command = 0x44;
   owm_write_byte (convert_t_command);
-
-  // The DS18B20 is now supposed to respond with a stream of 0 bits until the
-  // conversion completes, after which it's supposed to send 1 bits.  So we
-  // could do this bit-by-bit if our API exposed the bit-by-bit interface.
-  // FIXME: which it now does.  So should we do it that way?
-  // But it shouldn't hurt to read a few extra ones.
+  // The DS18B20 is now supposed to respond with a stream of 0 bits until
+  // the conversion completes, after which it's supposed to send 1 bits.
+  // Note that this is probably a typical behavior for busy one-wire devices.
   uint8_t conversion_complete = 0;
-  while ( ! (conversion_complete = owm_read_byte ()) ) {
+  while ( ! (conversion_complete = owm_read_bit ()) ) {
     ;
   }
   PFP ("conversion complete.\n");
@@ -242,7 +239,9 @@ main (void)
 
   // NOTE: I think avrlibc doesn't suppor the # printf flag.  No big loss, but
   // it means the blinked-out output might have a different number of digits
-  PFP ("Temperature reading: %#.6g degrees C\n", (tin ? -1.0 : 1.0) * atemp);
+  PFP (
+      "Temperature reading: %#.6g degrees C (subject to rounding issues).\n",
+      (tin ? -1.0 : 1.0) * atemp);
 
   PFP ("All tests passed (assuming temperature looks sane :).\n");
   PFP ("\n");
@@ -343,9 +342,6 @@ main (void)
 
   PFP ("All tests passed.\n");
   PFP ("\n");
-
-  // FIXME: I think client libs should link to the headers in the lib they
-  // use (e.g. in term_io), no the ultimate ones (e.g. not the ones in uart).
 
 #endif
 
