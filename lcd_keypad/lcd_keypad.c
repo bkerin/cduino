@@ -74,7 +74,8 @@ button_band (uint16_t raw_adc_reading)
   const uint16_t button_adc_center_values[BUTTON_COUNT + 1]
     = { 0, 144, 329, 505, 741, 1023 };
 
-  lcd_keypad_button_t nearest_button;
+  lcd_keypad_button_t nearest_button = LCD_KEYPAD_BUTTON_INDETERMINATE;
+
   uint16_t min_delta = UINT16_MAX;
   uint8_t ii;
   for ( ii = 0 ; ii < BUTTON_COUNT + 1 ; ii++ ) {
@@ -85,6 +86,10 @@ button_band (uint16_t raw_adc_reading)
       nearest_button = ii;
     }
   }
+
+  // We should always find a "nearest button", though it might be
+  // LCD_KEYPAD_BUTTON_NONE.
+  assert (nearest_button != LCD_KEYPAD_BUTTON_INDETERMINATE);
 
   return nearest_button;
 }
