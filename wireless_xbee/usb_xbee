@@ -1192,6 +1192,16 @@ sub get_frame # {{{1
 
 configure_tty($df);
 
+# FIXME: There exist situation where this error: get_frame() failed: timed
+# out before receiving full (possibly any of) frame at ./usb_xbee line 1305.
+# is guaranteed to trigger at startup even if there is no radio traffic. It
+# must be because some message fragments are left over in the XBee or UART
+# buffer when we start reading from it.  I'm not sure this should be allowe
+# to happen at startup.  Perhaps any broken messages should first be flushed
+# somehow? Then again, how do we distinguish them from broken traffic that
+# just happens to arrive then?  Perhaps the real answer is that this very
+# common error message must be documented better :)
+
 if ( $cm ) {   # --command-mode {{{1
 
     enter_command_mode();
