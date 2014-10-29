@@ -2,11 +2,15 @@
 //
 // Unlike many other Cduino test programs, this one doesn't blink the on-board
 // PB5 LED, but instead requires you to connect a led from Digital 4 (PD4)
-// to ground.  For much of the testing an second XBee tranciever and external
-// software driver are also required, see the details below.
+// to ground.
+//
+// An XBee shield is required.  I used a Sparkfun WRL-10854.
+//
+// For much of the testing a second XBee tranciever and external software
+// driver are also required; see the comments at the top of wireless_xbee.h
+// for more details.
 
 #include <assert.h>
-#include <stdlib.h>  // FIXME: probably only needed for broken assert.h
 #include <string.h>
 #include <util/delay.h>
 
