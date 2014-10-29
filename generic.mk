@@ -83,9 +83,11 @@ ARDUINO_BOOTLOADER ?= autoguess
 #ARDUINO_BOOTLOADER ?= ATmegaBOOT_168_atmega328.hex
 
 # Target patters for which we presumably don't need a connected Arduino.
-# Clients can augment this variable, but they have to do so before this
-# file is processed (i.e. before the include statement that includes it, or
-# with a variable assignment command line argument to the make invocation).
+# Clients can augment this variable, but they have to do so before this file
+# is processed (i.e. before the include statement that includes it, or with
+# an environment variable setting).  Note that using a command line setting
+# won't work (even if it's an append), because setting make variables that
+# way stomps settings that come from the Makefile or its included fragments.
 # See comments near where the variable is referenced.
 VALID_ARDUINOLESS_TARGET_PATTERNS += %.c %.o %.ee.hex %.hex %.out %.out.map
 

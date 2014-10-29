@@ -143,9 +143,6 @@ generic.mk behaves.  These occur in sections marked "Overridable" in that file.
 
 <h3>Variable Overview</h3>
 
-FIXME: is it right to list command line and environment as ways here?  It used
-to be just command line.  Double check
-
 There are a number of variables that have default values which can be
 completely overridden by assigning your own values before
 <code>generic.mk</code> is included or as environment variable or variable
@@ -255,16 +252,16 @@ Finally, there's at least one weird variable that doesn't work like the others:
 
 <ul>
 
-  FIXME: is it right to list command line as a way but not environment here?
-
-  <li><code>VALID_ARDUINOLESS_TARGET_PATTERNS</code> -- Add new files or file
-  patterns which should be buildable even when no Arduino is connected (so you
-  can for example get syntax fixes finished without an Arduino).  Many normal
-  patterns are appended to any client-supplied setting of this variable
-  automatically (%.o, %.out, etc.).  Because generic.mk requeires this variable
-  to be set as needed at make-compile-time, it must be assigned to before
-  <code>generic.mk</code> is included (or given as a variable assignment
-  argument to make at the command line). </li>
+  <li><code>VALID_ARDUINOLESS_TARGET_PATTERNS</code> -- This can be used to add
+  new files or file patterns which should be buildable even when no Arduino is
+  connected (so you can for example get syntax fixes finished without an
+  Arduino).  Many normal patterns are appended to any client-supplied setting
+  of this variable automatically (%.o, %.out, etc.).  Because of these
+  patterns, and because generic.mk requires this variable to be set at
+  make-compile-time, it must be set from the Makefile before
+  <code>generic.mk</code> is included or as an environment variable.  Setting
+  it from the command line doesn't work: doing that stomps the built-in default
+  setting.</li>
 
 </ul>
 
