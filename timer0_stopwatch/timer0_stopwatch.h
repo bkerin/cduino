@@ -164,7 +164,7 @@ timer0_stopwatch_microseconds (void);
 // and the evaluation of TIMER0_STOPWATCH_TCNT0 in an immediately following
 // statement should not be more than a couple of machine instructions.
 // About the only thing you can do to get tighter timing performance is to
-// disable the timer overflow interrupts, so that you don't have to worry
+// disable the timer overflow interrupt, so that you don't have to worry
 // about clearing TOV0.  This interface doesn't support doing that, however.
 #define TIMER0_STOPWATCH_RESET_TCNT0() \
   do { \

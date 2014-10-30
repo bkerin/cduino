@@ -6,8 +6,6 @@
 #include "timer0_stopwatch.h"
 #include "util.h"
 
-#define TIMER0_VALUE_COUNT 256   // Values representable with eight bits
-
 #ifndef __AVR_ATmega328P__
 #  error Processor macro __AVR_ATmega328P__ is not defined. This code has \
          only been tested with the ATMega328p at 16 MHz on an Arduino Uno \
@@ -121,11 +119,11 @@ timer0_stopwatch_ticks (void)
       // had a chance to count yet, and it might even have happend since we
       // saved the value of TCNT0 a few instructions ago, so we don't add
       // tcv in.
-      result = (timer0_stopwatch_oc + 1) * TIMER0_VALUE_COUNT;
+      result = (timer0_stopwatch_oc + 1) * TIMER0_STOPWATCH_COUNTER_VALUES;
     }
     else {
       // Otherwise, the computation is as expected.
-      result = timer0_stopwatch_oc * TIMER0_VALUE_COUNT + tcv;
+      result = timer0_stopwatch_oc * TIMER0_STOPWATCH_COUNTER_VALUES + tcv;
     }
   }
 
