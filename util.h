@@ -20,8 +20,8 @@
 #define FALSE 0x00
 
 // NOTE: Only F_CPU values of greater that 1MHz with even multiples of 1MHz
-// are accurate.  There are some alternate low-frequency macros which are
-// pretty close, but haven't been tested.
+// result in accurate settings for these macros.  There are some alternate
+// low-frequency macros which are pretty close, but haven't been tested.
 #if F_CPU >= 1000000L
 #  define CLOCK_CYCLES_PER_MICROSECOND() (F_CPU / 1000000L)
 #  define CLOCK_CYCLES_TO_MICROSECONDS(a) \
