@@ -1,10 +1,10 @@
 // Test/demo for the timer0_stopwatch.h interface.
 //
 // This program first performs a number of internal tests with no visible
-// output.  If all these pass, it get around to tripple-blinking the onboard
+// output.  If all these pass, it gets around to tripple-blinking the onboard
 // LED on the Arduino PB5 pin three times (note that the normal Arduino
 // boot sequence might blink it a time or two itself), with approximately
-// 3 seconds between each tripple-blink, then do nothing.
+// 3 seconds between each tripple-blink, then does nothing.
 
 #include <assert.h>
 #include <avr/io.h>
