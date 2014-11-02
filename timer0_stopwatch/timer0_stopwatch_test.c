@@ -3,8 +3,10 @@
 // This program first performs a number of internal tests with no visible
 // output.  If all these pass, it gets around to tripple-blinking the onboard
 // LED on the Arduino PB5 pin three times (note that the normal Arduino
-// boot sequence might blink it a time or two itself), with approximately
-// 3 seconds between each tripple-blink, then does nothing.
+// boot sequence might blink it a time or two itself), with approximately 3
+// seconds between each tripple-blink, then does nothing.  If things go wrong,
+// take a look at TIMER0_STOPWATCH_DEBUG in the Makefile for this module.
+
 
 #include <assert.h>
 #include <avr/io.h>
