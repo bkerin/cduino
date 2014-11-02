@@ -1,6 +1,7 @@
 // Implementation of the interface described in timer0_stopwatch.h.
 
 #include <avr/interrupt.h>
+#include <avr/power.h>
 #include <util/atomic.h>
 
 #include "timer0_stopwatch.h"
@@ -47,8 +48,11 @@ ISR (TIMER0_OVF_vect)
 void
 timer0_stopwatch_init (void)
 {
-  PRR &= ~(_BV (PRTIM0));   // Ensure timer0 not shut down to save power.
+  power_timer0_enable ();   // Ensure timer0 not shut down to save power
 
+  // NOTE: these defaults correspond to the normal
+  // count-up-overflow-at-the-top operation with all fancy optional timer
+  // features disabled.
   TCCR0A = TCCR0A_DEFAULT_VALUE;
   TCCR0B = TCCR0B_DEFAULT_VALUE;
 
@@ -56,10 +60,6 @@ timer0_stopwatch_init (void)
   // cause it to overflow (possibly triggering a deferred overflow interrupt)
   // as soon as we start it running.
   TCNT0 = 0;
-
-  // Ensure that timer/counter0 is in normal mode (timer counts upwards and
-  // simply overruns when it passes its maximum 8-bit value).
-  TCCR0B &= ~(_BV (WGM02) | _BV (WGM01) | _BV (WGM00));
 
   // Ensure that the clock source for timer/counter is set to the
   // TIMER0_STOPWATCH_PRESCALER_DIVIDER prescaler tap.  Note that connecting
@@ -73,10 +73,6 @@ timer0_stopwatch_init (void)
 
   timer0_stopwatch_oc = 0;
 
-  // FIXME: It's possible that we should be using the TSM bit of GTCCR here
-  // to truly sync up the counter and the prescaler, I dunno if it's worth
-  // dealing with though.
-
   TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
   GTCCR |= _BV (PSRSYNC);   // Reset the prescaler (affects timer1 also)
   TCNT0 = 0;
@@ -87,6 +83,8 @@ timer0_stopwatch_init (void)
 void
 timer0_stopwatch_reset (void)
 {
+  // FIXME: potential clear-of TOV0 of TIFR0 here as there are for the
+  // TIMER0_STOPWATCH_RESET_TCNT0() macro.
   ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
   {
     timer0_stopwatch_oc = 0;
@@ -142,18 +140,18 @@ timer0_stopwatch_microseconds (void)
 void
 timer0_stopwatch_shutdown (void)
 {
-  TIMSK0 &= ~(_BV (TOIE0));   // Disable overflow interrups for timer/counter0.
+  TIMSK0 &= ~(_BV (TOIE0));   // Disable overflow interrups for timer/counter0
 
   // Restore defaults for timer/counter0 control register B.  Note that this
   // will stop the timer.
   TCCR0B = TCCR0B_DEFAULT_VALUE;
 
-  // Leave timer reading 0 as per interface promise.
+  // Leave timer reading 0 as per interface promise
   timer0_stopwatch_oc = 0;
   TCNT0 = 0;
   TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
 
   TCCR0A = TCCR0A_DEFAULT_VALUE;
 
-  PRR &= ~(_BV (PRTIM0));   // Shutdown timer/counter0 to save power.
+  power_timer0_disable ();   // Shutdown timer/counter0 to save power
 }

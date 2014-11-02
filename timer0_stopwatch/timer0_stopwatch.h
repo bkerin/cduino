@@ -164,20 +164,29 @@ timer0_stopwatch_microseconds (void);
 // and the evaluation of TIMER0_STOPWATCH_TCNT0 in an immediately following
 // statement should not be more than a couple of machine instructions.
 // About the only thing you can do to get tighter timing performance is to
-// disable the timer overflow interrupt, so that you don't have to worry
-// about clearing TOV0.  This interface doesn't support doing that, however.
+// disable the timer overflow interrupt, so that you don't have to worry about
+// clearing TOV0.  This interface doesn't support doing that, however.  FIXME:
+// this looks maybe wrong with respect to the order in which we clear TOV0,
+// because *regardless* of ATOMIC_BLOCK, the free-running timer could trip
+// TOV0 back on between the time we clear it and the time we reset TCNT0.
+// I guess then we might get an interrupt when we come out of the atomic
+// block, but it seems like it would be a confusing one since the counter
+// would have been reset at that point...  at least think this over.
+// Maybe everything should just be stopped with TSM bit of GTCCR, it seems
+// like the only safe way to get everything synced up and probably only
+// costs one instruction, but it would need tested.
 #define TIMER0_STOPWATCH_RESET_TCNT0() \
   do { \
     ATOMIC_BLOCK (ATOMIC_RESTORESTATE) \
     { \
-      GTCCR |= _BV (PSRSYNC); \
       TIFR0 |= _BV (TOV0); \
+      GTCCR |= _BV (PSRSYNC); \
       TCNT0 = 0; \
     } \
   } while ( 0 )
 
 // This macro evaluates to the current value of the counter.  It should be
-// used together with TIMER0_STOPWATCH_RESET_TCNT0.  See the description
+// used together with TIMER0_STOPWATCH_RESET_TCNT0().  See the description
 // of that macro for more details.
 #define TIMER0_STOPWATCH_TCNT0() TCNT0
 
