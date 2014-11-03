@@ -74,9 +74,10 @@ main (void)
   mtc = 1042;   // These tests are not so fast, we'll do fewer.
   old_ticks = 0;
   double delay_us = 0.0;
+  // FIXME: this looks wrong, won't it always quit at ii = 2?
   for ( ii = 0 ; ii < mtc / 1000 ; ii++ ) {
     uint32_t new_ticks = timer0_stopwatch_ticks ();
-    const int uspt = TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK ;
+    const int uspt = TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK;
     assert (new_ticks >= old_ticks + delay_us / uspt);
     old_ticks = new_ticks;
     delay_us = ii % (max_delay_us + 1);
@@ -135,9 +136,9 @@ main (void)
   TIMER0_STOPWATCH_RESET_TCNT0();
   uint8_t tcnt0_reading1 = TIMER0_STOPWATCH_TCNT0();
   uint8_t tcnt0_reading2 = TIMER0_STOPWATCH_TCNT0();
-  _delay_us (1);
+  _delay_us (1.0);
   uint8_t tcnt0_reading3 = TIMER0_STOPWATCH_TCNT0();
-  _delay_us (2 * TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK);
+  _delay_us (2.0 * TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK);
   uint8_t tcnt0_reading4 = TIMER0_STOPWATCH_TCNT0();
   DEBUG_LOG ("tcnt0_reading1: %u\n", tcnt0_reading1);
   assert (tcnt0_reading1 == 0);
