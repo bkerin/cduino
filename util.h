@@ -55,7 +55,7 @@
       _delay_ms (5.0);          \
       XxX_ems += 5.0;           \
     } while ( XxX_ems < time ); \
-  } while ( 0 )                 \
+  } while ( 0 )
 
 // NOTE: the CHKP() and BASSERT() macros are probably the most useful in
 // this section.  The others let you change which pin drives the LED or
