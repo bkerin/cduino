@@ -13,17 +13,21 @@
 #include <avr/sfr_defs.h>
 #include <limits.h>
 #include <util/delay.h>
-// FIXME: we shouldn't need to include this once avrlibc has a correct
-// assert.h (we only use it for assert as of this writing).
-#include <stdlib.h>
 
 #include "timer0_stopwatch.h"
+
+// FIXXME: this modules uses a different scheme for its test output than
+// for example one_wire_master and many others.  I don't think there's a
+// good reason for the difference.
 
 // See the Makefile for this module for a convenient way to set all the
 // compiler and linker flags required for debug logging to work.
 #ifdef TIMER0_STOPWATCH_DEBUG
 #  include "term_io.h"
-#  define DEBUG_LOG(...) printf (__VA_ARGS__)
+#  ifndef __GNUC__
+#    error GNU C is required by a nearby comma-swallowing macro
+#  endif
+#  define DEBUG_LOG(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
 #else
 #  define DEBUG_LOG(...)
 #endif
