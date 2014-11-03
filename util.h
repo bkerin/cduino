@@ -6,16 +6,24 @@
 #define UTIL_H
 
 #include <avr/io.h>
+#include <avr/version.h>
 #include <avr/wdt.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <util/delay.h>
 
+// This version dependency applies to the whole library, this is just a
+// convenient place to put it.
+#if __AVR_LIBC_VERSION__ < 10800UL
+#  error AVR Libc version 1.8.0 or later is required
+#endif
+
 #define HIGH 0x01
 #define LOW  0x00
 
-// WARNING: of course some contexts might understand things differently...
+// WARNING: of course some contexts might understand things differently.
+// Fuse and lock bits read as zero when "programmed", for example.
 #define TRUE  0x01
 #define FALSE 0x00
 
