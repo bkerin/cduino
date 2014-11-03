@@ -81,6 +81,9 @@ main (void)
     assert (new_ticks >= old_ticks + delay_us / uspt);
     old_ticks = new_ticks;
     delay_us = ii % (max_delay_us + 1);
+    // FIXME: THIS IS BROKEN: _delay_us requires a compile-time constant
+    // argument, we we need a delay wrapper that works in constants or
+    // something
     _delay_us (delay_us);
   }
 
