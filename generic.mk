@@ -411,7 +411,7 @@ PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
   echo "" ; \
   echo "  * Your Arduino program is itself using the serial port, which" ; \
   echo "    prevents the programmer from working on my Arduino Uno rev. 3" ; \
-  echo "    at leats.  Make sure that you do not have a screen session" ; \
+  echo "    at least.  Make sure that you do not have a screen session" ; \
   echo "    connected to the arduino, for example.  If you get a message" ; \
   echo "    like \"Couldn't open /dev/ttyACM0: Device or resource busy\"" ; \
   echo "    this is a particularly likely explanation." ; \
