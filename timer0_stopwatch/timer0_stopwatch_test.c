@@ -133,13 +133,13 @@ main (void)
 
   // Test the latency performance of the TIMER0_STOPWATCH_RESET_TCNT0()
   // and TIMER0_STOPWATCH_TCNT0() macros.
-  TIMER0_STOPWATCH_RESET_TCNT0();
-  uint8_t tcnt0_reading1 = TIMER0_STOPWATCH_TCNT0();
-  uint8_t tcnt0_reading2 = TIMER0_STOPWATCH_TCNT0();
+  TIMER0_STOPWATCH_RESET_TCNT0 ();
+  uint8_t tcnt0_reading1 = TIMER0_STOPWATCH_TCNT0 ();
+  uint8_t tcnt0_reading2 = TIMER0_STOPWATCH_TCNT0 ();
   _delay_us (1.0);
-  uint8_t tcnt0_reading3 = TIMER0_STOPWATCH_TCNT0();
+  uint8_t tcnt0_reading3 = TIMER0_STOPWATCH_TCNT0 ();
   _delay_us (2.0 * TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK);
-  uint8_t tcnt0_reading4 = TIMER0_STOPWATCH_TCNT0();
+  uint8_t tcnt0_reading4 = TIMER0_STOPWATCH_TCNT0 ();
   DEBUG_LOG ("tcnt0_reading1: %u\n", tcnt0_reading1);
   assert (tcnt0_reading1 == 0);
   DEBUG_LOG ("tcnt0_reading2: %u\n", tcnt0_reading2);
