@@ -270,8 +270,9 @@
 #define BITS_PER_BYTE 8
 
 // Really, all of them :)
-#define MS_PER_S 1000
-#define US_PER_S 1000000
+#define MS_PER_S  1000
+#define US_PER_S  1000000
+#define US_PER_MS (US_PER_S / MS_PER_S)
 
 // Get the high or low byte of a two byte value (in a very paranoid way :)
 #define HIGH_BYTE(two_byte_value)                                       \
