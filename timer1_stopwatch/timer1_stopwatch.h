@@ -99,13 +99,14 @@ timer1_stopwatch_init (void);
 
 // Number of ticks since timer/counter1 was last reset or overflowed.  NOTE:
 // if this macro (or TCNT1 via any other mechanism) will ever be written
-// *or read* from an interrup handler, then an AVR libc ATOMIC_BLOCK muse be
-// used around the acces in the main thread at least (the interrupt handler
-// is probably atomic anyway, since interrupts are normally disable while
-// other interrup handlers are running).  Note that even if there is no
-// possibility of a write to this register, read corruption can still occur,
-// because a shared internal temporary register is used to read the 16 bit
-// timer value.  See the ATmega328P datasheet Revision 8271C, section 15.3.
+// *or read* from an interrupt handler, then an AVR libc ATOMIC_BLOCK (from
+// the AVR libc header util/atomic.h) must be used around the access in the
+// main thread at least (the interrupt handler is probably atomic anyway,
+// since interrupts are normally disable while other interrup handlers
+// are running).  Note that even if there is no possibility of a write
+// to this register, read corruption can still occur, because a shared
+// internal temporary register is used to read the 16 bit timer value.
+// See the ATmega328P datasheet Revision 8271C, section 15.3.
 #define TIMER1_STOPWATCH_TICKS() TCNT1
 
 // Number of microseconds since timer/counter1 was last reset or overflowed.
@@ -113,6 +114,10 @@ timer1_stopwatch_init (void);
 // this macro.
 #define TIMER1_STOPWATCH_MICROSECONDS() \
   (TIMER1_STOPWATCH_TICKS() * TIMER1_STOPWATCH_MICROSECONDS_PER_TIMER_TICK)
+
+// This macro evaluates to true iff the timer has overflowed since it was
+// last reset.
+#define TIMER1_STOPWATCH_OVERFLOWED() (TIFR1 & _BV (TOV1))
 
 // This method entirely shuts down timer/counter1:
 //

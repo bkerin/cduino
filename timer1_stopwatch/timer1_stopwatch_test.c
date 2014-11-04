@@ -62,7 +62,7 @@ main (void)
     assert (new_ticks >= old_ticks);
     old_ticks = new_ticks;
   }
-  DEBUG_LOG ("Monotonicity test passed\n");
+  DEBUG_LOG ("Monotonicity tests passed\n");
 
   // Verify that the overflow flag works as expected.
   old_ticks = 0;
@@ -73,18 +73,17 @@ main (void)
     uint16_t const tick_margin = 142;
     uint16_t new_ticks = TIMER1_STOPWATCH_TICKS ();
     if ( old_ticks < new_ticks - tick_margin ) {
-      assert (! (TIFR1 & _BV (TOV1)));
+      assert (! TIMER1_STOPWATCH_OVERFLOWED ());
     }
     // If we've already gone backwards in time, the overflow flag better
     // already be set.
     if ( new_ticks < old_ticks ) {
-      BASSERT (TIFR1 & _BV (TOV1));
-      assert (TIFR1 & _BV (TOV1));
+      assert (TIMER1_STOPWATCH_OVERFLOWED ());
       break;
     }
     old_ticks = new_ticks;
   }
-  DEBUG_LOG ("Overflow flag test passed\n");
+  DEBUG_LOG ("Overflow flag tests passed\n");
 
   // Test the latency performance of the TIMER1_STOPWATCH_RESET() and
   // TIMER1_STOPWATCH_TICKS() macros.
