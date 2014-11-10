@@ -1,6 +1,5 @@
 // Implementation of the interface described in one_wire_master.h.
 
-#include <stdlib.h>
 #include <string.h>
 #include <util/crc16.h>
 #include <util/delay.h>
@@ -21,9 +20,8 @@
 // after proscribed waits of only 9 us requires some care, especially at
 // slower processor frequencies.
 
-// Release (tri-state) the one wire master pin.  Note that this does
-// not enable the internal pullup.  See the commends near omw_init()
-// in one_wire_master.h.
+// Release (tri-state) the one wire pin.  Note that this does not enable the
+// internal pullup.  See the commends near owm_init() in one_wire_master.h.
 #define RELEASE_LINE()    \
   DIO_INIT (              \
       OWM_PIN,            \
@@ -31,7 +29,7 @@
       DIO_DISABLE_PULLUP, \
       DIO_DONT_CARE )
 
-// Drive the line of the one wire master pin low.
+// Drive the line of the one wire pin low.
 #define DRIVE_LINE_LOW() \
   DIO_INIT (             \
       OWM_PIN,           \
