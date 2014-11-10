@@ -504,8 +504,8 @@ wx_put_string_frame_printf (char const *format, ...)
 //     Note that the actual return from this function doesn't take much
 //     time on success or failure (its fast enough that successive calls
 //     can pick up successive frames sent in the same radio packet).
-//     It's just that when failure occurs, other things tend to be need
-//     doing that cause enough delay that a serial overrun occurs.  The same
+//     It's just that when failure occurs, clients tend to do other things
+//     that cause enough delay that a serial overrun occurs.  The same
 //     thing can happen with success if there's extra radio data floating
 //     around and your polling loop isn't tight enough.  In other words,
 //     this is just a particularly likely instance of the general class of
