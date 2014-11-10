@@ -98,6 +98,15 @@
           simultaneously.  See the definition of AVRISPMKII_PORT in generic.mk
           in the top-level project directory.</li>
 
+          <li>
+            New modules for using timer1 as a simple stopwatch.  Timer1 is a 16
+            bit timer, so there is no need to use interrupts in any way to
+            measure shortish chunks of time.
+            <a href="xlinked_source_html/timer1_stopwatch.h.html">
+              xlinked_source_html/timer1_stopwatch.h
+            </a>
+          </li>
+
           <li> New software implementation of Msxim one-wire master protocol:
           <a
             href="xlinked_source_html/one_wire_master.h.html">one_wire_master.h
