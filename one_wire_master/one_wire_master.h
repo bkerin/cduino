@@ -1,4 +1,4 @@
-// One-wire master interface (software interface -- require one IO pin only)
+// One-wire master interface (software interface -- requires only one IO pin)
 //
 // Test driver: one_wire_master_test.h    Implementation: one_wire_master.c
 //
