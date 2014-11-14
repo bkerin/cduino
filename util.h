@@ -27,9 +27,15 @@
 #define TRUE  0x01
 #define FALSE 0x00
 
-// NOTE: Only F_CPU values of greater that 1MHz with even multiples of 1MHz
-// result in accurate settings for these macros.  There are some alternate
-// low-frequency macros which are pretty close, but haven't been tested.
+// FIXME: I think these macros should return floats.  Its gross to require
+// an explicit cast.  But that would require an audit of existing uses.
+// Requiring the cast at least makes it clear when we can tolerate a
+// float result.  WARNING: unless the argument a contains an explicit cast
+// to double, the results of CLOCK_CYCLES_TO_MICROSECONDS() are subject
+// to integer truncation.  WARNING: Only F_CPU values of greater that 1MHz
+// with even multiples of 1MHz result in accurate settings for these macros.
+// There are some alternate low-frequency macros which are pretty close,
+// but haven't been tested.
 #if F_CPU >= 1000000L
 #  define CLOCK_CYCLES_PER_MICROSECOND() (F_CPU / 1000000L)
 #  define CLOCK_CYCLES_TO_MICROSECONDS(a) \
