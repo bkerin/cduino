@@ -49,8 +49,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Tick delays for various parts of the standard speed one-wire protocol,
-// as described in Table 2 in Maxim application note AN126.
+// Tick delays for various parts of the one-wire protocol, as described in
+// Table 2 in Maxim application note AN126.
 #define TICK_DELAY_A   6.0
 #define TICK_DELAY_B  64.0
 #define TICK_DELAY_C  60.0
@@ -371,7 +371,7 @@ owm_verify (uint8_t *id_buf)
 void
 owm_write_byte (uint8_t data)
 {
-  // Loop to write each bit in the byte, LS-bit first
+  // Loop to write each bit in the byte, LSB first
   for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ )
   {
     owm_write_bit (data & B00000001);
@@ -414,6 +414,8 @@ uint8_t
 owm_read_byte (void)
 {
   uint8_t result = 0;
+
+  // Loop to read each bit in the byte, LSB first.
   for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ ) {
     result >>= 1;  // Shift the result to get ready for the next bit
     // If result is one, then set MS bit
