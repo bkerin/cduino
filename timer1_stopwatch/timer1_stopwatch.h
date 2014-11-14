@@ -31,7 +31,7 @@
 
 #include "util.h"
 
-// Provide a default value for the prescaler divider.  Other possibly
+// Provide a default value for the prescaler divider.  Other possible
 // settings are 1, 8, 256, and 1024.
 #ifndef TIMER1_STOPWATCH_PRESCALER_DIVIDER
 #  define TIMER1_STOPWATCH_PRESCALER_DIVIDER 64
