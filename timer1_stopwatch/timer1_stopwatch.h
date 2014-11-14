@@ -52,7 +52,7 @@
 
 // The number of microseconds per tick of the timer/counter1.
 #define TIMER1_STOPWATCH_MICROSECONDS_PER_TIMER_TICK \
-  CLOCK_CYCLES_TO_MICROSECONDS (TIMER1_STOPWATCH_PRESCALER_DIVIDER)
+  CLOCK_CYCLES_TO_MICROSECONDS ((double) TIMER1_STOPWATCH_PRESCALER_DIVIDER)
 
 // The number of microseconds before timer/counter1 will overflow.
 #define TIMER1_STOPWATCH_OVERFLOW_MICROSECONDS \
@@ -88,6 +88,7 @@ timer1_stopwatch_init (void);
 // an interrupt you *must* use an atomic block around this macro; see the
 // comments for TIMER1_STOPWATCH_TICKS() below.  Note that the stopwatch only
 // begins running at the end of this sequence, when TSM is written to zero.
+// Note also that writing a logic one to TOV1 actually *clears* it (weirdly).
 #define TIMER1_STOPWATCH_RESET() \
   do { \
     GTCCR |= _BV (TSM); \
