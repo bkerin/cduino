@@ -86,14 +86,14 @@ owm_touch_reset (void)
 void
 owm_write_bit (uint8_t value)
 {
-  // Send a 1-Wire write bit. Provide 10us recovery time.
+  // Send a 1-Wire write bit. Provide recovery time.
 
   if ( value ) {
     // Write '1' bit
     DRIVE_LINE_LOW ();
     TICK_DELAY (TICK_DELAY_A);
     RELEASE_LINE ();
-    TICK_DELAY (TICK_DELAY_B); // Complete the time slot and 10us recovery
+    TICK_DELAY (TICK_DELAY_B); // Complete the time slot and recovery
   }
   else {
     // Write '0' bit
@@ -107,14 +107,14 @@ owm_write_bit (uint8_t value)
 uint8_t
 owm_read_bit (void)
 {
-  // Read a bit from the 1-Wire bus and return it. Provide 10us recovery time.
+  // Read a bit from the 1-Wire bus and return it. Provide recovery time.
 
   DRIVE_LINE_LOW ();
   TICK_DELAY (TICK_DELAY_A);
   RELEASE_LINE ();
   TICK_DELAY (TICK_DELAY_E);
   uint8_t result = SAMPLE_LINE ();   // Sample bit value from slave
-  TICK_DELAY (TICK_DELAY_F); // Complete the time slot and 10us recovery
+  TICK_DELAY (TICK_DELAY_F); // Complete the time slot and recovery
 
   return result;
 }
