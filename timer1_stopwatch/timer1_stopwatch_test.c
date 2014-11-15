@@ -30,10 +30,10 @@
 #endif
 
 #if TIMER1_STOPWATCH_PRESCALER_DIVIDER < 64
-#  error This test program has been been tried only with a sufficiently large \
+#  error This entire test program only works with a sufficiently large \
          prescaler divider value.  Some portions of it definitely will not    \
-         pass with smaller divider settings, due to overhead in the tests     \
-         themselves.
+         pass with smaller divider settings.  The first couple tests \
+         (of monotonicity, overflow flag behavior) do work correctly though.
 #endif
 
 // Emit a single very quick blink on PB5
@@ -55,7 +55,7 @@ main (void)
 
   // Test timer monotonicity: time should always increase, as long as we
   // don't go long enough to wrap it around.
-  uint16_t tc = 4242;   // Test Count.  These tests are fast, we will do lots.
+  uint16_t tc = 2424;   // Test Count.  These tests are fast, we will do lots.
   uint16_t old_ticks = 0;
   for ( uint16_t ii = 0 ; ii < tc ; ii++ ) {
     uint16_t new_ticks = TIMER1_STOPWATCH_TICKS ();
