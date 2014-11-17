@@ -270,6 +270,9 @@
 // Underlying named-argument macro implementing the DIO_INIT() macro.
 // FIXME: "for_input" doesn't do a good job of suggesting that DIO_INPUT
 // or DIO_OUTPUT should be used.  likewise for enable_pullup sort of.
+// FIXME: it would be interesting to know if break; is in anyway more
+// efficient that the while (0) that follow it, in any circumstances,
+// with a modern gcc
 #define DIO_INIT_NA( \
     dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
     for_input, enable_pullup, initial_value ) \
