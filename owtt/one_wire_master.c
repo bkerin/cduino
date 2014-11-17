@@ -1,5 +1,17 @@
-// Implementation of the interface described in one_wire_master.h.
+// This is a version of one_wire_master.c that has been armed with extra
+// code that can be used to determine the timing that one-wire slave devices
+// actually use.  We want to behave as much like Maxim one-wire devices
+// as possible, and presumably they had good reasons for choosing the
+// slave timing settings they chose.  Note that we're looking for actual
+// slave behavior here: those are different than the prescribed timings
+// that Maxim says master devices should use, though of couse they are
+// supposed to be compatible with the latter.  To use this program, you
+// temporarily replace the one_wire_master.c with this file, add links to
+// files timer1_stopwatch/timer1_stopwatch.[ch], then look for "Probing"
+// comments in this file to uncomment :) There are more details below,
+// see the comments below about "Determined Timings".
 
+#include <avr/cpufunc.h>
 #include <string.h>
 #include <util/crc16.h>
 #include <util/delay.h>
@@ -8,7 +20,12 @@
 #include "one_wire_master.h"
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
+
+// We need a little more resolution from the timer than what the default
+// setting provides, hence this smaller prescaler setting.
+#define TIMER1_STOPWATCH_PRESCALER_DIVIDER 8
 #include "timer1_stopwatch.h"
+
 #include "util.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -72,9 +89,52 @@ owm_init (void)
   RELEASE_LINE ();
 }
 
-// These are the Determined Timings that we find the DS18B20 with short
-// wires to require based on trial-and-error or measurement at the master end
-#define DT_REQUIRED_RESET_PULSE_LENGTH 231.0
+// These are the Determined Timings that we get partly by consideration of
+// what the master-end protocol implies that the slave should do, and partly
+// by trial-and-error or measurements made from the master end with DS18B20(s)
+// with short wires connected.  Different DS18B20s exhibit different timing
+// characteristics.  For example, the experimentally determined reset pulse
+// lengths required to get the slave to respond with a presence pulse for
+// two different parts I have are 231 and 250 us.  This 10% variation is
+// within expectations for a design with an RC-oscillator-based internal
+// clock, and is easily within the margin or error provided by the 480 us
+// pulse the master is supposed to send.  I just picked the middle of the
+// measured or experimentally determined values from my DS18B20s for the
+// programmed slave timing.
+
+// Where the DS18B20 datasheet gives a typical timing value (e.g. for when the
+// slave samples during a master write slot Fig. 14 of the DS18B20 datasheet),
+// I've just used that typical value and not done any experimentation to
+// determine exactly what the slave really does.
+
+// Finally, in some cases there's no reason I can imagine that it should hurt
+// anything to just go as fast as possible.  In particular, when the master
+// issues a read time slot (which its only supposed to do right after it's
+// issued some command that lets the slave know a read time slot is coming
+// next -- see the "READ TIME SLOTS" section of the DS18B20 datasheet),
+// there's no reason the slave that's supposed to transmit shouldn't
+// immediately take control of the bus.
+
+//#define DT_REQUIRED_RESET_PULSE_LENGTH_LOW_OBSERVED 231.0
+//#define DT_REQUIRED_RESET_PULSE_LENGTH_HIGH_OBSERVED 250.0
+// In order to keep additional probes working, we delay longer than the
+// high observed required length of time in this program.  For the actual
+// slave its going to be better to require a delay midway between the two
+// observed values.
+#define DT_REQUIRED_RESET_PULSE_LENGTH 260.0
+
+// So far as I can tell, the DS18B20 considers ANY low reading on the
+// line to indicate the start of a master read slot, despite officially
+// requiring the master to hold the line low for at least 1 us (in the
+// DS18B20 datasheet).  This makes sense I guess: 1 us is not much, and
+// the line capacitance might mean that pulses from the master have trouble
+// making it all the way down the line.  The line is unlikely to receive a
+// blip of noise right as the master is getting ready to issue a read slot,
+// and it might not matter if it did.  The official suggestion in Maxim
+// Application Note AN126 is that the master should hold the line low for
+// 6.0 us (for non-overdrive operation).  Our tests probably always have
+// a cycle worth of delay in them so, that's about what we're requiring :)
+#define DT_REQUIRED_READ_SLOT_START_LENGTH (1.0 / 16)
 
 // Convenience macros
 #define T1RESET() TIMER1_STOPWATCH_RESET ()
@@ -85,12 +145,15 @@ owm_touch_reset (void)
 {
   TICK_DELAY (TICK_DELAY_G);
   DRIVE_LINE_LOW ();
+  // Probing substitution that allows us to experimentally determine the
+  // length of presense pulse an actual Maxim slave (DS18B20) requires.
   //TICK_DELAY (TICK_DELAY_H);
   _delay_us (DT_REQUIRED_RESET_PULSE_LENGTH);
   RELEASE_LINE ();
 
-  _delay_us (10.0);
-
+  //  Probing block that can be used to measure presence pulse timing of an
+  //  actual Maxim slave (DS18B20).
+  /*
   T1RESET ();
   while ( SAMPLE_LINE () ) {
     ;
@@ -101,21 +164,15 @@ owm_touch_reset (void)
     ;
   }
   double dt_presence_pulse_length = T1US () - dt_delay_before_presence_pulse;
-
   PFP ("\nDelay before presence pulse: %f\n", dt_delay_before_presence_pulse);
   PFP ("\nPresence pulse length: %f\n", dt_presence_pulse_length);
-
-  // FIXME: WORK POINT: got to here with our reverse engineering-timing work
+  */
 
   TICK_DELAY (TICK_DELAY_I);
   // Look for presence pulse from slave
 
   uint8_t result = ! SAMPLE_LINE ();
   TICK_DELAY (TICK_DELAY_J); // Complete the reset sequence recovery
-
-  if ( result ) {
-    BTRAP ();
-  }
 
   return result; // Return sample presence pulse result
 }
@@ -146,11 +203,35 @@ owm_read_bit (void)
 {
   // Read a bit from the 1-Wire bus and return it. Provide 10us recovery time.
 
-  DRIVE_LINE_LOW ();
-  TICK_DELAY (TICK_DELAY_A);
-  RELEASE_LINE ();
+  // FIXME: I think the most sensible thing to do with this test file is
+  // just dump it into one_wire_master in changed-name for with comments
+  // saying how it was used to sort out the slave timings.  Then the same
+  // names for the discovered timings should be used in the slave module.
+
+
+  // Probing to determine how long actual slaves require the line to be held
+  // low to start a master-read slot.  Since this is last probe in this file
+  // it'ss not commented out.  Note that these hard-coded bits assume that
+  // the default one-wire bit is being used.
+  DDRD |= _BV (DDD2);
+  PORTD &= ~(_BV (PORTD2));
+  //DRIVE_LINE_LOW ();
+  // Entirely *eliminating* this delay doesn't stop the slave from
+  // interpreting the temporary blip generated by driving the line low then
+  // immediately releasing it as the start of a master read slot.  Note that
+  // the macros have been replaced here with bid fiddling (which might be
+  // an instructino or two faster) for maximum speed, and still the slave
+  // interprets the low blip as the start of a slave-write slot.
+  //TICK_DELAY (TICK_DELAY_A);
+  DDRD &= ~(_BV (DDD2));
+  //PORTD &= ~(_BV (PORTD2));   // Happens to be the same
+  //RELEASE_LINE ();
+
   TICK_DELAY (TICK_DELAY_E);
   uint8_t result = SAMPLE_LINE ();   // Sample bit value from slave
+  if ( ! result ) {
+    PFP ("read a 0 from slave\n");
+  }
   TICK_DELAY (TICK_DELAY_F); // Complete the time slot and 10us recovery
 
   return result;
