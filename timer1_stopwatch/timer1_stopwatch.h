@@ -31,8 +31,13 @@
 
 #include "util.h"
 
-// Provide a default value for the prescaler divider.  Other possible
-// settings are 1, 8, 256, and 1024.
+// Provide a default value for the prescaler divider.  Other possible settings
+// are 1, 8, 256, and 1024.  WARNING: if you want to set this to something
+// different, you must do so in the module Makefile or from the make command
+// line, since you want *all* inclusions of this header (including the one
+// in one_wire_master.c) to see the same value.  Doing otherwise invites
+// awful bugs in which different parts of the code have different ideas of
+// how long timer ticks are.
 #ifndef TIMER1_STOPWATCH_PRESCALER_DIVIDER
 #  define TIMER1_STOPWATCH_PRESCALER_DIVIDER 64
 #endif
