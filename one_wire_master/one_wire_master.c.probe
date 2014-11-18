@@ -176,6 +176,7 @@ owm_touch_reset (void)
 
   //  Probing block that can be used to measure presence pulse timing of an
   //  actual Maxim slave (DS18B20).
+  /*
   T1RESET ();
   while ( SAMPLE_LINE () ) {
     ;
@@ -188,6 +189,7 @@ owm_touch_reset (void)
   double dt_presence_pulse_length = T1US () - dt_delay_before_presence_pulse;
   PFP ("\nDelay before presence pulse: %f\n", dt_delay_before_presence_pulse);
   PFP ("\nPresence pulse length: %f\n", dt_presence_pulse_length);
+  */
 
   TICK_DELAY (TICK_DELAY_I);
   // Look for presence pulse from slave
@@ -245,7 +247,9 @@ owm_read_bit (void)
   TICK_DELAY (TICK_DELAY_E);
   uint8_t result = SAMPLE_LINE ();   // Sample bit value from slave
   if ( ! result ) {
-    PFP ("read a 0 from slave\n");
+    PFP (
+        "read a 0 from slave, so it believed a slave write slot was "
+        "happening \n" );
   }
   TICK_DELAY (TICK_DELAY_F); // Complete the time slot and 10us recovery
 
