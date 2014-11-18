@@ -33,3 +33,7 @@ CPPFLAGS += -DOWM_TEST_CONDITION_SINGLE_SLAVE
 ifneq ($(words $(filter -DOWM_TEST_CONDITION_%,$(CPPFLAGS))),1)
   $(error Exactly one OWM_TEST_CONDITION_* must be defined)
 endif
+
+# This is only required by the one_wire_master.c.probe program, which isn't
+# normally required by users.
+#CPPFLAGS += -DTIMER1_STOPWATCH_PRESCALER_DIVIDER=8

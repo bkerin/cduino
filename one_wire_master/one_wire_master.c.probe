@@ -8,12 +8,23 @@
 // reasons for choosing the slave timing settings they chose.  Note that
 // we're looking for actual slave timing behavior here: this is different
 // than the prescribed timings that Maxim says master devices should use,
-// though of couse it's supposed to be compatible.  To use this program,
-// you temporarily replace the one_wire_master.c with this file, add links
-// to files timer1_stopwatch/timer1_stopwatch.[ch], then look for "Probing"
-// comments in this file to figure out what to uncomment :) The hardware setup
-// should be the same as prescribed in one_wire_master_test.c.  There are
-// more details below, see the comments below about "Determined Timings".
+// though of couse it's supposed to be compatible.
+//
+// To use this program:
+//
+//   * Temporarily replace the one_wire_master.c with this file
+//
+//   * Add links  to files timer1_stopwatch/timer1_stopwatch.[ch]
+//
+//   * Uncomment the CPPFLAGS assignment in the Makefile that set the
+//     TIMER1_STOPWATCH_PRESCALER_DIVIDER to 8
+//
+//   * Look for "Probing" comments in this file to figure out what to
+//     uncomment :)
+//
+// The hardware setup should be the same as prescribed in
+// one_wire_master_test.c.  There are more details below, see the comments
+// below about "Determined Timings".
 
 #include <avr/cpufunc.h>
 #include <string.h>
@@ -25,9 +36,17 @@
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 
-// We need a little more resolution from the timer than what the default
-// setting provides, hence this smaller prescaler setting.
-#define TIMER1_STOPWATCH_PRESCALER_DIVIDER 8
+// For the timing probing to work right, this must have been set correctly
+// from the Makefile or command line, here we just verify that this
+// is the case.  WARNING: setting it here (even before the include of
+// timer1_stopwatch.h in this file) isn't enough, since this header is
+// also included from one_wire_master.c.  In fact trying to set it here
+// results in awful bugs, because it creates a discrepancy between the
+// implementation's belief about tick sizes and client's belief.
+#if TIMER1_STOPWATCH_PRESCALER_DIVIDER != 8
+#  error TIMER1_STOPWATCH_PRESCALER_DIVIDES not set as required
+#endif
+
 #include "timer1_stopwatch.h"
 
 #include "util.h"
@@ -157,7 +176,6 @@ owm_touch_reset (void)
 
   //  Probing block that can be used to measure presence pulse timing of an
   //  actual Maxim slave (DS18B20).
-  /*
   T1RESET ();
   while ( SAMPLE_LINE () ) {
     ;
@@ -170,7 +188,6 @@ owm_touch_reset (void)
   double dt_presence_pulse_length = T1US () - dt_delay_before_presence_pulse;
   PFP ("\nDelay before presence pulse: %f\n", dt_delay_before_presence_pulse);
   PFP ("\nPresence pulse length: %f\n", dt_presence_pulse_length);
-  */
 
   TICK_DELAY (TICK_DELAY_I);
   // Look for presence pulse from slave
@@ -206,12 +223,6 @@ uint8_t
 owm_read_bit (void)
 {
   // Read a bit from the 1-Wire bus and return it. Provide 10us recovery time.
-
-  // FIXME: I think the most sensible thing to do with this test file is
-  // just dump it into one_wire_master in changed-name for with comments
-  // saying how it was used to sort out the slave timings.  Then the same
-  // names for the discovered timings should be used in the slave module.
-
 
   // Probing to determine how long actual slaves require the line to be held
   // low to start a master-read slot.  Since this is last probe in this file
