@@ -232,9 +232,8 @@ values:
    ARDUINO_BOOTLOADER = $uno_rev3_bootloader
 
 But the ARDUINO_PORT should be the one from the above list that corresponds
-to the Arduino device you want to program.  If you aren't sure which you
-want, try unplugging the device and re-running the command that produced
-this message to see which one dissapears from the list :).
+to the Arduino device you want to program.  Note that the assignment of /dev
+files to devices can depend on the order in which they are plugged in :).
 
 The ARDUINO_BAUD should probably be $uno_rev3_baud for an Uno rev.3,
 or $duemilanove_baud for a Duemilanove.
