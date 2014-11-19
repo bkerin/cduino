@@ -6,8 +6,7 @@ include generic.mk
 
 # FIXME: USE OWM_ prefix for test conditions?  dio doesn't do it...
 
-# The one_wire_master.h interface requires that we define ONE_WIRE_MASTER_PIN
-# at compile time: in this case we choose to use DIO_PIN_DIGITAL_2
+# The one_wire_master.h interface requires this to be defined at compile time.
 CPPFLAGS += -DOWM_PIN=DIO_PIN_DIGITAL_2
 
 # Exactly one of the following OWM_TEST_CONDITION_* macros must be defined.
