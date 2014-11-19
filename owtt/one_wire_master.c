@@ -1,15 +1,30 @@
 // This is a version of one_wire_master.c that has been armed with extra
-// code that can be used to determine the timing that one-wire slave devices
-// actually use.  We want to behave as much like Maxim one-wire devices
-// as possible, and presumably they had good reasons for choosing the
-// slave timing settings they chose.  Note that we're looking for actual
-// slave behavior here: those are different than the prescribed timings
-// that Maxim says master devices should use, though of couse they are
-// supposed to be compatible with the latter.  To use this program, you
-// temporarily replace the one_wire_master.c with this file, add links to
-// files timer1_stopwatch/timer1_stopwatch.[ch], then look for "Probing"
-// comments in this file to uncomment :) There are more details below,
-// see the comments below about "Determined Timings".
+// code that can be used to determine the timing that one-wire slave
+// devices actually use.  It's actually only useful for figuring out how
+// slaves should work, but it lives here in the one_wire_master module
+// because we just used a hacked version of the master implementation
+// to figure out what the slaves should do.  We want to behave as much
+// like Maxim one-wire devices as possible, and presumably they had good
+// reasons for choosing the slave timing settings they chose.  Note that
+// we're looking for actual slave timing behavior here: this is different
+// than the prescribed timings that Maxim says master devices should use,
+// though of couse it's supposed to be compatible.
+//
+// To use this program:
+//
+//   * Temporarily replace the one_wire_master.c with this file
+//
+//   * Add links  to files timer1_stopwatch/timer1_stopwatch.[ch]
+//
+//   * Uncomment the CPPFLAGS assignment in the Makefile that set the
+//     TIMER1_STOPWATCH_PRESCALER_DIVIDER to 8
+//
+//   * Look for "Probing" comments in this file to figure out what to
+//     uncomment :)
+//
+// The hardware setup should be the same as prescribed in
+// one_wire_master_test.c.  There are more details below, see the comments
+// below about "Determined Timings".
 
 #include <avr/cpufunc.h>
 #include <string.h>
@@ -21,9 +36,17 @@
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 
-// We need a little more resolution from the timer than what the default
-// setting provides, hence this smaller prescaler setting.
-#define TIMER1_STOPWATCH_PRESCALER_DIVIDER 8
+// For the timing probing to work right, this must have been set correctly
+// from the Makefile or command line, here we just verify that this
+// is the case.  WARNING: setting it here (even before the include of
+// timer1_stopwatch.h in this file) isn't enough, since this header is
+// also included from one_wire_master.c.  In fact trying to set it here
+// results in awful bugs, because it creates a discrepancy between the
+// implementation's belief about tick sizes and client's belief.
+#if TIMER1_STOPWATCH_PRESCALER_DIVIDER != 8
+#  error TIMER1_STOPWATCH_PRESCALER_DIVIDES not set as required
+#endif
+
 #include "timer1_stopwatch.h"
 
 #include "util.h"
@@ -105,7 +128,7 @@ owm_init (void)
 // Where the DS18B20 datasheet gives a typical timing value (e.g. for when the
 // slave samples during a master write slot Fig. 14 of the DS18B20 datasheet),
 // I've just used that typical value and not done any experimentation to
-// determine exactly what the slave really does.
+// verify what the slave does.
 
 // Finally, in some cases there's no reason I can imagine that it should hurt
 // anything to just go as fast as possible.  In particular, when the master
@@ -203,12 +226,6 @@ owm_read_bit (void)
 {
   // Read a bit from the 1-Wire bus and return it. Provide 10us recovery time.
 
-  // FIXME: I think the most sensible thing to do with this test file is
-  // just dump it into one_wire_master in changed-name for with comments
-  // saying how it was used to sort out the slave timings.  Then the same
-  // names for the discovered timings should be used in the slave module.
-
-
   // Probing to determine how long actual slaves require the line to be held
   // low to start a master-read slot.  Since this is last probe in this file
   // it'ss not commented out.  Note that these hard-coded bits assume that
@@ -230,7 +247,9 @@ owm_read_bit (void)
   TICK_DELAY (TICK_DELAY_E);
   uint8_t result = SAMPLE_LINE ();   // Sample bit value from slave
   if ( ! result ) {
-    PFP ("read a 0 from slave\n");
+    PFP (
+        "read a 0 from slave, so it believed a slave write slot was "
+        "happening \n" );
   }
   TICK_DELAY (TICK_DELAY_F); // Complete the time slot and 10us recovery
 
