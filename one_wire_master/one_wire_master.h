@@ -54,8 +54,8 @@ owm_read_bit (void);
 // Device Presense Confirmation/Discovery
 //
 // These functions allow the presence of particular slaves to be confirmed,
-// or the bus searched for all slaves, slave from or not from of a particular
-// family, or slaves with an active alarm condition.
+// or the bus searched for all slaves.  FIXXME: searches for slaves from
+// particular families or with active alarm conditions aren't supported yet.
 //
 
 // When these commands occur after a reset, the slaves interpret them as

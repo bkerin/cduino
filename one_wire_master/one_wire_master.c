@@ -151,7 +151,7 @@ static uint8_t crc8;
 
 // Perform the 1-Wire Search Algorithm on the 1-Wire bus using the existing
 // search state.
-// Return TRUE : device found, ROM number in rom_id buffer
+// Return TRUE  : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 //
 static uint8_t
