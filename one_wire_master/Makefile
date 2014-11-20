@@ -1,5 +1,24 @@
 include run_screen.mk
 
+# It's convenient to have both a master and a slave connected at the
+# same time, so we can use our master and slave implementations together.
+# To support that, we have to use a different port for the second Arduino,
+# and not depend on autodetection.  Our build system then requires us to
+# specify all of these options.
+
+# These setting are only useful when we want to connect two Arduinos at once
+# (in order to test both a one-wire master and a slave, for example).  In this
+# situation we can't depend on build system autodetection, but must instead
+# state explicitly which device we want to program.  Our build system then
+# requires us to specify all of these options.  Note that the port device
+# file assigned to a given Arduino can depend on the order in which it
+# was plugged in, and on other devices present on USB.  When in doubt, try
+# plugging and unplugging the Arduinos and doing ls /dev to see which files
+# appear/dissapear.  FIXME: comment these back out when done testing slave
+ARDUINO_PORT = /dev/ttyACM0
+ARDUINO_BAUD = 115200
+ARDUINO_BOOTLOADER = optiboot_atmega328.hex
+
 AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
 include generic.mk
