@@ -11,6 +11,9 @@ adc_init (adc_reference_source_t reference_source)
 {
   PRR &= ~(_BV (PRADC));
 
+  // FIXME: elsewhere we give these default values their own macro names,
+  // I guess its worth it, sort of.
+
   // Restore the default settings for ADMUX.
   ADMUX = 0x00;
 
@@ -44,7 +47,9 @@ adc_init (adc_reference_source_t reference_source)
   // reference is changed should be discarded.
   ADCSRA |= _BV (ADEN) | _BV (ADPS2) | _BV (ADPS1) | _BV (ADPS0) | _BV (ADSC);
 
-  // Wait for the ADC to return a sample (and discard it).
+  // Wait for the ADC to return a sample.  Since adc_read_raw() sets this
+  // bit and waits for it to clear again, this first sampel ends up getting
+  // discarded as required.
   loop_until_bit_is_clear (ADCSRA, ADSC);
 }
 
