@@ -75,7 +75,7 @@ main (void)
   PFP ("Finished adc_pin_init().\n");
 
   PFP ("\n");
-  
+
   // Configure pin A1 (aka PC1) as an output, starting out low.
   PORTC &= ~(_BV (PORTC1));
   //FIXXME: could be a no-op, which recent avr libc have a macro for
@@ -93,7 +93,7 @@ main (void)
 
     toggle_pc1 ();
 
-    float mspr = 500.0;   // Milliseconds Per Reading (and per LED toggle)
+    float const mspr = 500.0;   // Milliseconds Per Reading (and LED toggle)
     _delay_ms (mspr);
   }
   return 0;
