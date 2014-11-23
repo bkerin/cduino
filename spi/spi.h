@@ -46,7 +46,7 @@
 // to use if you're talking to just one slave.  This is all I've tested myself.
 //
 // LIKELY UNTESTEDNESS WARNING: I have a vague memory of having tried out
-// the below multi-slave approach out once upon a time, and having it work.
+// the below multi-slave approach once upon a time, and having it work.
 // But I might be imagining it.
 //
 // It's possible to use another digital output to control a SPI slave,

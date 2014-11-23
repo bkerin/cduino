@@ -19,11 +19,33 @@
          the DIO_PIN_* tuple macros before this header is included)
 #endif
 
-// Intialize the one wire slave interface.  This sets up the chosen DIO
-// pin, including pin change interrupts and global interrupt enable.
-// FIXME: pull-up?  and documentation for pull-up?
+// The one-wire protocol says that the device ID consists of an 8-bit family
+// code (which is the same for all devices of a given type, followed by a
+// unique 48-bit part code, followed by an 8 bit CRC of the previous bits).
+#define OWS_PART_ID_SIZE_BITS 48
+
+// If a family code hasn't been specified already, assign a default.
+#ifndef OWS_FAMILY_CODE
+#  define OWS_FAMILY_CODE 0x42
+#endif
+
+// Default ID (excluding the trailing CRC), in case the user doesn't want
+// to bother providing one.  FIXME: fix up the mess of reversed bytes that
+// comes up when we keep IDs in 64 bit ints, we already dealt with this
+// issue in the one_wire_master module.
+#define OWS_DEFAULT_ID \
+  ((((uint64_t) OWS_FAMILY_CODE) << OWS_ID_SIZE_BITS) & 0x424242424242)
+
+// Initialize the one-wire slave interface.  This sets up the chosen
+// DIO pin, including pin change interrupts and global interrupt enable.
+// If load_eeprom_id is true, the first 64 bits of the AVR EEPROM are read
+// and used to form a slave ID, which is loaded into RAM for speedy access.
+// See the write_random_id_to_eeprom target of generic.mk for a convenient
+// way to load unique IDs onto devices.  If load_eeprom_id is false, a
+// default device ID of OWS_DEFAULT_ID is used (note that this arrangement
+// is only useful if you intend to use only one of your slaves on the bus).
 void
-ows_init (void);
+ows_init (uint8_t load_eeprom_id);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -35,21 +57,22 @@ ows_init (void);
 //
 
 // FIXME: well this should work but its busy... of course we would probably
-// like to be able to sleep and wake up on a pin change interrupt.
+// like to be able to sleep and wake up on a pin change interrupt, though
+// due to the time required to wake up, that's gauranteed to cause the slave
+// to speak a dielect, though admittedly one that only requires the master
+// to ignore non-response to the first reset pulse.
 void
 ows_wait_for_reset (void);
 
 // Wait for a reset, and signal our presence when we receive one.
 void
-ows_present (void);
+ows_wait_then_signal_presence (void);
 
 // Write bit
-// FIXME: is this how slaves write bits?
 void
 ows_write_bit (uint8_t value);
 
 // Read bit
-// FIXME: is this how slaves read bits?
 uint8_t
 ows_read_bit (void);
 
@@ -66,10 +89,12 @@ ows_read_bit (void);
 // directions to begin participating in various ID search/discovery commands.
 // Note that clients don't generally need to use these macros directly.
 // See the DS18B20 datasheet and Maxim application note AN187 for details.
-#define OWM_READ_ROM_COMMAND   0x33
-#define OWM_SEARCH_ROM_COMMAND 0xF0
+// FIXME: consolidate with constante from owm?
+#define OWS_READ_ROM_COMMAND   0x33
+#define OWS_SEARCH_ROM_COMMAND 0xF0
 
 // One wire ID size in bytes
+// FIXME: consolidate with constante from owm?
 #define OWM_ID_BYTE_COUNT 8
 
 // FIXME: all these functions need to turn into support for slave end
@@ -135,6 +160,23 @@ ows_write_byte (uint8_t data);
 // FIXME: is this how slave does it?
 uint8_t
 ows_read_byte (void);
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Device Presense Confirmation/Discovery
+//
+// These functions can be used to allow the slave to participate in bus
+// searches or device checks.
+//
+
+// When these commands occur after a reset, the slaves should interpret
+// them as directions to begin participating in various ID search/discovery
+// commands.  Note that clients don't generally need to use these macros
+// directly.  See the DS18B20 datasheet and Maxim application note AN187
+// for details.
+#define OWS_READ_ROM_COMMAND   0x33
+#define OWS_SEARCH_ROM_COMMAND 0xF0
+
 
 // Fancy simultaneous read/write.  Sort of.  I guess, I haven't used it. It's
 // supposed to be more efficient.  See Maxim Application Note AN126. WARNING:

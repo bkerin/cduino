@@ -1,20 +1,38 @@
 include run_screen.mk
 
+# It's convenient to have both a master and a slave connected at the
+# same time, so we can use our master and slave implementations together.
+# To support that, we have to use a different port for the second Arduino,
+# and not depend on autodetection.  Our build system then requires us to
+# specify all of these options.  Note that the port device file assigned to
+# a given Arduino can depend on the order in which it was plugged in, and on
+# other devices present on USB.  When in doubt, try plugging and unplugging
+# the Arduinos and doing ls /dev to see which files appear/dissapear.
+ARDUINO_PORT = /dev/ttyACM1
+ARDUINO_BAUD = 115200
+ARDUINO_BOOTLOADER=optiboot_atmega328.hex
+
 AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
 include generic.mk
 
-# FIXME: USE OWM_ prefix for test conditions?  dio doesn't do it...
+# FIXME: USE OWS_ prefix for test conditions?  dio doesn't do it...
 
-# The one_wire_master.h interface requires that we define ONE_WIRE_MASTER_PIN
-# at compile time: in this case we choose to use DIO_PIN_DIGITAL_2
-CPPFLAGS += -DOWM_PIN=DIO_PIN_DIGITAL_2
+# The one_wire_master.h interface requires this to be defined at compile time.
+CPPFLAGS += -DOWS_PIN=DIO_PIN_DIGITAL_2
+
+# This is the Maxim family code for the DS18B20.  Since our test/demo
+# program emulates a limited DS18B20, we use this family code :) Actually,
+# we mainly use it to show how to set your own family code.
+CPPFLAGS += -DOWS_FAMILY_CODE=0x28
 
 # Exactly one of the following OWM_TEST_CONDITION_* macros must be defined.
 
+# FIXME: this isnt thw OWM anymore, so remove or change
 CPPFLAGS += -DOWM_TEST_CONDITION_SINGLE_SLAVE
 
 # Uncomment these to test a multi-slave bus configuration.
+# FIXME: this isnt thw OWM anymore, so remove or change
 #CPPFLAGS += -DOWM_TEST_CONDITION_MULTIPLE_SLAVES
 
 # For the multiple-slave tests to work, you must determine your actual
@@ -26,10 +44,13 @@ CPPFLAGS += -DOWM_TEST_CONDITION_SINGLE_SLAVE
 # search algorithm.  It might be easiest to try both orders :) The individual
 # bytes of these IDs should be given in the order they occur in the ID.
 # The test program takes care of swapping them to account for endianness.
+# FIXME: this isnt thw OWM anymore, so remove or change
 #CPPFLAGS += -DOWM_FIRST_SLAVE_ID=0x28542a8e060000b4
+# FIXME: this isnt thw OWM anymore, so remove or change
 #CPPFLAGS += -DOWM_SECOND_SLAVE_ID=0x289ae53005000015
 
 # Ensure that exactly one test condition is defined.
+# FIXME: this isnt thw OWM anymore, so remove or change
 ifneq ($(words $(filter -DOWM_TEST_CONDITION_%,$(CPPFLAGS))),1)
   $(error Exactly one OWM_TEST_CONDITION_* must be defined)
 endif

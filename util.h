@@ -54,7 +54,7 @@
 #define LIKELY(condition)   __builtin_expect (!!(condition), 1)
 #define UNLIKELY(condition) __builtin_expect (!!(condition), 0)
 
-// Blink LEDs at checkpoints, trap points, or assertion violations {{{1
+// Tracing and Debugging Info via LEDs or EEPROM
 
 // The _delay_ms() and _delay_us() functions of AVR libc *REQUIRE* their
 // arguments to be recognizable to GCC as double constants at compile-time.
@@ -269,6 +269,47 @@
       }                                           \
     }                                             \
   } while ( 0 )
+
+// Offset from start of EEPROM used by LASSERT().
+#define LASSERT_EEPROM_ADDRESS 960
+
+// This is the RAM and EEPROM dedicated to the LASSERT() message.
+#define LASSERT_BUFFER_SIZE 40
+
+// FIXME: WORK POINT: test this LASSERT() stuff
+
+// Like assert(), but first stores the file and line of the violation
+// at EEPROM address LASSER_EEPROM_ADDRESS.  It can be retrieved later
+// with GET_LASSER_MESSAGE(), or cleared with CLEAR_LASSERT_MESSAGE().
+// This may be useful for chasing down rare failures.
+#define LASSERT(condition)                                                  \
+  do {                                                                      \
+    if ( UNLIKELY (! (condition)) ) {                                       \
+      char *XxX_msg = malloc (LASSERT_BUFFER_SIZE);                         \
+      XxX_msg[0] = '\0';                                                    \
+      int XxX_cp                                                            \
+        = snprintf (                                                        \
+            XxX_msg, LASSERT_BUFFER_SIZE, "%s: %i\n", __FILE__, __LINE__ ); \
+      if ( XxX_cp < 0 ) {                                                   \
+        XxX_msg = "error in LASSERT() itself";                              \
+      }                                                                     \
+      eeprom_update_block (                                                 \
+          XxX_msg,                                                          \
+          LASSERT_EEPROM_ADDRESS,                                           \
+          strnlen (XxX_msg, LASSERT_BUFFER_SIZE) );                         \
+      assert (0);                                                           \
+    }                                                                       \
+  } while ( 0 )                                                             \
+
+// Retrieve the last message stored by LASSERT() (or an empty string, if no
+// LASSERT() violation has occurred since CLEAR_LASSERT_MESSAGE() was called.
+// The buffer argument must point to LASSERT_BUFFER_SIZE bytes of memory.
+#define GET_LASSERT_MESSAGE(buffer) \
+  eeprom_read_block (buffer, LASSERT_EEPROM_ADDRESS, LASSERT_BUFFER_SIZE)
+
+// Clear any message stored in EEPROM by any previous LASSERT().
+#define CLEAR_LASSERT_MESSAGE() \
+  eeprom_write_byte (LASSERT_EEPROM_ADDRESS, '\0')
 
 // }}}1
 

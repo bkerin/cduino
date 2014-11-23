@@ -66,8 +66,11 @@ ds18b20_init_and_rom_command (void)
   // to the "INITIALIZATION" step (Step 1) described in the DS18B20 datasheet.
   // FIXME: would be nice to have datasheet available on web and linked to
   // by the docs...
+  PFP ("cp0\n");   // FIXME: remove testing
   uint8_t slave_presence = owm_touch_reset ();
   assert (slave_presence);
+
+  PFP ("cp1\n");   // FIXME: remove testing
 
   // This test program requires that only one slave be present, so we can
   // use the READ ROM command to get the slave's ROM ID.
@@ -122,6 +125,38 @@ main (void)
   PFP ("\n");
 
   owm_init ();   // Initialize the one-wire interface master end
+
+  // FIXME: devel block to test that pin not broken
+  {
+    // For testing output:
+    /*
+    for ( ; ; ) {
+      CHKP ();
+      DIO_INIT (OWM_PIN, DIO_OUTPUT, DIO_DONT_CARE, HIGH);
+      DIO_SET_LOW (OWM_PIN);
+      _delay_ms (5000.0);
+      DIO_SET_HIGH (OWM_PIN);
+      _delay_ms (5000.0);
+      DIO_INIT (OWM_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
+      for ( uint8_t ii = 0 ; ii < 5 ; ii++ ) {
+        uint8_t reading = DIO_READ (OWM_PIN);
+        PFP ("got reading: %i\n", (int) reading);
+        _delay_ms (1000.0);
+      }
+    }
+    */
+    // can be used *instead* of the above to test input
+    /*
+    for ( ; ; ) {
+      DIO_INIT (OWM_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
+      for ( uint8_t ii = 0 ; ii < 5 ; ii++ ) {
+        uint8_t reading = DIO_READ (OWM_PIN);
+        PFP ("got reading: %i\n", (int) reading);
+        _delay_ms (1000.0);
+      }
+    }
+    */
+  }
 
   PFP ("Trying owm_touch_reset()... ");
   uint8_t slave_presence = owm_touch_reset ();

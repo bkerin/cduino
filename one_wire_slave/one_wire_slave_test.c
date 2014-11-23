@@ -1,57 +1,20 @@
-// Test/demo for the one_wire_master.h interface.
+// Test/demo for the one_wire_slave.h interface.
 //
-// By default, this test program requires exactly one slave to be present:
-// a Maxim DS18B20 temperature sensor connected to the chosen one wire master
-// pin of the arduino (by default DIO_PIN_DIGITAL_2 -- see the Makefile for
-// this module to change this value).  The D18B20 is required to be powered
-// externally, not using parasite power.  The DS18B20 must be in its default
-// (factory) state.  A 4.7 kohm pull-up resistor must be used on the Arduino
-// side of the wire.  See Figure 5 of the DS18B20 datasheet, revision 042208.
-//
-// Test results are ouput via the term_io.h interface (which is not required
-// by the module itself).  If the USB cable used for programming the Arduino
-// is still connected, it should be possible to run
-//
-//   make -rR run_screen
-//
-// from the module directory to see the test results.
-//
-// If everything works correctly, the Arduino should also blink out the
-// absolute value of the sensed temperature in degrees Celcius multiplied
-// by 10000 on the on-board led (connected to PB5).  Single quick blinks
-// are zeros, slower series of blinks are other digits.
-//
-// It's also possible to compile this module differently to test its
-// performance with multiple slaves.  See the notes in the Makefile for
-// this module for details.
+// This program implements a simple one-wire slave device.  It acts like
+// a Maxim DS18B20, but the temperature is always about 42.42 degrees C :)
 
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
 
 #include "dio.h"
-#include "one_wire_master.h"
+#include "one_wire_slave.h"
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 #include "util.h"
 
-// The default incarnation of this test program expects a single slave,
-// but it can also be compiled and tweaked slightly to test a multi-slave bus.
-
-// The functions that perform DS18B20-specific operations are only used in
-// the default single-slave test condition.
-#ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
-
-#  define DS18B20_FAMILY_CODE UINT8_C (0x28)
-
-// These are properties of the DS18B20 that have nothing to do with the
-// one-wire bus in general.
-#  define DS18B20_SCRATCHPAD_SIZE  9
-#  define DS18B20_SCRATCHPAD_T_LSB 0
-#  define DS18B20_SCRATCHPAD_T_MSB 1
-
-static uint8_t spb[DS18B20_SCRATCHPAD_SIZE];   // DS18B20 Scratchpad Buffer
-
+/*  FIXME: we're leaving this here for the moment to make it easier to
+ *  implement the other side of things
 static uint64_t
 ds18b20_init_and_rom_command (void)
 {
@@ -97,8 +60,6 @@ ds18b20_get_scratchpad_contents (void)
   }
 }
 
-#endif
-
 static void
 print_slave_id (uint64_t id)
 {
@@ -109,6 +70,7 @@ print_slave_id (uint64_t id)
     printf ("%02" PRIx8, ((uint8_t *) (&id))[ii] );
   }
 }
+*/
 
 int
 main (void)
@@ -121,8 +83,73 @@ main (void)
   PFP ("term_io_init() worked.\n");
   PFP ("\n");
 
-  owm_init ();   // Initialize the one-wire interface master end
+  // FIXME: it might be nice to put true in here in the test somehow.
+  // But then again the default ID should work so maybe there is no point.
+  ows_init (FALSE);   // Initialize the one-wire interface slave end
 
+  // FIXME: devel block to test that pin not broken
+  {
+    // For testing output:
+    /*
+    for ( ; ; ) {
+      CHKP ();
+      DIO_INIT (OWS_PIN, DIO_OUTPUT, DIO_DONT_CARE, HIGH);
+      DIO_SET_LOW (OWS_PIN);
+      _delay_ms (5000.0);
+      DIO_SET_HIGH (OWS_PIN);
+      _delay_ms (5000.0);
+      DIO_INIT (OWS_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
+      for ( uint8_t ii = 0 ; ii < 5 ; ii++ ) {
+        uint8_t reading = DIO_READ (OWS_PIN);
+        PFP ("got reading: %i\n", (int) reading);
+        _delay_ms (1000.0);
+      }
+    }
+    */
+    // can be used *instead* of the above to test input
+    /*
+    for ( ; ; ) {
+      DIO_INIT (OWS_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
+      for ( uint8_t ii = 0 ; ii < 5 ; ii++ ) {
+        uint8_t reading = DIO_READ (OWS_PIN);
+        PFP ("got reading: %i\n", (int) reading);
+        _delay_ms (1000.0);
+      }
+    }
+    */
+  }
+
+  // Because the one-wire protocol doesn't allow us to take a bunch of time
+  // out to send things, we accumulate incremental test results in these
+  // variables then output everything at once.  Of course, some of the
+  // one-wire slave functions might block forever if things aren't working
+  // right, in which case more detailed diagnostics might need to be inserted.
+  // These variables stand for Got Reset Pulse Sent Presence Pulse and Got
+  // Read Rom Command.
+  uint8_t grpspp = FALSE, grrc = FALSE;
+
+  PFP ("Trying ows_wait_then_signal_presence()... ");
+  ows_wait_then_signal_presence ();
+  grpspp = TRUE;
+  uint8_t command = ows_read_byte ();
+  if ( command == OWS_READ_ROM_COMMAND ) {
+    grrc = TRUE;
+  }
+  else {
+    // FIXME: WORK POINT: seem to get zeros here...
+    PFP ("uh oh, seemed to get command %x\n", (uint8_t) command);
+  }
+  PFP ("Test results:\n");
+  if ( grpspp ) {
+    PFP ("  Got reset pulse (and sent presence pulse)\n");
+  }
+  if ( grrc ) {
+    PFP ("  Got READ_ROM command\n");
+  }
+  // FIXME: not we need to verify if sending the ROM ID seemed to work from
+  // this end.
+
+  /*  FIXME: commented out master-side code follows...
   PFP ("Trying owm_touch_reset()... ");
   uint8_t slave_presence = owm_touch_reset ();
   if ( ! slave_presence ) {
@@ -343,6 +370,5 @@ main (void)
   PFP ("All tests passed.\n");
   PFP ("\n");
 
-#endif
-
+  */
 }
