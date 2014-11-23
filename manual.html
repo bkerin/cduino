@@ -215,7 +215,7 @@ assignment arguments to make:
   watchdog timer, and other hardware features.  However, certain settings are
   required for normal arduino functionality, so changing them may break things.
   They can hopefully be reset using the replace_bootloader target, but this is
-  not guaranteed.  For example, setting the clock source to the low-frequency
+  not guaranteed.  For example, setting the clock source to the low-frequency,
   low-power internal oscillator makes the chips unprogrammable for me (but
   saves a lot of power on finished products :).</li>
 
@@ -241,8 +241,8 @@ that can usefully be augmented by adding your own values to them after
   <li><code>CPPFLAGS</code> -- Add your own C preprocessor flags (include
   directories, defines, etc.).</li>
 
-  <li><code>CFLAGS</code> -- Add you own C compiler flags (more waring options,
-  etc.).</li>
+  <li><code>CFLAGS</code> -- Add you own C compiler flags (more warning
+  options, etc.).</li>
 
   <li><code>CXXFLAGS</code> -- Add your own C++ compiler flags.</li>
 
