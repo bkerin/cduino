@@ -60,6 +60,9 @@ dc_motor_init (void)
 
   // Configure timer/counter2 hardware, with clocking stopped
   {
+    // FIXME: there is an AVR libc interface for doing this which I think
+    // we should use (I've already had some bugs in other modules from bit
+    // fidling these guys).
     PRR &= ~(_BV (PRTIM2));   // Ensure timer/counter2 not shut down
 
     // Clear OC2A/B on compare match when up-counting, set OC2A/B on
@@ -109,7 +112,7 @@ dc_motor_init (void)
 
   // Start the clock.  We don't use any prescaler here, so the counter runs
   // at full F_CPU speed.  Given that the phase-correct PWM output ends up
-  // generating one pulse per full count-up-count-down cycle, then ends up
+  // generating one pulse per full count-up-count-down cycle, that ends up
   // amounting to a PWM frequency of 16 MHz / ((256 - 1) * 2) = ~31.37 kHz
   // at the pins, which should be fast enough to prevent motor hum but not
   // so fast that the transistors in the motor driver can't switch along.
