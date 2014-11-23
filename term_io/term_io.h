@@ -22,8 +22,8 @@
 //     that they cannot be used for normal digital IO.
 //
 //   * The AVR libc input functions (scanf() and friends) do not by
-//     themselves provide provide any screen echo or command-line editing
-//     capability (hence the term_io_getline() function).
+//     themselves provide any screen echo or command-line editing capability
+//     (hence the term_io_getline() function).
 //
 //   * Some of the AVR libc output functions (printf() and friends) provide
 //     different levels of functionality and libc-ishness depending on
