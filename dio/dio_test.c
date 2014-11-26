@@ -571,4 +571,6 @@ main (void)
   return 0;   // Success (assuming observed LED behaved correctly).
 
   // }}}1
+
+  // FIXME: need to add tests for the interrupt functionality
 }
