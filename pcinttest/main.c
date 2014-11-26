@@ -18,17 +18,13 @@
 #include "term_io.h"
 
 #define SWITCH_PIN            DIO_PIN_PB0
-#define SWITCH_PIN_IC_REG     PCICR
-#define SWITCH_PIN_IE_BIT     PCIE0
-#define SWITCH_PIN_MSK_REG    PCMSK0
-#define SWITCH_PIN_MSK_BIT    PCINT0
-#define SWITCH_INTERRUPT_VECT PCINT0_vect
 
 volatile uint8_t  sio = 1;   // Switch Is Open
 volatile uint32_t ic  = 0;   // Interrupt Count
 
+// FIXME: sync back up with the copy that moved to one_wire_slave
 
-ISR (SWITCH_INTERRUPT_VECT)
+ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (SWITCH_PIN))
 {
   sio = DIO_READ (SWITCH_PIN);
   ic++;
@@ -64,25 +60,27 @@ main (void)
 {
   term_io_init ();
 
-  DIO_INIT (SWITCH_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-  SWITCH_PIN_IC_REG |= _BV (SWITCH_PIN_IE_BIT);
-  loop_until_bit_is_set (SWITCH_PIN_IC_REG, SWITCH_PIN_IE_BIT);
-  SWITCH_PIN_MSK_REG |= _BV (SWITCH_PIN_MSK_BIT);
-  loop_until_bit_is_set (SWITCH_PIN_MSK_REG, SWITCH_PIN_MSK_BIT);
+  DIO_ENABLE_PIN_CHANGE_INTERRUPT (SWITCH_PIN);
 
   sei ();
 
-#define ITERATIONS 50000
-
   for ( ; ; ) {
-    for ( uint32_t ii = 0 ; ii < ITERATIONS ; ii++ ) {
+
+    // Note that when the wires aren't in contact, an interrupt is generated
+    // every time we explicitly drive the line low, so in this configuration
+    // we actually get the highest interrupt count when the wire "switch"
+    // is left open the entire time.
+    uint32_t const tic = 50000;   // Test Iteration Count.  Arbitrary-ish
+    for ( uint32_t ii = 0 ; ii < tic ; ii++ ) {
       _delay_ms (.02042);
       LOW_STINT ();
       _delay_ms (.02042);
     }
+
     // It also seems to work correctly in the simpler case where we never
     // drive the line low:
     //_delay_ms (2042.0);
+
     printf (
         "%" PRIu32 " interrupts.  Switch is %s\n",
         ic,
