@@ -17,8 +17,8 @@
 //
 // How This Interface Works
 //
-// This interface provides simple pin-at-a-time initialization, reading,
-// and writing of the digital IO pins of the ATMega 328p.
+// This interface provides pin-at-a-time initialization, reading, writing,
+// and pin change interrupt control of the digital IO pins of the ATMega 328P.
 //
 // WARNING: this interface provides macros to control pins that are
 // normally not available for use as general digital IO on an Arduino.
@@ -49,9 +49,8 @@
 // that use the same port in a single instruction, which is possible with
 // the raw memory map read/write interface provided by AVR Libc.
 //
-// For those who like the alternate numbering system that Aruidnos use
-// for their preferred digital IO pins, macros that work like this are
-// also provided:
+// For those who like the alternate numbering system that Aruidnos use for
+// their preferred digital IO pins, macros like this are also provided:
 //
 //   DIO_INIT_DIGITAL_8 (DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
 //
@@ -71,10 +70,46 @@
 //
 // I find these forms harder to read, and the macros are variadic, which
 // means you're likely to get strange hard-to-interpret errors if you call
-// them wrong.  So I don't reccomend these forms.  However, they may be
-// convenient for clients that want to allow compile-time pin configuration.
-// See the sd_card module for an example.
-
+// them wrong.  However, they are convenient for clients that want to allow
+// compile-time pin choices.  See the sd_card module for an example.
+//
+// Finally, macros are also provided to enable pin change interrupts using
+// the tuple macros.  For example:
+//
+// #include <avr/interrupt.h>
+// FIXME: I guess according to our principle of direct inclusion we should be
+// including stdint.h everywhere, ug.  Or else define byte in util.h :)
+// #include <stdint.h>
+// #include "dio.h"
+//
+// #define MY_FAVORITE_PIN DIO_PIN_PB0
+//
+// volatile uint8_t some_flag = 0;
+//
+// // Note that each pin group "shares" an interrupt (see comment below).
+// // DIO_PIN_CHANGE_VECTOR(PIN) expands to the AVR libc interrupt vector name
+// // associated with the pin, so it can be used wherever that vector would be
+// // used (i.e. together with AVR libc ISR attributes, EMPTY_INTERRUPT(),
+// // etc.).
+// ISR (DIO_PIN_CHANGE_VECTOR (MY_FAVORITE_PIN), ISR_NONBLOCK)
+// {
+//   some_flag = 1;
+// }
+//
+// int
+// main (void)
+// {
+//   DIO_INIT (MY_FAVORITE_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
+//
+//   // This first ensure that the interrupt flag is clear, but *does not*
+//   // enable interrupts globally.  Note that each group of pins "shares" an
+//   // interrupt, though that interrupt will only be generated if interrupt
+//   // generation is enabled for the particular pin experiencing the change.
+//   DIO_ENABLE_PIN_CHANGE_INTERRUPT (MY_FAVORITE_PIN);
+//
+//   sei ();   // Enable interrupts
+// }
+//
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -189,43 +224,68 @@
 // Packaged names for the register and bit macros associated with IO pins.
 // These can be used by clients that want to let their clients select which
 // pin to use at compile-time (see also the DIO_INIT(), DIO_SET_LOW(),
-// DIO_SET_HIGH(), DIO_SET(), and DIO_READ() macros).  NOTE: to support
-// the use of these tuples, a number of macros have a variadic top layer.
+// DIO_SET_HIGH(), DIO_SET(), and DIO_READ() macros).  NOTE: pin change
+// interrupts are shared between groups of pins.  NOTE: to support the
+// use of these tuples, a number of macros have a variadic top layer.
 // Obviously these tuples are best interpreted by the variadic macros
-// intented to receive them.  They can also be used to initialize dio_pin_t
-// structure literals.
-#define DIO_PIN_PB0 DDRB, DDB0, PORTB, PORTB0, PINB, PINB0
-#define DIO_PIN_PB1 DDRB, DDB1, PORTB, PORTB1, PINB, PINB1
-#define DIO_PIN_PB2 DDRB, DDB2, PORTB, PORTB2, PINB, PINB2
-#define DIO_PIN_PB3 DDRB, DDB3, PORTB, PORTB3, PINB, PINB3
-#define DIO_PIN_PB4 DDRB, DDB4, PORTB, PORTB4, PINB, PINB4
-#define DIO_PIN_PB5 DDRB, DDB5, PORTB, PORTB5, PINB, PINB5
-#define DIO_PIN_PB6 DDRB, DDB6, PORTB, PORTB6, PINB, PINB6
-#define DIO_PIN_PB7 DDRB, DDB7, PORTB, PORTB7, PINB, PINB7
+// intented to receive them.
+#define DIO_PIN_PB0 DDRB, DDB0, PORTB, PORTB0, PINB, PINB0, \
+                    PCIE0, PCIF0, PCMSK0, PCINT0, PCINT0_vect
+#define DIO_PIN_PB1 DDRB, DDB1, PORTB, PORTB1, PINB, PINB1 \
+                    PCIE0, PCIF0, PCMSK0, PCINT1, PCINT0_vect
+#define DIO_PIN_PB2 DDRB, DDB2, PORTB, PORTB2, PINB, PINB2 \
+                    PCIE0, PCIF0, PCMSK0, PCINT2, PCINT0_vect
+#define DIO_PIN_PB3 DDRB, DDB3, PORTB, PORTB3, PINB, PINB3 \
+                    PCIE0, PCIF0, PCMSK0, PCINT3, PCINT0_vect
+#define DIO_PIN_PB4 DDRB, DDB4, PORTB, PORTB4, PINB, PINB4 \
+                    PCIE0, PCIF0, PCMSK0, PCINT4, PCINT0_vect
+#define DIO_PIN_PB5 DDRB, DDB5, PORTB, PORTB5, PINB, PINB5 \
+                    PCIE0, PCIF0, PCMSK0, PCINT5, PCINT0_vect
+#define DIO_PIN_PB6 DDRB, DDB6, PORTB, PORTB6, PINB, PINB6 \
+                    PCIE0, PCIF0, PCMSK0, PCINT6, PCINT0_vect
+#define DIO_PIN_PB7 DDRB, DDB7, PORTB, PORTB7, PINB, PINB7 \
+                    PCIE0, PCIF0, PCMSK0, PCINT7, PCINT0_vect
 
-#define DIO_PIN_PC0 DDRC, DDC0, PORTC, PORTC0, PINC, PINC0
-#define DIO_PIN_PC1 DDRC, DDC1, PORTC, PORTC1, PINC, PINC1
-#define DIO_PIN_PC2 DDRC, DDC2, PORTC, PORTC2, PINC, PINC2
-#define DIO_PIN_PC3 DDRC, DDC3, PORTC, PORTC3, PINC, PINC3
-#define DIO_PIN_PC4 DDRC, DDC4, PORTC, PORTC4, PINC, PINC4
-#define DIO_PIN_PC5 DDRC, DDC5, PORTC, PORTC5, PINC, PINC5
-#define DIO_PIN_PC6 DDRC, DDC6, PORTC, PORTC6, PINC, PINC6
+#define DIO_PIN_PC0 DDRC, DDC0, PORTC, PORTC0, PINC, PINC0 \
+                    PCIE1, PCIF1, PCMSK1, PCINT8, PCINT1_vect
+#define DIO_PIN_PC1 DDRC, DDC1, PORTC, PORTC1, PINC, PINC1 \
+                    PCIE1, PCIF1, PCMSK1, PCINT9, PCINT1_vect
+#define DIO_PIN_PC2 DDRC, DDC2, PORTC, PORTC2, PINC, PINC2 \
+                    PCIE1, PCIF1, PCMSK1, PCINT10, PCINT1_vect
+#define DIO_PIN_PC3 DDRC, DDC3, PORTC, PORTC3, PINC, PINC3 \
+                    PCIE1, PCIF1, PCMSK1, PCINT11, PCINT1_vect
+#define DIO_PIN_PC4 DDRC, DDC4, PORTC, PORTC4, PINC, PINC4 \
+                    PCIE1, PCIF1, PCMSK1, PCINT12, PCINT1_vect
+#define DIO_PIN_PC5 DDRC, DDC5, PORTC, PORTC5, PINC, PINC5 \
+                    PCIE1, PCIF1, PCMSK1, PCINT13, PCINT1_vect
+#define DIO_PIN_PC6 DDRC, DDC6, PORTC, PORTC6, PINC, PINC6 \
+                    PCIE1, PCIF1, PCMSK1, PCINT14, PCINT1_vect
 
-#define DIO_PIN_PD0 DDRD, DDD0, PORTD, PORTD0, PIND, PIND0
-#define DIO_PIN_PD1 DDRD, DDD1, PORTD, PORTD1, PIND, PIND1
-#define DIO_PIN_PD2 DDRD, DDD2, PORTD, PORTD2, PIND, PIND2
-#define DIO_PIN_PD3 DDRD, DDD3, PORTD, PORTD3, PIND, PIND3
-#define DIO_PIN_PD4 DDRD, DDD4, PORTD, PORTD4, PIND, PIND4
-#define DIO_PIN_PD5 DDRD, DDD5, PORTD, PORTD5, PIND, PIND5
-#define DIO_PIN_PD6 DDRD, DDD6, PORTD, PORTD6, PIND, PIND6
-#define DIO_PIN_PD7 DDRD, DDD7, PORTD, PORTD7, PIND, PIND7
+#define DIO_PIN_PD0 DDRD, DDD0, PORTD, PORTD0, PIND, PIND0 \
+                    PCIE2, PCIF2, PCMSK2, PCINT16, PCINT2_vect
+#define DIO_PIN_PD1 DDRD, DDD1, PORTD, PORTD1, PIND, PIND1 \
+                    PCIE2, PCIF2, PCMSK2, PCINT17, PCINT2_vect
+#define DIO_PIN_PD2 DDRD, DDD2, PORTD, PORTD2, PIND, PIND2 \
+                    PCIE2, PCIF2, PCMSK2, PCINT18, PCINT2_vect
+#define DIO_PIN_PD3 DDRD, DDD3, PORTD, PORTD3, PIND, PIND3 \
+                    PCIE2, PCIF2, PCMSK2, PCINT19, PCINT2_vect
+#define DIO_PIN_PD4 DDRD, DDD4, PORTD, PORTD4, PIND, PIND4 \
+                    PCIE2, PCIF2, PCMSK2, PCINT20, PCINT2_vect
+#define DIO_PIN_PD5 DDRD, DDD5, PORTD, PORTD5, PIND, PIND5 \
+                    PCIE2, PCIF2, PCMSK2, PCINT21, PCINT2_vect
+#define DIO_PIN_PD6 DDRD, DDD6, PORTD, PORTD6, PIND, PIND6 \
+                    PCIE2, PCIF2, PCMSK2, PCINT22, PCINT2_vect
+#define DIO_PIN_PD7 DDRD, DDD7, PORTD, PORTD7, PIND, PIND7 \
+                    PCIE2, PCIF2, PCMSK2, PCINT23, PCINT2_vect
 
 // Set a pin (which must have been initialized for output) low.  The argument
 // is intended to be one of the DIO_PIN_P* tuples.
 #define DIO_SET_LOW(...) DIO_SET_LOW_NA (__VA_ARGS__)
 
 // Underlying named-argument macro implementing the DIO_SET_LOW() macro.
-#define DIO_SET_LOW_NA(dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit) \
+#define DIO_SET_LOW_NA( \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ) \
   do { \
     port_reg &= ~(_BV (port_bit)); \
     loop_until_bit_is_clear (port_reg, port_bit); \
@@ -237,7 +297,8 @@
 
 // Underlying named-argument macro implementing the DIO_SET_HIGH() macro.
 #define DIO_SET_HIGH_NA( \
-    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit) \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ) \
   do { \
     port_reg |= _BV (port_bit); \
     loop_until_bit_is_set (port_reg, port_bit); \
@@ -250,15 +311,19 @@
 
 // Underlying named-argument macro implementing the DIO_SET() macro.
 #define DIO_SET_NA( \
-    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, value) \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect, \
+    value ) \
   do { \
     if ( value ) { \
       DIO_SET_HIGH_NA ( \
-          dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit); \
+          dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+          pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ); \
     } \
     else { \
       DIO_SET_LOW_NA ( \
-          dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit); \
+          dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+          pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ); \
     } \
   } while ( 0 )
 
@@ -268,13 +333,15 @@
 #define DIO_INIT(...) DIO_INIT_NA (__VA_ARGS__)
 
 // Underlying named-argument macro implementing the DIO_INIT() macro.
-// FIXME: "for_input" doesn't do a good job of suggesting that DIO_INPUT
-// or DIO_OUTPUT should be used.  likewise for enable_pullup sort of.
-// FIXME: it would be interesting to know if break; is in anyway more
-// efficient that the while (0) that follow it, in any circumstances,
-// with a modern gcc
+// FIXME: "for_input" doesn't do a good job of suggesting that DIO_INPUT or
+// DIO_OUTPUT should be used.  likewise for enable_pullup sort of.  FIXME:
+// it would be interesting to know if break; is in anyway more efficient that
+// the while (0) that follow it, in any circumstances, with a modern gcc.
+// Likewise for not using our other macros inside the if ( enable_pullup
+// ) section.
 #define DIO_INIT_NA( \
     dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect, \
     for_input, enable_pullup, initial_value ) \
   do { \
       if ( for_input ) { \
@@ -292,6 +359,7 @@
       else { \
         DIO_SET ( \
             dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+            pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect, \
             initial_value ); \
         dir_reg |= _BV (dir_bit); \
         loop_until_bit_is_set (dir_reg, dir_bit); \
@@ -541,7 +609,9 @@
 // We probably waste an instruction doing this, but the Arduino libraries
 // define HIGH this way and it's kind of nice to keep everything symbolic,
 // so we do the same.
-#define DIO_READ_NA(dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit) \
+#define DIO_READ_NA( \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ) \
   ((pin_reg & _BV (pin_bit)) >> pin_bit)
 
 #define DIO_READ_PB0() DIO_READ (DIO_PIN_PB0)
@@ -580,95 +650,161 @@
 
 // }}}1
 
+// Pin Change Interrupt Control {{{1
+
+// Clear the interrupt flag, enable the interrupt for the pin group containing
+// the pin, and set the mask bit for the pin such that interrupts will be
+// generated when it changes.  Note that this enables interrupts for *all*
+// the pins in the pin group that have their mask bits set.  This macro is
+// intended to take one of the DIO_PIN_P* tuples as its argument.
+#define DIO_ENABLE_PIN_CHANGE_INTERRUPT(...) \
+  DIO_ENABLE_PIN_CHANGE_INTERRUPT_NA (__VA_ARGS__)
+
+// Underlying named-argument macro implementing the
+// DIO_ENABLE_PIN_CHANGE_INTERRUPT() macro.  Note that pcif_bit is actually
+// *cleared* by writing a logical one to it.
+#define DIO_ENABLE_PIN_CHANGE_INTERRUPT_NA( \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ) \
+  do { \
+    PCIFR |= _BV (pcif_bit); \
+    loop_until_bit_is_clear (PCIFR, pcif_bit); \
+    PCICR |= _BV (pcie_bit); \
+    loop_until_bit_is_set (PCICR, pcie_bit); \
+    pcmsk_reg |= _BV (pcint_bit); \
+    loop_until_bit_is_set (pcmsk_reg, pcint_bit); \
+  } while ( 0 )
+
+// Clear the mask bit the the pin and disable the interrupt for the pin
+// group containing the pin.  Note that this disables the shared interrupt
+// for *all* the pins in the pin group.  Finally, ensure that the interrupt
+// flag for the pin group is clear.  This macro is intended to take one of
+// the DIO_PIN_P* tuples as its argument.
+#define DIO_DISABLE_PIN_CHANGE_INTERRUPT(...) \
+  DIO_DISABLE_PIN_CHANGE_INTERRUPT_NA(__VA_ARGS__) \
+
+// Underlying named-argument macro implementing the
+// DIO_DISABLE_PIN_CHANGE_INTERRUPT() macro.  Note that pcif_bit is actually
+// *cleared* by writing a logical one to it.
+#define DIO_DISABLE_PIN_CHANGE_INTERRUPT_NA( \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ) \
+  do { \
+    pcmsk_reg &= ~(_BV (pcint_bit)); \
+    loop_until_bit_is_clear (pcmsk_reg, pcint_bit); \
+    PCICR &= ~(_BV (pcie_bit)); \
+    loop_until_bit_is_clear (PCICR, pcie_bit); \
+    PCIFR |= _BV (pcif_bit); \
+    loop_until_bit_is_clear (PCIFR, pcif_bit); \
+  } while ( 0 )
+
+// The name of the interrupt vector as AVR libc knows it.  The expansion
+// of this macro is acceptable as an argument to AVR libc's ISR(),
+// EMPTY_INTERRUPT(), or ISR_ALIAS() macros.  This macro is intended to
+// take one of the DIO_PIN_P* tuples as its argument.
+#define DIO_PIN_CHANGE_INTERRUPT_VECTOR(...) \
+  DIO_PIN_CHANGE_INTERRUPT_VECTOR_NA(__VA_ARGS__)
+
+// Underlying named-argument macro implementing the DIO_PIN_CHANGE_VECTOR()
+// macro.
+#define DIO_PIN_CHANGE_INTERRUPT_VECTOR_NA( \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ) \
+  pcint_vect
+
+// FIXME: maybe we want per-pin mask control macros?
+
+// }}}1
+
 // Arduino Compatible Pin Number Macros {{{1
 
 // WARNING: all caveats described for the underlying macros apply.
 
-#define DIO_PIN_DIGITAL_0 DIO_PIN_PD0
-#define DIO_PIN_DIGITAL_1 DIO_PIN_PD1
-#define DIO_PIN_DIGITAL_2 DIO_PIN_PD2
-#define DIO_PIN_DIGITAL_3 DIO_PIN_PD3
-#define DIO_PIN_DIGITAL_4 DIO_PIN_PD4
-#define DIO_PIN_DIGITAL_5 DIO_PIN_PD5
-#define DIO_PIN_DIGITAL_6 DIO_PIN_PD6
-#define DIO_PIN_DIGITAL_7 DIO_PIN_PD7
-#define DIO_PIN_DIGITAL_8 DIO_PIN_PB0
-#define DIO_PIN_DIGITAL_9 DIO_PIN_PB1
+#define DIO_PIN_DIGITAL_0  DIO_PIN_PD0
+#define DIO_PIN_DIGITAL_1  DIO_PIN_PD1
+#define DIO_PIN_DIGITAL_2  DIO_PIN_PD2
+#define DIO_PIN_DIGITAL_3  DIO_PIN_PD3
+#define DIO_PIN_DIGITAL_4  DIO_PIN_PD4
+#define DIO_PIN_DIGITAL_5  DIO_PIN_PD5
+#define DIO_PIN_DIGITAL_6  DIO_PIN_PD6
+#define DIO_PIN_DIGITAL_7  DIO_PIN_PD7
+#define DIO_PIN_DIGITAL_8  DIO_PIN_PB0
+#define DIO_PIN_DIGITAL_9  DIO_PIN_PB1
 #define DIO_PIN_DIGITAL_10 DIO_PIN_PB2
 #define DIO_PIN_DIGITAL_11 DIO_PIN_PB3
 #define DIO_PIN_DIGITAL_12 DIO_PIN_PB4
 #define DIO_PIN_DIGITAL_13 DIO_PIN_PB5
 
-#define DIO_INIT_DIGITAL_0 DIO_INIT_PD0
-#define DIO_INIT_DIGITAL_1 DIO_INIT_PD1
-#define DIO_INIT_DIGITAL_2 DIO_INIT_PD2
-#define DIO_INIT_DIGITAL_3 DIO_INIT_PD3
-#define DIO_INIT_DIGITAL_4 DIO_INIT_PD4
-#define DIO_INIT_DIGITAL_5 DIO_INIT_PD5
-#define DIO_INIT_DIGITAL_6 DIO_INIT_PD6
-#define DIO_INIT_DIGITAL_7 DIO_INIT_PD7
-#define DIO_INIT_DIGITAL_8 DIO_INIT_PB0
-#define DIO_INIT_DIGITAL_9 DIO_INIT_PB1
+#define DIO_INIT_DIGITAL_0  DIO_INIT_PD0
+#define DIO_INIT_DIGITAL_1  DIO_INIT_PD1
+#define DIO_INIT_DIGITAL_2  DIO_INIT_PD2
+#define DIO_INIT_DIGITAL_3  DIO_INIT_PD3
+#define DIO_INIT_DIGITAL_4  DIO_INIT_PD4
+#define DIO_INIT_DIGITAL_5  DIO_INIT_PD5
+#define DIO_INIT_DIGITAL_6  DIO_INIT_PD6
+#define DIO_INIT_DIGITAL_7  DIO_INIT_PD7
+#define DIO_INIT_DIGITAL_8  DIO_INIT_PB0
+#define DIO_INIT_DIGITAL_9  DIO_INIT_PB1
 #define DIO_INIT_DIGITAL_10 DIO_INIT_PB2
 #define DIO_INIT_DIGITAL_11 DIO_INIT_PB3
 #define DIO_INIT_DIGITAL_12 DIO_INIT_PB4
 #define DIO_INIT_DIGITAL_13 DIO_INIT_PB5
 
-#define DIO_SET_DIGITAL_0_LOW DIO_SET_PD0_LOW
-#define DIO_SET_DIGITAL_1_LOW DIO_SET_PD1_LOW
-#define DIO_SET_DIGITAL_2_LOW DIO_SET_PD2_LOW
-#define DIO_SET_DIGITAL_3_LOW DIO_SET_PD3_LOW
-#define DIO_SET_DIGITAL_4_LOW DIO_SET_PD4_LOW
-#define DIO_SET_DIGITAL_5_LOW DIO_SET_PD5_LOW
-#define DIO_SET_DIGITAL_6_LOW DIO_SET_PD6_LOW
-#define DIO_SET_DIGITAL_7_LOW DIO_SET_PD7_LOW
-#define DIO_SET_DIGITAL_8_LOW DIO_SET_PB0_LOW
-#define DIO_SET_DIGITAL_9_LOW DIO_SET_PB1_LOW
+#define DIO_SET_DIGITAL_0_LOW  DIO_SET_PD0_LOW
+#define DIO_SET_DIGITAL_1_LOW  DIO_SET_PD1_LOW
+#define DIO_SET_DIGITAL_2_LOW  DIO_SET_PD2_LOW
+#define DIO_SET_DIGITAL_3_LOW  DIO_SET_PD3_LOW
+#define DIO_SET_DIGITAL_4_LOW  DIO_SET_PD4_LOW
+#define DIO_SET_DIGITAL_5_LOW  DIO_SET_PD5_LOW
+#define DIO_SET_DIGITAL_6_LOW  DIO_SET_PD6_LOW
+#define DIO_SET_DIGITAL_7_LOW  DIO_SET_PD7_LOW
+#define DIO_SET_DIGITAL_8_LOW  DIO_SET_PB0_LOW
+#define DIO_SET_DIGITAL_9_LOW  DIO_SET_PB1_LOW
 #define DIO_SET_DIGITAL_10_LOW DIO_SET_PB2_LOW
 #define DIO_SET_DIGITAL_11_LOW DIO_SET_PB3_LOW
 #define DIO_SET_DIGITAL_12_LOW DIO_SET_PB4_LOW
 #define DIO_SET_DIGITAL_13_LOW DIO_SET_PB5_LOW
 
-#define DIO_SET_DIGITAL_0_HIGH DIO_SET_PD0_HIGH
-#define DIO_SET_DIGITAL_1_HIGH DIO_SET_PD1_HIGH
-#define DIO_SET_DIGITAL_2_HIGH DIO_SET_PD2_HIGH
-#define DIO_SET_DIGITAL_3_HIGH DIO_SET_PD3_HIGH
-#define DIO_SET_DIGITAL_4_HIGH DIO_SET_PD4_HIGH
-#define DIO_SET_DIGITAL_5_HIGH DIO_SET_PD5_HIGH
-#define DIO_SET_DIGITAL_6_HIGH DIO_SET_PD6_HIGH
-#define DIO_SET_DIGITAL_7_HIGH DIO_SET_PD7_HIGH
-#define DIO_SET_DIGITAL_8_HIGH DIO_SET_PB0_HIGH
-#define DIO_SET_DIGITAL_9_HIGH DIO_SET_PB1_HIGH
+#define DIO_SET_DIGITAL_0_HIGH  DIO_SET_PD0_HIGH
+#define DIO_SET_DIGITAL_1_HIGH  DIO_SET_PD1_HIGH
+#define DIO_SET_DIGITAL_2_HIGH  DIO_SET_PD2_HIGH
+#define DIO_SET_DIGITAL_3_HIGH  DIO_SET_PD3_HIGH
+#define DIO_SET_DIGITAL_4_HIGH  DIO_SET_PD4_HIGH
+#define DIO_SET_DIGITAL_5_HIGH  DIO_SET_PD5_HIGH
+#define DIO_SET_DIGITAL_6_HIGH  DIO_SET_PD6_HIGH
+#define DIO_SET_DIGITAL_7_HIGH  DIO_SET_PD7_HIGH
+#define DIO_SET_DIGITAL_8_HIGH  DIO_SET_PB0_HIGH
+#define DIO_SET_DIGITAL_9_HIGH  DIO_SET_PB1_HIGH
 #define DIO_SET_DIGITAL_10_HIGH DIO_SET_PB2_HIGH
 #define DIO_SET_DIGITAL_11_HIGH DIO_SET_PB3_HIGH
 #define DIO_SET_DIGITAL_12_HIGH DIO_SET_PB4_HIGH
 #define DIO_SET_DIGITAL_13_HIGH DIO_SET_PB5_HIGH
 
-#define DIO_SET_DIGITAL_0 DIO_SET_PD0
-#define DIO_SET_DIGITAL_1 DIO_SET_PD1
-#define DIO_SET_DIGITAL_2 DIO_SET_PD2
-#define DIO_SET_DIGITAL_3 DIO_SET_PD3
-#define DIO_SET_DIGITAL_4 DIO_SET_PD4
-#define DIO_SET_DIGITAL_5 DIO_SET_PD5
-#define DIO_SET_DIGITAL_6 DIO_SET_PD6
-#define DIO_SET_DIGITAL_7 DIO_SET_PD7
-#define DIO_SET_DIGITAL_8 DIO_SET_PB0
-#define DIO_SET_DIGITAL_9 DIO_SET_PB1
+#define DIO_SET_DIGITAL_0  DIO_SET_PD0
+#define DIO_SET_DIGITAL_1  DIO_SET_PD1
+#define DIO_SET_DIGITAL_2  DIO_SET_PD2
+#define DIO_SET_DIGITAL_3  DIO_SET_PD3
+#define DIO_SET_DIGITAL_4  DIO_SET_PD4
+#define DIO_SET_DIGITAL_5  DIO_SET_PD5
+#define DIO_SET_DIGITAL_6  DIO_SET_PD6
+#define DIO_SET_DIGITAL_7  DIO_SET_PD7
+#define DIO_SET_DIGITAL_8  DIO_SET_PB0
+#define DIO_SET_DIGITAL_9  DIO_SET_PB1
 #define DIO_SET_DIGITAL_10 DIO_SET_PB2
 #define DIO_SET_DIGITAL_11 DIO_SET_PB3
 #define DIO_SET_DIGITAL_12 DIO_SET_PB4
 #define DIO_SET_DIGITAL_13 DIO_SET_PB5
 
-#define DIO_READ_DIGITAL_0 DIO_READ_PD0
-#define DIO_READ_DIGITAL_1 DIO_READ_PD1
-#define DIO_READ_DIGITAL_2 DIO_READ_PD2
-#define DIO_READ_DIGITAL_3 DIO_READ_PD3
-#define DIO_READ_DIGITAL_4 DIO_READ_PD4
-#define DIO_READ_DIGITAL_5 DIO_READ_PD5
-#define DIO_READ_DIGITAL_6 DIO_READ_PD6
-#define DIO_READ_DIGITAL_7 DIO_READ_PD7
-#define DIO_READ_DIGITAL_8 DIO_READ_PB0
-#define DIO_READ_DIGITAL_9 DIO_READ_PB1
+#define DIO_READ_DIGITAL_0  DIO_READ_PD0
+#define DIO_READ_DIGITAL_1  DIO_READ_PD1
+#define DIO_READ_DIGITAL_2  DIO_READ_PD2
+#define DIO_READ_DIGITAL_3  DIO_READ_PD3
+#define DIO_READ_DIGITAL_4  DIO_READ_PD4
+#define DIO_READ_DIGITAL_5  DIO_READ_PD5
+#define DIO_READ_DIGITAL_6  DIO_READ_PD6
+#define DIO_READ_DIGITAL_7  DIO_READ_PD7
+#define DIO_READ_DIGITAL_8  DIO_READ_PB0
+#define DIO_READ_DIGITAL_9  DIO_READ_PB1
 #define DIO_READ_DIGITAL_10 DIO_READ_PB2
 #define DIO_READ_DIGITAL_11 DIO_READ_PB3
 #define DIO_READ_DIGITAL_12 DIO_READ_PB4
