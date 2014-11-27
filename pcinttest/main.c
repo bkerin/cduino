@@ -22,8 +22,6 @@
 volatile uint8_t  sio = 1;   // Switch Is Open
 volatile uint32_t ic  = 0;   // Interrupt Count
 
-// FIXME: sync back up with the copy that moved to one_wire_slave
-
 ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (SWITCH_PIN))
 {
   sio = DIO_READ (SWITCH_PIN);
