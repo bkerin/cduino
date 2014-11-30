@@ -8,9 +8,11 @@
 #include <avr/io.h>
 #include <avr/version.h>
 #include <avr/wdt.h>
+#include <avr/eeprom.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <util/atomic.h>
 #include <util/delay.h>
 
 // This version dependency applies to the whole library, this is just a
@@ -271,45 +273,70 @@
   } while ( 0 )
 
 // Offset from start of EEPROM used by LASSERT().
-#define LASSERT_EEPROM_ADDRESS 960
+#define LASSERT_EEPROM_ADDRESS ((void *) 960)
 
 // This is the RAM and EEPROM dedicated to the LASSERT() message.
 #define LASSERT_BUFFER_SIZE 40
-
-// FIXME: WORK POINT: test this LASSERT() stuff
 
 // Like assert(), but first stores the file and line of the violation
 // at EEPROM address LASSER_EEPROM_ADDRESS.  It can be retrieved later
 // with GET_LASSER_MESSAGE(), or cleared with CLEAR_LASSERT_MESSAGE().
 // This may be useful for chasing down rare failures.
-#define LASSERT(condition)                                                  \
-  do {                                                                      \
-    if ( UNLIKELY (! (condition)) ) {                                       \
-      char *XxX_msg = malloc (LASSERT_BUFFER_SIZE);                         \
-      XxX_msg[0] = '\0';                                                    \
-      int XxX_cp                                                            \
-        = snprintf (                                                        \
-            XxX_msg, LASSERT_BUFFER_SIZE, "%s: %i\n", __FILE__, __LINE__ ); \
-      if ( XxX_cp < 0 ) {                                                   \
-        XxX_msg = "error in LASSERT() itself";                              \
-      }                                                                     \
-      eeprom_update_block (                                                 \
-          XxX_msg,                                                          \
-          LASSERT_EEPROM_ADDRESS,                                           \
-          strnlen (XxX_msg, LASSERT_BUFFER_SIZE) );                         \
-      assert (0);                                                           \
-    }                                                                       \
-  } while ( 0 )                                                             \
+#define LASSERT(condition)                                                    \
+  do {                                                                        \
+    ATOMIC_BLOCK (ATOMIC_RESTORESTATE)                                        \
+    {                                                                         \
+      if ( UNLIKELY (! (condition)) ) {                                       \
+        char *XxX_msg = malloc (LASSERT_BUFFER_SIZE);                         \
+        XxX_msg[0] = '\0';                                                    \
+        int XxX_cp                                                            \
+          = snprintf (                                                        \
+              XxX_msg, LASSERT_BUFFER_SIZE, "%s: %i\n", __FILE__, __LINE__ ); \
+        if ( XxX_cp < 0 ) {                                                   \
+          XxX_msg = "error in LASSERT() itself";                              \
+        }                                                                     \
+        eeprom_update_block (                                                 \
+            XxX_msg,                                                          \
+            LASSERT_EEPROM_ADDRESS,                                           \
+            strnlen (XxX_msg, LASSERT_BUFFER_SIZE) + 1 );                     \
+        assert (0);                                                           \
+      }                                                                       \
+    }                                                                         \
+  } while ( 0 )                                                               \
 
-// Retrieve the last message stored by LASSERT() (or an empty string, if no
-// LASSERT() violation has occurred since CLEAR_LASSERT_MESSAGE() was called.
+// Retrieve the last message stored by LASSERT() (or an empty string,
+// if no LASSERT() violation has occurred since CLEAR_LASSERT_MESSAGE()
+// was called or if EEPROM storage space doesn't contain a null byte).
 // The buffer argument must point to LASSERT_BUFFER_SIZE bytes of memory.
-#define GET_LASSERT_MESSAGE(buffer) \
-  eeprom_read_block (buffer, LASSERT_EEPROM_ADDRESS, LASSERT_BUFFER_SIZE)
+#define GET_LASSERT_MESSAGE(buffer)                                          \
+  do {                                                                       \
+    ATOMIC_BLOCK (ATOMIC_RESTORESTATE)                                       \
+    {                                                                        \
+      eeprom_read_block                                                      \
+        (buffer, LASSERT_EEPROM_ADDRESS, LASSERT_BUFFER_SIZE);               \
+      uint8_t XxX_got_null = FALSE;                                          \
+      for ( uint8_t XxX_ii = 0 ; XxX_ii < LASSERT_BUFFER_SIZE ; XxX_ii++ ) { \
+        if ( buffer[XxX_ii] == '\0' ) {                                      \
+          XxX_got_null = TRUE;                                               \
+          break;                                                             \
+        }                                                                    \
+      }                                                                      \
+      if ( ! XxX_got_null ) {                                                \
+        buffer[0] = '\0';                                                    \
+      }                                                                      \
+    }                                                                        \
+  } while ( 0 )
+
+
 
 // Clear any message stored in EEPROM by any previous LASSERT().
-#define CLEAR_LASSERT_MESSAGE() \
-  eeprom_write_byte (LASSERT_EEPROM_ADDRESS, '\0')
+#define CLEAR_LASSERT_MESSAGE()                         \
+  do {                                                  \
+    ATOMIC_BLOCK (ATOMIC_RESTORESTATE)                  \
+    {                                                   \
+      eeprom_write_byte (LASSERT_EEPROM_ADDRESS, '\0'); \
+    }                                                   \
+  } while ( 0 )
 
 // }}}1
 
