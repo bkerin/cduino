@@ -83,6 +83,16 @@ main (void)
   PFP ("term_io_init() worked.\n");
   PFP ("\n");
 
+  char lassbuf[LASSERT_BUFFER_SIZE];
+  GET_LASSERT_MESSAGE(lassbuf);
+  PFP ("lassert message: %s\n", lassbuf);
+  if ( lassbuf[0] != '\0' ) {
+    CLEAR_LASSERT_MESSAGE ();
+  }
+  else {
+    LASSERT (0);
+  }
+
   // FIXME: it might be nice to put true in here in the test somehow.
   // But then again the default ID should work so maybe there is no point.
   ows_init (FALSE);   // Initialize the one-wire interface slave end
@@ -124,28 +134,50 @@ main (void)
   // variables then output everything at once.  Of course, some of the
   // one-wire slave functions might block forever if things aren't working
   // right, in which case more detailed diagnostics might need to be inserted.
-  // These variables stand for Got Reset Pulse Sent Presence Pulse and Got
-  // Read Rom Command.
-  uint8_t grpspp = FALSE, grrc = FALSE;
+  // These variables stand for Got Reset Pulse Sent Presence Pulse, Handled
+  // Extra Reset Pulse, and Got Read Rom Command.
+  uint8_t grpspp = FALSE, herp = FALSE, grrc = FALSE;
 
-  PFP ("Trying ows_wait_then_signal_presence()... ");
-  ows_wait_then_signal_presence ();
+  PFP ("Trying wait-for-reset-presence-pulse-command sequence... ");
+
+  ows_wait_for_reset ();
   grpspp = TRUE;
-  uint8_t command = ows_read_byte ();
+
+  uint8_t command;
+  for ( ; ; ) {
+    ows_error_t err = ows_read_byte (&command);
+
+    if ( err == OWS_ERROR_NONE ) {
+      break;
+    }
+    else {
+      // It so happens that our code in one_wire_master/one_wire_master_test.c
+      // takes advantage of the ability of the DS18B20 to correctly handle
+      // an additional reset request, and sends us one here.  In general,
+      // masters might send reset requests at any time, and its nice to
+      // honor them if possible, so here we test our capacity to do so a bit.
+      err = ows_handle_any_reset ();
+      if ( err == OWS_ERROR_RESET_DETECTED_AND_HANDLED ) {
+        herp = TRUE;
+      }
+    }
+  }
+  PFP ("finished.\n");
+
   if ( command == OWS_READ_ROM_COMMAND ) {
     grrc = TRUE;
   }
-  else {
-    // FIXME: WORK POINT: seem to get zeros here...
-    PFP ("uh oh, seemed to get command %x\n", (uint8_t) command);
-  }
-  PFP ("Test results:\n");
+  PFP ("  Results:\n");
   if ( grpspp ) {
-    PFP ("  Got reset pulse (and sent presence pulse)\n");
+    PFP ("    Got reset pulse (and sent presence pulse)\n");
+  }
+  if ( herp ) {
+    PFP ("    Got extra reset pulse (and sent another presence pulse)\n");
   }
   if ( grrc ) {
-    PFP ("  Got READ_ROM command\n");
+    PFP ("    Got READ_ROM command\n");
   }
+
   // FIXME: not we need to verify if sending the ROM ID seemed to work from
   // this end.
 
