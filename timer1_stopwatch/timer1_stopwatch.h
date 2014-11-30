@@ -89,11 +89,12 @@ timer1_stopwatch_init (void);
 // means that the prescaler is stopped, which means that timer0 might lose
 // quite a bit of time if you have many interrupts or something.  You might
 // want to use an AVR libc ATOMIC_BLOCK(ATOMIC_RESTORESTATE) around this
-// macro in this situation.  If your program writes *or reads* TCNT1 from
-// an interrupt you *must* use an atomic block around this macro; see the
-// comments for TIMER1_STOPWATCH_TICKS() below.  Note that the stopwatch only
-// begins running at the end of this sequence, when TSM is written to zero.
-// Note also that writing a logic one to TOV1 actually *clears* it (weirdly).
+// macro in this situation.  If your program writes *or reads* TCNT1 from an
+// interrupt service routine you *must* use an atomic block around this macro
+// outside that routine; see the comments for TIMER1_STOPWATCH_TICKS() below.
+// Note that the stopwatch only begins running at the end of this sequence,
+// when TSM is written to zero.  Note also that writing a logic one to TOV1
+// actually *clears* it (weirdly).
 #define TIMER1_STOPWATCH_RESET() \
   do { \
     GTCCR |= _BV (TSM); \
@@ -104,13 +105,13 @@ timer1_stopwatch_init (void);
   } while ( 0 )
 
 // Number of ticks since timer/counter1 was last reset or overflowed.  NOTE:
-// if this macro (or TCNT1 via any other mechanism) will ever be written
-// *or read* from an interrupt handler, then an AVR libc ATOMIC_BLOCK (from
-// the AVR libc header util/atomic.h) must be used around the access in the
-// main thread at least (the interrupt handler is probably atomic anyway,
-// since interrupts are normally disable while other interrup handlers
-// are running).  Note that even if there is no possibility of a write
-// to this register, read corruption can still occur, because a shared
+// if this macro (or TCNT1 via any other mechanism) will ever be written *or
+// read* from an interrupt service routine, then an AVR libc ATOMIC_BLOCK
+// (from the AVR libc header util/atomic.h) must be used around the access
+// in the main thread at least (the interrupt handler is probably atomic
+// anyway, since interrupts are normally disable while other interrup
+// handlers are running).  Note that even if there is no possibility of a
+// write to this register, read corruption can still occur, because a shared
 // internal temporary register is used to read the 16 bit timer value.
 // See the ATmega328P datasheet Revision 8271C, section 15.3.
 #define TIMER1_STOPWATCH_TICKS() TCNT1
