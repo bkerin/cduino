@@ -26,17 +26,20 @@ owm_init (void);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Individual Bit Functions
+// Reset and Individual Bit Functions
 //
-// These function perform bit-at-a-time operations.  All the fundamental
-// timing used in the one-wire protocol is implemented in these functions,
-// other functions in this interface are implemented in terms of these.
+// These function perform reset or bit-at-a-time operations.  All the
+// fundamental timing used in the one-wire protocol is implemented in these
+// functions, other functions in this interface are implemented in terms
+// of these.
 //
 
 // Generate a 1-Wire reset.  Return TRUE if a resulting presence pulse is
 // detected, or FALSE otherwise.  NOTE: this is logically different than
 // the comments for the OWTouchReset() function from Maxim application
-// note AN126 indicate, since those seem backwards and confused.  NOTE:
+// note AN126 indicate, since those seem backwards and confused.  FIXME:
+// I don't think its wrong relative to their code, so the question is why
+// do they do it that way?  Does it have to do with the search?  NOTE:
 // does not handle alarm presence from DS2404/DS1994.
 uint8_t
 owm_touch_reset (void);
@@ -119,11 +122,11 @@ owm_verify (uint8_t *id_buf);
 // Byte Write/Read
 //
 
-// Write byte
+// Write byte.  The LSB is written first.
 void
 owm_write_byte (uint8_t data);
 
-// Read byte
+// Read byte.  The LSB is read first.
 uint8_t
 owm_read_byte (void);
 

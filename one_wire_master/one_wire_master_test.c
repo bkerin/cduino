@@ -66,11 +66,8 @@ ds18b20_init_and_rom_command (void)
   // to the "INITIALIZATION" step (Step 1) described in the DS18B20 datasheet.
   // FIXME: would be nice to have datasheet available on web and linked to
   // by the docs...
-  PFP ("cp0\n");   // FIXME: remove testing
   uint8_t slave_presence = owm_touch_reset ();
   assert (slave_presence);
-
-  PFP ("cp1\n");   // FIXME: remove testing
 
   // This test program requires that only one slave be present, so we can
   // use the READ ROM command to get the slave's ROM ID.
