@@ -83,51 +83,9 @@ main (void)
   PFP ("term_io_init() worked.\n");
   PFP ("\n");
 
-  char lassbuf[LASSERT_BUFFER_SIZE];
-  GET_LASSERT_MESSAGE(lassbuf);
-  PFP ("lassert message: %s\n", lassbuf);
-  if ( lassbuf[0] != '\0' ) {
-    CLEAR_LASSERT_MESSAGE ();
-  }
-  else {
-    LASSERT (0);
-  }
-
   // FIXME: it might be nice to put true in here in the test somehow.
   // But then again the default ID should work so maybe there is no point.
   ows_init (FALSE);   // Initialize the one-wire interface slave end
-
-  // FIXME: devel block to test that pin not broken
-  {
-    // For testing output:
-    /*
-    for ( ; ; ) {
-      CHKP ();
-      DIO_INIT (OWS_PIN, DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-      DIO_SET_LOW (OWS_PIN);
-      _delay_ms (5000.0);
-      DIO_SET_HIGH (OWS_PIN);
-      _delay_ms (5000.0);
-      DIO_INIT (OWS_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-      for ( uint8_t ii = 0 ; ii < 5 ; ii++ ) {
-        uint8_t reading = DIO_READ (OWS_PIN);
-        PFP ("got reading: %i\n", (int) reading);
-        _delay_ms (1000.0);
-      }
-    }
-    */
-    // can be used *instead* of the above to test input
-    /*
-    for ( ; ; ) {
-      DIO_INIT (OWS_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-      for ( uint8_t ii = 0 ; ii < 5 ; ii++ ) {
-        uint8_t reading = DIO_READ (OWS_PIN);
-        PFP ("got reading: %i\n", (int) reading);
-        _delay_ms (1000.0);
-      }
-    }
-    */
-  }
 
   // Because the one-wire protocol doesn't allow us to take a bunch of time
   // out to send things, we accumulate incremental test results in these
@@ -138,19 +96,22 @@ main (void)
   // Extra Reset Pulse, and Got Read Rom Command.
   uint8_t grpspp = FALSE, herp = FALSE, grrc = FALSE;
 
-  PFP ("Trying wait-for-reset-presence-pulse-command sequence... ");
+  PFP ("Trying wait-for-reset, presence-pulse, command sequence... ");
 
+  ows_wait_for_reset ();
   ows_wait_for_reset ();
   grpspp = TRUE;
 
   uint8_t command;
   for ( ; ; ) {
+
     ows_error_t err = ows_read_byte (&command);
 
     if ( err == OWS_ERROR_NONE ) {
       break;
     }
     else {
+      PFP ("DOOOOOME\n");
       // It so happens that our code in one_wire_master/one_wire_master_test.c
       // takes advantage of the ability of the DS18B20 to correctly handle
       // an additional reset request, and sends us one here.  In general,
@@ -177,6 +138,7 @@ main (void)
   if ( grrc ) {
     PFP ("    Got READ_ROM command\n");
   }
+  PFP ("Got byte %" PRIx8 "\n", command);
 
   // FIXME: not we need to verify if sending the ROM ID seemed to work from
   // this end.

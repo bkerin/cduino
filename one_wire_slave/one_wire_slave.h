@@ -36,45 +36,82 @@
 #define OWS_DEFAULT_ID \
   ((((uint64_t) OWS_FAMILY_CODE) << OWS_ID_SIZE_BITS) & 0x424242424242)
 
-// Initialize the one-wire slave interface.  This sets up the chosen
-// DIO pin, including pin change interrupts and global interrupt enable.
-// If load_eeprom_id is true, the first 64 bits of the AVR EEPROM are read
-// and used to form a slave ID, which is loaded into RAM for speedy access.
-// See the write_random_id_to_eeprom target of generic.mk for a convenient
-// way to load unique IDs onto devices.  If load_eeprom_id is false, a
-// default device ID of OWS_DEFAULT_ID is used (note that this arrangement
-// is only useful if you intend to use only one of your slaves on the bus).
+// Return type for function in this interface which can encounter errors.
+typedef enum {
+  OWS_ERROR_NONE = 0,
+  OWS_ERROR_LINE_UNEXPECTEDLY_LOW,
+  OWS_ERROR_GOT_RESET_PULSE,
+  OWS_ERROR_RESET_DETECTED_AND_HANDLED,
+  OWS_ERROR_MISSED_RESET_DETECTED
+} ows_error_t;
+
+// Initialize the one-wire slave interface.  This sets up the chosen DIO
+// pin, including pin change interrupts and global interrupt enable (see
+// comments near the got_reset declaration below).  If load_eeprom_id
+// is true, the first 64 bits of the AVR EEPROM are read and used to
+// form a slave ID, which is loaded into RAM for speedy access.  See the
+// write_random_id_to_eeprom target of generic.mk for a convenient way to
+// load unique IDs onto devices.  If load_eeprom_id is false, a default
+// device ID of OWS_DEFAULT_ID is used (note that this arrangement is only
+// useful if you intend to use only one of your slaves on the bus).
 void
 ows_init (uint8_t load_eeprom_id);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Individual Bit Functions
+// Reset Support and Individual Bit Functions
 //
-// These function perform bit-at-a-time operations.  All the fundamental
-// timing used in the one-wire protocol is implemented in these functions,
+// This stuff supports reset and bit-at-a-time operations.  All the
+// fundamental timing used in the one-wire protocol is implemented here,
 // other functions in this interface are implemented in terms of these.
 //
+// The master could decide at any time to abort whatever operation is going
+// on and and send us a reset pulse.  Reset pulse detection is handled
+// asynchronously via a pin changer interrupt service routine for OWS_PIN.
+// Users of this interface should call ows_wait_for_reset() when they want
+// to block and wait for a reset pulse, and ows_handle_any_reset() when they
+// want to handle and reset that may have occurred recently.  Clients should
+// react to unexpected reset pulses by aborting any ongoing operation and
+// waiting for new instructions from the master.  Note that to implement a
+// well-behaved slave, clients have to call ows_handle_any_reset() extremely
+// frequently: a presence pulse is supposed to be issued within 60 us of
+// the end of the reset pulse.  Of course, you might choose to have your
+// slave behave a little less well, since it won't break other slaves if
+// you miss the occasional reset pulse when you have something better to do :)
 
-// FIXME: well this should work but its busy... of course we would probably
-// like to be able to sleep and wake up on a pin change interrupt, though
-// due to the time required to wake up, that's gauranteed to cause the slave
-// to speak a dielect, though admittedly one that only requires the master
-// to ignore non-response to the first reset pulse.
+// Block until a reset pulse from the master is seen, then produce a
+// corresponding presence pulse and return.
 void
 ows_wait_for_reset (void);
+
+// Check if any resets have occurred, and handle them if its not
+// already too late.  Return OWS_ERROR_NONE if no reset has been seen,
+// OWS_ERROR_RESET_DETECTED_AND_HANDLED if a reset pulse was seen and a
+// response pulse sent, or OWS_ERROR_MISSED_RESET_DETECTED if a reset pulse
+// was seen but it was too late to send a valid presence pulse in response.
+ows_error_t
+ows_handle_any_reset (void);
+
+// FIXME: should move elsewhere?  Or maybe change to version with the timing
+// padding out front?
+#define OWS_SEND_PRESENCE_PULSE() \
+  do { \
+    DRIVE_LINE_LOW (); \
+    _delay_us (); \
+    RELEASE_LINE (); \
+  } while ( 0 )
 
 // Wait for a reset, and signal our presence when we receive one.
 void
 ows_wait_then_signal_presence (void);
 
 // Write bit
-void
-ows_write_bit (uint8_t value);
+ows_error_t
+ows_write_bit (uint8_t data_bit);
 
 // Read bit
-uint8_t
-ows_read_bit (void);
+ows_error_t
+ows_read_bit (uint8_t *data_bit_ptr);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -151,15 +188,24 @@ ows_verify (uint8_t *id_buf);
 // Byte Write/Read
 //
 
-// Write byte
-// FIXME: is this how slave does it?
-void
-ows_write_byte (uint8_t data);
+// Write up to eight bits in a row, checking for got_reset after each bit.
+// The LSB of data is written first.  If got_reset becomes true, return
+// immediately (the returned value will be invalid).  This early return
+// is done to allow slave implementations using this interface to react
+// to reset pulses in time.
+ows_error_t
+ows_write_byte (uint8_t data_byte);
 
 // Read byte
 // FIXME: is this how slave does it?
-uint8_t
-ows_read_byte (void);
+
+// Read up to eight bits in a row, checking for got_reset after each bit.
+// The LSB bit of data is read first.  If got_reset becomes true, return
+// immediately (the returned value will be invalid).  This early return
+// is done to allow slave implementations using this interface to react
+// to reset pulses in time.
+ows_error_t
+ows_read_byte (uint8_t *data_byte_ptr);
 
 ///////////////////////////////////////////////////////////////////////////////
 //

@@ -8,11 +8,14 @@
 #include "dio.h"
 #include "one_wire_slave.h"
 #include "timer1_stopwatch.h"
+// FIXME: next two lines for debug only:
+#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+#include "term_io.h"
 #include "util.h"
 
 #ifndef OWS_PIN
 #  error OWS_PIN not defined (it must be explicitly set to one of \
-         the DIO_PIN_* tuple macros before this header is included)
+         the DIO_PIN_* tuple macros before this point)
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -76,39 +79,126 @@ ows_init (uint8_t load_eeprom_id)
   load_eeprom_id = load_eeprom_id;   // FIXME: out until we use IDs
 
   timer1_stopwatch_init ();
-  RELEASE_LINE ();
+
+  RELEASE_LINE ();   // Serves to initialize pin along the way
+  DIO_ENABLE_PIN_CHANGE_INTERRUPT (OWS_PIN);
+
+  sei ();
 }
 
-// The following ST_* (Slave Timing) macros contain timing values that actual
-// Maxim DS18B20 devices have been found to use; see one_wire_slave.c.probe
-// from the one_wire_master module for the source of these values.
+// The following ST_* (Slave Timing) macros contain timing values that
+// actual Maxim DS18B20 devices have been found to use, or values that
+// we have derived logically from our understanding of the protocol; see
+// one_wire_master.c.probe from the one_wire_master module for the source
+// of the experimental values.
 
-// DS18B20 datasheet and AN126 both say masters are supposed to send 480
-// us pulse minimum.
+// The DS18B20 datasheet and AN126 both say masters are supposed to send
+// 480 us pulse minimum.
 #define ST_RESET_PULSE_LENGTH_REQUIRED 231.0
 
-// DS18B20 datasheet says 15 to 60 us.
+// The DS18B20 datasheet says 15 to 60 us.
 #define ST_DELAY_BEFORE_PRESENCE_PULSE 29.0
 
-// DS18B20 datasheet says 60 to 240 us.   FIXME: do
-// other 1-wire datasheets give the same timing numbers?  the DS18B20 is
-// somewhat old, maybe they've sorted out new better numbers since then.
+// The DS18B20 datasheet says 60 to 240 us.  FIXME: do other 1-wire datasheets
+// give the same timing numbers?  the DS18B20 is somewhat old, maybe they've
+// sorted out new better numbers since then.
 #define ST_PRESENCE_PULSE_LENGTH 115.0
 
-// DS18B20 datasheet says at least 1 us required from master, but the actual
-// DS18B20 devices seem even the shortest blip as signaling the start of
-// a slot.  So this one-cycle time is sort of a joke, and in fact its best
+// The DS18B20 datasheet says at least 1 us required from master, but the
+// actual DS18B20 devices seem even the shortest blip as signaling the start
+// of a slot.  So this one-cycle time is sort of a joke, and in fact its best
 // to not wait at all so we don't have to worry about the actual timer delay.
 #define ST_REQUIRED_READ_SLOT_START_LENGTH (1.0 / 16)
 
+// The total lenght of a slade read slot isn't supposed to be any longer
+// than this.
+#define ST_SLAVE_READ_SLOT_DURATION 60.0
+
+// This is the time the DS18B20 diagram indicates that it typically waits
+// from the time the line is pulled low by the master to when it (the slave)
+// samples.
+#define ST_SLAVE_READ_SLOT_SAMPLE_TIME 30.0
+
+// This is the time that we wait from when the master pulls the line low to
+// indicate the start of a slave write slot to when we set the line ourselves.
+// Since AN126 recommends that the master hold the line low for 6 us, we wait
+// a little more than that.  Of course Figure 16 of the DS18B20 datasheet
+// indicates that the master should keep TINIT "as short as possible".
+// I guess 6 us is as short as possible, for some reason :)
+#define ST_SLAVE_WRITE_SLOT_SEND_TIME (TICK_DELAY_A + 2.42)
+
+// This is the time to hold the line low when sending a 0 to the master.
+// See Figure 1 of Maxim Application Note AN126.  We go with TICK_DELAY_F /
+// 2.0 here because it's, well, half way between when we must have the line
+// held low and when we must release it.  We could probably measure what
+// actual slaves do if necessary...
+#define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME (TICK_DELAY_E + TICK_DELAY_F / 2.0)
+
+// This is the longest that this slave implementation ever holds the line
+// low itself.  This is relevant because we want to let our interrupt
+// handler do all the resetting of the hardware timer that we use to
+// detect reset pulses without having to flip the reset detector on and
+// off or anything.  This policy avoids timer access atomicity issues
+// and generally keeps things simple.  The consequence is that we end up
+// requiring reset pulses up to this much longer than the experimentally
+// measured value of ST_RESET_PULSE_LENGTH_REQUIRED.  We have to do that
+// because the interrupt handler counts interrupts caused when the slave
+// itself drives the line low, so the ensuing line-low time ends up counting
+// towardes reset pulse time.  Because ST_RESET_PULSE_LENGTH_REQUIRED +
+// ST_LONGEST_SLAVE_LOW_PULSE_LENGTH is still considerably less than the 480
+// us pulse that well-behaved masters send, this shouldn't be a problem.
+// The value of this macro is ST_PRESENCE_PULSE_LENGTH because that's the
+// longest the slave should ever have to hold the line low.
+#define ST_LONGEST_SLAVE_LOW_PULSE_LENGTH ST_PRESENCE_PULSE_LENGTH
+
 // Convenience macros
 #define T1RESET() TIMER1_STOPWATCH_RESET ()
-#define T1US() ((double) TIMER1_STOPWATCH_MICROSECONDS ())
+#define T1US()    ((double) TIMER1_STOPWATCH_MICROSECONDS ())
+#define T1OF()    TIMER1_STOPWATCH_OVERFLOWED ()
+
+// Atomic version of T1US().  We have to use an atomic block to access
+// TCNT1 outside the ISR, so we have this macro that does that and sets
+// the double variable name argument given it to the elapsed us.
+#define AT1US(outvar)                                               \
+  do {                                                              \
+    uint16_t XxX_tt;                                                \
+    ATOMIC_BLOCK (ATOMIC_RESTORESTATE)                              \
+    {                                                               \
+      XxX_tt = TIMER1_STOPWATCH_TICKS ();                           \
+    }                                                               \
+    outvar = XxX_tt * TIMER1_STOPWATCH_MICROSECONDS_PER_TIMER_TICK; \
+  } while (0)
 
 // Readability macros
-#define LINE_IS_HIGH() (SAMPLE_LINE ())
-#define LINE_IS_LOW() (! SAMPLE_LINE ())
+#define LINE_IS_HIGH() (  SAMPLE_LINE ())
+#define LINE_IS_LOW()  (! SAMPLE_LINE ())
 
+volatile uint8_t got_reset = FALSE;
+
+// This ISR keeps track of the length of low pulses.  If we see a long enough
+// one we consider that we've seen a reset and set a client-visible flag.
+ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
+{
+  if ( LINE_IS_LOW () ) {
+    T1RESET ();
+  }
+  else {
+    // See comments near the definition of ST_LONGEST_SLAVE_LOW_PULSE
+    if ( ( T1US ()
+           > ST_RESET_PULSE_LENGTH_REQUIRED +
+             ST_LONGEST_SLAVE_LOW_PULSE_LENGTH )
+         ||
+         T1OF () ) {
+      got_reset = TRUE;
+      // FIXME: should we reset here as well so can figure out when to start
+      // presence pulse?  In which cast I guess we want to always T1RESET(),
+      // and the LINE_IS_LOW() branch above is actually empty...
+      T1RESET ();
+    }
+  }
+}
+
+/*
 void
 ows_wait_for_reset (void)
 {
@@ -118,10 +208,98 @@ ows_wait_for_reset (void)
     while ( LINE_IS_LOW () ) { ; }
   } while ( T1US () < ST_RESET_PULSE_LENGTH_REQUIRED );
 }
+*/
+
+// FIXME: should move elsewhere?  Or maybe change to version with the timing
+// padding out front?
+static void
+ows_send_presence_pulse (void)
+{
+  // The ISR resets the timer for us at the end of the reset pulse, so we
+  // can use it to ensure that we've delayed long enough before sending the
+  // presence pulse.
+  /*
+  double tsrp;   // Time Since Reset Pulse
+
+  do {
+    AT1US (tsrp);
+  } while ( tsrp < ST_DELAY_BEFORE_PRESENCE_PULSE );
+  */
+
+  DRIVE_LINE_LOW ();
+  _delay_us (ST_PRESENCE_PULSE_LENGTH);
+  RELEASE_LINE ();
+}
+
+// FIXME: comment me
+#define OWS_PRESENCE_PULSE()              \
+  do {                                    \
+    DRIVE_LINE_LOW ();                    \
+    _delay_us (ST_PRESENCE_PULSE_LENGTH); \
+    RELEASE_LINE ();                      \
+  } while ( 0 )
+
+#define AT1TICKS(outvar)                  \
+  do {                                    \
+    ATOMIC_BLOCK (ATOMIC_RESTORESTATE)    \
+    {                                     \
+      outvar = TIMER1_STOPWATCH_TICKS (); \
+    }                                     \
+  } while ( 0 )
+
+void
+ows_wait_for_reset (void)
+{
+  while ( ! got_reset ) { ; }
+  uint16_t at1_ticks;
+  do {
+    AT1TICKS (at1_ticks);
+  } while ( at1_ticks < 7 );
+  OWS_PRESENCE_PULSE ();
+  got_reset = FALSE;
+}
+
+// Time between edge drop and read on master end is 70 us, so we need to
+// determine what timing to use here.
+//#define RESET_IS_RECENT(et) (et < 60.0)
 
 
+// FIXME: hard-wired for our us/tick here, which depends on the
+// timer1_stopwatch.h not being subject to tweaked prescaler values, and
+// our FCPU being as expected.
+#define RESET_IS_RECENT(eticks) (eticks < 15)
 
-// Wait for a reset, and signal our presence when we receive one.
+ows_error_t
+ows_handle_any_reset (void)
+{
+  ows_error_t result;
+
+  if ( got_reset ) {
+    uint16_t at1_ticks;
+    do {
+      AT1TICKS (at1_ticks);
+    } while ( at1_ticks < 7);
+    if ( RESET_IS_RECENT (at1_ticks) ) {
+      AT1TICKS (at1_ticks);
+      ows_send_presence_pulse ();
+      result = OWS_ERROR_RESET_DETECTED_AND_HANDLED;
+    }
+    else {
+      PFP ("DEBUG: missed reset pulse\n");
+      result = OWS_ERROR_MISSED_RESET_DETECTED;
+    }
+  }
+  else {
+    result = OWS_ERROR_NONE;
+  }
+
+  got_reset = FALSE;
+
+  return result;
+}
+
+// Wait for a reset.  When we receive one, send a presence pulse and then
+// clear got_reset.
 void
 ows_wait_then_signal_presence (void)
 {
@@ -130,99 +308,17 @@ ows_wait_then_signal_presence (void)
   DRIVE_LINE_LOW ();
   _delay_us (ST_PRESENCE_PULSE_LENGTH);
   RELEASE_LINE ();
+  got_reset = FALSE;
 }
-
-// FIXME: not sure whether we need event system or can just check for long
-// reset pulses everywhere that we're getting pulses.
-/*
-typedef enum {
-  OWS_EVENT_RESET_PULSE,
-  OWS_EVENT_FALLING_EDGE,
-} ows_event_t;
-
-ows_event_t
-ows_wait_for_event (uint8_t line_is_high)
-{
-  if ( line_is_high ) {
-    T1RESET ();
-    while ( LINE_IS_HIGH () ) { ; }
-    return OWS_EVENT_FALLING_EDGE;
-  }
-  else {
-    while ( LINE_IS_LOW () ) { ; }
-    return OWS_EVENT_RISING_EDGE;
-  }
-}
-*/
 
 /*
-static uint8_t volatile owsps = HIGH;   // One-Wire Slave Pin State
-
-ISR (OWS_PIN_CHANGE_INTERRUPT_VECT)
-{
-  owsps = SAMPLE_LINE ();
-}
+static uint8_t read_bits[16] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+static uint8_t crb = 0;
 */
 
-// FIXME: WORK POINT: well I think the next func would work for monitoring
-// the length of low pulses in a procedural sort of way, but I dunno about
-// that approach generally.  The trouble is I'm not sure I see a way to
-// do it without forcing clients to keep track of time themselves, which
-// is undesirable.  I guess you could have every call into the API check
-// for a reset pulse and return a sentinel if it happens, but boy is it
-// ugly and painful to keep track of the timing.  I think we need to read
-// how the search algorithm works before deciding what kind of event loop or
-// whatever is best to use on the slave.  I think slaves need a general even
-// system for sure though, since for example at the moment our master-side
-// test ends up sending two resets in a row, which this slave doesn't end
-// up honoring.  The slave should generate events when the bit read gets
-// done, but keep tracking the cumulative low time and eventually generate
-// a reset even when that becomes appropriate... as long as it hasn't been
-// instructed not to do so by a search command or something...
-
-static void
-wait_watch_for_reset (double ttw, double *alt)
+ows_error_t
+ows_read_bit (uint8_t *data_bit_ptr)
 {
-  // Busy wait for Time To Wait us, while keeping track of any Accumulated
-  // Low Time on the line.  Note that if the line is known to be high when
-  // this function is call, *alt should be zero.
-
-  double lpst = -1.0;   // Low Pulse Start Time
-  T1RESET ();
-  uint8_t ols = HIGH;   // Old Line State
-  while ( T1US () < ttw ) {
-    uint8_t nls = SAMPLE_LINE ();
-    if ( nls == HIGH ) {
-      *alt = 0.0;
-      lpst = -1.0;
-    }
-    else if ( nls == LOW && ols == HIGH ) {
-      lpst = T1US ();
-    }
-    nls = ols;
-  }
-
-  if ( lpst > 0.0 ) {
-    *alt += T1US ();
-  }
-}
-
-uint8_t
-ows_read_bit (void)
-{
-  // Slave Read Slot Duration
-  double const srsd = 60.0;
-
-  // Slave Read Slot Sample Time.  This is the time the DS18B20 diagram
-  // indicates that it typically waits from the time the line is pulled low
-  // to when it samples.
-  double const srsst = 30.0;
-
-  WAIT_FOR_LINE_LOW (BIG_WAIT);
-  WAIT_FOR_LINE_HIGH (
-
-
-
   // You might think we would want to require the line to stay low for a
   // while, rather than going the first time we see anything.  But so far
   // as I can tell the DS18B20 doesn't do this for master read slots: it
@@ -231,26 +327,45 @@ ows_read_bit (void)
   while ( LINE_IS_HIGH () ) {
     // We could use ST_REQUIRED_READ_SLOT_START_LENGTH here after we detect
     // a blip but it's pointless: see comments near that macro.
+    // FIXME: shouldn't we spend all our idle time polling got_reset, so we
+    // can't get stuck forever in case of a horrible timing incident?
     ;
   }
-  T1RESET ();
 
-  double low_time = 0.0;
-  wait_count_low_time ();
+  _delay_us (ST_SLAVE_READ_SLOT_SAMPLE_TIME);
 
-  while ( LINE_IS_LOW () ) {
-    if ( T1US () >= srsst ) { result = 0; }
+  *data_bit_ptr = SAMPLE_LINE ();
+
+  // FIXME: debug stuff
+  /*
+  read_bits[crb++] = *data_bit_ptr;
+  if ( crb == 15 ) {
+    PFP ("read bits: ");
+    for ( uint8_t ii = 0 ; ii < 16 ; ii++ ) {
+      PFP ("%i ", (int) (read_bits[ii]));
+    }
   }
-  while ( T1US () < srsst ) { result = 1; }
+  */
 
+  // FIXME: This is slightly suspect: it finishes out the time slot without
+  // regard for the master going fast or slow, and the masteris supposed to
+  // signal the next bit.  Perhaps we should call ourselves done as soon as we
+  // find the line to be be high instead, that way if the master goes faster
+  // we follow along?  I think its right actually, but we should check after
+  // this time that the master has actually released the line ever somehow
+  _delay_us (ST_SLAVE_READ_SLOT_DURATION - ST_SLAVE_READ_SLOT_SAMPLE_TIME);
 
-  _delay_us (srsd - srsst);
+  //while ( LINE_IS_LOW () ) {
+  //  ;
+  //}
 
-  return result;
+  // Before we report that all is well, we check that the master did in fact
+  // release the line at the end of the slot as expected.
+  return (LINE_IS_HIGH () ? OWS_ERROR_NONE : OWS_ERROR_LINE_UNEXPECTEDLY_LOW);
 }
 
-void
-ows_write_bit (uint8_t value)
+ows_error_t
+ows_write_bit (uint8_t data_bit)
 {
   // Figure 1 of Maxim Application Note AN 126 shows that the master should
   // start a read slot by pulling the line low for 6 us, then sample the
@@ -259,132 +374,79 @@ ows_write_bit (uint8_t value)
   // the bus is supposed to be released again by the end of the time slot F
   // (55) us later.
 
-  // Slave Write Slot Send Time.  This is the time that we wait from when
-  // the master pulls the line low to indicate the start of a slave write
-  // slot to when we set the line ourselves.  Since AN126 recommends that
-  // the master hold the line low for 6 us, we wait a little more than that.
-  // Of course Figure 16 of the DS18B20 datasheet indicates that the master
-  // should keep TINIT "as short as possible".  I guess 6 us is as short as
-  // possible, for some reason :)
-  double const swsst = TICK_DELAY_A + 2.42;
-
-  // Slave Write Line Hold Time.  Time to hold the line low when sending a
-  // 0 to the master.  See Figure 1 of Maxim Application Note AN126.  We go
-  // with TICK_DELAY_F / 2.0 here because it's, well, half way between when
-  // we must have the line held low and when we must release it.
-  double const swlht = (TICK_DELAY_E + TICK_DELAY_F / 2.0);
-
-  while ( SAMPLE_LINE () ) {
+  while ( LINE_IS_HIGH () ) {
     ;
   }
 
-  _delay_us (swsst);
+  // FIXME: questionable delay, questionable policy of insisting that line
+  // must be clear when we start to send...
 
-  if ( ! value ) {
+  _delay_us (ST_SLAVE_WRITE_SLOT_SEND_TIME);
+
+  if ( ! SAMPLE_LINE () ) {
+    return OWS_ERROR_LINE_UNEXPECTEDLY_LOW;
+  }
+
+  if ( ! data_bit ) {
     DRIVE_LINE_LOW ();
   }
 
-  _delay_us (swlht);
+  _delay_us (ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME);
 
   RELEASE_LINE ();
+
+  if ( ! SAMPLE_LINE () ) {
+    return OWS_ERROR_LINE_UNEXPECTEDLY_LOW;
+  }
+
+  return OWS_ERROR_NONE;
 }
 
-uint8_t
-ows_read_byte (void)
+ows_error_t
+ows_read_byte (uint8_t *data_byte_ptr)
 {
-  uint8_t result = 0;
-
   for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ ) {
-    result >>= 1;  // Shift the result to get ready for the next bit
+
+    (*data_byte_ptr) >>= 1;  // Shift the result to get ready for the next bit
+    uint8_t bit_value;
+    ows_error_t err = ows_read_bit (&bit_value);
+    if ( err ) { return err; }
+    err = err;  // FIXME: handle errors here
     // If result is one, then set MS bit
-    if ( ows_read_bit () ) {
-      result |= B10000000;
+    if ( bit_value ) {
+      (*data_byte_ptr) |= B10000000;
+    }
+
+    // If we see a reset pulse, we just return immediately.  We can go a bit
+    // slot without taking so much time that we might be ignoring a reset
+    // pulse for too long, but perhaps not eight of them.  If we get a reset
+    // pulse return early as promised.  FIXME: this can probably never happen
+    // now that we propagate error right away when doin gows_read_bit()
+    if ( got_reset ) {
+      return OWS_ERROR_GOT_RESET_PULSE;
     }
   }
 
-  return result;
+  return OWS_ERROR_NONE;
 }
 
-void
-ows_write_byte (uint8_t data)
+ows_error_t
+ows_write_byte (uint8_t data_byte)
 {
   // Loop to write each bit in the byte, LS-bit first
   for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ )
   {
-    ows_write_bit (data & B00000001);
-    data >>= 1;   // Shift to get to next bit
+    ows_error_t err = ows_write_bit (data_byte & B00000001);
+    if ( err ) {
+      return err;
+    }
+    data_byte >>= 1;   // Shift to get to next bit
   }
+
+  return OWS_ERROR_NONE;
 }
 
 /*
-
-uint8_t
-owm_touch_reset (void)
-{
-  TICK_DELAY (TICK_DELAY_G);
-  DRIVE_LINE_LOW ();
-  TICK_DELAY (TICK_DELAY_H);
-  RELEASE_LINE ();
-  TICK_DELAY (TICK_DELAY_I);
-  // Look for presence pulse from slave
-  uint8_t result = ! SAMPLE_LINE ();
-  TICK_DELAY (TICK_DELAY_J); // Complete the reset sequence recovery
-
-  return result; // Return sample presence pulse result
-}
-
-void
-owm_write_bit (uint8_t value)
-{
-  // Send a 1-Wire write bit. Provide 10us recovery time.
-
-  if ( value ) {
-    // Write '1' bit
-    DRIVE_LINE_LOW ();
-    TICK_DELAY (TICK_DELAY_A);
-    RELEASE_LINE ();
-    TICK_DELAY (TICK_DELAY_B); // Complete the time slot and 10us recovery
-  }
-  else {
-    // Write '0' bit
-    DRIVE_LINE_LOW ();
-    TICK_DELAY (TICK_DELAY_C);
-    RELEASE_LINE ();
-    TICK_DELAY (TICK_DELAY_D);
-  }
-}
-
-uint8_t
-owm_read_bit (void)
-{
-  // Read a bit from the 1-Wire bus and return it. Provide 10us recovery time.
-
-  DRIVE_LINE_LOW ();
-  TICK_DELAY (TICK_DELAY_A);
-  RELEASE_LINE ();
-  TICK_DELAY (TICK_DELAY_E);
-  uint8_t result = SAMPLE_LINE ();   // Sample bit value from slave
-  TICK_DELAY (TICK_DELAY_F); // Complete the time slot and 10us recovery
-
-  return result;
-}
-
-uint8_t
-owm_read_id (uint8_t *id_buf)
-{
-  uint8_t slave_presence = owm_touch_reset ();
-  if ( ! slave_presence ) {
-    return FALSE;
-  }
-
-  uint8_t const read_rom_command = OWM_READ_ROM_COMMAND;
-  owm_write_byte (read_rom_command);
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
-    id_buf[ii] = owm_read_byte ();
-  }
-
-  return TRUE;
-}
 
 // Global search state
 static uint8_t rom_id[OWM_ID_BYTE_COUNT];   // Current ROM device ID
