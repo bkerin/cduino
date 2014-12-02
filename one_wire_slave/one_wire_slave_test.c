@@ -87,6 +87,24 @@ main (void)
   // But then again the default ID should work so maybe there is no point.
   ows_init (FALSE);   // Initialize the one-wire interface slave end
 
+  // FIXME: This command loop part is having some problems, though I think
+  // it mostlyworks
+  /*
+  PFP ("Ready to honor a READ_ROM_COMMAND... ");
+  uint8_t command = ows_wait_for_command ();
+  assert (command == OWS_READ_ROM_COMMAND);
+  ows_error_t err = ows_write_rom_id ();
+  assert (err == OWS_ERROR_NONE);
+
+  BTRAP ();
+
+  for ( uint8_t ii = 0 ; ii < 8 ; ii++ ) {
+    uint8_t fake_byte = 0x28;
+    ows_write_byte (fake_byte);
+  }
+  */
+
+
   // Because the one-wire protocol doesn't allow us to take a bunch of time
   // out to send things, we accumulate incremental test results in these
   // variables then output everything at once.  Of course, some of the
@@ -99,10 +117,11 @@ main (void)
   PFP ("Trying wait-for-reset, presence-pulse, command sequence... ");
 
   ows_wait_for_reset ();
-  ows_wait_for_reset ();
+
   grpspp = TRUE;
 
   uint8_t command;
+
   for ( ; ; ) {
 
     ows_error_t err = ows_read_byte (&command);
@@ -110,20 +129,26 @@ main (void)
     if ( err == OWS_ERROR_NONE ) {
       break;
     }
+    else if ( err == OWS_ERROR_UNEXPECTED_PULSE_LENGTH ) {
+      PFP ("upl!\n");
+    }
     else {
-      PFP ("DOOOOOME\n");
       // It so happens that our code in one_wire_master/one_wire_master_test.c
       // takes advantage of the ability of the DS18B20 to correctly handle
       // an additional reset request, and sends us one here.  In general,
       // masters might send reset requests at any time, and its nice to
       // honor them if possible, so here we test our capacity to do so a bit.
-      err = ows_handle_any_reset ();
       if ( err == OWS_ERROR_RESET_DETECTED_AND_HANDLED ) {
         herp = TRUE;
       }
     }
   }
-  PFP ("finished.\n");
+
+  // FIXME: clean up this test reply
+  for ( uint8_t ii = 0 ; ii < 8 ; ii++ ) {
+    uint8_t fake_byte = 0x28;
+    ows_write_byte (fake_byte);
+  }
 
   if ( command == OWS_READ_ROM_COMMAND ) {
     grrc = TRUE;

@@ -24,21 +24,32 @@
 // unique 48-bit part code, followed by an 8 bit CRC of the previous bits).
 #define OWS_PART_ID_SIZE_BITS 48
 
+// The number of CRC bits in the ROM ID.
+#define OWS_PART_ID_CRC_SIZE_BITS 8
+
+// Offset of the family code in bits from the LSB of the ROM ID.
+#define OWS_FAMILY_CODE_OFFSET \
+  (OWS_PART_ID_SIZE_BITS + OWS_PART_ID_CRC_SIZE_BITS)
+
 // If a family code hasn't been specified already, assign a default.
 #ifndef OWS_FAMILY_CODE
 #  define OWS_FAMILY_CODE 0x42
 #endif
 
 // Default ID (excluding the trailing CRC), in case the user doesn't want
-// to bother providing one.  FIXME: fix up the mess of reversed bytes that
-// comes up when we keep IDs in 64 bit ints, we already dealt with this
-// issue in the one_wire_master module.
+// to bother providing one.  Note that we put the bytes in this literal in
+// the order we want them to go in the ID.  To compare this to a literal
+// uint64_t value you need to swap the bytes of the literal (or just don't
+// do that).  The last byte is 0x00 for now, it gets filled in with the
+// CRC value at initialization-time.
 #define OWS_DEFAULT_ID \
-  ((((uint64_t) OWS_FAMILY_CODE) << OWS_ID_SIZE_BITS) & 0x424242424242)
+  ((((uint64_t) OWS_FAMILY_CODE) << OWS_FAMILY_CODE_OFFSET) & 0x42424242424200)
 
 // Return type for function in this interface which can encounter errors.
+// FIXME: figure out which of thest we end up using
 typedef enum {
   OWS_ERROR_NONE = 0,
+  OWS_ERROR_UNEXPECTED_PULSE_LENGTH,
   OWS_ERROR_LINE_UNEXPECTEDLY_LOW,
   OWS_ERROR_GOT_RESET_PULSE,
   OWS_ERROR_RESET_DETECTED_AND_HANDLED,
@@ -48,6 +59,7 @@ typedef enum {
 // Initialize the one-wire slave interface.  This sets up the chosen DIO
 // pin, including pin change interrupts and global interrupt enable (see
 // comments near the got_reset declaration below).  If load_eeprom_id
+// FIXME: make the EEPROM offset a tunable constant
 // is true, the first 64 bits of the AVR EEPROM are read and used to
 // form a slave ID, which is loaded into RAM for speedy access.  See the
 // write_random_id_to_eeprom target of generic.mk for a convenient way to
@@ -66,44 +78,18 @@ ows_init (uint8_t load_eeprom_id);
 // other functions in this interface are implemented in terms of these.
 //
 // The master could decide at any time to abort whatever operation is going
-// on and and send us a reset pulse.  Reset pulse detection is handled
-// asynchronously via a pin changer interrupt service routine for OWS_PIN.
-// Users of this interface should call ows_wait_for_reset() when they want
-// to block and wait for a reset pulse, and ows_handle_any_reset() when they
-// want to handle and reset that may have occurred recently.  Clients should
-// react to unexpected reset pulses by aborting any ongoing operation and
-// waiting for new instructions from the master.  Note that to implement a
-// well-behaved slave, clients have to call ows_handle_any_reset() extremely
-// frequently: a presence pulse is supposed to be issued within 60 us of
-// the end of the reset pulse.  Of course, you might choose to have your
-// slave behave a little less well, since it won't break other slaves if
-// you miss the occasional reset pulse when you have something better to do :)
+// on and and send us a reset pulse.
+
+// Wait for a reset pulse, respond with a presence pulse, then read a
+// single byte from the master and return it.  This ignores any short or
+// weird-length pulses on the line without any complaints.
+uint8_t
+ows_wait_for_command (void);
 
 // Block until a reset pulse from the master is seen, then produce a
 // corresponding presence pulse and return.
 void
 ows_wait_for_reset (void);
-
-// Check if any resets have occurred, and handle them if its not
-// already too late.  Return OWS_ERROR_NONE if no reset has been seen,
-// OWS_ERROR_RESET_DETECTED_AND_HANDLED if a reset pulse was seen and a
-// response pulse sent, or OWS_ERROR_MISSED_RESET_DETECTED if a reset pulse
-// was seen but it was too late to send a valid presence pulse in response.
-ows_error_t
-ows_handle_any_reset (void);
-
-// FIXME: should move elsewhere?  Or maybe change to version with the timing
-// padding out front?
-#define OWS_SEND_PRESENCE_PULSE() \
-  do { \
-    DRIVE_LINE_LOW (); \
-    _delay_us (); \
-    RELEASE_LINE (); \
-  } while ( 0 )
-
-// Wait for a reset, and signal our presence when we receive one.
-void
-ows_wait_then_signal_presence (void);
 
 // Write bit
 ows_error_t
@@ -131,7 +117,7 @@ ows_read_bit (uint8_t *data_bit_ptr);
 #define OWS_SEARCH_ROM_COMMAND 0xF0
 
 // One wire ID size in bytes
-// FIXME: consolidate with constante from owm?
+// FIXME: consolidate with constante from owm?  Or rename to OWS_ prefix
 #define OWM_ID_BYTE_COUNT 8
 
 // FIXME: all these functions need to turn into support for slave end
@@ -142,8 +128,11 @@ ows_read_bit (uint8_t *data_bit_ptr);
 // a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE is returned.
 // If there is not exactly one slave present, the results of this function
 // are undefined (later calls to this interface might behave strangely).
-uint8_t
-ows_read_id (uint8_t *id_buf);
+
+// This is the appropriate response to a OWS_READ_ROM_COMMAND.
+// FIXME: consistify ID, id, rom_id names externally at least
+ows_error_t
+ows_write_rom_id (void);
 
 // Find the "first" slave on the one-wire bus (in the sense of the discovery
 // order of the one-wire search algorithm described in Maxim application
