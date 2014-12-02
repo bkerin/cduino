@@ -83,28 +83,33 @@ main (void)
   PFP ("term_io_init() worked.\n");
   PFP ("\n");
 
-  // FIXME: it might be nice to put true in here in the test somehow.
-  // But then again the default ID should work so maybe there is no point.
-  ows_init (FALSE);   // Initialize the one-wire interface slave end
+  PFP ("Trying ows_init()... ");
+  // Initialize the interface, using the OWS_DEFAULT_PART_ID
+  ows_init (FALSE);
+  // Use this if you want to use an ID that you've loaded into EEPROM:
+  //ows_init (TRUE);   // Initialize the one-wire interface slave end
+  PFP ("ok, it returned.\n");
 
   // FIXME: This command loop part is having some problems, though I think
   // it mostlyworks
-  /*
   PFP ("Ready to honor a READ_ROM_COMMAND... ");
   uint8_t command = ows_wait_for_command ();
   assert (command == OWS_READ_ROM_COMMAND);
   ows_error_t err = ows_write_rom_id ();
+  PFP ("cp-1\n");
   assert (err == OWS_ERROR_NONE);
 
-  BTRAP ();
-
+  /*
   for ( uint8_t ii = 0 ; ii < 8 ; ii++ ) {
     uint8_t fake_byte = 0x28;
     ows_write_byte (fake_byte);
   }
   */
 
+  PFP ("cp0\n");
 
+
+  /*
   // Because the one-wire protocol doesn't allow us to take a bunch of time
   // out to send things, we accumulate incremental test results in these
   // variables then output everything at once.  Of course, some of the
@@ -144,12 +149,6 @@ main (void)
     }
   }
 
-  // FIXME: clean up this test reply
-  for ( uint8_t ii = 0 ; ii < 8 ; ii++ ) {
-    uint8_t fake_byte = 0x28;
-    ows_write_byte (fake_byte);
-  }
-
   if ( command == OWS_READ_ROM_COMMAND ) {
     grrc = TRUE;
   }
@@ -164,230 +163,6 @@ main (void)
     PFP ("    Got READ_ROM command\n");
   }
   PFP ("Got byte %" PRIx8 "\n", command);
-
-  // FIXME: not we need to verify if sending the ROM ID seemed to work from
-  // this end.
-
-  /*  FIXME: commented out master-side code follows...
-  PFP ("Trying owm_touch_reset()... ");
-  uint8_t slave_presence = owm_touch_reset ();
-  if ( ! slave_presence ) {
-    PFP ("failed: non-true was returned");
-    assert (FALSE);
-  }
-  PFP ("ok, got slave presence pulse.\n");
-
-#ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
-
-  PFP ("Trying DS18B20 initialization... ");
-  uint64_t slave_rid = ds18b20_init_and_rom_command ();
-  PFP ("ok, succeeded.  Slave ID: ");
-  print_slave_id (slave_rid);
-  PFP ("\n");
-
-
-  // Uncomment this to repeatedly blink out the (decimal) byte values of
-  // the ROM ID for the device instead of continuing the normal test program.
-  //for ( ; ; ) {
-  //  for ( uint8_t ii = 0 ; ii < sizeof (uint64_t) ; ii++ ) {
-  //    BLINK_OUT_UINT32_FEEDING_WDT (((uint8_t *) slave_id)[ii]);
-  //  }
-  //  _delay_ms (4.2);
-  //}
-
-  uint64_t rid;   // ROM ID
-
-  // We can use owm_read_id() because we know we have exactly one slave.
-  PFP ("Trying owm_read_id()... ");
-  uint8_t device_found = owm_read_id ((uint8_t *) &rid);
-  if ( (! device_found) || rid != slave_rid ) {
-    PFP ("failed: didn't find slave with previously discovered ID");
-    assert (FALSE);
-  }
-  PFP ("ok, found slave with previously discovered ID.\n");
-
-  PFP ("Trying owm_first()... ");
-  device_found = owm_first ((uint8_t *) &rid);
-  if ( (! device_found) || rid != slave_rid ) {
-    PFP ("failed: didn't find slave with previously discovered ID");
-    assert (FALSE);
-  }
-  PFP ("ok, found slave with previously discovered ID.\n");
-
-  // Verify that owm_next() (following the owm_first() call above) returns
-  // false, since there is only one device on the bus.
-  PFP ("Trying owm_next()... ");
-  device_found = owm_next ((uint8_t *) &rid);
-  if ( device_found ) {
-    PFP ("failed: unexpectedly returned true");
-    assert (FALSE);
-  }
-  PFP ("ok, no next device found.\n");
-
-  // owm_verify() should work with either a single or multiple slaves.
-  PFP ("Trying owm_verify() with previously discoved ID... ");
-  device_found = owm_verify ((uint8_t *) &rid);
-  if ( ! device_found ) {
-    PFP ("failed: unexpectedly returned false");
-    assert (FALSE);
-  }
-  PFP ("ok, ID verified.\n");
-
-  PFP ("Starting temperature conversion... ");
-  uint8_t const convert_t_command = 0x44;
-  owm_write_byte (convert_t_command);
-  // The DS18B20 is now supposed to respond with a stream of 0 bits until
-  // the conversion completes, after which it's supposed to send 1 bits.
-  // Note that this is probably a typical behavior for busy one-wire devices.
-  uint8_t conversion_complete = 0;
-  while ( ! (conversion_complete = owm_read_bit ()) ) {
-    ;
-  }
-  PFP ("conversion complete.\n");
-
-  // We can now read the device scratchpad memory.  This requires us to first
-  // perform the initialization and read rom commands again as described in
-  // the DS18B20 datasheet.  The slave ROM code better be the same on second
-  // reading :)
-  PFP ("Reading DS18B20 scratchpad memory... ");
-  uint64_t slave_rid_2nd_reading = ds18b20_init_and_rom_command ();
-  assert (slave_rid_2nd_reading == slave_rid);
-  ds18b20_get_scratchpad_contents ();
-  PFP ("done.\n");
-
-  // Convenient names for the temperature bytes
-  uint8_t t_lsb = spb[DS18B20_SCRATCHPAD_T_LSB];
-  uint8_t t_msb = spb[DS18B20_SCRATCHPAD_T_MSB];
-
-  uint8_t tin = (t_msb & B10000000);   // Temperature Is Negative
-
-  // Absolute value of temperature (in degrees C) times 2^4.  This is just
-  // what the DS18B20 likes to spit out.  See Fig. 2 of the DS18B20 datasheet.
-  int16_t atemp_t2tt4 = (((int16_t) t_msb) << BITS_PER_BYTE) | t_lsb;
-  if ( tin ) {   // If negative...
-    // ...just make it positive (it's 2's compliment)
-    atemp_t2tt4 = (~atemp_t2tt4) + 1;
-  }
-
-  // Uncomment some of this to test the the 2's compliment and blinky-output
-  // features themselves, ignoring the real sensor output (but assuming
-  // we make it to this point :).  Table 1 of the DS18B20 datasheet has a
-  // number of example values.
-  //
-  //atemp_t2tt4 = INT16_C (0xFF5E);    // Means -10.125 (blinks out 101250)
-  //atemp_t2tt4 = (~atemp_t2tt4) + 1;  // Knowns to be negative so abs it
-  //
-  //atemp_t2tt4 = INT16_C (0x0191);    // Means 25.0625 (blinks out 250625)
-
-  // Absolute value of temperature, in degrees C.  These factors of 2.0 are
-  // due to the meaning the DS18B20 assigns to the individual field bits.
-  double atemp = atemp_t2tt4 / (2.0 * 2.0 * 2.0 * 2.0);
-
-  // NOTE: I think avrlibc doesn't suppor the # printf flag.  No big loss, but
-  // it means the blinked-out output might have a different number of digits
-  PFP (
-      "Temperature reading: %#.6g degrees C (subject to rounding issues).\n",
-      (tin ? -1.0 : 1.0) * atemp);
-
-  PFP ("All tests passed (assuming temperature looks sane :).\n");
-  PFP ("\n");
-  PFP (
-      "Will now blink out abs(temperature) forever. Note that due to\n"
-      "rounding/formatting issues the number of blinked-out digits or values\n"
-      "of those digits might differ slightly from the printf()-generated\n"
-      "version.\n" );
-
-  // atemp Times 10000
-  uint32_t att10000 = round(atemp * 10000);
-
-  // Blink out the absolute value of the current temperate times 10000
-  // (effectively including four decimal places).
-  for ( ; ; ) {
-    // Feeding the wdt is harmless even when it's not initialized.
-    BLINK_OUT_UINT32_FEEDING_WDT (att10000);
-  }
-
-#endif
-
-#ifdef OWM_TEST_CONDITION_MULTIPLE_SLAVES
-
-#ifndef OWM_FIRST_SLAVE_ID
-#  error OWM_FIRST_SLAVE_ID is not defined
-#endif
-#ifndef OWM_SECOND_SLAVE_ID
-#  error OWM_SECOND_SLAVE_ID is not defined
-#endif
-
-  // Account for endianness by swapping the bytes of the literal ID values.
-  uint64_t first_device_id
-    = __builtin_bswap64 (UINT64_C (OWM_FIRST_SLAVE_ID));
-  uint64_t second_device_id
-    = __builtin_bswap64 (UINT64_C (OWM_SECOND_SLAVE_ID));
-
-  uint64_t rid;   // ROM ID
-
-  PFP ("Trying owm_first()... ");
-  uint8_t device_found = owm_first ((uint8_t *) &rid);
-  if ( ! device_found ) {
-    PFP ("failed: didn't discover any slave devices");
-    assert (FALSE);
-  }
-  if ( rid != first_device_id ) {
-    PFP ("failed: discovered first device ID was ");
-    print_slave_id (rid);
-    PFP (", not the expected ");
-    print_slave_id (first_device_id);
-    assert (FALSE);
-  }
-  PFP ("ok, found 1st device with expected ID ");
-  print_slave_id (rid);
-  PFP (".\n");
-
-  PFP ("Trying owm_next()... ");
-  device_found = owm_next ((uint8_t *) &rid);
-  if ( ! device_found ) {
-    PFP ("failed: didn't discover a second slave device");
-    assert (FALSE);
-  }
-  if ( rid != second_device_id ) {
-    PFP ("failed: discovered second device ID was ");
-    print_slave_id (rid);
-    PFP (", not the expected ");
-    print_slave_id (second_device_id);
-    assert (FALSE);
-  }
-  PFP ("ok, found 2nd device with expected ID ");
-  print_slave_id (rid);
-  PFP (".\n");
-
-  // Verify that owm_next() (following the owm_first() call above) returns
-  // false, since there are only two devices on the bus.
-  PFP ("Trying owm_next() again... ");
-  device_found = owm_next ((uint8_t *) &rid);
-  if ( device_found ) {
-    PFP ("failed: unexpectedly returned true");
-    assert (FALSE);
-  }
-  PFP ("ok, no next device found.\n");
-
-  PFP("Trying owm_verify(first_device_id)... ");
-  device_found = owm_verify ((uint8_t *) &rid);
-  if ( ! device_found ) {
-    PFP ("failed: didn't find device");
-    assert (FALSE);
-  }
-  PFP ("ok, found it.\n");
-
-  PFP("Trying owm_verify(second_device_id)... ");
-  device_found = owm_verify ((uint8_t *) &rid);
-  if ( ! device_found ) {
-    PFP ("failed: didn't find device");
-    assert (FALSE);
-  }
-  PFP ("ok, found it.\n");
-
-  PFP ("All tests passed.\n");
-  PFP ("\n");
-
   */
+
 }

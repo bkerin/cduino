@@ -61,34 +61,44 @@
 
 static uint8_t rom_id[OWM_ID_BYTE_COUNT];
 
-void
-ows_init (uint8_t load_eeprom_id)
+static void
+set_rom_id (uint8_t use_eeprom_id)
 {
-  load_eeprom_id = load_eeprom_id;   // FIXME: out until we use IDs
+  // Set up the ROM ID in rom_id, using EEPROM data if use_eeprom_id is
+  // TRUE, or the default part ID otherwise.  In either case the matching
+  // CRC is added.
 
-  if ( load_eeprom_id ) {
+  uint8_t const ncb = OWM_ID_BYTE_COUNT - 1;   // Non-CRC Bytes in the ROM ID
+  uint8_t const pib = ncb - 1;   // Part ID Bytes in the ROM ID
+
+  if ( use_eeprom_id ) {
+    rom_id[0] = OWS_FAMILY_CODE;
     ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
     {
-      eeprom_read_block (rom_id, 0, OWM_ID_BYTE_COUNT);
+      uint8_t *pidp = rom_id + 1;   // Part ID Ptr (+1 for family code space)
+      eeprom_read_block (pidp, 0, pib);
     }
   }
   else {
-    uint64_t id_as_uint64 = __builtin_bswap64 (OWS_DEFAULT_ID);
-
-    for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+    uint64_t id_as_uint64 = __builtin_bswap64 (UINT64_C (OWS_DEFAULT_PART_ID));
+    id_as_uint64 >>= BITS_PER_BYTE;
+    ((uint8_t *) (&id_as_uint64))[0] = OWS_FAMILY_CODE;
+    for ( uint8_t ii = 0 ; ii < ncb ; ii++ ) {
       rom_id[ii] = ((uint8_t *) &id_as_uint64)[ii];
     }
-    //BASSERT (rom_id[0] == 0x28);
-    /*
-    BASSERT (rom_id[1] == 0x42);
-    BASSERT (rom_id[2] == 0x42);
-    BASSERT (rom_id[3] == 0x42);
-    BASSERT (rom_id[4] == 0x42);
-    BASSERT (rom_id[5] == 0x42);
-    BASSERT (rom_id[6] == 0x42);
-    BASSERT (rom_id[7] == 0x00);
-    */
   }
+
+  uint8_t crc = 0;   // CRC (to be computed)
+  for ( uint8_t ii = 0 ; ii < ncb ; ii++ ) {
+    crc = _crc_ibutton_update (crc, rom_id[ii]);
+  }
+  rom_id[ncb] = crc;
+}
+
+void
+ows_init (uint8_t use_eeprom_id)
+{
+  set_rom_id (use_eeprom_id);
 
   timer1_stopwatch_init ();
 

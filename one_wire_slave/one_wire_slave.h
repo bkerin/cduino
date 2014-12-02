@@ -19,31 +19,28 @@
          the DIO_PIN_* tuple macros before this header is included)
 #endif
 
-// The one-wire protocol says that the device ID consists of an 8-bit family
-// code (which is the same for all devices of a given type, followed by a
-// unique 48-bit part code, followed by an 8 bit CRC of the previous bits).
-#define OWS_PART_ID_SIZE_BITS 48
-
-// The number of CRC bits in the ROM ID.
-#define OWS_PART_ID_CRC_SIZE_BITS 8
-
-// Offset of the family code in bits from the LSB of the ROM ID.
-#define OWS_FAMILY_CODE_OFFSET \
-  (OWS_PART_ID_SIZE_BITS + OWS_PART_ID_CRC_SIZE_BITS)
-
-// If a family code hasn't been specified already, assign a default.
+// The first byte of the ROM ID is supposed to be a family code that is
+// constant for all devices in a given "family".  If it hasn't been defined
+// already, we assign a default.
 #ifndef OWS_FAMILY_CODE
 #  define OWS_FAMILY_CODE 0x42
 #endif
 
-// Default ID (excluding the trailing CRC), in case the user doesn't want
-// to bother providing one.  Note that we put the bytes in this literal in
-// the order we want them to go in the ID.  To compare this to a literal
-// uint64_t value you need to swap the bytes of the literal (or just don't
-// do that).  The last byte is 0x00 for now, it gets filled in with the
-// CRC value at initialization-time.
-#define OWS_DEFAULT_ID \
-  ((((uint64_t) OWS_FAMILY_CODE) << OWS_FAMILY_CODE_OFFSET) & 0x42424242424200)
+// The second through seventh bytes of the ROM ID are supposed to be unique
+// to each part.  There's support in ows_init() for loading a unique code
+// from EEPROM, but in case clients don't want to deal with setting that
+// up we have this default value.  The bytes given in this value are bytes
+// two through seven, reading from left to right.  Watch out for the endian
+// switch if you even try to compare ROM IDs as uint64_t numbers.
+#define OWS_DEFAULT_PART_ID 0x444444222222
+
+// If the use_eeprom_id argument to ows_init() is TRUE, this is the
+// location where the six byte part ID is looked up in EEPROM, otherwise
+// it is ignored.  A different address could be used here, but then the
+// write_random_id_to_eeprom target of generic.mk would need to change
+// as well or a different mechanism used to load the ID into EEPROM (see
+// comments above the ows_init() declaration below.
+#define OWS_PART_ID_EEPROM_ADDRESS 0
 
 // Return type for function in this interface which can encounter errors.
 // FIXME: figure out which of thest we end up using
@@ -58,16 +55,18 @@ typedef enum {
 
 // Initialize the one-wire slave interface.  This sets up the chosen DIO
 // pin, including pin change interrupts and global interrupt enable (see
-// comments near the got_reset declaration below).  If load_eeprom_id
-// FIXME: make the EEPROM offset a tunable constant
-// is true, the first 64 bits of the AVR EEPROM are read and used to
-// form a slave ID, which is loaded into RAM for speedy access.  See the
-// write_random_id_to_eeprom target of generic.mk for a convenient way to
-// load unique IDs onto devices.  If load_eeprom_id is false, a default
-// device ID of OWS_DEFAULT_ID is used (note that this arrangement is only
+// comments near the got_reset declaration below).  If use_eeprom_id FIXME:
+// make the EEPROM offset a tunable constant is true, the first six bytes of
+// the AVR EEPROM are read and used together with the OWS_FAMILY_CODE and a
+// CRC to form a slave ROM ID, which is loaded into RAM for speedy access.
+// See the write_random_id_to_eeprom target of generic.mk for a convenient
+// way to load unique IDs onto devices (note that that target writes eight
+// random bytes, of which only the first six are used by this interface).
+// If use_eeprom_id is false, a default device ID with a non-family part
+// numberof OWS_DEFAULT_PART_ID is used (note that this arrangement is only
 // useful if you intend to use only one of your slaves on the bus).
 void
-ows_init (uint8_t load_eeprom_id);
+ows_init (uint8_t use_eeprom_id);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
