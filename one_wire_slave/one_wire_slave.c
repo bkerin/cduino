@@ -15,11 +15,6 @@
 #include "term_io.h"
 #include "util.h"
 
-#ifndef OWS_PIN
-#  error OWS_PIN not defined (it must be explicitly set to one of \
-         the DIO_PIN_* tuple macros before this point)
-#endif
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Line Drive, Sample, and Delay Routines
@@ -58,6 +53,8 @@
 
 // Timer1 ticks per microsecond
 #define T1TPUS 2
+
+#define ILAD(il) il ## .0
 
 static uint8_t rom_id[OWM_ID_BYTE_COUNT];
 
@@ -144,19 +141,11 @@ ows_init (uint8_t use_eeprom_id)
 // samples.
 #define ST_SLAVE_READ_SLOT_SAMPLE_TIME 32
 
+// FIXME: ideally we wouldn't have to repeat these values as as ints,
+// would be nice to know that _delay_us() can handle a literal int argument
 #define TICK_DELAY_A   6
 #define TICK_DELAY_E   9
 #define TICK_DELAY_F  55
-
-// This is the time that we wait from when the master pulls the line low
-// to indicate the start of a slave write slot to when we set the line
-// ourselves.  Since AN126 recommends that the master hold the line low
-// for 6 us, we wait a little more than that.  Of course Figure 16 of the
-// DS18B20 datasheet indicates that the master should keep TINIT "as short
-// as possible".  I guess 6 us is as short as possible, for some reason :)
-// FIXME: currently unused, we went with A + E / 2 or less pulse lenght,
-// and then immediately hold the line low instead
-#define ST_SLAVE_WRITE_SLOT_SEND_TIME (TICK_DELAY_A + 2.42)
 
 // This is the maximum pulse lengh we will tolerate when looking for
 // the pulse the master is supposed to send to start a slave write slot.
@@ -252,7 +241,9 @@ wait_for_pulse (void)
   return pls;
 }
 
-// FIXME: comment me
+// Drive the line low for the time required to indicate presence to the
+// master, then call wait_for_pulse() to swallow the pulse that this causes
+// the ISR to detect.
 #define OWS_PRESENCE_PULSE()              \
   do {                                    \
     DRIVE_LINE_LOW ();                    \
@@ -308,12 +299,15 @@ ows_read_bit (uint8_t *data_bit_ptr)
   return OWS_ERROR_NONE;
 }
 
-#define OWS_ZERO_PULSE()                                     \
-  do {                                                       \
-    DRIVE_LINE_LOW ();                                       \
-    _delay_us ((double) ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME); \
-    RELEASE_LINE ();                                         \
-    wait_for_pulse ();                                       \
+// Drive the line low for the time required to indicate a value of zero when
+// writing a bit, then call wait_for_pulse() to swallow the pulse that this
+// causes the ISR to detect.
+#define OWS_ZERO_PULSE()                            \
+  do {                                              \
+    DRIVE_LINE_LOW ();                              \
+    _delay_us (ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME); \
+    RELEASE_LINE ();                                \
+    wait_for_pulse ();                              \
   } while ( 0 )
 
 ows_error_t
@@ -345,6 +339,16 @@ ows_write_bit (uint8_t data_bit)
   return OWS_ERROR_NONE;
 }
 
+// Call call, Propagating Errors.  The call argument must be a call to a
+// function returning ows_err_t.
+#define CPE(call)                  \
+  do {                             \
+    ows_error_t err = call;        \
+    if ( err != OWS_ERROR_NONE ) { \
+      return err;                  \
+    }                              \
+  } while ( 0 )
+
 ows_error_t
 ows_read_byte (uint8_t *data_byte_ptr)
 {
@@ -354,10 +358,7 @@ ows_read_byte (uint8_t *data_byte_ptr)
 
     // Read the next bit
     uint8_t bit_value;
-    ows_error_t err = ows_read_bit (&bit_value);
-    if ( err ) {
-      return err;
-    }
+    CPE (ows_read_bit (&bit_value));
 
     // If result is one, then set (current) MS bit of the result byte
     if ( bit_value ) {
@@ -374,10 +375,7 @@ ows_write_byte (uint8_t data_byte)
   // Loop to write each bit in the byte, LS-bit first
   for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ )
   {
-    ows_error_t err = ows_write_bit (data_byte & B00000001);
-    if ( err ) {
-      return err;
-    }
+    CPE (ows_write_bit (data_byte & B00000001));
     data_byte >>= 1;   // Shift to get to next bit
   }
 
@@ -388,12 +386,34 @@ ows_error_t
 ows_write_rom_id (void)
 {
   for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
-    ows_error_t err = ows_write_byte (rom_id[ii]);
-    if ( err ) {
-      return err;
+    CPE (ows_write_byte (rom_id[ii]));
+  }
+
+  return OWS_ERROR_NONE;
+}
+
+
+// Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
+#define ID_BIT(bn) \
+  ((rom_id[bn / OWM_ID_BYTE_COUNT]) >> (bn % BITS_PER_BYTE) & B00000001)
+
+ows_error_t
+ows_answer_search (void)
+{
+  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT * BITS_PER_BYTE ; ii++ ) {
+    // one-wire search algorithm goes here, returning early once we're out
+    // of the search.
+    uint8_t bv = ID_BIT (ii);
+    CPE (ows_write_bit (bv));
+    CPE (ows_write_bit (! bv));
+    uint8_t mbv;
+    CPE (ows_read_bit (&mbv));
+    if ( bv != mbv ) {
+      return OWS_ERROR_NONE;
     }
   }
 
+  // FIXME: I guess nothing special is required of us when we run out of bits?
   return OWS_ERROR_NONE;
 }
 

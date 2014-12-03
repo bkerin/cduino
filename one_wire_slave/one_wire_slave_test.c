@@ -1,7 +1,34 @@
 // Test/demo for the one_wire_slave.h interface.
 //
-// This program implements a simple one-wire slave device.  It acts like
-// a Maxim DS18B20, but the temperature is always about 42.42 degrees C :)
+// This program implements a simple one-wire slave device.  It acts a bit
+// like a Maxim DS18B20, but the temperature is always about 42.42 degrees
+// C :) There are some other slightly eccentric features of these tests,
+// since they are designed to account for the expectations of the test
+// program one_wire_master_test.c (from the one_wire_master module).
+//
+// Physically, the test setup should consist of:
+//
+//   * one Arduino acting as the master, and set up as described in
+//     one_wire_master_test.c, but with the actual DS18B20 removed, and
+//
+//   * a second Arduino running this test program, connected to the first
+//     Arduino via a single wire (by default to OWS_PIN DIO_PIN_DIGITAL_2),
+//     and
+//
+//   * A common ground provided through the USB system, i.e. both Arduinos
+//     should be plugged into the same USB hub :)
+//
+// The slave Arduino should be reset first, then the master should be reset
+// to kick off the tests.
+//
+// Because the slave needs to respond quickly to requests from the master,
+// it can't take the time to provide incremental diagnostic output via
+// term_io.h like other module tests do.  Instead, it will give you some
+// nice blinky-LED feedback about the point of failure on the on-board LED
+// (connected to PB5, aka DIGITAL_5) , or simple enthusiastic rapid blinking
+// if everything works :) See the coments for BASSERT_FEEDING_WDT_SHOW_POINT()
+// in util.h for details.
+//
 
 #include <assert.h>
 #include <math.h>
@@ -72,6 +99,29 @@ print_slave_id (uint64_t id)
 }
 */
 
+// This is like BASERT_FEEDING_WDT_SHOW_POINT() from util.h, but it doesn't
+// wast a huge blob of code space every use.  FIXME: it would be nice if
+// util supplied an efficient version like this, but it would have to stop
+// being a header-only module.
+static void
+bassert_feeding_wdt_show_point (uint8_t condition, char const *file, int line)
+{
+  if ( UNLIKELY (! (condition)) ) {
+    for ( ; ; ) {
+      size_t XxX_fnl = strlen (file);
+      BLINK_OUT_UINT32_FEEDING_WDT (XxX_fnl);
+      BLINK_OUT_UINT32_FEEDING_WDT (line);
+    }
+  }
+}
+
+// Blinky-assert, Showing Point Efficiently.  This does a blinky-assert
+// showing the failure point in a code-space efficient way.  We need this
+// wrapper to the function to conveniently add the correct __FILE__ and
+// __LINE__ arguments.
+#define BASSERT_SPE(cond) \
+  bassert_feeding_wdt_show_point ((cond), __FILE__, __LINE__)
+
 int
 main (void)
 {
@@ -90,24 +140,34 @@ main (void)
   //ows_init (TRUE);   // Initialize the one-wire interface slave end
   PFP ("ok, it returned.\n");
 
-  // FIXME: This command loop part is having some problems, though I think
-  // it mostlyworks
-  PFP ("Ready to honor a READ_ROM_COMMAND... ");
+  PFP ("Ready to honor two READ_ROM_COMMANDs... ");
   uint8_t command = ows_wait_for_command ();
-  assert (command == OWS_READ_ROM_COMMAND);
+  BASSERT_SPE (command == OWS_READ_ROM_COMMAND);
   ows_error_t err = ows_write_rom_id ();
-  PFP ("cp-1\n");
-  assert (err == OWS_ERROR_NONE);
+  BASSERT_SPE (err == OWS_ERROR_NONE);
+  command = ows_wait_for_command ();
+  BASSERT_SPE (command == OWS_READ_ROM_COMMAND);
+  err = ows_write_rom_id ();
+  BASSERT_SPE (err == OWS_ERROR_NONE);
+  PFP ("ok, got them (and sent IDs in response).");
 
-  /*
-  for ( uint8_t ii = 0 ; ii < 8 ; ii++ ) {
-    uint8_t fake_byte = 0x28;
-    ows_write_byte (fake_byte);
-  }
-  */
+  // Next we expect a SEARCH_ROM command from the master (because it calls
+  // owm_first()).
+  command = ows_wait_for_command ();
+  BASSERT_SPE (command == OWS_SEARCH_ROM_COMMAND);
+  // FIXME: WORK POINT: test me
+  BTRAP ();
+  err = ows_answer_search ();
+  BASSERT_SPE (err == OWS_ERROR_NONE);
 
-  PFP ("cp0\n");
+  // Next we expect another SEARCH_ROM command from the master (because it
+  // calls owm_next()).
+  command = ows_wait_for_command ();
+  BASSERT_SPE (command == OWS_SEARCH_ROM_COMMAND);
+  err = ows_answer_search ();
+  BASSERT_SPE (err == OWS_ERROR_NONE);
 
+  // FIXME: next the master does owm_verify()...
 
   /*
   // Because the one-wire protocol doesn't allow us to take a bunch of time

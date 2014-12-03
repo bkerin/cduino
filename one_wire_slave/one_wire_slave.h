@@ -79,9 +79,11 @@ ows_init (uint8_t use_eeprom_id);
 // The master could decide at any time to abort whatever operation is going
 // on and and send us a reset pulse.
 
-// Wait for a reset pulse, respond with a presence pulse, then read a
-// single byte from the master and return it.  This ignores any short or
-// weird-length pulses on the line without any complaints.
+// Wait for a reset pulse, respond with a presence pulse, then try to
+// read a single byte from the master and return it.  Any additional reset
+// pulses that occur during this read attempt are also responded to with
+// presence pulses.  Any errors that occur while trying to read the byte
+// effectively cause a new wait for a reset pulse to begin.
 uint8_t
 ows_wait_for_command (void);
 
@@ -111,12 +113,14 @@ ows_read_bit (uint8_t *data_bit_ptr);
 // directions to begin participating in various ID search/discovery commands.
 // Note that clients don't generally need to use these macros directly.
 // See the DS18B20 datasheet and Maxim application note AN187 for details.
-// FIXME: consolidate with constante from owm?
+// FIXME: consolidate with constant from owm?
 #define OWS_READ_ROM_COMMAND   0x33
 #define OWS_SEARCH_ROM_COMMAND 0xF0
 
 // One wire ID size in bytes
 // FIXME: consolidate with constante from owm?  Or rename to OWS_ prefix
+// FIXME: might be nice to use _SIZE for byte sizes, everywhere.  What do
+// we do elsewhere?
 #define OWM_ID_BYTE_COUNT 8
 
 // FIXME: all these functions need to turn into support for slave end
@@ -132,6 +136,12 @@ ows_read_bit (uint8_t *data_bit_ptr);
 // FIXME: consistify ID, id, rom_id names externally at least
 ows_error_t
 ows_write_rom_id (void);
+
+// FIXME: WORK POINT: test me
+// Answer a (just received) OWS_SEARCH_ROM_COMMAND by engaging in the search
+// process described in Maxim Application Note AN187.
+ows_error_t
+ows_answer_search (void);
 
 // Find the "first" slave on the one-wire bus (in the sense of the discovery
 // order of the one-wire search algorithm described in Maxim application
