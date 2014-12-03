@@ -273,7 +273,7 @@ first (void)
   last_device_flag = FALSE;
   last_family_discrep = 0;
 
-  return search();
+  return search ();
 }
 
 
@@ -284,7 +284,7 @@ first (void)
 static uint8_t
 next (void)
 {
-  return search();
+  return search ();
 }
 
 // Verify that the device with the ROM number in rom_id buffer is present.
