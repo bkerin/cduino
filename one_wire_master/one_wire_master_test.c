@@ -220,6 +220,14 @@ main (void)
   PFP ("ok, ID verified.\n");
 
   PFP ("Starting temperature conversion... ");
+  // FIXME: this test program doesn't do a good job of indicating that we
+  // can only issue a conversion command here because its the next step
+  // in the transaction sequence (D18B20 datasheet "Transaction Sequence"
+  // section).  In reality the master should probably get some sort of
+  // owm_start_command_transaction() or so which would take SKIP_ROM,
+  // READ_ROM, or MATCH_ROM (and for this last one an ID), this would wrap
+  // up the entire command-transaction initiation process as used by for
+  // example the DS18B20.
   uint8_t const convert_t_command = 0x44;
   owm_write_byte (convert_t_command);
   // The DS18B20 is now supposed to respond with a stream of 0 bits until

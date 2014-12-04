@@ -2,8 +2,17 @@
 //
 // Test driver: one_wire_master_test.h    Implementation: one_wire_master.c
 //
-// This interface provides most of the lower-level one-wire functionality,
-// up to byte-at-a-time communication and device search.
+// If you're new to one-wire you should first read the entire Maxim DS18B20
+// temperature sensor datasheet FIXME: link it.  Its hard to use one-wire
+// without at least a rough understanding of how the line signalling and
+// transaction schemes work.
+//
+// This interface features high-level routines that can handle all the
+// back-and-forth required to initiate a one-wire command transaction or
+// slave search or verify, and also access to the lower-level one-wire
+// functionality, such as bit- and byte-at-a-time communication.  Note that
+// the latter low-level functions are typically required to usefully complete
+// a transaction.  FIXME: actually provide the transaction-level interface.
 
 #ifndef ONE_WIRE_MASTER_H
 #define ONE_WIRE_MASTER_H
@@ -67,6 +76,13 @@ owm_read_bit (void);
 // See the DS18B20 datasheet and Maxim application note AN187 for details.
 #define OWM_READ_ROM_COMMAND   0x33
 #define OWM_SEARCH_ROM_COMMAND 0xF0
+
+// FIXME: we must support these as well, at both master and slave ends.
+// Also the commands should maybe all go together somewhere other than
+// under the Device Presence Confirmation/Discovery section  Then again
+#define OWM_MATCH_ROM_COMMAND     0x55
+#define OWM_SKIP_ROM_COMMAND      0xCC
+#define OWM_ALARM_SEARCH_COMMAND  0xEC
 
 // One wire ID size in bytes
 #define OWM_ID_BYTE_COUNT 8

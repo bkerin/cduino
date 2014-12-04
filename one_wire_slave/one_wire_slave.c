@@ -275,6 +275,59 @@ ows_wait_for_command (void)
   return result;
 }
 
+/* FIXME: WORK POINT: first make a commit for the nicely working code, after
+ * examining all the changes, then this function isn't teste yet and has some
+ * unimplemented subroutines
+
+uint8_t
+ows_wait_for_function_command (void)
+{
+  uint8_t tfu = FALSE;  // Transaction For Us (our ROM ID, or all slaves)
+
+  uint8_t got_result = FALSE;   // True iff we have a result to return
+  uint8_t result;               // The result to return
+
+  do {
+    uint8_t command = ows_wait_for_command ();
+
+    switch ( command ) {
+      case OWS_SEARCH_ROM_COMMAND:
+        break;
+      case OWS_ALARM_SEARCH_COMMAND:
+        break;
+      case OWS_READ_ROM:
+        ows_error_t err = ows_write_rom_id ();
+        if ( err == OWS_ERROR_NONE ) {
+          tfu = TRUE;
+        }
+        break;
+      case OWS_MATCH_ROM:
+        // FIXME: implement a match_rom check on the slave side, do it here
+        uint8_t riba[OWM_ID_BYTE_COUNT];   // ROM ID Being Addressed
+        if ( ows_read_and_match_rom_id () ) {
+          tfu = TRUE;
+        }
+        break;
+      case OWS_SKIP_COM_COMMAND:
+        tfu = TRUE;
+        break;
+    }
+
+    if ( tfu ) {
+        command = ows_wait_for_command ();
+        if ( ! IS_ROM_COMMAND (command) ) {
+          got_result = TRUE;
+          result = command;
+        }
+    }
+
+  } while ( ! got_result );
+
+  return result;
+}
+
+*/
+
 ows_error_t
 ows_read_bit (uint8_t *data_bit_ptr)
 {
@@ -392,7 +445,6 @@ ows_write_rom_id (void)
   return OWS_ERROR_NONE;
 }
 
-
 // Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
 #define ID_BIT(bn) \
   ((rom_id[bn / OWM_ID_BYTE_COUNT]) >> (bn % BITS_PER_BYTE) & B00000001)
@@ -401,8 +453,6 @@ ows_error_t
 ows_answer_search (void)
 {
   for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT * BITS_PER_BYTE ; ii++ ) {
-    // one-wire search algorithm goes here, returning early once we're out
-    // of the search.
     uint8_t bv = ID_BIT (ii);
     CPE (ows_write_bit (bv));
     CPE (ows_write_bit (! bv));
@@ -413,7 +463,6 @@ ows_answer_search (void)
     }
   }
 
-  // FIXME: I guess nothing special is required of us when we run out of bits?
   return OWS_ERROR_NONE;
 }
 

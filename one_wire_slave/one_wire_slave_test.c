@@ -27,7 +27,9 @@
 // nice blinky-LED feedback about the point of failure on the on-board LED
 // (connected to PB5, aka DIGITAL_5) , or simple enthusiastic rapid blinking
 // if everything works :) See the coments for BASSERT_FEEDING_WDT_SHOW_POINT()
-// in util.h for details.
+// in util.h for details about the failure feedback.  If everthing works
+// here, you might want to take a look at the diagnostic output from the
+// master to verify that the final results got to it correctly.
 //
 
 #include <assert.h>
@@ -39,65 +41,6 @@
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 #include "util.h"
-
-/*  FIXME: we're leaving this here for the moment to make it easier to
- *  implement the other side of things
-static uint64_t
-ds18b20_init_and_rom_command (void)
-{
-  // Requies exactly one DS18B20 device to be present on the bus.  Perform the
-  // Initialization (Step 1) and ROM Command (Step 2) steps of the transaction
-  // sequence described in the DS18B20 datasheet, and return the discovered
-  // ROM code of the slave.  Note that functions that perform this operation
-  // in a single call are available in the one_wire_master.h interface,
-  // but here we perform them manually as a cross-check.
-
-  // Prompt the slave(s) to respond with a "presence pulse".  This corresponds
-  // to the "INITIALIZATION" step (Step 1) described in the DS18B20 datasheet.
-  // FIXME: would be nice to have datasheet available on web and linked to
-  // by the docs...
-  uint8_t slave_presence = owm_touch_reset ();
-  assert (slave_presence);
-
-  // This test program requires that only one slave be present, so we can
-  // use the READ ROM command to get the slave's ROM ID.
-  uint64_t slave_rid;
-  owm_write_byte (OWM_READ_ROM_COMMAND);
-  for ( uint8_t ii = 0 ; ii < sizeof (slave_rid) ; ii++ ) {
-    ((uint8_t *) (&slave_rid))[ii] = owm_read_byte ();
-  }
-
-  // We should have gotten the fixed family code as the first byte of the ID.
-  assert (((uint8_t *) (&slave_rid))[0] == DS18B20_FAMILY_CODE);
-
-  return slave_rid;
-}
-
-static void
-ds18b20_get_scratchpad_contents (void)
-{
-  // Send the command that causes the DS18B20 to send the scratchpad contents,
-  // then read the result and store it in spb.  This routine must follow an
-  // ds18b20_init_and_rom_command() call.
-
-  uint8_t const read_scratchpad_command = 0xBE;
-  owm_write_byte (read_scratchpad_command);
-  for ( uint8_t ii = 0 ; ii < DS18B20_SCRATCHPAD_SIZE ; ii++ ) {
-    spb[ii] = owm_read_byte ();
-  }
-}
-
-static void
-print_slave_id (uint64_t id)
-{
-   // Output the given slave id as a 64 bit hex number, using printf().
-
-  printf ("0x");
-  for ( uint8_t ii = 0 ; ii < sizeof (id) ; ii++ ) {
-    printf ("%02" PRIx8, ((uint8_t *) (&id))[ii] );
-  }
-}
-*/
 
 // This is like BASERT_FEEDING_WDT_SHOW_POINT() from util.h, but it doesn't
 // wast a huge blob of code space every use.  FIXME: it would be nice if
@@ -117,10 +60,45 @@ bassert_feeding_wdt_show_point (uint8_t condition, char const *file, int line)
 
 // Blinky-assert, Showing Point Efficiently.  This does a blinky-assert
 // showing the failure point in a code-space efficient way.  We need this
-// wrapper to the function to conveniently add the correct __FILE__ and
-// __LINE__ arguments.
+// wrapper to the function to automatically add the __FILE__ and __LINE__
+// arguments.
 #define BASSERT_SPE(cond) \
   bassert_feeding_wdt_show_point ((cond), __FILE__, __LINE__)
+
+static void
+send_fake_ds18b20_scratchpad_contents (void)
+{
+  // Send the appropriate response to a read scratchpad command from the
+  // master, at least as far as the one_wire_master_test.c program cares.
+  // Note in particular that one_wire_master_test.c doesn't even care about
+  // the CRC that a real DS18B20 would send.  FIXME: maybe we should make
+  // the master actually check this since it would be a good idea to show
+  // how to do that anyway. (and compute it at this end)
+
+  // Temperature least and most significant bits st the temperature comes
+  // out to 42.0 degrees C (see Fig. 2 of Maxim DS18B20 datasheet).
+  uint8_t const t_lsb = B10100000;
+  uint8_t const t_msb = B00000010;
+
+  ows_error_t err;
+
+  err = ows_write_byte (t_lsb);
+  BASSERT_SPE (err == OWS_ERROR_NONE);
+  err = ows_write_byte (t_msb);
+  BASSERT_SPE (err == OWS_ERROR_NONE);
+
+  // Remaining Scratchpad Size (after temp. bytes).  This is a property of
+  // the DS18B20.
+  uint8_t const rss = 7;
+
+  // The test program that supposed to be running on the master doesn't care
+  // about anything except the temperature bytes, so we just send 0 for the
+  // remaining bytes.
+  for ( uint8_t ii = 0 ; ii < rss ; ii++ ) {
+    err = ows_write_byte (0);
+    BASSERT_SPE (err == OWS_ERROR_NONE);
+  }
+}
 
 int
 main (void)
@@ -140,7 +118,8 @@ main (void)
   //ows_init (TRUE);   // Initialize the one-wire interface slave end
   PFP ("ok, it returned.\n");
 
-  PFP ("Ready to honor two READ_ROM_COMMANDs... ");
+  PFP ("Ready to start tests, reset the master now\n");
+
   uint8_t command = ows_wait_for_command ();
   BASSERT_SPE (command == OWS_READ_ROM_COMMAND);
   ows_error_t err = ows_write_rom_id ();
@@ -149,14 +128,11 @@ main (void)
   BASSERT_SPE (command == OWS_READ_ROM_COMMAND);
   err = ows_write_rom_id ();
   BASSERT_SPE (err == OWS_ERROR_NONE);
-  PFP ("ok, got them (and sent IDs in response).");
 
   // Next we expect a SEARCH_ROM command from the master (because it calls
   // owm_first()).
   command = ows_wait_for_command ();
   BASSERT_SPE (command == OWS_SEARCH_ROM_COMMAND);
-  // FIXME: WORK POINT: test me
-  BTRAP ();
   err = ows_answer_search ();
   BASSERT_SPE (err == OWS_ERROR_NONE);
 
@@ -167,62 +143,52 @@ main (void)
   err = ows_answer_search ();
   BASSERT_SPE (err == OWS_ERROR_NONE);
 
-  // FIXME: next the master does owm_verify()...
+  // Next we expect a verify command, then a convert temperature command from
+  // the master (the verify is required as part of the transaction sequence
+  // (see the DS18B20 datasheet "Transaction Sequence" section).
+  command = ows_wait_for_command ();
+  uint8_t const convert_t_command = 0x44;
+  BASSERT_SPE (command == convert_t_command);
+  // A real Maxim DS18B20 would take some time here to digitize the
+  // temperature measurement.  If it wasn't using parasite power, it would
+  // during that time respond to read bit commands from the master by
+  // sending zeros.  Fortunately we're just making up a number, which is
+  // instantaneous :) But seriously, this shows a weak point in our slave
+  // implementation: we aren't set up to send zeros and do anything else
+  // useful at the same time.  In theory the ISR in one_wire_slave.c could be
+  // programmed to automatically send zeros when requested (perhaps with an
+  // additional timer compare match interrupt or something to time the zero
+  // pulse being sent), but I think its not worth dealing with this.  If you
+  // really want DS18B20 behavior use a real one, otherwise just specify
+  // your own requirement for masters that want to interrogate your device.
+  // For example: "after issuing a convert_t_command, the master shall wait
+  // 0.42 ms for the conversion to complete before beginning any additional
+  // transaction sequence with the same slave".  Another possible strategy
+  // is to have your slave continually make conversions on its own (possibly
+  // at a cost in responsiveness to reset pulses, see the comments near the
+  // ows_wait_for_reset() declaration in one_wire_slave.h), in which case
+  // the results of recent measurements should be immediately available
+  // on request, and can be returned as part of the same transaction.
+  // Or you could try using a real-time OS instead.  Or you could just add
+  // one more microcontroller and have it communicate the recent results
+  // of it's measurements to the processor using this module on IO pins,
+  // so they are always immediately available :)
+  ows_write_bit (1);
 
-  /*
-  // Because the one-wire protocol doesn't allow us to take a bunch of time
-  // out to send things, we accumulate incremental test results in these
-  // variables then output everything at once.  Of course, some of the
-  // one-wire slave functions might block forever if things aren't working
-  // right, in which case more detailed diagnostics might need to be inserted.
-  // These variables stand for Got Reset Pulse Sent Presence Pulse, Handled
-  // Extra Reset Pulse, and Got Read Rom Command.
-  uint8_t grpspp = FALSE, herp = FALSE, grrc = FALSE;
+  // FIXME: WORK POINT: master does another ds18b20_init_and_rom_command in
+  // here, wonder if that's actually required?
 
-  PFP ("Trying wait-for-reset, presence-pulse, command sequence... ");
+  // Next we expect a READ_SCRATCHPAD transaction sequence, in this case
+  // initiated with a READ_ROM command.
+  command = ows_wait_for_command ();
+  BASSERT_SPE (command == OWS_READ_ROM_COMMAND);
+  err = ows_write_rom_id ();
+  BASSERT_SPE (err == OWS_ERROR_NONE);
+  command = ows_wait_for_command ();
+  uint8_t const read_scratchpad_command = 0xBE;
+  BASSERT_SPE (command == read_scratchpad_command);
+  send_fake_ds18b20_scratchpad_contents ();
 
-  ows_wait_for_reset ();
-
-  grpspp = TRUE;
-
-  uint8_t command;
-
-  for ( ; ; ) {
-
-    ows_error_t err = ows_read_byte (&command);
-
-    if ( err == OWS_ERROR_NONE ) {
-      break;
-    }
-    else if ( err == OWS_ERROR_UNEXPECTED_PULSE_LENGTH ) {
-      PFP ("upl!\n");
-    }
-    else {
-      // It so happens that our code in one_wire_master/one_wire_master_test.c
-      // takes advantage of the ability of the DS18B20 to correctly handle
-      // an additional reset request, and sends us one here.  In general,
-      // masters might send reset requests at any time, and its nice to
-      // honor them if possible, so here we test our capacity to do so a bit.
-      if ( err == OWS_ERROR_RESET_DETECTED_AND_HANDLED ) {
-        herp = TRUE;
-      }
-    }
-  }
-
-  if ( command == OWS_READ_ROM_COMMAND ) {
-    grrc = TRUE;
-  }
-  PFP ("  Results:\n");
-  if ( grpspp ) {
-    PFP ("    Got reset pulse (and sent presence pulse)\n");
-  }
-  if ( herp ) {
-    PFP ("    Got extra reset pulse (and sent another presence pulse)\n");
-  }
-  if ( grrc ) {
-    PFP ("    Got READ_ROM command\n");
-  }
-  PFP ("Got byte %" PRIx8 "\n", command);
-  */
-
+  // Made it through, so start rapid blinking as promised!
+  BTRAP ();
 }
