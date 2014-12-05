@@ -159,7 +159,7 @@ ows_init (uint8_t use_eeprom_id)
 
 // This is the time to hold the line low when sending a 0 to the master.
 // See Figure 1 of Maxim Application Note AN126.  We go with TICK_DELAY_F /
-// 2.0 here because it's, well, half way between when we must have the line
+// 2 here because it's, well, half way between when we must have the line
 // held low and when we must release it.  We could probably measure what
 // actual slaves do if necessary...
 #define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME (TICK_DELAY_E + TICK_DELAY_F / 2)
@@ -187,7 +187,7 @@ ows_init (uint8_t use_eeprom_id)
 // Hard-coded for our prescaler/F_CPU to not be a double.  This version
 // must be used only in ISR, otherwise use AT1US().
 #define T1US() (TIMER1_STOPWATCH_TICKS() * 4)
-#define T1OF()    TIMER1_STOPWATCH_OVERFLOWED ()
+#define T1OF() TIMER1_STOPWATCH_OVERFLOWED ()
 
 
 // Atomic version of T1US().  We have to use an atomic block to access
@@ -210,52 +210,70 @@ ows_init (uint8_t use_eeprom_id)
 
 volatile uint8_t got_reset = FALSE;
 
-volatile uint16_t pulse_length = 0;
+// When a (negative) pulse is in progress, the length of the the most recent
+// negative pulse is considered unknown.  This is also the case when the
+// interrupt service routine that measure the pulse lengths hasn't yet seen
+// a pulse.
+#define PULSE_LENGTH_UNKNOWN 0
+
+// When the pin change ISR observes a positive edge, it sets new_pulse and
+// records the pulse_length in timer1 ticks of the new pulse.
+volatile uint8_t new_pulse = FALSE;
+volatile uint16_t pulse_length;
 
 // This ISR keeps track of the length of low pulses.  If we see a long enough
 // one we consider that we've seen a reset and set a client-visible flag.
 ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 {
   if ( LINE_IS_HIGH () ) {
+    new_pulse = TRUE;
     pulse_length = TIMER1_STOPWATCH_TICKS ();
   }
   else {
-    pulse_length = 0;
+    new_pulse = FALSE;
     T1RESET ();
   }
 }
 
-// FIXME: consider rename to more accurate name
 static uint16_t
-wait_for_pulse (void)
+wait_for_pulse_end (void)
 {
-  uint16_t pls = 0;   // Pulse Length Seen
+  // Wait for the positive edge that occurs at the end of a negative pulse,
+  // and return the negative pulse duration.  In fact this waits for a
+  // flag variable to be set from a pin change ISR, which seems to be
+  // considerably more rebust than pure delta detecton would probably be:
+  // see pcint_test.c.disabled in the one_wire_slave module directory for
+  // some tests I did to verify how this interrupt works.
+
+  uint8_t gnp = FALSE;   // Got New Pulse
+  uint16_t npl;          // New Pulse Length
   do {
     ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
     {
-      pls = pulse_length;
-      pulse_length = 0;
+      gnp = new_pulse;
+      npl = pulse_length;
+      new_pulse = FALSE;
     }
-  } while ( pls == 0 );
+  } while ( ! gnp );
 
-  return pls;
+  return npl;
 }
 
 // Drive the line low for the time required to indicate presence to the
-// master, then call wait_for_pulse() to swallow the pulse that this causes
-// the ISR to detect.
+// master, then call wait_for_pulse_end() to swallow the pulse that this
+// causes the ISR to detect.
 #define OWS_PRESENCE_PULSE()              \
   do {                                    \
     DRIVE_LINE_LOW ();                    \
     _delay_us (ST_PRESENCE_PULSE_LENGTH); \
     RELEASE_LINE ();                      \
-    wait_for_pulse ();                    \
+    wait_for_pulse_end ();                \
   } while ( 0 )
 
 void
 ows_wait_for_reset (void)
 {
-  while ( wait_for_pulse () < ST_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
+  while ( wait_for_pulse_end () < ST_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
     ;
   }
   _delay_us ((double) ST_DELAY_BEFORE_PRESENCE_PULSE);
@@ -275,63 +293,119 @@ ows_wait_for_command (void)
   return result;
 }
 
-/* FIXME: WORK POINT: first make a commit for the nicely working code, after
- * examining all the changes, then this function isn't teste yet and has some
- * unimplemented subroutines
+// Call call, Propagating Errors.  The call argument must be a call to a
+// function returning ows_err_t.
+#define CPE(call)                  \
+  do {                             \
+    ows_error_t err = call;        \
+    if ( err != OWS_ERROR_NONE ) { \
+      return err;                  \
+    }                              \
+  } while ( 0 )
+
+// FIXME: I may need to be relocated
+//
+ows_error_t
+ows_read_and_match_rom_id (void)
+{
+  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+    for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; ii++ ) {
+      uint8_t bit_value;
+      CPE (ows_read_bit (&bit_value));
+      if ( bit_value != ((rom_id[ii]) >> jj) ) {
+        return OWS_ERROR_ROM_ID_MISMATCH;
+      }
+    }
+  }
+
+  return OWS_ERROR_NONE;
+}
+
+// ROM commands perform one-wire search and addressing operations and are
+// effectively part of the one-wire protocol, as opposed to other commands
+// which particular slave types may define to do particular things.
+#define OWS_IS_ROM_COMMAND(command) \
+  ( command ==   OWS_SEARCH_ROM_COMMAND || \
+    command ==     OWS_READ_ROM_COMMAND || \
+    command ==    OWS_MATCH_ROM_COMMAND || \
+    command ==     OWS_SKIP_ROM_COMMAND || \
+    command == OWS_ALARM_SEARCH_COMMAND )
 
 uint8_t
 ows_wait_for_function_command (void)
 {
   uint8_t tfu = FALSE;  // Transaction For Us (our ROM ID, or all slaves)
-
-  uint8_t got_result = FALSE;   // True iff we have a result to return
-  uint8_t result;               // The result to return
+  uint8_t command = OWS_NULL_COMMAND;
+  ows_error_t err;   // For return codes
 
   do {
-    uint8_t command = ows_wait_for_command ();
+
+    if ( command == OWS_NULL_COMMAND ) {
+      command = ows_wait_for_command ();
+    }
 
     switch ( command ) {
+
       case OWS_SEARCH_ROM_COMMAND:
+        // FIXME: we should perhaps just propagate errors everywhere, all
+        // the way to the top?  At the moment we eat them here
+        ows_answer_search ();
+        command = OWS_NULL_COMMAND;
         break;
+
       case OWS_ALARM_SEARCH_COMMAND:
+        // FIXME: This isn't implemented master-side yet either
+        command = OWS_NULL_COMMAND;
         break;
-      case OWS_READ_ROM:
-        ows_error_t err = ows_write_rom_id ();
+
+      case OWS_READ_ROM_COMMAND:
+        // FIXME: again, swallowing errors is questionable policy
+        err = ows_write_rom_id ();
         if ( err == OWS_ERROR_NONE ) {
           tfu = TRUE;
         }
-        break;
-      case OWS_MATCH_ROM:
-        // FIXME: implement a match_rom check on the slave side, do it here
-        uint8_t riba[OWM_ID_BYTE_COUNT];   // ROM ID Being Addressed
-        if ( ows_read_and_match_rom_id () ) {
-          tfu = TRUE;
+        else {
+          command = OWS_NULL_COMMAND;
         }
         break;
-      case OWS_SKIP_COM_COMMAND:
+
+      case OWS_MATCH_ROM_COMMAND:
+        err = ows_read_and_match_rom_id ();
+        if ( err == OWS_ERROR_NONE ) {
+          tfu = TRUE;
+        }
+        else {
+          command = OWS_NULL_COMMAND;
+        }
+        // FIXME: other errors during matching are swallowed...
+        break;
+
+      case OWS_SKIP_ROM_COMMAND:
         tfu = TRUE;
         break;
+
     }
 
     if ( tfu ) {
         command = ows_wait_for_command ();
-        if ( ! IS_ROM_COMMAND (command) ) {
-          got_result = TRUE;
-          result = command;
+        // The master might be a weirdo and decide to send another ROM command
+        // instead of a function command, in which case we need to keep going.
+        if ( ! OWS_IS_ROM_COMMAND (command) ) {
+          return command;
+        }
+        else {
+          tfu = FALSE;
         }
     }
 
-  } while ( ! got_result );
+  } while ( TRUE );
 
-  return result;
 }
-
-*/
 
 ows_error_t
 ows_read_bit (uint8_t *data_bit_ptr)
 {
-  uint16_t pl = wait_for_pulse ();
+  uint16_t pl = wait_for_pulse_end ();
 
   if ( pl < ST_SLAVE_READ_SLOT_SAMPLE_TIME * T1TPUS ) {
     *data_bit_ptr = 1;
@@ -352,15 +426,15 @@ ows_read_bit (uint8_t *data_bit_ptr)
   return OWS_ERROR_NONE;
 }
 
-// Drive the line low for the time required to indicate a value of zero when
-// writing a bit, then call wait_for_pulse() to swallow the pulse that this
-// causes the ISR to detect.
+// Drive the line low for the time required to indicate a value of zero
+// when writing a bit, then call wait_for_pulse_end() to swallow the pulse
+// that this causes the ISR to detect.
 #define OWS_ZERO_PULSE()                            \
   do {                                              \
     DRIVE_LINE_LOW ();                              \
     _delay_us (ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME); \
     RELEASE_LINE ();                                \
-    wait_for_pulse ();                              \
+    wait_for_pulse_end ();                          \
   } while ( 0 )
 
 ows_error_t
@@ -373,7 +447,7 @@ ows_write_bit (uint8_t data_bit)
   // the bus is supposed to be released again by the end of the time slot F
   // (55) us later.
 
-  uint16_t pl = wait_for_pulse ();
+  uint16_t pl = wait_for_pulse_end ();
 
   if ( pl < ST_SLAVE_WRITE_SLOT_START_PULSE_MAX_LENGTH * T1TPUS ) {
     if ( ! data_bit ) {
@@ -391,16 +465,6 @@ ows_write_bit (uint8_t data_bit)
 
   return OWS_ERROR_NONE;
 }
-
-// Call call, Propagating Errors.  The call argument must be a call to a
-// function returning ows_err_t.
-#define CPE(call)                  \
-  do {                             \
-    ows_error_t err = call;        \
-    if ( err != OWS_ERROR_NONE ) { \
-      return err;                  \
-    }                              \
-  } while ( 0 )
 
 ows_error_t
 ows_read_byte (uint8_t *data_byte_ptr)

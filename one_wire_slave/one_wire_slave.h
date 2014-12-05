@@ -50,7 +50,8 @@ typedef enum {
   OWS_ERROR_LINE_UNEXPECTEDLY_LOW,
   OWS_ERROR_GOT_RESET_PULSE,
   OWS_ERROR_RESET_DETECTED_AND_HANDLED,
-  OWS_ERROR_MISSED_RESET_DETECTED
+  OWS_ERROR_MISSED_RESET_DETECTED,
+  OWS_ERROR_ROM_ID_MISMATCH,
 } ows_error_t;
 
 // Initialize the one-wire slave interface.  This sets up the chosen DIO
@@ -81,9 +82,9 @@ ows_init (uint8_t use_eeprom_id);
 // on and and send us a reset pulse.
 
 // Wait for a function command transaction intended for our ROM ID (and
-// possibly others as well if a OWS_SKIP_ROM_COMMAND is used), and return the
-// function command itself.  In the meantime, automagically participate in
-// any slave searches (i.e. respond to any incoming OWS_SEARCH_ROM_COMMAND
+// possibly others as well if a OWS_SKIP_ROM_COMMAND was sent), and return
+// the function command itself.  In the meantime, automagically participate
+// in any slave searches (i.e. respond to any incoming OWS_SEARCH_ROM_COMMAND
 // or OWS_ALARM_SEARCH_COMMAND commands).  Any errors (funny-lengh pulses,
 // aborted searches, etc.) are silently ignored.
 uint8_t
@@ -97,16 +98,26 @@ ows_wait_for_function_command (void);
 uint8_t
 ows_wait_for_command (void);
 
+// ROM commands perform one-wire search and addressing operations and are
+// effectively part of the one-wire protocol, as opposed to other commands
+// which particular slave types may define to do slave-type-specific things.
+#define OWS_IS_ROM_COMMAND(command) \
+  ( command == OWS_SEARCH_ROM_COMMAND   || \
+    command == OWS_READ_ROM_COMMAND     || \
+    command == OWS_MATCH_ROM_COMMAND    || \
+    command == OWS_SKIP_ROM_COMMAND     || \
+    command == OWS_ALARM_SEARCH_COMMAND    )
+
 // Block until a reset pulse from the master is seen, then produce a
 // corresponding presence pulse and return.
 void
 ows_wait_for_reset (void);
 
-// Write bit
+// Write bit (which should be 0 or 1).
 ows_error_t
 ows_write_bit (uint8_t data_bit);
 
-// Read bit
+// Read bit, setting data_bit_ptr to 0 or 1.
 ows_error_t
 ows_read_bit (uint8_t *data_bit_ptr);
 
@@ -119,13 +130,21 @@ ows_read_bit (uint8_t *data_bit_ptr);
 // family, or slaves with an active alarm condition.
 //
 
+// This implementation assumes that no actual command uses this value.
+// We use this value internally to indicate situation where we don't have
+// a command yet.
+#define OWS_NULL_COMMAND 0x00
+
 // When these commands occur after a reset, the slaves interpret them as
 // directions to begin participating in various ID search/discovery commands.
 // Note that clients don't generally need to use these macros directly.
 // See the DS18B20 datasheet and Maxim application note AN187 for details.
 // FIXME: consolidate with constant from owm?
-#define OWS_READ_ROM_COMMAND   0x33
-#define OWS_SEARCH_ROM_COMMAND 0xF0
+#define OWS_SEARCH_ROM_COMMAND   0xF0
+#define OWS_READ_ROM_COMMAND     0x33
+#define OWS_MATCH_ROM_COMMAND    0x55
+#define OWS_SKIP_ROM_COMMAND     0xCC
+#define OWS_ALARM_SEARCH_COMMAND 0xEC
 
 // One wire ID size in bytes
 // FIXME: consolidate with constante from owm?  Or rename to OWS_ prefix
@@ -152,6 +171,18 @@ ows_write_rom_id (void);
 // process described in Maxim Application Note AN187.
 ows_error_t
 ows_answer_search (void);
+
+// Respond to a (just received) OWS_MATCH_ROM_COMMAND by reading up to
+// OWM_ID_BYTE_COUNT bytes, one bit at a time, and matching the bits to
+// our ROM ID.  Return OWS_ERROR_ROM_ID_MISMATCH as soon as we see a
+// non-matching bit, or OWS_ERROR_NONE if all bits match (i.e. the master
+// is talking to us).  Note that it isn't really an error if the ROM doesn't
+// match, it just means the master doesn't want to talk to us.  This routine
+// can also return other errors propagated from ows_read_bit().  FIXME:
+// I guess all the routines should mention possible error return values,
+// or else they should be described once in some central place.
+ows_error_t
+ows_read_and_match_rom_id (void);
 
 // Find the "first" slave on the one-wire bus (in the sense of the discovery
 // order of the one-wire search algorithm described in Maxim application
@@ -181,7 +212,7 @@ ows_next (uint8_t *id_buf);
 uint8_t
 ows_verify (uint8_t *id_buf);
 
-// FIXXME: it would be nice to add a filter for alarm search (EC command).
+// FIXME: it would be nice to add a filter for alarm search (EC command).
 // This command might actually be useful, since it makes it possible to scan
 // an entire bus for any devices needing immediate attention.  It wouldn't
 // be too hard to add support for this either: I think all that would be
@@ -214,23 +245,6 @@ ows_write_byte (uint8_t data_byte);
 // to reset pulses in time.
 ows_error_t
 ows_read_byte (uint8_t *data_byte_ptr);
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// Device Presense Confirmation/Discovery
-//
-// These functions can be used to allow the slave to participate in bus
-// searches or device checks.
-//
-
-// When these commands occur after a reset, the slaves should interpret
-// them as directions to begin participating in various ID search/discovery
-// commands.  Note that clients don't generally need to use these macros
-// directly.  See the DS18B20 datasheet and Maxim application note AN187
-// for details.
-#define OWS_READ_ROM_COMMAND   0x33
-#define OWS_SEARCH_ROM_COMMAND 0xF0
-
 
 // Fancy simultaneous read/write.  Sort of.  I guess, I haven't used it. It's
 // supposed to be more efficient.  See Maxim Application Note AN126. WARNING:
