@@ -18,11 +18,23 @@
 #define ONE_WIRE_MASTER_H
 
 #include "dio.h"
+#include "one_wire_common_commands.h"
 
 #ifndef OWM_PIN
 #  error OWM_PIN not defined (it must be explicitly set to one of \
          the DIO_PIN_* tuple macros before this header is included)
 #endif
+
+// We have our own master-prefixed names for the common one-wire commands.
+// You probably won't want to use any of these directly when using this
+// interface.
+#define OWM_NULL_COMMAND         OWCC_NULL_COMMAND
+#define OWM_SLEEP_COMMAND        OWCC_SLEEP_COMMAND
+#define OWM_SEARCH_ROM_COMMAND   OWCC_SEARCH_ROM_COMMAND
+#define OWM_READ_ROM_COMMAND     OWCC_READ_ROM_COMMAND
+#define OWM_MATCH_ROM_COMMAND    OWCC_MATCH_ROM_COMMAND
+#define OWM_SKIP_ROM_COMMAND     OWCC_SKIP_ROM_COMMAND
+#define OWM_ALARM_SEARCH_COMMAND OWCC_ALARM_SEARCH_COMMAND
 
 // Intialize the one wire master interface.  All this does is set up the
 // chosen DIO pin.  It starts out set as an input without the internal pull-up

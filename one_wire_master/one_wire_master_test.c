@@ -87,7 +87,7 @@ static void
 ds18b20_get_scratchpad_contents (void)
 {
   // Send the command that causes the DS18B20 to send the scratchpad contents,
-  // then read the result and store it in spb.  This routine must follow an
+  // then read the result and store it in spb.  This routine must follow a
   // ds18b20_init_and_rom_command() call.
 
   uint8_t const read_scratchpad_command = 0xBE;
@@ -220,14 +220,17 @@ main (void)
   PFP ("ok, ID verified.\n");
 
   PFP ("Starting temperature conversion... ");
-  // FIXME: this test program doesn't do a good job of indicating that we
-  // can only issue a conversion command here because its the next step
-  // in the transaction sequence (D18B20 datasheet "Transaction Sequence"
-  // section).  In reality the master should probably get some sort of
+  // FIXME: the master should probably get some sort of
   // owm_start_command_transaction() or so which would take SKIP_ROM,
   // READ_ROM, or MATCH_ROM (and for this last one an ID), this would wrap
   // up the entire command-transaction initiation process as used by for
   // example the DS18B20.
+  // NOTE: the DS18B20 doesn't seem to require an addressing command before
+  // the "Convert T" command here, which is contrary to its own datasheet.
+  // I guess if there's only one slave on the bus it works ok, but its sort of
+  // weird, so we go ahead and do the addressing again.
+  uint64_t slave_rid_2nd_reading = ds18b20_init_and_rom_command ();
+  assert (slave_rid_2nd_reading == slave_rid);
   uint8_t const convert_t_command = 0x44;
   owm_write_byte (convert_t_command);
   // The DS18B20 is now supposed to respond with a stream of 0 bits until
@@ -244,8 +247,8 @@ main (void)
   // the DS18B20 datasheet.  The slave ROM code better be the same on second
   // reading :)
   PFP ("Reading DS18B20 scratchpad memory... ");
-  uint64_t slave_rid_2nd_reading = ds18b20_init_and_rom_command ();
-  assert (slave_rid_2nd_reading == slave_rid);
+  uint64_t slave_rid_3rd_reading = ds18b20_init_and_rom_command ();
+  assert (slave_rid_3rd_reading == slave_rid);
   ds18b20_get_scratchpad_contents ();
   PFP ("done.\n");
 

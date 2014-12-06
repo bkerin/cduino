@@ -120,6 +120,28 @@ main (void)
 
   PFP ("Ready to start tests, reset the master now\n");
 
+  for ( ; ; ) {
+    uint8_t fcmd = ows_wait_for_function_command ();
+    // FIXME: convert T command
+    if ( fcmd == 0x44 ) {
+      // Because we're just making up a number, we convert instantly, so we
+      // can immediately send the one that the DS18B20 sends when it's done
+      // converting :) See the comment below near the next reference to the
+      // DS18B20_CONVERT_T_COMMAND below for a longer discussion about this.
+      // FIXME: WORK POINT: define DS18B20_CONVERT_T_COMMAND macro, and the
+      // others, also time for a general cleanup I think, and test sending
+      // one works ok from this point.
+      ows_write_bit (1);
+    }
+    // FIXME: read scratchpad command like for convert T
+    else if ( fcmd == 0xBE ) {
+      send_fake_ds18b20_scratchpad_contents ();
+    }
+
+    // FIXME: we promised above to end with rapid blinking, so this dispatch
+    // versin should do that as well.
+  }
+
   uint8_t command = ows_wait_for_command ();
   BASSERT_SPE (command == OWS_READ_ROM_COMMAND);
   ows_error_t err = ows_write_rom_id ();

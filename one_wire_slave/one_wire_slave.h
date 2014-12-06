@@ -13,11 +13,23 @@
 #define ONE_WIRE_SLAVE_H
 
 #include "dio.h"
+#include "one_wire_common_commands.h"
 
 #ifndef OWS_PIN
 #  error OWS_PIN not defined (it must be explicitly set to one of \
          the DIO_PIN_* tuple macros before this header is included)
 #endif
+
+// We have our own namespace-prefixed names for the common one-wire commands.
+// You probably won't want to use any of these directly when using this
+// interface.
+#define OWS_NULL_COMMAND         OWCC_NULL_COMMAND
+#define OWS_SLEEP_COMMAND        OWCC_SLEEP_COMMAND
+#define OWS_SEARCH_ROM_COMMAND   OWCC_SEARCH_ROM_COMMAND
+#define OWS_READ_ROM_COMMAND     OWCC_READ_ROM_COMMAND
+#define OWS_MATCH_ROM_COMMAND    OWCC_MATCH_ROM_COMMAND
+#define OWS_SKIP_ROM_COMMAND     OWCC_SKIP_ROM_COMMAND
+#define OWS_ALARM_SEARCH_COMMAND OWCC_ALARM_SEARCH_COMMAND
 
 // The first byte of the ROM ID is supposed to be a family code that is
 // constant for all devices in a given "family".  If it hasn't been defined
@@ -130,26 +142,12 @@ ows_read_bit (uint8_t *data_bit_ptr);
 // family, or slaves with an active alarm condition.
 //
 
-// This implementation assumes that no actual command uses this value.
-// We use this value internally to indicate situation where we don't have
-// a command yet.
-#define OWS_NULL_COMMAND 0x00
-
-// When these commands occur after a reset, the slaves interpret them as
-// directions to begin participating in various ID search/discovery commands.
-// Note that clients don't generally need to use these macros directly.
-// See the DS18B20 datasheet and Maxim application note AN187 for details.
-// FIXME: consolidate with constant from owm?
-#define OWS_SEARCH_ROM_COMMAND   0xF0
-#define OWS_READ_ROM_COMMAND     0x33
-#define OWS_MATCH_ROM_COMMAND    0x55
-#define OWS_SKIP_ROM_COMMAND     0xCC
-#define OWS_ALARM_SEARCH_COMMAND 0xEC
-
 // One wire ID size in bytes
 // FIXME: consolidate with constante from owm?  Or rename to OWS_ prefix
 // FIXME: might be nice to use _SIZE for byte sizes, everywhere.  What do
 // we do elsewhere?
+// FIXME: maybe the common header should be one_wire_common.h, instead of
+// one_wire_common_commands.h, so it could include this and be decently named
 #define OWM_ID_BYTE_COUNT 8
 
 // FIXME: all these functions need to turn into support for slave end
@@ -166,7 +164,6 @@ ows_read_bit (uint8_t *data_bit_ptr);
 ows_error_t
 ows_write_rom_id (void);
 
-// FIXME: WORK POINT: test me
 // Answer a (just received) OWS_SEARCH_ROM_COMMAND by engaging in the search
 // process described in Maxim Application Note AN187.
 ows_error_t

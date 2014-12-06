@@ -54,8 +54,6 @@
 // Timer1 ticks per microsecond
 #define T1TPUS 2
 
-#define ILAD(il) il ## .0
-
 static uint8_t rom_id[OWM_ID_BYTE_COUNT];
 
 static void
@@ -329,7 +327,7 @@ ows_read_and_match_rom_id (void)
     command ==     OWS_READ_ROM_COMMAND || \
     command ==    OWS_MATCH_ROM_COMMAND || \
     command ==     OWS_SKIP_ROM_COMMAND || \
-    command == OWS_ALARM_SEARCH_COMMAND )
+    command == OWS_ALARM_SEARCH_COMMAND    )
 
 uint8_t
 ows_wait_for_function_command (void)
@@ -340,8 +338,33 @@ ows_wait_for_function_command (void)
 
   do {
 
-    if ( command == OWS_NULL_COMMAND ) {
+    while ( command == OWS_NULL_COMMAND ) {
+      // This command *should* be a ROM command of some sort, even if its
+      // only a OWS_SKIP_ROM_COMMAND, since at this point we don't have a
+      // target slave for a real comand, however...
       command = ows_wait_for_command ();
+      // it might not be, and some Maxim slave devices might still work in
+      // some situation.  For example, the DS18B20 seems to honor "Convert
+      // T" (0x44) commands that come after a Search ROM command, at least
+      // when there's only one slave on the bus.  Yet the DS18B20 datasheet
+      // clearly states in the "TRANSACTION SEQUENCE" section that a new
+      // transaction must be started after Search ROM (and for good reason,
+      // since this command doesn't address any particular slave).  So if
+      // we get a non-ROM command here, we have two choices:
+      //
+      //   1.  Do what the DS18B20 apparently does, and treat it as valid
+      //       (and return it from this function).
+      //
+      //   2.  Treat it as an error, and silently eat it (FIXME: or propagate
+      //       it, if we decide we want to propagate errors from this
+      //       function).
+      //
+      // I'm going with option 2 for the moment, but this is a sufficiently
+      // screwy issue that perhaps a client-visible option controlling or
+      // at least indicating this behavior is warranted.
+      if ( ! OWS_IS_ROM_COMMAND (command) ) {
+        command = OWS_NULL_COMMAND;
+      }
     }
 
     switch ( command ) {
@@ -387,15 +410,15 @@ ows_wait_for_function_command (void)
     }
 
     if ( tfu ) {
-        command = ows_wait_for_command ();
-        // The master might be a weirdo and decide to send another ROM command
-        // instead of a function command, in which case we need to keep going.
-        if ( ! OWS_IS_ROM_COMMAND (command) ) {
-          return command;
-        }
-        else {
-          tfu = FALSE;
-        }
+      command = ows_wait_for_command ();
+      // The master might be a weirdo and decide to send another ROM command
+      // instead of a function command, in which case we need to keep going.
+      if ( ! OWS_IS_ROM_COMMAND (command) ) {
+        return command;
+      }
+      else {
+        tfu = FALSE;
+      }
     }
 
   } while ( TRUE );
