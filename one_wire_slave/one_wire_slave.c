@@ -206,14 +206,6 @@ ows_init (uint8_t use_eeprom_id)
 #define LINE_IS_HIGH() (  SAMPLE_LINE ())
 #define LINE_IS_LOW()  (! SAMPLE_LINE ())
 
-volatile uint8_t got_reset = FALSE;
-
-// When a (negative) pulse is in progress, the length of the the most recent
-// negative pulse is considered unknown.  This is also the case when the
-// interrupt service routine that measure the pulse lengths hasn't yet seen
-// a pulse.
-#define PULSE_LENGTH_UNKNOWN 0
-
 // When the pin change ISR observes a positive edge, it sets new_pulse and
 // records the pulse_length in timer1 ticks of the new pulse.
 volatile uint8_t new_pulse = FALSE;
@@ -237,8 +229,8 @@ static uint16_t
 wait_for_pulse_end (void)
 {
   // Wait for the positive edge that occurs at the end of a negative pulse,
-  // and return the negative pulse duration.  In fact this waits for a
-  // flag variable to be set from a pin change ISR, which seems to be
+  // then return the negative pulse duration.  In fact this waits for
+  // a flag variable to be set from a pin change ISR, which seems to be
   // considerably more rebust than pure delta detecton would probably be:
   // see pcint_test.c.disabled in the one_wire_slave module directory for
   // some tests I did to verify how this interrupt works.

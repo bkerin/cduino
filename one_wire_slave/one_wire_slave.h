@@ -66,18 +66,18 @@ typedef enum {
   OWS_ERROR_ROM_ID_MISMATCH,
 } ows_error_t;
 
-// Initialize the one-wire slave interface.  This sets up the chosen DIO
-// pin, including pin change interrupts and global interrupt enable (see
-// comments near the got_reset declaration below).  If use_eeprom_id FIXME:
-// make the EEPROM offset a tunable constant is true, the first six bytes of
-// the AVR EEPROM are read and used together with the OWS_FAMILY_CODE and a
-// CRC to form a slave ROM ID, which is loaded into RAM for speedy access.
-// See the write_random_id_to_eeprom target of generic.mk for a convenient
-// way to load unique IDs onto devices (note that that target writes eight
-// random bytes, of which only the first six are used by this interface).
-// If use_eeprom_id is false, a default device ID with a non-family part
-// numberof OWS_DEFAULT_PART_ID is used (note that this arrangement is only
-// useful if you intend to use only one of your slaves on the bus).
+// Initialize the one-wire slave interface.  This sets up the chosen
+// DIO pin, including pin change interrupts and global interrupt enable.
+// If use_eeprom_id FIXME: make the EEPROM offset a tunable constant is
+// true, the first six bytes of the AVR EEPROM are read and used together
+// with the OWS_FAMILY_CODE and a CRC to form a slave ROM ID, which is
+// loaded into RAM for speedy access.  See the write_random_id_to_eeprom
+// target of generic.mk for a convenient way to load unique IDs onto devices
+// (note that that target writes eight random bytes, of which only the first
+// six are used by this interface).  If use_eeprom_id is false, a default
+// device ID with a non-family part numberof OWS_DEFAULT_PART_ID is used
+// (note that this arrangement is only useful if you intend to use only
+// one of your slaves on the bus).
 void
 ows_init (uint8_t use_eeprom_id);
 
@@ -181,34 +181,6 @@ ows_answer_search (void);
 ows_error_t
 ows_read_and_match_rom_id (void);
 
-// Find the "first" slave on the one-wire bus (in the sense of the discovery
-// order of the one-wire search algorithm described in Maxim application
-// note AN187).  If a slave is discovered, its ID is written into id_buf
-// (which mucst be a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE
-// is returned.  If no slave is discovered, FALSE is returned.  Note that
-// this resets any search which is already in progress.
-uint8_t
-ows_first (uint8_t *id_buf);
-
-// Require an immediately preceeding call to ows_first() or ows_next() to
-// have occurred.  Find the "next" slave on the one-wire bus (in the sense of
-// the discovery order of the one-wire search algorithm described in Maxim
-// application note AN187).  This continues a search begun by a previous
-// call to ows_first().  If another slave is found, its ID is written into
-// id_buf (which must be a pointer to OWM_ID_BYTE_COUNT bytes of space and
-// TRUE is returned.  If no additional slave is found, FALSE is returned.
-uint8_t
-ows_next (uint8_t *id_buf);
-
-// Return true iff device with ID equal to the value in the OWM_ID_BYTE_COUNT
-// bytes pointed to by id_buf is present on the bus, or FALSE otherwise.
-// Note that unlike ows_read_id(), this function is safe to use when there
-// are multiple devices on the bus.  When this function returns, the global
-// search state is restored (so for example the next call to ows_next()
-// should behave as if the call to this routine never occurred).
-uint8_t
-ows_verify (uint8_t *id_buf);
-
 // FIXME: it would be nice to add a filter for alarm search (EC command).
 // This command might actually be useful, since it makes it possible to scan
 // an entire bus for any devices needing immediate attention.  It wouldn't
@@ -224,22 +196,15 @@ ows_verify (uint8_t *id_buf);
 // Byte Write/Read
 //
 
-// Write up to eight bits in a row, checking for got_reset after each bit.
-// The LSB of data is written first.  If got_reset becomes true, return
-// immediately (the returned value will be invalid).  This early return
-// is done to allow slave implementations using this interface to react
-// to reset pulses in time.
+// Write up to eight bits in a row.  The least significant bit is written
+// first.  Any error that can occur in the underlying ows_write_bit()
+// routine is immediately propagated and returned by this routine.
 ows_error_t
 ows_write_byte (uint8_t data_byte);
 
-// Read byte
-// FIXME: is this how slave does it?
-
-// Read up to eight bits in a row, checking for got_reset after each bit.
-// The LSB bit of data is read first.  If got_reset becomes true, return
-// immediately (the returned value will be invalid).  This early return
-// is done to allow slave implementations using this interface to react
-// to reset pulses in time.
+// Read up to eight bits in a row.  The least significant bit is read first.
+// Any error that can occur in the underlying ows_read_bit() routine is
+// immediately propagated and returned by this routine.
 ows_error_t
 ows_read_byte (uint8_t *data_byte_ptr);
 
