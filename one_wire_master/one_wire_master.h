@@ -25,17 +25,6 @@
          the DIO_PIN_* tuple macros before this header is included)
 #endif
 
-// We have our own master-prefixed names for the common one-wire commands.
-// You probably won't want to use any of these directly when using this
-// interface.
-#define OWM_NULL_COMMAND         OWC_NULL_COMMAND
-#define OWM_SLEEP_COMMAND        OWC_SLEEP_COMMAND
-#define OWM_SEARCH_ROM_COMMAND   OWC_SEARCH_ROM_COMMAND
-#define OWM_READ_ROM_COMMAND     OWC_READ_ROM_COMMAND
-#define OWM_MATCH_ROM_COMMAND    OWC_MATCH_ROM_COMMAND
-#define OWM_SKIP_ROM_COMMAND     OWC_SKIP_ROM_COMMAND
-#define OWM_ALARM_SEARCH_COMMAND OWC_ALARM_SEARCH_COMMAND
-
 // Intialize the one wire master interface.  All this does is set up the
 // chosen DIO pin.  It starts out set as an input without the internal pull-up
 // enabled.  It would probably be possible to use the internal pull-up on
@@ -127,7 +116,7 @@ owm_verify (uint8_t *id_buf);
 // be too hard to add support for this either: I think all that would be
 // required would be for the search() function in one_wire_master.c to
 // take a alarm_only argument, and then issue an EC command instead of an
-// OWM_SEARCH_ROM_COMMAND if that argument was true.  It could be tested
+// OWC_SEARCH_ROM_COMMAND if that argument was true.  It could be tested
 // using the DS18B20 temperature alarm functionality, but setting those
 // alarms up is somewhat of a hassle, so we haven't bothered yet.
 

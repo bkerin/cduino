@@ -29,4 +29,14 @@
 #define OWC_SKIP_ROM_COMMAND     0xCC
 #define OWC_ALARM_SEARCH_COMMAND 0xEC
 
+// ROM commands perform one-wire search and addressing operations and are
+// effectively part of the one-wire protocol, as opposed to other commands
+// which particular slave types may define to do particular things.
+#define OWC_IS_ROM_COMMAND(command) \
+  ( command ==   OWC_SEARCH_ROM_COMMAND || \
+    command ==     OWC_READ_ROM_COMMAND || \
+    command ==    OWC_MATCH_ROM_COMMAND || \
+    command ==     OWC_SKIP_ROM_COMMAND || \
+    command == OWC_ALARM_SEARCH_COMMAND    )
+
 #endif  // ONE_WIRE_COMMON_H

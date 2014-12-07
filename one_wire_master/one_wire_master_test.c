@@ -72,7 +72,7 @@ ds18b20_init_and_rom_command (void)
   // This test program requires that only one slave be present, so we can
   // use the READ ROM command to get the slave's ROM ID.
   uint64_t slave_rid;
-  owm_write_byte (OWM_READ_ROM_COMMAND);
+  owm_write_byte (OWC_READ_ROM_COMMAND);
   for ( uint8_t ii = 0 ; ii < sizeof (slave_rid) ; ii++ ) {
     ((uint8_t *) (&slave_rid))[ii] = owm_read_byte ();
   }

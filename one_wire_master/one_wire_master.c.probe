@@ -264,7 +264,7 @@ owm_read_id (uint8_t *id_buf)
     return FALSE;
   }
 
-  uint8_t const read_rom_command = OWM_READ_ROM_COMMAND;
+  uint8_t const read_rom_command = OWC_READ_ROM_COMMAND;
   owm_write_byte (read_rom_command);
   for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
     id_buf[ii] = owm_read_byte ();
@@ -319,7 +319,7 @@ search (void)
       return FALSE;
     }
     // Issue the search command
-    owm_write_byte (OWM_SEARCH_ROM_COMMAND);   // Issue the search command
+    owm_write_byte (OWC_SEARCH_ROM_COMMAND);   // Issue the search command
     // Loop to do the search
     do {
       // Read a bit and its complement

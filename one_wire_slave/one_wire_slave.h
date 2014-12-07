@@ -20,17 +20,6 @@
          the DIO_PIN_* tuple macros before this header is included)
 #endif
 
-// We have our own namespace-prefixed names for the common one-wire commands.
-// You probably won't want to use any of these directly when using this
-// interface.
-#define OWS_NULL_COMMAND         OWC_NULL_COMMAND
-#define OWS_SLEEP_COMMAND        OWC_SLEEP_COMMAND
-#define OWS_SEARCH_ROM_COMMAND   OWC_SEARCH_ROM_COMMAND
-#define OWS_READ_ROM_COMMAND     OWC_READ_ROM_COMMAND
-#define OWS_MATCH_ROM_COMMAND    OWC_MATCH_ROM_COMMAND
-#define OWS_SKIP_ROM_COMMAND     OWC_SKIP_ROM_COMMAND
-#define OWS_ALARM_SEARCH_COMMAND OWC_ALARM_SEARCH_COMMAND
-
 // The first byte of the ROM ID is supposed to be a family code that is
 // constant for all devices in a given "family".  If it hasn't been defined
 // already, we assign a default.
@@ -96,8 +85,8 @@ ows_init (uint8_t use_eeprom_id);
 // Wait for a function command transaction intended for our ROM ID (and
 // possibly others as well if a OWS_SKIP_ROM_COMMAND was sent), and return
 // the function command itself.  In the meantime, automagically participate
-// in any slave searches (i.e. respond to any incoming OWS_SEARCH_ROM_COMMAND
-// or OWS_ALARM_SEARCH_COMMAND commands).  Any errors (funny-lengh pulses,
+// in any slave searches (i.e. respond to any incoming OWC_SEARCH_ROM_COMMAND
+// or OWC_ALARM_SEARCH_COMMAND commands).  Any errors (funny-lengh pulses,
 // aborted searches, etc.) are silently ignored.
 uint8_t
 ows_wait_for_function_command (void);
@@ -109,16 +98,6 @@ ows_wait_for_function_command (void);
 // effectively cause a new wait for a reset pulse to begin.
 uint8_t
 ows_wait_for_command (void);
-
-// ROM commands perform one-wire search and addressing operations and are
-// effectively part of the one-wire protocol, as opposed to other commands
-// which particular slave types may define to do slave-type-specific things.
-#define OWS_IS_ROM_COMMAND(command) \
-  ( command == OWS_SEARCH_ROM_COMMAND   || \
-    command == OWS_READ_ROM_COMMAND     || \
-    command == OWS_MATCH_ROM_COMMAND    || \
-    command == OWS_SKIP_ROM_COMMAND     || \
-    command == OWS_ALARM_SEARCH_COMMAND    )
 
 // Block until a reset pulse from the master is seen, then produce a
 // corresponding presence pulse and return.
@@ -143,11 +122,9 @@ ows_read_bit (uint8_t *data_bit_ptr);
 //
 
 // One wire ID size in bytes
-// FIXME: consolidate with constante from owm?  Or rename to OWS_ prefix
 // FIXME: might be nice to use _SIZE for byte sizes, everywhere.  What do
 // we do elsewhere?
-// FIXME: maybe the common header should be one_wire_common.h, instead of
-// one_wire_common_commands.h, so it could include this and be decently named
+// FIXME: finnish factoring to one_wire_common.h also
 #define OWM_ID_BYTE_COUNT 8
 
 // FIXME: all these functions need to turn into support for slave end
@@ -159,22 +136,22 @@ ows_read_bit (uint8_t *data_bit_ptr);
 // If there is not exactly one slave present, the results of this function
 // are undefined (later calls to this interface might behave strangely).
 
-// This is the appropriate response to a OWS_READ_ROM_COMMAND.
+// This is the appropriate response to a OWC_READ_ROM_COMMAND.
 // FIXME: consistify ID, id, rom_id names externally at least
 ows_error_t
 ows_write_rom_id (void);
 
-// Answer a (just received) OWS_SEARCH_ROM_COMMAND by engaging in the search
+// Answer a (just received) OWC_SEARCH_ROM_COMMAND by engaging in the search
 // process described in Maxim Application Note AN187.
 ows_error_t
 ows_answer_search (void);
 
-// Respond to a (just received) OWS_MATCH_ROM_COMMAND by reading up to
-// OWM_ID_BYTE_COUNT bytes, one bit at a time, and matching the bits to
-// our ROM ID.  Return OWS_ERROR_ROM_ID_MISMATCH as soon as we see a
-// non-matching bit, or OWS_ERROR_NONE if all bits match (i.e. the master
-// is talking to us).  Note that it isn't really an error if the ROM doesn't
-// match, it just means the master doesn't want to talk to us.  This routine
+// Respond to a (just received) OWC_MATCH_ROM_COMMAND by reading up to
+// OWM_ID_BYTE_COUNT bytes, one bit at a time, and matching the bits to our
+// ROM ID.  Return OWS_ERROR_ROM_ID_MISMATCH as soon as we see a non-matching
+// bit, or OWS_ERROR_NONE if all bits match (i.e. the master is talking
+// to us).  Note that it isn't really an error if the ROM doesn't match,
+// it just means the master doesn't want to talk to us.  This routine
 // can also return other errors propagated from ows_read_bit().  FIXME:
 // I guess all the routines should mention possible error return values,
 // or else they should be described once in some central place.

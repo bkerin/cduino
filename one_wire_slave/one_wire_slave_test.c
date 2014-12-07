@@ -143,25 +143,25 @@ main (void)
   }
 
   uint8_t command = ows_wait_for_command ();
-  BASSERT_SPE (command == OWS_READ_ROM_COMMAND);
+  BASSERT_SPE (command == OWC_READ_ROM_COMMAND);
   ows_error_t err = ows_write_rom_id ();
   BASSERT_SPE (err == OWS_ERROR_NONE);
   command = ows_wait_for_command ();
-  BASSERT_SPE (command == OWS_READ_ROM_COMMAND);
+  BASSERT_SPE (command == OWC_READ_ROM_COMMAND);
   err = ows_write_rom_id ();
   BASSERT_SPE (err == OWS_ERROR_NONE);
 
   // Next we expect a SEARCH_ROM command from the master (because it calls
   // owm_first()).
   command = ows_wait_for_command ();
-  BASSERT_SPE (command == OWS_SEARCH_ROM_COMMAND);
+  BASSERT_SPE (command == OWC_SEARCH_ROM_COMMAND);
   err = ows_answer_search ();
   BASSERT_SPE (err == OWS_ERROR_NONE);
 
   // Next we expect another SEARCH_ROM command from the master (because it
   // calls owm_next()).
   command = ows_wait_for_command ();
-  BASSERT_SPE (command == OWS_SEARCH_ROM_COMMAND);
+  BASSERT_SPE (command == OWC_SEARCH_ROM_COMMAND);
   err = ows_answer_search ();
   BASSERT_SPE (err == OWS_ERROR_NONE);
 
@@ -203,7 +203,7 @@ main (void)
   // Next we expect a READ_SCRATCHPAD transaction sequence, in this case
   // initiated with a READ_ROM command.
   command = ows_wait_for_command ();
-  BASSERT_SPE (command == OWS_READ_ROM_COMMAND);
+  BASSERT_SPE (command == OWC_READ_ROM_COMMAND);
   err = ows_write_rom_id ();
   BASSERT_SPE (err == OWS_ERROR_NONE);
   command = ows_wait_for_command ();

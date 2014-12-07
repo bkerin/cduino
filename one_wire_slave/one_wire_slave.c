@@ -311,26 +311,16 @@ ows_read_and_match_rom_id (void)
   return OWS_ERROR_NONE;
 }
 
-// ROM commands perform one-wire search and addressing operations and are
-// effectively part of the one-wire protocol, as opposed to other commands
-// which particular slave types may define to do particular things.
-#define OWS_IS_ROM_COMMAND(command) \
-  ( command ==   OWS_SEARCH_ROM_COMMAND || \
-    command ==     OWS_READ_ROM_COMMAND || \
-    command ==    OWS_MATCH_ROM_COMMAND || \
-    command ==     OWS_SKIP_ROM_COMMAND || \
-    command == OWS_ALARM_SEARCH_COMMAND    )
-
 uint8_t
 ows_wait_for_function_command (void)
 {
   uint8_t tfu = FALSE;  // Transaction For Us (our ROM ID, or all slaves)
-  uint8_t command = OWS_NULL_COMMAND;
+  uint8_t command = OWC_NULL_COMMAND;
   ows_error_t err;   // For return codes
 
   do {
 
-    while ( command == OWS_NULL_COMMAND ) {
+    while ( command == OWC_NULL_COMMAND ) {
       // This command *should* be a ROM command of some sort, even if its
       // only a OWS_SKIP_ROM_COMMAND, since at this point we don't have a
       // target slave for a real comand, however...
@@ -354,48 +344,48 @@ ows_wait_for_function_command (void)
       // I'm going with option 2 for the moment, but this is a sufficiently
       // screwy issue that perhaps a client-visible option controlling or
       // at least indicating this behavior is warranted.
-      if ( ! OWS_IS_ROM_COMMAND (command) ) {
-        command = OWS_NULL_COMMAND;
+      if ( ! OWC_IS_ROM_COMMAND (command) ) {
+        command = OWC_NULL_COMMAND;
       }
     }
 
     switch ( command ) {
 
-      case OWS_SEARCH_ROM_COMMAND:
+      case OWC_SEARCH_ROM_COMMAND:
         // FIXME: we should perhaps just propagate errors everywhere, all
         // the way to the top?  At the moment we eat them here
         ows_answer_search ();
-        command = OWS_NULL_COMMAND;
+        command = OWC_NULL_COMMAND;
         break;
 
-      case OWS_ALARM_SEARCH_COMMAND:
+      case OWC_ALARM_SEARCH_COMMAND:
         // FIXME: This isn't implemented master-side yet either
-        command = OWS_NULL_COMMAND;
+        command = OWC_NULL_COMMAND;
         break;
 
-      case OWS_READ_ROM_COMMAND:
+      case OWC_READ_ROM_COMMAND:
         // FIXME: again, swallowing errors is questionable policy
         err = ows_write_rom_id ();
         if ( err == OWS_ERROR_NONE ) {
           tfu = TRUE;
         }
         else {
-          command = OWS_NULL_COMMAND;
+          command = OWC_NULL_COMMAND;
         }
         break;
 
-      case OWS_MATCH_ROM_COMMAND:
+      case OWC_MATCH_ROM_COMMAND:
         err = ows_read_and_match_rom_id ();
         if ( err == OWS_ERROR_NONE ) {
           tfu = TRUE;
         }
         else {
-          command = OWS_NULL_COMMAND;
+          command = OWC_NULL_COMMAND;
         }
         // FIXME: other errors during matching are swallowed...
         break;
 
-      case OWS_SKIP_ROM_COMMAND:
+      case OWC_SKIP_ROM_COMMAND:
         tfu = TRUE;
         break;
 
@@ -405,7 +395,7 @@ ows_wait_for_function_command (void)
       command = ows_wait_for_command ();
       // The master might be a weirdo and decide to send another ROM command
       // instead of a function command, in which case we need to keep going.
-      if ( ! OWS_IS_ROM_COMMAND (command) ) {
+      if ( ! OWC_IS_ROM_COMMAND (command) ) {
         return command;
       }
       else {
