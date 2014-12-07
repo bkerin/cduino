@@ -56,7 +56,7 @@ static uint8_t spb[DS18B20_SCRATCHPAD_SIZE];   // DS18B20 Scratchpad Buffer
 static uint64_t
 ds18b20_init_and_rom_command (void)
 {
-  // Requies exactly one DS18B20 device to be present on the bus.  Perform the
+  // Requies exactly one DS18B20 slave to be present on the bus.  Perform the
   // Initialization (Step 1) and ROM Command (Step 2) steps of the transaction
   // sequence described in the DS18B20 datasheet, and return the discovered
   // ROM code of the slave.  Note that functions that perform this operation
@@ -173,7 +173,7 @@ main (void)
 
 
   // Uncomment this to repeatedly blink out the (decimal) byte values of
-  // the ROM ID for the device instead of continuing the normal test program.
+  // the ROM ID for the slave instead of continuing the normal test program.
   //for ( ; ; ) {
   //  for ( uint8_t ii = 0 ; ii < sizeof (uint64_t) ; ii++ ) {
   //    BLINK_OUT_UINT32_FEEDING_WDT (((uint8_t *) slave_id)[ii]);
@@ -182,6 +182,9 @@ main (void)
   //}
 
   uint64_t rid;   // ROM ID
+
+  // FIXME: most places where we say "device" in identifiers, it would be
+  // better to say "slave"
 
   // We can use owm_read_id() because we know we have exactly one slave.
   PFP ("Trying owm_read_id()... ");
@@ -201,14 +204,30 @@ main (void)
   PFP ("ok, found slave with previously discovered ID.\n");
 
   // Verify that owm_next() (following the owm_first() call above) returns
-  // false, since there is only one device on the bus.
+  // false, since there is only one slave on the bus.
   PFP ("Trying owm_next()... ");
   device_found = owm_next ((uint8_t *) &rid);
   if ( device_found ) {
     PFP ("failed: unexpectedly returned true");
     assert (FALSE);
   }
-  PFP ("ok, no next device found.\n");
+  PFP ("ok, no next slave found.\n");
+
+  // The normal test arrangement doesn't feature any alarmed slaves.  Its kind
+  // of a pain to program the alarm condition on real DS18B20 devices and
+  // I haven't done so.  The one_wire_slave_test.c program contains a line
+  // that can be uncommented to cause and slave created using that interface
+  // to consider itself alarmed, however.
+  PFP ("Trying owm_first_alarmed()... ");
+  device_found = owm_first_alarmed ((uint8_t *) &rid);
+  if ( ! device_found ) {
+    PFP ("no alarmed slaves found (usually ok, see source).\n");
+  }
+  else {
+    PFP ("found alarmed slave (ID: ");
+    print_slave_id (slave_rid);
+    PFP (").\n");
+  }
 
   // owm_verify() should work with either a single or multiple slaves.
   PFP ("Trying owm_verify() with previously discoved ID... ");
@@ -234,14 +253,14 @@ main (void)
   owm_write_byte (DS18B20_COMMANDS_CONVERT_T_COMMAND);
   // The DS18B20 is now supposed to respond with a stream of 0 bits until
   // the conversion completes, after which it's supposed to send 1 bits.
-  // Note that this is probably a typical behavior for busy one-wire devices.
+  // Note that this is probably a typical behavior for busy one-wire slaves.
   uint8_t conversion_complete = 0;
   while ( ! (conversion_complete = owm_read_bit ()) ) {
     ;
   }
   PFP ("conversion complete.\n");
 
-  // We can now read the device scratchpad memory.  This requires us to first
+  // We can now read the slave scratchpad memory.  This requires us to first
   // perform the initialization and read rom commands again as described in
   // the DS18B20 datasheet.  The slave ROM code better be the same on second
   // reading :)
@@ -325,24 +344,24 @@ main (void)
   PFP ("Trying owm_first()... ");
   uint8_t device_found = owm_first ((uint8_t *) &rid);
   if ( ! device_found ) {
-    PFP ("failed: didn't discover any slave devices");
+    PFP ("failed: didn't discover any slaves");
     assert (FALSE);
   }
   if ( rid != first_device_id ) {
-    PFP ("failed: discovered first device ID was ");
+    PFP ("failed: discovered first slave ID was ");
     print_slave_id (rid);
     PFP (", not the expected ");
     print_slave_id (first_device_id);
     assert (FALSE);
   }
-  PFP ("ok, found 1st device with expected ID ");
+  PFP ("ok, found 1st slave with expected ID ");
   print_slave_id (rid);
   PFP (".\n");
 
   PFP ("Trying owm_next()... ");
   device_found = owm_next ((uint8_t *) &rid);
   if ( ! device_found ) {
-    PFP ("failed: didn't discover a second slave device");
+    PFP ("failed: didn't discover a second slave");
     assert (FALSE);
   }
   if ( rid != second_device_id ) {
@@ -352,7 +371,7 @@ main (void)
     print_slave_id (second_device_id);
     assert (FALSE);
   }
-  PFP ("ok, found 2nd device with expected ID ");
+  PFP ("ok, found 2nd slave with expected ID ");
   print_slave_id (rid);
   PFP (".\n");
 

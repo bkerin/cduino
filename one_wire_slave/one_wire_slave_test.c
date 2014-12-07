@@ -119,6 +119,10 @@ main (void)
   //ows_init (TRUE);   // Initialize the one-wire interface slave end
   PFP ("ok, it returned.\n");
 
+  // The one_wire_master_test.c program does a search for alarmed slaves.
+  // Uncomment this line to cause this slave to consider itself alarmed :)
+  //ows_alarm = 42;
+
   PFP ("Ready to start tests, reset the master now\n");
 
   for ( ; ; ) {
@@ -138,10 +142,11 @@ main (void)
       case DS18B20_COMMANDS_READ_SCRATCHPAD_COMMAND:
         send_fake_ds18b20_scratchpad_contents ();
         // FIXME: Maybe it doesn't make sense for this version to blink,
-        // since it makes it essentially throws an annoying gotcha into it
-        // if its being used as a demo program?  In which case the text at
-        // the top of this file would need to change
-        BTRAP ();
+        // since it makes it essentially throws an annoying gotcha into it if
+        // its being used as a demo program?  In which case the text at the
+        // top of this file would need to change.  At the moment it doesn't
+        // blink in case we're twiddling the master, that can sometimes make
+        // life easier.
         break;
 
       default:

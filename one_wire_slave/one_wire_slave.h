@@ -53,6 +53,7 @@ typedef enum {
   OWS_ERROR_RESET_DETECTED_AND_HANDLED,
   OWS_ERROR_MISSED_RESET_DETECTED,
   OWS_ERROR_ROM_ID_MISMATCH,
+  OWS_ERROR_NOT_ALARMED,
 } ows_error_t;
 
 // Initialize the one-wire slave interface.  This sets up the chosen
@@ -101,6 +102,8 @@ ows_write_bit (uint8_t data_bit);
 ows_error_t
 ows_read_bit (uint8_t *data_bit_ptr);
 
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Device Presense Confirmation/Discovery
@@ -131,6 +134,19 @@ ows_write_rom_id (void);
 // process described in Maxim Application Note AN187.
 ows_error_t
 ows_answer_search (void);
+
+// If set to a non-zero value, this flag indicates an alarm condition.
+// Clients of this interface can ascribe particular meanings to particular
+// non-zero values if desired.  Slaves with an alarm condition should respond
+// to any OWC_ALARM_SEARCH_COMMAND issued by thier master (and will do so
+// automagically in ows_wait_for_function_command()).
+extern uint8_t ows_alarm;
+
+// Like ows_answer_search(), but only participates if ows_alarm is non-zero.
+// This is the correct reaction to an OWC_ALARM_SEARCH_COMMAND.  If ows_alarm
+// is zero, this macro evaluates to OWS_ERROR_NOT_ALARMED.
+#define OWS_MAYBE_ANSWER_ALARM_SEARCH() \
+  (ows_alarm ? ows_answer_search () : OWS_ERROR_NOT_ALARMED)
 
 // Respond to a (just received) OWC_MATCH_ROM_COMMAND by reading up to
 // OWM_ID_BYTE_COUNT bytes, one bit at a time, and matching the bits to our

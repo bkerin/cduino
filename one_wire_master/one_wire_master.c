@@ -150,12 +150,15 @@ static uint8_t crc8;
 #define FAMILY_ID_BIT_COUNT 8
 
 // Perform the 1-Wire Search Algorithm on the 1-Wire bus using the existing
-// search state.
+// search state.  If alarmed_slaves_only is TRUE, use OWC_ALARM_SEARCH_COMMAND
+// instead of OWC_SEARCH_ROM_COMMAND to find only slaves with an active
+// alarm condition.
+//
 // Return TRUE  : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 //
 static uint8_t
-search (void)
+search (uint8_t alarmed_slaves_only)
 {
   uint8_t id_bit_number;
   uint8_t last_zero, rom_byte_number, search_result;
@@ -181,8 +184,11 @@ search (void)
       last_family_discrep = 0;
       return FALSE;
     }
-    // Issue the search command
-    owm_write_byte (OWC_SEARCH_ROM_COMMAND);   // Issue the search command
+    // Issue the appropriate search command
+    owm_write_byte (
+        alarmed_slaves_only ?
+          OWC_ALARM_SEARCH_COMMAND :
+          OWC_SEARCH_ROM_COMMAND );
     // Loop to do the search
     do {
       // Read a bit and its complement
@@ -265,26 +271,31 @@ search (void)
   return search_result;
 }
 
+// Find the 'first' device on the one-wire bus.  If alarmed_slaves_only is
+// true, only slaves ith an active alarm condition are found.
+// Return TRUE  : device found, ROM number in rom_id buffer
+//        FALSE : device not found, end of search
 static uint8_t
-first (void)
+first (uint8_t alarmed_slaves_only)
 {
   // Reset the search state
   last_discrep = 0;
   last_device_flag = FALSE;
   last_family_discrep = 0;
 
-  return search ();
+  return search (alarmed_slaves_only);
 }
 
 
-// Find the 'next' devices on the 1-Wire bus
+// Find the 'next' device on the one-wire bus.  If alarmed_slaves_only is
+// true, only slaves ith an active alarm condition are found.
 // Return TRUE : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 //
 static uint8_t
-next (void)
+next (uint8_t alarmed_slaves_only)
 {
-  return search ();
+  return search (alarmed_slaves_only);
 }
 
 // Verify that the device with the ROM number in rom_id buffer is present.
@@ -310,7 +321,7 @@ verify (void)
   last_discrep = ID_BIT_COUNT;
   last_device_flag = FALSE;
 
-  if ( search() ) {
+  if ( search (FALSE) ) {
      // Check if same device found
      result = TRUE;
      for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++)
@@ -340,7 +351,7 @@ verify (void)
 uint8_t
 owm_first (uint8_t *id_buf)
 {
-  uint8_t result = first ();
+  uint8_t result = first (FALSE);
 
   if ( result ) {
     memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
@@ -352,7 +363,7 @@ owm_first (uint8_t *id_buf)
 uint8_t
 owm_next (uint8_t *id_buf)
 {
-  uint8_t result = next ();
+  uint8_t result = next (FALSE);
   if ( result ) {
     memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
   }
@@ -367,6 +378,31 @@ owm_verify (uint8_t *id_buf)
   uint8_t result = verify ();
   return result;
 }
+
+uint8_t
+owm_first_alarmed (uint8_t *id_buf)
+{
+  uint8_t result = first (TRUE);
+
+  if ( result ) {
+    memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
+  }
+
+  return result;
+}
+
+uint8_t
+owm_next_alarmed (uint8_t *id_buf)
+{
+  uint8_t result = next (TRUE);
+  if ( result ) {
+    memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
+  }
+
+  return result;
+}
+
+
 
 void
 owm_write_byte (uint8_t data)

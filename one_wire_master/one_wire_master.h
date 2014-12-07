@@ -110,6 +110,14 @@ owm_next (uint8_t *id_buf);
 uint8_t
 owm_verify (uint8_t *id_buf);
 
+// Like owm_first(), but only finds slaves with an active alarm condition.
+uint8_t
+owm_first_alarmed (uint8_t *id_buf);
+
+// Like owm_next(), but only finds slaves with an active alarm condition.
+uint8_t
+owm_next_alarmed (uint8_t *id_buf);
+
 // FIXXME: it would be nice to add a filter for alarm search (EC command).
 // This command might actually be useful, since it makes it possible to scan
 // an entire bus for any devices needing immediate attention.  It wouldn't
