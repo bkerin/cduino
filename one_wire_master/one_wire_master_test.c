@@ -123,38 +123,6 @@ main (void)
 
   owm_init ();   // Initialize the one-wire interface master end
 
-  // FIXME: devel block to test that pin not broken
-  {
-    // For testing output:
-    /*
-    for ( ; ; ) {
-      CHKP ();
-      DIO_INIT (OWM_PIN, DIO_OUTPUT, DIO_DONT_CARE, HIGH);
-      DIO_SET_LOW (OWM_PIN);
-      _delay_ms (5000.0);
-      DIO_SET_HIGH (OWM_PIN);
-      _delay_ms (5000.0);
-      DIO_INIT (OWM_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-      for ( uint8_t ii = 0 ; ii < 5 ; ii++ ) {
-        uint8_t reading = DIO_READ (OWM_PIN);
-        PFP ("got reading: %i\n", (int) reading);
-        _delay_ms (1000.0);
-      }
-    }
-    */
-    // can be used *instead* of the above to test input
-    /*
-    for ( ; ; ) {
-      DIO_INIT (OWM_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
-      for ( uint8_t ii = 0 ; ii < 5 ; ii++ ) {
-        uint8_t reading = DIO_READ (OWM_PIN);
-        PFP ("got reading: %i\n", (int) reading);
-        _delay_ms (1000.0);
-      }
-    }
-    */
-  }
-
   PFP ("Trying owm_touch_reset()... ");
   uint8_t slave_presence = owm_touch_reset ();
   if ( ! slave_presence ) {
@@ -171,33 +139,20 @@ main (void)
   print_slave_id (slave_rid);
   PFP ("\n");
 
-
-  // Uncomment this to repeatedly blink out the (decimal) byte values of
-  // the ROM ID for the slave instead of continuing the normal test program.
-  //for ( ; ; ) {
-  //  for ( uint8_t ii = 0 ; ii < sizeof (uint64_t) ; ii++ ) {
-  //    BLINK_OUT_UINT32_FEEDING_WDT (((uint8_t *) slave_id)[ii]);
-  //  }
-  //  _delay_ms (4.2);
-  //}
-
-  uint64_t rid;   // ROM ID
-
-  // FIXME: most places where we say "device" in identifiers, it would be
-  // better to say "slave"
+  uint64_t rid;   // ROM ID (of slave)
 
   // We can use owm_read_id() because we know we have exactly one slave.
   PFP ("Trying owm_read_id()... ");
-  uint8_t device_found = owm_read_id ((uint8_t *) &rid);
-  if ( (! device_found) || rid != slave_rid ) {
+  uint8_t slave_found = owm_read_id ((uint8_t *) &rid);
+  if ( (! slave_found) || rid != slave_rid ) {
     PFP ("failed: didn't find slave with previously discovered ID");
     assert (FALSE);
   }
   PFP ("ok, found slave with previously discovered ID.\n");
 
   PFP ("Trying owm_first()... ");
-  device_found = owm_first ((uint8_t *) &rid);
-  if ( (! device_found) || rid != slave_rid ) {
+  slave_found = owm_first ((uint8_t *) &rid);
+  if ( (! slave_found) || rid != slave_rid ) {
     PFP ("failed: didn't find slave with previously discovered ID");
     assert (FALSE);
   }
@@ -206,8 +161,8 @@ main (void)
   // Verify that owm_next() (following the owm_first() call above) returns
   // false, since there is only one slave on the bus.
   PFP ("Trying owm_next()... ");
-  device_found = owm_next ((uint8_t *) &rid);
-  if ( device_found ) {
+  slave_found = owm_next ((uint8_t *) &rid);
+  if ( slave_found ) {
     PFP ("failed: unexpectedly returned true");
     assert (FALSE);
   }
@@ -219,8 +174,8 @@ main (void)
   // that can be uncommented to cause and slave created using that interface
   // to consider itself alarmed, however.
   PFP ("Trying owm_first_alarmed()... ");
-  device_found = owm_first_alarmed ((uint8_t *) &rid);
-  if ( ! device_found ) {
+  slave_found = owm_first_alarmed ((uint8_t *) &rid);
+  if ( ! slave_found ) {
     PFP ("no alarmed slaves found (usually ok, see source).\n");
   }
   else {
@@ -231,8 +186,8 @@ main (void)
 
   // owm_verify() should work with either a single or multiple slaves.
   PFP ("Trying owm_verify() with previously discoved ID... ");
-  device_found = owm_verify ((uint8_t *) &rid);
-  if ( ! device_found ) {
+  slave_found = owm_verify ((uint8_t *) &rid);
+  if ( ! slave_found ) {
     PFP ("failed: unexpectedly returned false");
     assert (FALSE);
   }
@@ -334,24 +289,24 @@ main (void)
 #endif
 
   // Account for endianness by swapping the bytes of the literal ID values.
-  uint64_t first_device_id
+  uint64_t first_slave_id
     = __builtin_bswap64 (UINT64_C (OWM_FIRST_SLAVE_ID));
-  uint64_t second_device_id
+  uint64_t second_slave_id
     = __builtin_bswap64 (UINT64_C (OWM_SECOND_SLAVE_ID));
 
   uint64_t rid;   // ROM ID
 
   PFP ("Trying owm_first()... ");
-  uint8_t device_found = owm_first ((uint8_t *) &rid);
-  if ( ! device_found ) {
+  uint8_t slave_found = owm_first ((uint8_t *) &rid);
+  if ( ! slave_found ) {
     PFP ("failed: didn't discover any slaves");
     assert (FALSE);
   }
-  if ( rid != first_device_id ) {
+  if ( rid != first_slave_id ) {
     PFP ("failed: discovered first slave ID was ");
     print_slave_id (rid);
     PFP (", not the expected ");
-    print_slave_id (first_device_id);
+    print_slave_id (first_slave_id);
     assert (FALSE);
   }
   PFP ("ok, found 1st slave with expected ID ");
@@ -359,16 +314,16 @@ main (void)
   PFP (".\n");
 
   PFP ("Trying owm_next()... ");
-  device_found = owm_next ((uint8_t *) &rid);
-  if ( ! device_found ) {
+  slave_found = owm_next ((uint8_t *) &rid);
+  if ( ! slave_found ) {
     PFP ("failed: didn't discover a second slave");
     assert (FALSE);
   }
-  if ( rid != second_device_id ) {
-    PFP ("failed: discovered second device ID was ");
+  if ( rid != second_slave_id ) {
+    PFP ("failed: discovered second slave ID was ");
     print_slave_id (rid);
     PFP (", not the expected ");
-    print_slave_id (second_device_id);
+    print_slave_id (second_slave_id);
     assert (FALSE);
   }
   PFP ("ok, found 2nd slave with expected ID ");
@@ -376,27 +331,27 @@ main (void)
   PFP (".\n");
 
   // Verify that owm_next() (following the owm_first() call above) returns
-  // false, since there are only two devices on the bus.
+  // false, since there are only two slaves on the bus.
   PFP ("Trying owm_next() again... ");
-  device_found = owm_next ((uint8_t *) &rid);
-  if ( device_found ) {
+  slave_found = owm_next ((uint8_t *) &rid);
+  if ( slave_found ) {
     PFP ("failed: unexpectedly returned true");
     assert (FALSE);
   }
-  PFP ("ok, no next device found.\n");
+  PFP ("ok, no next slave found.\n");
 
-  PFP("Trying owm_verify(first_device_id)... ");
-  device_found = owm_verify ((uint8_t *) &rid);
-  if ( ! device_found ) {
-    PFP ("failed: didn't find device");
+  PFP("Trying owm_verify(first_slave_id)... ");
+  slave_found = owm_verify ((uint8_t *) &rid);
+  if ( ! slave_found ) {
+    PFP ("failed: didn't find slave");
     assert (FALSE);
   }
   PFP ("ok, found it.\n");
 
-  PFP("Trying owm_verify(second_device_id)... ");
-  device_found = owm_verify ((uint8_t *) &rid);
-  if ( ! device_found ) {
-    PFP ("failed: didn't find device");
+  PFP("Trying owm_verify(second_slave_id)... ");
+  slave_found = owm_verify ((uint8_t *) &rid);
+  if ( ! slave_found ) {
+    PFP ("failed: didn't find slave");
     assert (FALSE);
   }
   PFP ("ok, found it.\n");
