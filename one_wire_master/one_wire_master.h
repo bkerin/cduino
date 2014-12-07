@@ -18,7 +18,7 @@
 #define ONE_WIRE_MASTER_H
 
 #include "dio.h"
-#include "one_wire_common_commands.h"
+#include "one_wire_common.h"
 
 #ifndef OWM_PIN
 #  error OWM_PIN not defined (it must be explicitly set to one of \
@@ -28,13 +28,13 @@
 // We have our own master-prefixed names for the common one-wire commands.
 // You probably won't want to use any of these directly when using this
 // interface.
-#define OWM_NULL_COMMAND         OWCC_NULL_COMMAND
-#define OWM_SLEEP_COMMAND        OWCC_SLEEP_COMMAND
-#define OWM_SEARCH_ROM_COMMAND   OWCC_SEARCH_ROM_COMMAND
-#define OWM_READ_ROM_COMMAND     OWCC_READ_ROM_COMMAND
-#define OWM_MATCH_ROM_COMMAND    OWCC_MATCH_ROM_COMMAND
-#define OWM_SKIP_ROM_COMMAND     OWCC_SKIP_ROM_COMMAND
-#define OWM_ALARM_SEARCH_COMMAND OWCC_ALARM_SEARCH_COMMAND
+#define OWM_NULL_COMMAND         OWC_NULL_COMMAND
+#define OWM_SLEEP_COMMAND        OWC_SLEEP_COMMAND
+#define OWM_SEARCH_ROM_COMMAND   OWC_SEARCH_ROM_COMMAND
+#define OWM_READ_ROM_COMMAND     OWC_READ_ROM_COMMAND
+#define OWM_MATCH_ROM_COMMAND    OWC_MATCH_ROM_COMMAND
+#define OWM_SKIP_ROM_COMMAND     OWC_SKIP_ROM_COMMAND
+#define OWM_ALARM_SEARCH_COMMAND OWC_ALARM_SEARCH_COMMAND
 
 // Intialize the one wire master interface.  All this does is set up the
 // chosen DIO pin.  It starts out set as an input without the internal pull-up
@@ -81,20 +81,6 @@ owm_read_bit (void);
 // or the bus searched for all slaves.  FIXXME: searches for slaves from
 // particular families or with active alarm conditions aren't supported yet.
 //
-
-// When these commands occur after a reset, the slaves interpret them as
-// directions to begin participating in various ID search/discovery commands.
-// Note that clients don't generally need to use these macros directly.
-// See the DS18B20 datasheet and Maxim application note AN187 for details.
-#define OWM_READ_ROM_COMMAND   0x33
-#define OWM_SEARCH_ROM_COMMAND 0xF0
-
-// FIXME: we must support these as well, at both master and slave ends.
-// Also the commands should maybe all go together somewhere other than
-// under the Device Presence Confirmation/Discovery section  Then again
-#define OWM_MATCH_ROM_COMMAND     0x55
-#define OWM_SKIP_ROM_COMMAND      0xCC
-#define OWM_ALARM_SEARCH_COMMAND  0xEC
 
 // One wire ID size in bytes
 #define OWM_ID_BYTE_COUNT 8

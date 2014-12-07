@@ -13,7 +13,7 @@
 #define ONE_WIRE_SLAVE_H
 
 #include "dio.h"
-#include "one_wire_common_commands.h"
+#include "one_wire_common.h"
 
 #ifndef OWS_PIN
 #  error OWS_PIN not defined (it must be explicitly set to one of \
@@ -23,13 +23,13 @@
 // We have our own namespace-prefixed names for the common one-wire commands.
 // You probably won't want to use any of these directly when using this
 // interface.
-#define OWS_NULL_COMMAND         OWCC_NULL_COMMAND
-#define OWS_SLEEP_COMMAND        OWCC_SLEEP_COMMAND
-#define OWS_SEARCH_ROM_COMMAND   OWCC_SEARCH_ROM_COMMAND
-#define OWS_READ_ROM_COMMAND     OWCC_READ_ROM_COMMAND
-#define OWS_MATCH_ROM_COMMAND    OWCC_MATCH_ROM_COMMAND
-#define OWS_SKIP_ROM_COMMAND     OWCC_SKIP_ROM_COMMAND
-#define OWS_ALARM_SEARCH_COMMAND OWCC_ALARM_SEARCH_COMMAND
+#define OWS_NULL_COMMAND         OWC_NULL_COMMAND
+#define OWS_SLEEP_COMMAND        OWC_SLEEP_COMMAND
+#define OWS_SEARCH_ROM_COMMAND   OWC_SEARCH_ROM_COMMAND
+#define OWS_READ_ROM_COMMAND     OWC_READ_ROM_COMMAND
+#define OWS_MATCH_ROM_COMMAND    OWC_MATCH_ROM_COMMAND
+#define OWS_SKIP_ROM_COMMAND     OWC_SKIP_ROM_COMMAND
+#define OWS_ALARM_SEARCH_COMMAND OWC_ALARM_SEARCH_COMMAND
 
 // The first byte of the ROM ID is supposed to be a family code that is
 // constant for all devices in a given "family".  If it hasn't been defined
