@@ -5,6 +5,7 @@
 #include <util/delay.h>
 
 #include "dio.h"
+#include "one_wire_common.h"
 #include "one_wire_master.h"
 #include "util.h"
 
@@ -14,8 +15,8 @@
 //
 // These macros correspond to the uses of the inp and outp and tickDelay
 // functions of Maxim application note AN126.  We use macros to avoid
-// function call time overhead, which can be significant: Maxim application
-// note AN148 states that the most common programming error in 1-wire
+// function call time overhead, which can be significant: Maxim Application
+// Note AN148 states that the most common programming error in 1-wire
 // programmin involves late sampling, which given that some samples occur
 // after proscribed waits of only 9 us requires some care, especially at
 // slower processor frequencies.
@@ -47,21 +48,6 @@
 // compiler knows is constant at compile time.  Pause for exactly ticks ticks.
 #define TICK_DELAY(ticks) _delay_us (TICK_TIME_IN_US * ticks)
 
-///////////////////////////////////////////////////////////////////////////////
-
-// Tick delays for various parts of the one-wire protocol, as described in
-// Table 2 in Maxim application note AN126.
-#define TICK_DELAY_A   6.0
-#define TICK_DELAY_B  64.0
-#define TICK_DELAY_C  60.0
-#define TICK_DELAY_D  10.0
-#define TICK_DELAY_E   9.0
-#define TICK_DELAY_F  55.0
-#define TICK_DELAY_G   0.0
-#define TICK_DELAY_H 480.0
-#define TICK_DELAY_I  70.0
-#define TICK_DELAY_J 410.0
-
 void
 owm_init (void)
 {
@@ -71,14 +57,14 @@ owm_init (void)
 uint8_t
 owm_touch_reset (void)
 {
-  TICK_DELAY (TICK_DELAY_G);
+  TICK_DELAY (OWC_TICK_DELAY_G);
   DRIVE_LINE_LOW ();
-  TICK_DELAY (TICK_DELAY_H);
+  TICK_DELAY (OWC_TICK_DELAY_H);
   RELEASE_LINE ();
-  TICK_DELAY (TICK_DELAY_I);
+  TICK_DELAY (OWC_TICK_DELAY_I);
   // Look for presence pulse from slave
   uint8_t result = ! SAMPLE_LINE ();
-  TICK_DELAY (TICK_DELAY_J); // Complete the reset sequence recovery
+  TICK_DELAY (OWC_TICK_DELAY_J); // Complete the reset sequence recovery
 
   return result; // Return sample presence pulse result
 }
@@ -91,16 +77,16 @@ owm_write_bit (uint8_t value)
   if ( value ) {
     // Write '1' bit
     DRIVE_LINE_LOW ();
-    TICK_DELAY (TICK_DELAY_A);
+    TICK_DELAY (OWC_TICK_DELAY_A);
     RELEASE_LINE ();
-    TICK_DELAY (TICK_DELAY_B); // Complete the time slot and recovery
+    TICK_DELAY (OWC_TICK_DELAY_B); // Complete the time slot and recovery
   }
   else {
     // Write '0' bit
     DRIVE_LINE_LOW ();
-    TICK_DELAY (TICK_DELAY_C);
+    TICK_DELAY (OWC_TICK_DELAY_C);
     RELEASE_LINE ();
-    TICK_DELAY (TICK_DELAY_D);
+    TICK_DELAY (OWC_TICK_DELAY_D);
   }
 }
 
@@ -110,11 +96,11 @@ owm_read_bit (void)
   // Read a bit from the 1-Wire bus and return it. Provide recovery time.
 
   DRIVE_LINE_LOW ();
-  TICK_DELAY (TICK_DELAY_A);
+  TICK_DELAY (OWC_TICK_DELAY_A);
   RELEASE_LINE ();
-  TICK_DELAY (TICK_DELAY_E);
+  TICK_DELAY (OWC_TICK_DELAY_E);
   uint8_t result = SAMPLE_LINE ();   // Sample bit value from slave
-  TICK_DELAY (TICK_DELAY_F); // Complete the time slot and recovery
+  TICK_DELAY (OWC_TICK_DELAY_F); // Complete the time slot and recovery
 
   return result;
 }
@@ -401,8 +387,6 @@ owm_next_alarmed (uint8_t *id_buf)
 
   return result;
 }
-
-
 
 void
 owm_write_byte (uint8_t data)

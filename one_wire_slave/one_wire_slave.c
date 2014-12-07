@@ -8,6 +8,7 @@
 #include <util/delay.h>
 
 #include "dio.h"
+#include "one_wire_common.h"
 #include "one_wire_slave.h"
 #include "timer1_stopwatch.h"
 // FIXME: next two lines for debug only:
@@ -142,28 +143,23 @@ ows_init (uint8_t use_eeprom_id)
 // samples.
 #define ST_SLAVE_READ_SLOT_SAMPLE_TIME 32
 
-// FIXME: ideally we wouldn't have to repeat these values as as ints,
-// would be nice to know that _delay_us() can handle a literal int argument
-#define TICK_DELAY_A   6
-#define TICK_DELAY_E   9
-#define TICK_DELAY_F  55
-
-// This is the maximum pulse lengh we will tolerate when looking for
-// the pulse the master is supposed to send to start a slave write slot.
-// We go with TICK_DELAY_E / 2 here because its half whay between what the
+// This is the maximum pulse lengh we will tolerate when looking for the
+// pulse the master is supposed to send to start a slave write slot.  We go
+// with OWC_TICK_DELAY_E / 2 here because its half whay between what the
 // master is supposed to send and the point at which the master is supposed
 // to sample the line, and also because the grace time is small enough that
 // it won't cause the ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME-length pulse we
 // might send in response to crowd the end of the time slot at all.
 #define ST_SLAVE_WRITE_SLOT_START_PULSE_MAX_LENGTH \
-  (TICK_DELAY_A + TICK_DELAY_E / 2)
+  (OWC_TICK_DELAY_A + OWC_TICK_DELAY_E / 2)
 
 // This is the time to hold the line low when sending a 0 to the master.
-// See Figure 1 of Maxim Application Note AN126.  We go with TICK_DELAY_F /
-// 2 here because it's, well, half way between when we must have the line
+// See Figure 1 of Maxim Application Note AN126.  We go with OWC_TICK_DELAY_F
+// / 2 here because it's, well, half way between when we must have the line
 // held low and when we must release it.  We could probably measure what
 // actual slaves do if necessary...
-#define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME (TICK_DELAY_E + TICK_DELAY_F / 2)
+#define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME \
+  (OWC_TICK_DELAY_E + OWC_TICK_DELAY_F / 2)
 
 // This is the longest that this slave implementation ever holds the line
 // low itself.  This is relevant because we want to let our interrupt

@@ -1,10 +1,24 @@
-// This header contains command values that aren't specific to any
-// particular slave device or are used in to implement extra features that
-// this library provides.  These values are (necessarily) identical in the
-// one_wire_master and one_wire_slave modules, so they get their own header.
+// This header describes one-wire characteristics that aren't specific
+// to any particular slave device, and also some constants used in to
+// implement extra features that this library provides.  These values are
+// (necessarily) identical in the one_wire_master and one_wire_slave modules,
+// so they get their own header.
 
 #ifndef ONE_WIRE_COMMON_H
 #define ONE_WIRE_COMMON_H
+
+// Tick delays for various parts of the one-wire protocol, as described in
+// Table 2 in Maxim application note AN126 FIXME: link it
+#define OWC_TICK_DELAY_A   6
+#define OWC_TICK_DELAY_B  64
+#define OWC_TICK_DELAY_C  60
+#define OWC_TICK_DELAY_D  10
+#define OWC_TICK_DELAY_E   9
+#define OWC_TICK_DELAY_F  55
+#define OWC_TICK_DELAY_G   0
+#define OWC_TICK_DELAY_H 480
+#define OWC_TICK_DELAY_I  70
+#define OWC_TICK_DELAY_J 410
 
 #define OWC_ID_SIZE_BYTES 1
 

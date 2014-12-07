@@ -32,6 +32,7 @@
 #include <util/delay.h>
 
 #include "dio.h"
+#include "one_wire_common.h"
 #include "one_wire_master.h"
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
@@ -91,19 +92,6 @@
 #define TICK_DELAY(ticks) _delay_us (TICK_TIME_IN_US * ticks)
 
 ///////////////////////////////////////////////////////////////////////////////
-
-// Tick delays for various parts of the one-wire protocol, as described in
-// Table 2 in Maxim application note AN126.
-#define TICK_DELAY_A   6.0
-#define TICK_DELAY_B  64.0
-#define TICK_DELAY_C  60.0
-#define TICK_DELAY_D  10.0
-#define TICK_DELAY_E   9.0
-#define TICK_DELAY_F  55.0
-#define TICK_DELAY_G   0.0
-#define TICK_DELAY_H 480.0
-#define TICK_DELAY_I  70.0
-#define TICK_DELAY_J 410.0
 
 void
 owm_init (void)
@@ -166,11 +154,11 @@ owm_init (void)
 uint8_t
 owm_touch_reset (void)
 {
-  TICK_DELAY (TICK_DELAY_G);
+  TICK_DELAY (OWC_TICK_DELAY_G);
   DRIVE_LINE_LOW ();
   // Probing substitution that allows us to experimentally determine the
   // length of presense pulse an actual Maxim slave (DS18B20) requires.
-  //TICK_DELAY (TICK_DELAY_H);
+  //TICK_DELAY (OWC_TICK_DELAY_H);
   _delay_us (DT_REQUIRED_RESET_PULSE_LENGTH);
   RELEASE_LINE ();
 
@@ -191,11 +179,11 @@ owm_touch_reset (void)
   PFP ("\nPresence pulse length: %f\n", dt_presence_pulse_length);
   */
 
-  TICK_DELAY (TICK_DELAY_I);
+  TICK_DELAY (OWC_TICK_DELAY_I);
   // Look for presence pulse from slave
 
   uint8_t result = ! SAMPLE_LINE ();
-  TICK_DELAY (TICK_DELAY_J); // Complete the reset sequence recovery
+  TICK_DELAY (OWC_TICK_DELAY_J); // Complete the reset sequence recovery
 
   return result; // Return sample presence pulse result
 }
@@ -208,16 +196,16 @@ owm_write_bit (uint8_t value)
   if ( value ) {
     // Write '1' bit
     DRIVE_LINE_LOW ();
-    TICK_DELAY (TICK_DELAY_A);
+    TICK_DELAY (OWC_TICK_DELAY_A);
     RELEASE_LINE ();
-    TICK_DELAY (TICK_DELAY_B); // Complete the time slot and 10us recovery
+    TICK_DELAY (OWC_TICK_DELAY_B); // Complete the time slot and 10us recovery
   }
   else {
     // Write '0' bit
     DRIVE_LINE_LOW ();
-    TICK_DELAY (TICK_DELAY_C);
+    TICK_DELAY (OWC_TICK_DELAY_C);
     RELEASE_LINE ();
-    TICK_DELAY (TICK_DELAY_D);
+    TICK_DELAY (OWC_TICK_DELAY_D);
   }
 }
 
@@ -239,19 +227,19 @@ owm_read_bit (void)
   // the macros have been replaced here with bid fiddling (which might be
   // an instructino or two faster) for maximum speed, and still the slave
   // interprets the low blip as the start of a slave-write slot.
-  //TICK_DELAY (TICK_DELAY_A);
+  //TICK_DELAY (OWC_TICK_DELAY_A);
   DDRD &= ~(_BV (DDD2));
   //PORTD &= ~(_BV (PORTD2));   // Happens to be the same
   //RELEASE_LINE ();
 
-  TICK_DELAY (TICK_DELAY_E);
+  TICK_DELAY (OWC_TICK_DELAY_E);
   uint8_t result = SAMPLE_LINE ();   // Sample bit value from slave
   if ( ! result ) {
     PFP (
         "read a 0 from slave, so it believed a slave write slot was "
         "happening \n" );
   }
-  TICK_DELAY (TICK_DELAY_F); // Complete the time slot and 10us recovery
+  TICK_DELAY (OWC_TICK_DELAY_F); // Complete the time slot and 10us recovery
 
   return result;
 }

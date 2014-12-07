@@ -155,8 +155,6 @@ main (void)
 
     }
 
-    // FIXME: we promised above to end with rapid blinking, so this dispatch
-    // versin should do that as well somehow, or we shouldn't promise it
   }
 
   uint8_t command = ows_wait_for_command ();
@@ -212,9 +210,6 @@ main (void)
   // of it's measurements to the processor using this module on IO pins,
   // so they are always immediately available :)
   ows_write_bit (1);
-
-  // FIXME: WORK POINT: master does another ds18b20_init_and_rom_command in
-  // here, wonder if that's actually required?
 
   // Next we expect a READ_SCRATCHPAD transaction sequence, in this case
   // initiated with a READ_ROM command.
