@@ -70,24 +70,13 @@ typedef enum {
 void
 ows_init (uint8_t use_eeprom_id);
 
-///////////////////////////////////////////////////////////////////////////////
-//
-// Reset Support and Individual Bit Functions
-//
-// FIXME: fix this out-of-date description
-// This stuff supports reset and bit-at-a-time operations.  All the
-// fundamental timing used in the one-wire protocol is implemented here,
-// other functions in this interface are implemented in terms of these.
-//
-// The master could decide at any time to abort whatever operation is going
-// on and and send us a reset pulse.
-
-// Wait for a function command transaction intended for our ROM ID (and
-// possibly others as well if a OWS_SKIP_ROM_COMMAND was sent), and return
-// the function command itself.  In the meantime, automagically participate
-// in any slave searches (i.e. respond to any incoming OWC_SEARCH_ROM_COMMAND
-// or OWC_ALARM_SEARCH_COMMAND commands).  Any errors (funny-lengh pulses,
-// aborted searches, etc.) are silently ignored.
+// Wait for the initiation of a function command transaction intended for our
+// ROM ID (and possibly others as well if a OWS_SKIP_ROM_COMMAND was sent),
+// and return the function command itself.  In the meantime, automagically
+// respond to resets and participate in any slave searches (i.e. respond to
+// any incoming OWC_SEARCH_ROM_COMMAND or OWC_ALARM_SEARCH_COMMAND commands).
+// Any errors (funny-lengh pulses, aborted searches, etc.) are silently
+// ignored.
 uint8_t
 ows_wait_for_function_command (void);
 
