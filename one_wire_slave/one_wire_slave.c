@@ -68,10 +68,13 @@ set_rom_id (uint8_t use_eeprom_id)
 
   if ( use_eeprom_id ) {
     rom_id[0] = OWS_FAMILY_CODE;
+    // This probably only really needs to be atomic if the eeprom_* routines
+    // are getting used from an ISR somewhere.  But who knows, the user
+    // might want to do that.
     ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
     {
       uint8_t *pidp = rom_id + 1;   // Part ID Ptr (+1 for family code space)
-      eeprom_read_block (pidp, 0, pib);
+      eeprom_read_block (pidp, OWS_PART_ID_EEPROM_ADDRESS , pib);
     }
   }
   else {

@@ -35,10 +35,10 @@
 // switch if you even try to compare ROM IDs as uint64_t numbers.
 #define OWS_DEFAULT_PART_ID 0x444444222222
 
-// If the use_eeprom_id argument to ows_init() is TRUE, this is the
-// location where the six byte part ID is looked up in EEPROM, otherwise
-// it is ignored.  A different address could be used here, but then the
-// write_random_id_to_eeprom target of generic.mk would need to change
+// If the use_eeprom_id argument to ows_init() is TRUE, this is the location
+// where the six byte part ID is looked up in EEPROM, otherwise it is ignored.
+// A different address (integer offset value) could be used here, but then
+// the write_random_id_to_eeprom target of generic.mk would need to change
 // as well or a different mechanism used to load the ID into EEPROM (see
 // comments above the ows_init() declaration below.
 #define OWS_PART_ID_EEPROM_ADDRESS 0
@@ -57,16 +57,16 @@ typedef enum {
 
 // Initialize the one-wire slave interface.  This sets up the chosen
 // DIO pin, including pin change interrupts and global interrupt enable.
-// If use_eeprom_id FIXME: make the EEPROM offset a tunable constant is
-// true, the first six bytes of the AVR EEPROM are read and used together
-// with the OWS_FAMILY_CODE and a CRC to form a slave ROM ID, which is
-// loaded into RAM for speedy access.  See the write_random_id_to_eeprom
-// target of generic.mk for a convenient way to load unique IDs onto devices
-// (note that that target writes eight random bytes, of which only the first
-// six are used by this interface).  If use_eeprom_id is false, a default
-// device ID with a non-family part numberof OWS_DEFAULT_PART_ID is used
-// (note that this arrangement is only useful if you intend to use only
-// one of your slaves on the bus).
+// If use_eeprom_id is true, the first six bytes of the AVR EEPROM are
+// read and used together with the OWS_FAMILY_CODE and a CRC to form a
+// slave ROM ID, which is loaded into RAM for speedy access.  In this
+// case, interrupts will be blocked for a while while the EEPROM is read.
+// See the write_random_id_to_eeprom target of generic.mk for a convenient
+// way to load unique IDs onto devices (note that that target writes eight
+// random bytes, of which only the first six are used by this interface).
+// If use_eeprom_id is false, a default device ID with a non-family part
+// numberof OWS_DEFAULT_PART_ID is used (note that this arrangement is only
+// useful if you intend to use only one of your slaves on the bus).
 void
 ows_init (uint8_t use_eeprom_id);
 
