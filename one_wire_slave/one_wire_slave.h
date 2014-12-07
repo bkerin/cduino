@@ -116,9 +116,6 @@ ows_read_bit (uint8_t *data_bit_ptr);
 // FIXME: finnish factoring to one_wire_common.h also
 #define OWM_ID_BYTE_COUNT 8
 
-// FIXME: all these functions need to turn into support for slave end
-// of protocol.
-
 // This function requires that exactly one slave be present on the bus.
 // If we discover a slave, its ID is written into id_buf (which pust be
 // a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE is returned.

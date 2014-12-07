@@ -341,8 +341,8 @@ ows_wait_for_function_command (void)
       //       (and return it from this function).
       //
       //   2.  Treat it as an error, and silently eat it (FIXME: or propagate
-      //       it, if we decide we want to propagate errors from this
-      //       function).
+      //       the error, if we decide we want to propagate errors from
+      //       this function).
       //
       // I'm going with option 2 for the moment, but this is a sufficiently
       // screwy issue that perhaps a client-visible option controlling or

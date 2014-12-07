@@ -30,6 +30,7 @@
 #include <stdlib.h>
 
 #include "dio.h"
+#include "ds18b20_commands.h"
 #include "one_wire_master.h"
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
@@ -90,8 +91,7 @@ ds18b20_get_scratchpad_contents (void)
   // then read the result and store it in spb.  This routine must follow a
   // ds18b20_init_and_rom_command() call.
 
-  uint8_t const read_scratchpad_command = 0xBE;
-  owm_write_byte (read_scratchpad_command);
+  owm_write_byte (DS18B20_COMMANDS_READ_SCRATCHPAD_COMMAND);
   for ( uint8_t ii = 0 ; ii < DS18B20_SCRATCHPAD_SIZE ; ii++ ) {
     spb[ii] = owm_read_byte ();
   }
@@ -231,8 +231,7 @@ main (void)
   // weird, so we go ahead and do the addressing again.
   uint64_t slave_rid_2nd_reading = ds18b20_init_and_rom_command ();
   assert (slave_rid_2nd_reading == slave_rid);
-  uint8_t const convert_t_command = 0x44;
-  owm_write_byte (convert_t_command);
+  owm_write_byte (DS18B20_COMMANDS_CONVERT_T_COMMAND);
   // The DS18B20 is now supposed to respond with a stream of 0 bits until
   // the conversion completes, after which it's supposed to send 1 bits.
   // Note that this is probably a typical behavior for busy one-wire devices.

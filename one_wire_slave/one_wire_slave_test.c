@@ -37,6 +37,7 @@
 #include <stdlib.h>
 
 #include "dio.h"
+#include "ds18b20_commands.h"
 #include "one_wire_slave.h"
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
@@ -121,25 +122,36 @@ main (void)
   PFP ("Ready to start tests, reset the master now\n");
 
   for ( ; ; ) {
+
     uint8_t fcmd = ows_wait_for_function_command ();
-    // FIXME: convert T command
-    if ( fcmd == 0x44 ) {
-      // Because we're just making up a number, we convert instantly, so we
-      // can immediately send the one that the DS18B20 sends when it's done
-      // converting :) See the comment below near the next reference to the
-      // DS18B20_CONVERT_T_COMMAND below for a longer discussion about this.
-      // FIXME: WORK POINT: define DS18B20_CONVERT_T_COMMAND macro, and the
-      // others, also time for a general cleanup I think, and test sending
-      // one works ok from this point.
-      ows_write_bit (1);
-    }
-    // FIXME: read scratchpad command like for convert T
-    else if ( fcmd == 0xBE ) {
-      send_fake_ds18b20_scratchpad_contents ();
+
+    switch ( fcmd ) {
+
+      case DS18B20_COMMANDS_CONVERT_T_COMMAND:
+        // Because we're just making up a number, we convert instantly, so we
+        // can immediately send the one that the DS18B20 sends when it's done
+        // converting :) See the comment below near the next reference to the
+        // DS18B20_CONVERT_T_COMMAND below for a longer discussion about this.
+        ows_write_bit (1);
+        break;
+
+      case DS18B20_COMMANDS_READ_SCRATCHPAD_COMMAND:
+        send_fake_ds18b20_scratchpad_contents ();
+        // FIXME: Maybe it doesn't make sense for this version to blink,
+        // since it makes it essentially throws an annoying gotcha into it
+        // if its being used as a demo program?  In which case the text at
+        // the top of this file would need to change
+        BTRAP ();
+        break;
+
+      default:
+        BASSERT_SPE (0);   // Shouldn't be here unless the master screwed up
+        break;
+
     }
 
     // FIXME: we promised above to end with rapid blinking, so this dispatch
-    // versin should do that as well.
+    // versin should do that as well somehow, or we shouldn't promise it
   }
 
   uint8_t command = ows_wait_for_command ();
@@ -169,8 +181,7 @@ main (void)
   // the master (the verify is required as part of the transaction sequence
   // (see the DS18B20 datasheet "Transaction Sequence" section).
   command = ows_wait_for_command ();
-  uint8_t const convert_t_command = 0x44;
-  BASSERT_SPE (command == convert_t_command);
+  BASSERT_SPE (command == DS18B20_COMMANDS_CONVERT_T_COMMAND);
   // A real Maxim DS18B20 would take some time here to digitize the
   // temperature measurement.  If it wasn't using parasite power, it would
   // during that time respond to read bit commands from the master by
@@ -207,8 +218,7 @@ main (void)
   err = ows_write_rom_id ();
   BASSERT_SPE (err == OWS_ERROR_NONE);
   command = ows_wait_for_command ();
-  uint8_t const read_scratchpad_command = 0xBE;
-  BASSERT_SPE (command == read_scratchpad_command);
+  BASSERT_SPE (command == DS18B20_COMMANDS_READ_SCRATCHPAD_COMMAND);
   send_fake_ds18b20_scratchpad_contents ();
 
   // Made it through, so start rapid blinking as promised!
