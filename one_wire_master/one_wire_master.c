@@ -88,7 +88,7 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd)
           }
           else {
             if ( crc != rom_id[ii] ) {
-              return OMW_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+              return OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
             }
           }
         }
@@ -228,7 +228,7 @@ search (uint8_t alarmed_slaves_only)
   if ( !last_device_flag )
   {
     // 1-Wire reset
-    if ( !owm_touch_reset () ) {
+    if ( ! owm_touch_reset () ) {
       // Reset the search
       last_discrep = 0;
       last_device_flag = FALSE;
@@ -357,8 +357,8 @@ next (uint8_t alarmed_slaves_only)
 static uint8_t
 verify (void)
 {
-  unsigned char rom_backup[OWM_ID_BYTE_COUNT];
   uint8_t result;
+  unsigned char rom_backup[OWM_ID_BYTE_COUNT];
   uint8_t ld_backup, ldf_backup, lfd_backup;
 
   // Keep a backup copy of the current state
