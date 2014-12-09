@@ -43,8 +43,8 @@
 // comments above the ows_init() declaration below.
 #define OWS_PART_ID_EEPROM_ADDRESS 0
 
-// Return type for function in this interface which can encounter errors.
-// FIXME: figure out which of thest we end up using
+// Return type for function in this interface which report errors.  FIXME:
+// figure out which of thest we end up using
 typedef enum {
   OWS_ERROR_NONE = 0,
   OWS_ERROR_UNEXPECTED_PULSE_LENGTH,

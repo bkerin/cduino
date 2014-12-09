@@ -217,6 +217,7 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
   if ( LINE_IS_HIGH () ) {
     new_pulse = TRUE;
     pulse_length = TIMER1_STOPWATCH_TICKS ();
+    if ( T1OF () ) { PFP ("FIXME: debug: timer overflow detected"); }
   }
   else {
     new_pulse = FALSE;
@@ -270,16 +271,15 @@ ows_wait_for_reset (void)
   OWS_PRESENCE_PULSE ();
 }
 
-uint8_t
-ows_wait_for_command (void)
+ows_error_t
+ows_wait_for_command (uint8_t *command)
 {
-  uint8_t result;
-
-  while ( ows_read_byte (&result) != OWS_ERROR_NONE ) {
+  while ( ows_read_byte (&command) != OWS_ERROR_NONE ) {
     ;
   }
+  CPE (ows_read_byte (command));
 
-  return result;
+  return OWS_ERROR_NONE;
 }
 
 // Call call, Propagating Errors.  The call argument must be a call to a
@@ -338,7 +338,11 @@ ows_wait_for_function_command (void)
       //
       //   2.  Treat it as an error, and silently eat it (FIXME: or propagate
       //       the error, if we decide we want to propagate errors from
-      //       this function).
+      //       this function).  WORK POINT: we need to do this to get a good
+      //       picture of what's causing the occasional bad read, or else
+      //       maybe try the all-serial version of the slave more, thought
+      //       it was failing unexpectedly right near the start of the master
+      //       sequence sheeshi
       //
       // I'm going with option 2 for the moment, but this is a sufficiently
       // screwy issue that perhaps a client-visible option controlling or
@@ -414,6 +418,7 @@ ows_read_bit (uint8_t *data_bit_ptr)
   if ( pl < ST_SLAVE_READ_SLOT_SAMPLE_TIME * T1TPUS ) {
     *data_bit_ptr = 1;
   }
+  // FIXME: use the time quantity symbols here, assuming this is right:
   // this is required to be less than tick delay C + D, D is the margin
   else if ( pl < (60+10) * T1TPUS ) {
     *data_bit_ptr = 0;

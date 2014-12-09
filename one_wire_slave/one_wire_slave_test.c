@@ -43,6 +43,39 @@
 #include "term_io.h"
 #include "util.h"
 
+static ows_error_t err = OWS_ERROR_NONE;
+
+static void
+print_ows_error (ows_error_t err)
+{
+  switch ( err ) {
+    case OWS_ERROR_NONE:
+      PFP ("OWS_ERROR_NONE");
+      break;
+    case OWS_ERROR_UNEXPECTED_PULSE_LENGTH:
+      PFP ("OWS_ERROR_UNEXPECTED_PULSE_LENGTH");
+      break;
+    case OWS_ERROR_LINE_UNEXPECTEDLY_LOW:
+      PFP ("OWS_ERROR_LINE_UNEXPECTEDLY_LOW");
+      break;
+    case OWS_ERROR_GOT_RESET_PULSE:
+      PFP ("OWS_ERROR_GOT_RESET_PULSE");
+      break;
+    case OWS_ERROR_RESET_DETECTED_AND_HANDLED:
+      PFP ("OWS_ERROR_RESET_DETECTED_AND_HANDLED");
+      break;
+    case OWS_ERROR_MISSED_RESET_DETECTED:
+      PFP ("OWS_ERROR_MISSED_RESET_DETECTED");
+      break;
+    case OWS_ERROR_ROM_ID_MISMATCH:
+      PFP ("OWS_ERROR_ROM_ID_MISMATCH");
+      break;
+    case OWS_ERROR_NOT_ALARMED:
+      PFP ("OWS_ERROR_NOT_ALARMED");
+      break;
+  }
+}
+
 // This is like BASERT_FEEDING_WDT_SHOW_POINT() from util.h, but it doesn't
 // wast a huge blob of code space every use.  FIXME: it would be nice if
 // util supplied an efficient version like this, but it would have to stop
@@ -55,6 +88,9 @@ bassert_feeding_wdt_show_point (uint8_t condition, char const *file, int line)
       size_t XxX_fnl = strlen (file);
       BLINK_OUT_UINT32_FEEDING_WDT (XxX_fnl);
       BLINK_OUT_UINT32_FEEDING_WDT (line);
+      // FIXME: comment that this function does this
+      print_ows_error (err);
+      PFP ("\n");
     }
   }
 }
@@ -80,8 +116,6 @@ send_fake_ds18b20_scratchpad_contents (void)
   // out to 42.0 degrees C (see Fig. 2 of Maxim DS18B20 datasheet).
   uint8_t const t_lsb = B10100000;
   uint8_t const t_msb = B00000010;
-
-  ows_error_t err;
 
   err = ows_write_byte (t_lsb);
   BASSERT_SPE (err == OWS_ERROR_NONE);
@@ -157,9 +191,12 @@ main (void)
 
   }
 
+  /* Tweaking wait_for_command and I don't want to update this old procedural
+   * way yet...
+
   uint8_t command = ows_wait_for_command ();
   BASSERT_SPE (command == OWC_READ_ROM_COMMAND);
-  ows_error_t err = ows_write_rom_id ();
+  err = ows_write_rom_id ();
   BASSERT_SPE (err == OWS_ERROR_NONE);
   command = ows_wait_for_command ();
   BASSERT_SPE (command == OWC_READ_ROM_COMMAND);
@@ -223,4 +260,6 @@ main (void)
 
   // Made it through, so start rapid blinking as promised!
   BTRAP ();
+
+  */
 }

@@ -1,5 +1,6 @@
 // Implementation of the interface described in one_wire_master.h.
 
+#include <assert.h>
 #include <string.h>
 #include <util/crc16.h>
 #include <util/delay.h>
@@ -7,6 +8,9 @@
 #include "dio.h"
 #include "one_wire_common.h"
 #include "one_wire_master.h"
+// FIXME: remove this debug goop
+#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+#include "term_io.h"
 #include "util.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -44,14 +48,70 @@
 // 1 us.
 #define TICK_TIME_IN_US 1.0
 
-// WARNING: the argument to this macro must be a double expression that the
-// compiler knows is constant at compile time.  Pause for exactly ticks ticks.
+// WARNING: the argument to this macro must be a valid constant double
+// or constand integer expression that the compiler knows is constant at
+// compile time.  Pause for exactly ticks ticks.
 #define TICK_DELAY(ticks) _delay_us (TICK_TIME_IN_US * ticks)
 
 void
 owm_init (void)
 {
   RELEASE_LINE ();
+}
+
+owm_error_t
+owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd)
+{
+  if ( ! OWC_IS_TRANSACTION_INITIATING_ROM_COMMAND (rom_cmd) ) {
+    return OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND;
+  }
+  if ( OWC_IS_ROM_COMMAND (function_cmd) ) {
+    return OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND;
+  }
+
+  if ( ! owm_touch_reset () ) {
+    return OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE;
+  }
+
+  owm_write_byte (rom_cmd);
+
+  switch ( rom_cmd ) {
+
+    case OWC_READ_ROM_COMMAND:
+      {
+        uint8_t crc = 0;
+        for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+          rom_id[ii] = owm_read_byte ();
+          uint8_t const ncb = OWM_ID_BYTE_COUNT - 1;   // Non-CRC Bytes (in ID)
+          if ( LIKELY (ii < ncb) ) {
+            crc = _crc_ibutton_update (crc, rom_id[ii]);
+          }
+          else {
+            if ( crc != rom_id[ii] ) {
+              return OMW_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+            }
+          }
+        }
+        break;
+      }
+
+    case OWC_MATCH_ROM_COMMAND:
+      for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+        owm_write_byte (rom_id[ii]);
+      }
+      break;
+
+    case OWC_SKIP_ROM_COMMAND:
+      break;
+
+    default:
+      assert (0);   // Shouldn't be here
+      break;
+  }
+
+  owm_write_byte (function_cmd);
+
+  return OWM_ERROR_NONE;
 }
 
 uint8_t
@@ -105,6 +165,8 @@ owm_read_bit (void)
   return result;
 }
 
+// FIXME: this routine has a really misleading name, sounce like a
+// owm_read_byte but really sends stuff first, ug
 uint8_t
 owm_read_id (uint8_t *id_buf)
 {
@@ -121,6 +183,9 @@ owm_read_id (uint8_t *id_buf)
 
   return TRUE;
 }
+
+// FIXME: i'm not seeing how crc8 is actually ever used to validate the
+// results of search()... it gets computed, but then what?
 
 // Global search state
 static uint8_t rom_id[OWM_ID_BYTE_COUNT];   // Current ROM device ID
@@ -168,6 +233,7 @@ search (uint8_t alarmed_slaves_only)
       last_discrep = 0;
       last_device_flag = FALSE;
       last_family_discrep = 0;
+      PFP ("FIXME: touch failure in search");
       return FALSE;
     }
     // Issue the appropriate search command
@@ -210,7 +276,7 @@ search (uint8_t alarmed_slaves_only)
         }
         // Set or clear the bit in the ROM byte rom_byte_number with mask
         // rom_byte_mask
-        if (search_direction == 1) {
+        if ( search_direction == 1 ) {
           rom_id[rom_byte_number] |= rom_byte_mask;
         }
         else {
@@ -224,7 +290,7 @@ search (uint8_t alarmed_slaves_only)
         rom_byte_mask <<= 1;
         // If the mask is 0 then go to new SerialNum byte rom_byte_number
         // and reset mask
-        if (rom_byte_mask == 0) {
+        if ( rom_byte_mask == 0 ) {
              // Incrementally update CRC
              crc8 = _crc_ibutton_update (crc8, rom_id[rom_byte_number]);
              rom_byte_number++;
@@ -350,6 +416,7 @@ uint8_t
 owm_next (uint8_t *id_buf)
 {
   uint8_t result = next (FALSE);
+
   if ( result ) {
     memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
   }
@@ -362,6 +429,7 @@ owm_verify (uint8_t *id_buf)
 {
   memcpy (rom_id, id_buf, OWM_ID_BYTE_COUNT);
   uint8_t result = verify ();
+
   return result;
 }
 

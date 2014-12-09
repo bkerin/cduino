@@ -53,4 +53,12 @@
     command ==     OWC_SKIP_ROM_COMMAND || \
     command == OWC_ALARM_SEARCH_COMMAND    )
 
+// These ROM commands are valid ways to start a transaction (see
+// DS18B20_datasheed.pdf "TRANSACTION SEQUENCE" section).
+#define OWC_IS_TRANSACTION_INITIATING_ROM_COMMAND(command) \
+  ( command ==  OWC_READ_ROM_COMMAND || \
+    command == OWC_MATCH_ROM_COMMAND || \
+    command ==  OWC_SKIP_ROM_COMMAND    )
+
+
 #endif  // ONE_WIRE_COMMON_H

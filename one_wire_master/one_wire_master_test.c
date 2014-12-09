@@ -1,5 +1,8 @@
 // Test/demo for the one_wire_master.h interface.
 //
+// Note that this test program tests some lower-level functions earlier
+// than owm_start_transaction(), which is the one you probably want to use.
+//
 // By default, this test program requires exactly one slave to be present:
 // a Maxim DS18B20 temperature sensor connected to the chosen one wire master
 // pin of the arduino (by default DIO_PIN_DIGITAL_2 -- see the Makefile for
@@ -36,6 +39,24 @@
 #include "term_io.h"
 #include "util.h"
 
+// FIXME: this is another candidate to go in term_io.
+#define PFP_ASSERT(cond) \
+  pfp_assert ((cond), __FILE__, __LINE__, __func__, #cond)
+static void
+pfp_assert (
+    uint8_t cond,
+    char const *file,
+    int line,
+    char const *func,
+    char const *cond_string )
+{
+  if ( UNLIKELY (! cond) ) {
+    PFP ("\n%s:%i: %s: Assertion `%s' failed.\n",
+        file, line, func, cond_string );
+  }
+  assert (cond);
+}
+
 // The default incarnation of this test program expects a single slave,
 // but it can also be compiled and tweaked slightly to test a multi-slave bus.
 
@@ -68,7 +89,7 @@ ds18b20_init_and_rom_command (void)
   // FIXME: would be nice to have datasheet available on web and linked to
   // by the docs...
   uint8_t slave_presence = owm_touch_reset ();
-  assert (slave_presence);
+  PFP_ASSERT (slave_presence);
 
   // This test program requires that only one slave be present, so we can
   // use the READ ROM command to get the slave's ROM ID.
@@ -79,7 +100,7 @@ ds18b20_init_and_rom_command (void)
   }
 
   // We should have gotten the fixed family code as the first byte of the ID.
-  assert (((uint8_t *) (&slave_rid))[0] == DS18B20_FAMILY_CODE);
+  PFP_ASSERT (((uint8_t *) (&slave_rid))[0] == DS18B20_FAMILY_CODE);
 
   return slave_rid;
 }
@@ -127,7 +148,7 @@ main (void)
   uint8_t slave_presence = owm_touch_reset ();
   if ( ! slave_presence ) {
     PFP ("failed: non-true was returned");
-    assert (FALSE);
+    PFP_ASSERT (FALSE);
   }
   PFP ("ok, got slave presence pulse.\n");
 
@@ -144,17 +165,25 @@ main (void)
   // We can use owm_read_id() because we know we have exactly one slave.
   PFP ("Trying owm_read_id()... ");
   uint8_t slave_found = owm_read_id ((uint8_t *) &rid);
-  if ( (! slave_found) || rid != slave_rid ) {
-    PFP ("failed: didn't find slave with previously discovered ID");
-    assert (FALSE);
+  if ( (! slave_found) ) {
+    PFP ("failed: no slave found");
+    PFP_ASSERT (FALSE);
+  }
+  if ( rid != slave_rid ) {
+    PFP ("failed: discovered slave ID is different");
+    PFP_ASSERT (FALSE);
   }
   PFP ("ok, found slave with previously discovered ID.\n");
 
   PFP ("Trying owm_first()... ");
   slave_found = owm_first ((uint8_t *) &rid);
-  if ( (! slave_found) || rid != slave_rid ) {
-    PFP ("failed: didn't find slave with previously discovered ID");
-    assert (FALSE);
+  if ( (! slave_found) ) {
+    PFP ("failed: no slave found");
+    PFP_ASSERT (FALSE);
+  }
+  if ( rid != slave_rid ) {
+    PFP ("failed: discovered slave ID is different");
+    PFP_ASSERT (FALSE);
   }
   PFP ("ok, found slave with previously discovered ID.\n");
 
@@ -164,7 +193,7 @@ main (void)
   slave_found = owm_next ((uint8_t *) &rid);
   if ( slave_found ) {
     PFP ("failed: unexpectedly returned true");
-    assert (FALSE);
+    PFP_ASSERT (FALSE);
   }
   PFP ("ok, no next slave found.\n");
 
@@ -189,7 +218,7 @@ main (void)
   slave_found = owm_verify ((uint8_t *) &rid);
   if ( ! slave_found ) {
     PFP ("failed: unexpectedly returned false");
-    assert (FALSE);
+    PFP_ASSERT (FALSE);
   }
   PFP ("ok, ID verified.\n");
 
@@ -204,7 +233,7 @@ main (void)
   // I guess if there's only one slave on the bus it works ok, but its sort of
   // weird, so we go ahead and do the addressing again.
   uint64_t slave_rid_2nd_reading = ds18b20_init_and_rom_command ();
-  assert (slave_rid_2nd_reading == slave_rid);
+  PFP_ASSERT (slave_rid_2nd_reading == slave_rid);
   owm_write_byte (DS18B20_COMMANDS_CONVERT_T_COMMAND);
   // The DS18B20 is now supposed to respond with a stream of 0 bits until
   // the conversion completes, after which it's supposed to send 1 bits.
@@ -215,13 +244,60 @@ main (void)
   }
   PFP ("conversion complete.\n");
 
+  // Now we try the conversion command a few more times using different
+  // flavors of the highest-level, generic transaction initiation routine.
+  // Of course, after all these conversions the temperature should
+  // still come out the same.  If it doesn't, that could indicate that
+  // owm_start_transaction() isn't working right.
+
+  // FIXME: well assert is a pretty lousy way to detect how tests fail,
+  // might want to conditionally print something or so...
+
+  PFP ("Trying owm_start_transaction() with READ_ROM... ");
+  uint64_t slave_rid_3rd_reading;
+  owm_error_t err = owm_start_transaction (
+      OWC_READ_ROM_COMMAND,
+      (uint8_t *) &slave_rid_3rd_reading,
+      DS18B20_COMMANDS_CONVERT_T_COMMAND );
+  PFP_ASSERT (err == OWM_ERROR_NONE);
+  PFP_ASSERT (slave_rid_3rd_reading = slave_rid);
+  conversion_complete = 0;
+  while ( ! (conversion_complete = owm_read_bit ()) ) {
+    ;
+  }
+  PFP ("seemed ok.\n");
+
+  PFP ("Trying owm_start_transaction() with MATCH_ROM... ");
+  err = owm_start_transaction (
+      OWC_MATCH_ROM_COMMAND,
+      (uint8_t *) &slave_rid,
+      DS18B20_COMMANDS_CONVERT_T_COMMAND );
+  PFP_ASSERT (err == OWM_ERROR_NONE);
+  conversion_complete = 0;
+  while ( ! (conversion_complete = owm_read_bit ()) ) {
+    ;
+  }
+  PFP ("seemed ok.\n");
+
+  PFP ("Trying owm_start_transaction() with SKIP_ROM... ");
+  err = owm_start_transaction (
+      OWC_SKIP_ROM_COMMAND,
+      NULL,
+      DS18B20_COMMANDS_CONVERT_T_COMMAND );
+  PFP_ASSERT (err == OWM_ERROR_NONE);
+  conversion_complete = 0;
+  while ( ! (conversion_complete = owm_read_bit ()) ) {
+    ;
+  }
+  PFP ("seemed ok.\n");
+
   // We can now read the slave scratchpad memory.  This requires us to first
   // perform the initialization and read rom commands again as described in
   // the DS18B20 datasheet.  The slave ROM code better be the same on second
   // reading :)
   PFP ("Reading DS18B20 scratchpad memory... ");
-  uint64_t slave_rid_3rd_reading = ds18b20_init_and_rom_command ();
-  assert (slave_rid_3rd_reading == slave_rid);
+  uint64_t slave_rid_4th_reading = ds18b20_init_and_rom_command ();
+  PFP_ASSERT (slave_rid_4th_reading == slave_rid);
   ds18b20_get_scratchpad_contents ();
   PFP ("done.\n");
 
@@ -300,14 +376,14 @@ main (void)
   uint8_t slave_found = owm_first ((uint8_t *) &rid);
   if ( ! slave_found ) {
     PFP ("failed: didn't discover any slaves");
-    assert (FALSE);
+    PFP_ASSERT (FALSE);
   }
   if ( rid != first_slave_id ) {
     PFP ("failed: discovered first slave ID was ");
     print_slave_id (rid);
     PFP (", not the expected ");
     print_slave_id (first_slave_id);
-    assert (FALSE);
+    PFP_ASSERT (FALSE);
   }
   PFP ("ok, found 1st slave with expected ID ");
   print_slave_id (rid);
@@ -317,14 +393,14 @@ main (void)
   slave_found = owm_next ((uint8_t *) &rid);
   if ( ! slave_found ) {
     PFP ("failed: didn't discover a second slave");
-    assert (FALSE);
+    PFP_ASSERT (FALSE);
   }
   if ( rid != second_slave_id ) {
     PFP ("failed: discovered second slave ID was ");
     print_slave_id (rid);
     PFP (", not the expected ");
     print_slave_id (second_slave_id);
-    assert (FALSE);
+    PFP_ASSERT (FALSE);
   }
   PFP ("ok, found 2nd slave with expected ID ");
   print_slave_id (rid);
@@ -336,7 +412,7 @@ main (void)
   slave_found = owm_next ((uint8_t *) &rid);
   if ( slave_found ) {
     PFP ("failed: unexpectedly returned true");
-    assert (FALSE);
+    PFP_ASSERT (FALSE);
   }
   PFP ("ok, no next slave found.\n");
 
@@ -344,7 +420,7 @@ main (void)
   slave_found = owm_verify ((uint8_t *) &rid);
   if ( ! slave_found ) {
     PFP ("failed: didn't find slave");
-    assert (FALSE);
+    PFP_ASSERT (FALSE);
   }
   PFP ("ok, found it.\n");
 
@@ -352,7 +428,7 @@ main (void)
   slave_found = owm_verify ((uint8_t *) &rid);
   if ( ! slave_found ) {
     PFP ("failed: didn't find slave");
-    assert (FALSE);
+    PFP_ASSERT (FALSE);
   }
   PFP ("ok, found it.\n");
 

@@ -25,6 +25,16 @@
          the DIO_PIN_* tuple macros before this header is included)
 #endif
 
+// Return type for at least some of the functions in this interface which
+// report errors.
+typedef enum {
+  OWM_ERROR_NONE = 0,
+  OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND,
+  OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND,
+  OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE,
+  OMW_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE
+} owm_error_t;
+
 // Intialize the one wire master interface.  All this does is set up the
 // chosen DIO pin.  It starts out set as an input without the internal pull-up
 // enabled.  It would probably be possible to use the internal pull-up on
@@ -33,6 +43,40 @@
 // much stronger pull-up, so for simplicity the internal pull-up is disabled.
 void
 owm_init (void);
+
+// Start the transaction sequence as described in the Maxim DS18B20
+// datasheet, "TRANSACTION SEQUENCE" section.
+//
+// Arguments:
+//
+//   rom_cmd          May be OWC_READ_ROM_COMMAND (if there's only one slave on
+//                    the bus), OWC_MATCH_ROM_COMMAND, or OWC_SKIP_ROM_COMMAND
+//
+//   rom_id           For OWC_READ_ROM_COMMAND, this caontain the read ROM ID
+//                    on return.  For OWC_MATCH_ROM_COMMAND, it must contain
+//                    the ROM ID being addressed.  For OWC_SKIP_ROM_COMMAND it
+//                    is unused (and may be NULL)
+//
+//   function_cmd     The function command to send.  This must not be a ROM
+//                    command
+//
+// Return:
+//
+//   OWM_ERROR_NONE on success, or some other error code otherwise
+//
+//
+//
+// To actually complete the transaction, some slave- and transaction-specific
+// back-and-forth using the lower level function in this interface will
+// likely be required.  Note that this routine cannot by itself ensure that
+// the slave has received any OWC_MATCH_ROM_COMMAND or OWC_SKIP_ROM_COMMAND
+// command correctly, since those don't elicit any response from the slave
+// (though they do change its state).  The function_command likely does
+// elicit a responst, but this routine doesn't read it, so correct receipt
+// of that command also cannot be verified by this routine.  FIXME: WORK
+// POINT: test this guy
+owm_error_t
+owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
