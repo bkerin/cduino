@@ -78,16 +78,18 @@ ows_init (uint8_t use_eeprom_id);
 // any incoming OWC_SEARCH_ROM_COMMAND or OWC_ALARM_SEARCH_COMMAND commands).
 // Any errors (funny-lengh pulses, aborted searches, etc.) are silently
 // ignored.
-uint8_t
-ows_wait_for_function_command (void);
+// FIXME: update comments
+ows_error_t
+ows_wait_for_function_command (uint8_t *command_ptr);
 
 // Wait for a reset pulse, respond with a presence pulse, then try to
 // read a single byte from the master and return it.  Any additional reset
 // pulses that occur during this read attempt are also responded to with
 // presence pulses.  Any errors that occur while trying to read the byte
 // effectively cause a new wait for a reset pulse to begin.
-uint8_t
-ows_wait_for_command (void);
+// FIXME: needs comments updated
+ows_error_t
+ows_wait_for_command (uint8_t *command_ptr);
 
 // Block until a reset pulse from the master is seen, then produce a
 // corresponding presence pulse and return.

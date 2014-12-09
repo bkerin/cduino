@@ -215,12 +215,18 @@ volatile uint16_t pulse_length;
 ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 {
   if ( LINE_IS_HIGH () ) {
+    if ( new_pulse  ) { PFP ("FIXME: debug: pulse stack-up detected"); }
     new_pulse = TRUE;
     pulse_length = TIMER1_STOPWATCH_TICKS ();
     if ( T1OF () ) { PFP ("FIXME: debug: timer overflow detected"); }
   }
   else {
-    new_pulse = FALSE;
+    // FIXME: we used to clear new_pulse here.  This effectively
+    // erases any unhandled pulse from our minds.  But is that good?
+    // wait_for_pulse_end() clears it anyway, and not clearing it here
+    // extends the time in which we could work on it (admittedly while
+    // another negative pulse is already in progress...)
+    //new_pulse = FALSE;
     T1RESET ();
   }
 }
@@ -260,6 +266,11 @@ wait_for_pulse_end (void)
     wait_for_pulse_end ();                \
   } while ( 0 )
 
+// FIXME: WORK POINT: I think the root of the problem is our unclear position
+// on when interface methods should reset... the stack seems like a cute
+// idea but its time to go back some commits and see if things work right
+// withouth them
+
 void
 ows_wait_for_reset (void)
 {
@@ -271,26 +282,45 @@ ows_wait_for_reset (void)
   OWS_PRESENCE_PULSE ();
 }
 
+// Call call, Propagating Errors.  The call argument must be a call to a
+// function returning ows_err_t.
+#define CPE(call)                      \
+  do {                                 \
+    ows_error_t XxX_err = call;        \
+    if ( XxX_err != OWS_ERROR_NONE ) { \
+      return XxX_err;                  \
+    }                                  \
+  } while ( 0 )
+
 ows_error_t
-ows_wait_for_command (uint8_t *command)
+ows_wait_for_command (uint8_t *command_ptr)
 {
-  while ( ows_read_byte (&command) != OWS_ERROR_NONE ) {
-    ;
-  }
-  CPE (ows_read_byte (command));
+  ows_wait_for_reset ();
+
+  CPE (ows_read_byte (command_ptr));
 
   return OWS_ERROR_NONE;
 }
 
-// Call call, Propagating Errors.  The call argument must be a call to a
-// function returning ows_err_t.
-#define CPE(call)                  \
-  do {                             \
-    ows_error_t err = call;        \
-    if ( err != OWS_ERROR_NONE ) { \
-      return err;                  \
-    }                              \
-  } while ( 0 )
+uint8_t bhist[22];
+uint8_t bhist_ii = 0;
+
+#define ADD_BHIST(val)        \
+  do {                        \
+    bhist[bhist_ii] = val;    \
+    bhist_ii++;               \
+    bhist_ii = bhist_ii % 22; \
+  } while ( 0 );
+
+#define DUMP_BHIST()                                     \
+  do {                                                   \
+   PFP ("bhist: ");                                      \
+   for ( uint8_t XxX_ii = 0 ; XxX_ii < 22 ; XxX_ii++ ) { \
+     PFP ("%i ", (int) bhist[XxX_ii]);                   \
+     PFP ("\n");                                         \
+     PFP ("bhist_ii: %i\n", bhist_ii);                   \
+   }                                                     \
+  } while ( 0 );
 
 // FIXME: I may need to be relocated
 //
@@ -302,6 +332,11 @@ ows_read_and_match_rom_id (void)
       uint8_t bit_value;
       CPE (ows_read_bit (&bit_value));
       if ( bit_value != ((rom_id[ii]) >> jj) ) {
+        PFP (
+            "wrong bit value %i at byte %i, bit %i\n",
+            (int) bit_value,
+            (int) ii, (int) jj );
+        DUMP_BHIST ();
         return OWS_ERROR_ROM_ID_MISMATCH;
       }
     }
@@ -310,20 +345,19 @@ ows_read_and_match_rom_id (void)
   return OWS_ERROR_NONE;
 }
 
-uint8_t
-ows_wait_for_function_command (void)
+ows_error_t
+ows_wait_for_function_command (uint8_t *command_ptr)
 {
   uint8_t tfu = FALSE;  // Transaction For Us (our ROM ID, or all slaves)
-  uint8_t command = OWC_NULL_COMMAND;
-  ows_error_t err;   // For return codes
+  *command_ptr = OWC_NULL_COMMAND;
 
   do {
 
-    while ( command == OWC_NULL_COMMAND ) {
+    while ( *command_ptr == OWC_NULL_COMMAND ) {
       // This command *should* be a ROM command of some sort, even if its
       // only a OWS_SKIP_ROM_COMMAND, since at this point we don't have a
       // target slave for a real comand, however...
-      command = ows_wait_for_command ();
+      CPE (ows_wait_for_command (command_ptr));
       // it might not be, and some Maxim slave devices might still work in
       // some situation.  For example, the DS18B20 seems to honor "Convert
       // T" (0x44) commands that come after a Search ROM command, at least
@@ -347,44 +381,34 @@ ows_wait_for_function_command (void)
       // I'm going with option 2 for the moment, but this is a sufficiently
       // screwy issue that perhaps a client-visible option controlling or
       // at least indicating this behavior is warranted.
-      if ( ! OWC_IS_ROM_COMMAND (command) ) {
-        command = OWC_NULL_COMMAND;
+      if ( ! OWC_IS_ROM_COMMAND (*command_ptr) ) {
+        *command_ptr = OWC_NULL_COMMAND;
       }
     }
 
-    switch ( command ) {
+    switch ( *command_ptr ) {
 
       case OWC_SEARCH_ROM_COMMAND:
         // FIXME: we should perhaps just propagate errors everywhere, all
         // the way to the top?  At the moment we eat them here
-        ows_answer_search ();
-        command = OWC_NULL_COMMAND;
+        CPE (ows_answer_search ());
+        *command_ptr = OWC_NULL_COMMAND;
         break;
 
       case OWC_ALARM_SEARCH_COMMAND:
         OWS_MAYBE_ANSWER_ALARM_SEARCH ();
-        command = OWC_NULL_COMMAND;
+        *command_ptr = OWC_NULL_COMMAND;
         break;
 
       case OWC_READ_ROM_COMMAND:
         // FIXME: again, swallowing errors is questionable policy
-        err = ows_write_rom_id ();
-        if ( err == OWS_ERROR_NONE ) {
-          tfu = TRUE;
-        }
-        else {
-          command = OWC_NULL_COMMAND;
-        }
+        CPE (ows_write_rom_id ());
+        tfu = TRUE;
         break;
 
       case OWC_MATCH_ROM_COMMAND:
-        err = ows_read_and_match_rom_id ();
-        if ( err == OWS_ERROR_NONE ) {
-          tfu = TRUE;
-        }
-        else {
-          command = OWC_NULL_COMMAND;
-        }
+        CPE (ows_read_and_match_rom_id ());
+        tfu = TRUE;
         // FIXME: other errors during matching are swallowed...
         break;
 
@@ -395,13 +419,15 @@ ows_wait_for_function_command (void)
     }
 
     if ( tfu ) {
-      command = ows_wait_for_command ();
+      CPE (ows_wait_for_command (command_ptr));
       // The master might be a weirdo and decide to send another ROM command
       // instead of a function command, in which case we need to keep going.
-      if ( ! OWC_IS_ROM_COMMAND (command) ) {
-        return command;
+      if ( ! OWC_IS_ROM_COMMAND (*command_ptr) ) {
+        return OWS_ERROR_NONE;
       }
       else {
+        // FIXME: Now that we're propagating errors, this should probably
+        // be one, then the rest of this routine would be simpler
         tfu = FALSE;
       }
     }
@@ -417,18 +443,25 @@ ows_read_bit (uint8_t *data_bit_ptr)
 
   if ( pl < ST_SLAVE_READ_SLOT_SAMPLE_TIME * T1TPUS ) {
     *data_bit_ptr = 1;
+    ADD_BHIST(1);
   }
   // FIXME: use the time quantity symbols here, assuming this is right:
   // this is required to be less than tick delay C + D, D is the margin
+  // since we expect the master to go high again after C
   else if ( pl < (60+10) * T1TPUS ) {
     *data_bit_ptr = 0;
+    ADD_BHIST(0);
   }
   else if ( pl > ST_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
     OWS_PRESENCE_PULSE ();
+    *data_bit_ptr = 2;   // FIXME: im for debugging
+    ADD_BHIST(2);
     return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
   }
   else {
+    *data_bit_ptr = 3;   // FIXME: im for debugging
+    ADD_BHIST(3);
     return OWS_ERROR_UNEXPECTED_PULSE_LENGTH;
   }
 

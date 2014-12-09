@@ -161,7 +161,23 @@ main (void)
 
   for ( ; ; ) {
 
-    uint8_t fcmd = ows_wait_for_function_command ();
+    uint8_t fcmd;
+    err = ows_wait_for_function_command (&fcmd);
+
+    // For diagnostic purposes we do this.  Normally printing something out
+    // at this point might take too much time that could otherwise be spent
+    // eating the error and waiting for the line to sort itself out :)
+    if ( err ) {
+      /*
+      if ( err && err != OWS_ERROR_RESET_DETECTED_AND_HANDLED ) {
+        PFP ("\n");
+        PFP ("Got error: ");
+        print_ows_error (err);
+        PFP ("\n");
+      }
+      */
+      continue;
+    }
 
     switch ( fcmd ) {
 
