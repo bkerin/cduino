@@ -32,7 +32,7 @@ typedef enum {
   OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND,
   OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND,
   OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE,
-  OMW_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE
+  OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE
 } owm_error_t;
 
 // Intialize the one wire master interface.  All this does is set up the
@@ -62,9 +62,15 @@ owm_init (void);
 //
 // Return:
 //
-//   OWM_ERROR_NONE on success, or some other error code otherwise
+//   FIXME: really, shouldn't this be doing a reset? and that would give
+//   it some more potential error codes.
 //
-//
+//   OWM_ERROR_NONE on succes, or an error code indicating the problem
+//   otherwise.  If the arguments are valid, the OWC_MATCH_ROM_COMMAND
+//   and OWC_SKIP_ROM_COMMAND flavors of this routine should
+//   always succeed.  The OWC_READ_ROM_COMMAND flavor will return
+//   OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE when it detects a CRC
+//   mismatch on the read ROM ID.
 //
 // To actually complete the transaction, some slave- and transaction-specific
 // back-and-forth using the lower level function in this interface will

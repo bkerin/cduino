@@ -39,9 +39,55 @@
 #include "term_io.h"
 #include "util.h"
 
-// FIXME: this is another candidate to go in term_io.
+// FIXME: this big ugly function should turn into a table or something,
+// maybe with X macros or some other macro setup
+static void
+print_owm_error (owm_error_t err)
+{
+  switch ( err ) {
+    case OWM_ERROR_NONE:
+      PFP ("OWM_ERROR_NONE");
+      break;
+    case OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND:
+      PFP ("OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND");
+      break;
+    case OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND:
+      PFP ("OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND");
+      break;
+    case OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE:
+      PFP ("OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE");
+      break;
+    case OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE:
+      PFP ("OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE");
+      break;
+  }
+}
+
+// FIXME: this could conceivably be genericized into util.h as well, maybe
+// taking a constant-to-string lookup table or so.
+#define PFP_ASSERT_NO_OWM_ERROR(err) \
+  pfp_assert_no_owm_error ((err), __FILE__, __LINE__, __func__)
+static void
+pfp_assert_no_owm_error (
+    owm_error_t err,
+    char const *file,
+    int line,
+    char const *func )
+{
+  if ( UNLIKELY (err) ) {
+    PFP ("\n");
+    PFP ("%s:%i: %s: OWM error: ", file, line, func);
+    print_owm_error (err);
+    PFP ("\n");
+    assert (FALSE);
+  }
+}
+
+
+// FIXME: this is another candidate to go in term_io.  or at least get docs
 #define PFP_ASSERT(cond) \
   pfp_assert ((cond), __FILE__, __LINE__, __func__, #cond)
+
 static void
 pfp_assert (
     uint8_t cond,
@@ -53,8 +99,8 @@ pfp_assert (
   if ( UNLIKELY (! cond) ) {
     PFP ("\n%s:%i: %s: Assertion `%s' failed.\n",
         file, line, func, cond_string );
+    assert (FALSE);
   }
-  assert (cond);
 }
 
 // The default incarnation of this test program expects a single slave,
@@ -259,6 +305,7 @@ main (void)
       OWC_READ_ROM_COMMAND,
       (uint8_t *) &slave_rid_3rd_reading,
       DS18B20_COMMANDS_CONVERT_T_COMMAND );
+  PFP_ASSERT_NO_OWM_ERROR (err);
   PFP_ASSERT (err == OWM_ERROR_NONE);
   PFP_ASSERT (slave_rid_3rd_reading = slave_rid);
   conversion_complete = 0;
