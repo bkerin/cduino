@@ -124,11 +124,12 @@ owm_read_bit (void);
 // One wire ID size in bytes
 #define OWM_ID_BYTE_COUNT 8
 
-// This function requires that exactly one slave be present on the bus.
-// If we discover a slave, its ID is written into id_buf (which pust be
-// a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE is returned.
-// If there is not exactly one slave present, the results of this function
-// are undefined (later calls to this interface might behave strangely).
+// This function requires that exactly zero or one slaves be present on the
+// bus.  If we discover a slave, its ID is written into id_buf (which must
+// be a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE is returned.
+// If no slave responds to our presence pulse, FALSE is returned.  If there
+// are two or more slaves present, the results of this function are undefined
+// (later calls to this interface might behave strangely).
 uint8_t
 owm_read_id (uint8_t *id_buf);
 
