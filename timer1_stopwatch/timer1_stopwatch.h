@@ -96,12 +96,12 @@ timer1_stopwatch_init (void);
 // when TSM is written to zero.  Note also that writing a logic one to TOV1
 // actually *clears* it (weirdly).
 #define TIMER1_STOPWATCH_RESET() \
-  do { \
-    GTCCR |= _BV (TSM); \
-    GTCCR |= _BV (PSRSYNC); \
-    TIFR1 |= _BV (TOV1); \
-    TCNT1 = 0; \
-    GTCCR &= ~(_BV (TSM)); \
+  do {                           \
+    GTCCR |= _BV (TSM);          \
+    GTCCR |= _BV (PSRSYNC);      \
+    TIFR1 |= _BV (TOV1);         \
+    TCNT1 = 0;                   \
+    GTCCR &= ~(_BV (TSM));       \
   } while ( 0 )
 
 // Number of ticks since timer/counter1 was last reset or overflowed.  NOTE:
