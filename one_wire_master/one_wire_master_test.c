@@ -200,6 +200,26 @@ main (void)
 
 #ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
 
+  // FIXME: DEBUG BLOCK: what happens if...
+  /*
+  uint64_t slave_rid42
+    = __builtin_bswap64 (UINT64_C (0x28444444222222bb));
+  for ( ; ; ) {
+    uint64_t lrid;
+    uint8_t found_slave = owm_read_id ((uint8_t *) &lrid);
+    if ( ! found_slave ) {
+      PFP ("no slave found (because no presence pulse)\n");
+    }
+    else if ( lrid != slave_rid42 ) {
+      PFP ("read wrong ID:");
+      print_slave_id (lrid);
+      PFP ("\n");
+    }
+  }
+  */
+
+  for ( ; ; ) {  // FIXME: for debug: do it forever...
+
   PFP ("Trying DS18B20 initialization... ");
   uint64_t slave_rid = ds18b20_init_and_rom_command ();
   PFP ("ok, succeeded.  Slave ID: ");
@@ -207,6 +227,19 @@ main (void)
   PFP ("\n");
 
   uint64_t rid;   // ROM ID (of slave)
+
+  // FIXME: DEBUG BLOCK: what happens if...
+  /*
+  for ( ; ; ) {
+    uint8_t slave_found = owm_first ((uint8_t *) &rid);
+    if ( ! slave_found ) {
+      PFP ("no slave found\n");
+    }
+    else{
+      //PFP ("slave found\n");
+    }
+  }
+  */
 
   // We can use owm_read_id() because we know we have exactly one slave.
   PFP ("Trying owm_read_id()... ");
@@ -331,6 +364,11 @@ main (void)
       OWC_SKIP_ROM_COMMAND,
       NULL,
       DS18B20_COMMANDS_CONVERT_T_COMMAND );
+  /*
+  PFP ("\n");
+  print_owm_error (err);
+  PFP ("\n");
+  */
   PFP_ASSERT (err == OWM_ERROR_NONE);
   conversion_complete = 0;
   while ( ! (conversion_complete = owm_read_bit ()) ) {
@@ -395,9 +433,16 @@ main (void)
 
   // Blink out the absolute value of the current temperate times 10000
   // (effectively including four decimal places).
+  // FIXME: disabled in favor of do it forever below
+  att10000 = att10000;
+  /*
   for ( ; ; ) {
     // Feeding the wdt is harmless even when it's not initialized.
-    BLINK_OUT_UINT32_FEEDING_WDT (att10000);
+    //BLINK_OUT_UINT32_FEEDING_WDT (att10000);
+  }
+  */
+
+  _delay_ms (1);   // FIXME: debug: do it forever
   }
 
 #endif

@@ -1,5 +1,6 @@
 // Implementation of the interface described in one_wire_master.h.
 
+#include <assert.h>
 #include <avr/eeprom.h>
 #include <stdlib.h>
 #include <string.h>
@@ -158,8 +159,12 @@ ows_init (uint8_t use_eeprom_id)
 // / 2 here because it's, well, half way between when we must have the line
 // held low and when we must release it.  We could probably measure what
 // actual slaves do if necessary...
+/*  FIXME: trying a diff value here though first is theoretically fine:
 #define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME \
-  (OWC_TICK_DELAY_E + OWC_TICK_DELAY_F / 2)
+    (OWC_TICK_DELAY_E + OWC_TICK_DELAY_F / 2)
+*/
+#define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME \
+  (OWC_TICK_DELAY_E * 2)
 
 // This is the longest that this slave implementation ever holds the line
 // low itself.  This is relevant because we want to let our interrupt
@@ -210,15 +215,16 @@ ows_init (uint8_t use_eeprom_id)
 volatile uint8_t new_pulse = FALSE;
 volatile uint16_t pulse_length;
 
-// This ISR keeps track of the length of low pulses.  If we see a long enough
-// one we consider that we've seen a reset and set a client-visible flag.
+// This ISR keeps track of the length of low pulses.  When we see the end
+// of one we consider that we've seen a reset and set a client-visible flag.
 ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 {
   if ( LINE_IS_HIGH () ) {
-    if ( new_pulse  ) { PFP ("FIXME: debug: pulse stack-up detected"); }
+    //if ( new_pulse  ) { PFP ("FIXME: debug: pulse stack-up detected"); }
     new_pulse = TRUE;
     pulse_length = TIMER1_STOPWATCH_TICKS ();
-    if ( T1OF () ) { PFP ("FIXME: debug: timer overflow detected"); }
+    // FIXME: might want to check this too in final code:
+    //if ( T1OF () ) { PFP ("FIXME: debug: timer overflow detected"); }
   }
   else {
     // FIXME: we used to clear new_pulse here.  This effectively
@@ -235,11 +241,11 @@ static uint16_t
 wait_for_pulse_end (void)
 {
   // Wait for the positive edge that occurs at the end of a negative pulse,
-  // then return the negative pulse duration.  In fact this waits for
-  // a flag variable to be set from a pin change ISR, which seems to be
-  // considerably more rebust than pure delta detecton would probably be:
-  // see pcint_test.c.disabled in the one_wire_slave module directory for
-  // some tests I did to verify how this interrupt works.
+  // then return the negative pulse duration in timer1 ticks.  In fact this
+  // waits for a flag variable to be set from a pin change ISR, which seems
+  // to be considerably more rebust than pure delta detecton would probably
+  // be: see pcint_test.c.disabled in the one_wire_slave module directory
+  // for some tests I did to verify how this interrupt works.
 
   uint8_t gnp = FALSE;   // Got New Pulse
   uint16_t npl;          // New Pulse Length
@@ -265,11 +271,6 @@ wait_for_pulse_end (void)
     RELEASE_LINE ();                      \
     wait_for_pulse_end ();                \
   } while ( 0 )
-
-// FIXME: WORK POINT: I think the root of the problem is our unclear position
-// on when interface methods should reset... the stack seems like a cute
-// idea but its time to go back some commits and see if things work right
-// withouth them
 
 void
 ows_wait_for_reset (void)
@@ -305,23 +306,6 @@ ows_wait_for_command (uint8_t *command_ptr)
 uint8_t bhist[22];
 uint8_t bhist_ii = 0;
 
-#define ADD_BHIST(val)        \
-  do {                        \
-    bhist[bhist_ii] = val;    \
-    bhist_ii++;               \
-    bhist_ii = bhist_ii % 22; \
-  } while ( 0 );
-
-#define DUMP_BHIST()                                     \
-  do {                                                   \
-   PFP ("bhist: ");                                      \
-   for ( uint8_t XxX_ii = 0 ; XxX_ii < 22 ; XxX_ii++ ) { \
-     PFP ("%i ", (int) bhist[XxX_ii]);                   \
-     PFP ("\n");                                         \
-     PFP ("bhist_ii: %i\n", bhist_ii);                   \
-   }                                                     \
-  } while ( 0 );
-
 // FIXME: I may need to be relocated
 //
 ows_error_t
@@ -332,11 +316,12 @@ ows_read_and_match_rom_id (void)
       uint8_t bit_value;
       CPE (ows_read_bit (&bit_value));
       if ( bit_value != ((rom_id[ii]) >> jj) ) {
+        /*
         PFP (
             "wrong bit value %i at byte %i, bit %i\n",
             (int) bit_value,
             (int) ii, (int) jj );
-        DUMP_BHIST ();
+            */
         return OWS_ERROR_ROM_ID_MISMATCH;
       }
     }
@@ -345,94 +330,114 @@ ows_read_and_match_rom_id (void)
   return OWS_ERROR_NONE;
 }
 
+// Transaction State Waiting For (Reset Pulse|ROM Command|Function Command).
+#define TSWFRP  0
+#define TSWFRC  1
+#define TSWFFC  2
+
 ows_error_t
 ows_wait_for_function_command (uint8_t *command_ptr)
 {
-  uint8_t tfu = FALSE;  // Transaction For Us (our ROM ID, or all slaves)
-  *command_ptr = OWC_NULL_COMMAND;
+  // FIXME: maybe we don't actually need OWC_NULL_COMMAND for anything now
 
-  do {
+  uint8_t ts = TSWFRP;                // Transaction State
+  ows_error_t err = OWS_ERROR_NONE;   // Storage for most recent error
 
-    while ( *command_ptr == OWC_NULL_COMMAND ) {
-      // This command *should* be a ROM command of some sort, even if its
-      // only a OWS_SKIP_ROM_COMMAND, since at this point we don't have a
-      // target slave for a real comand, however...
-      CPE (ows_wait_for_command (command_ptr));
-      // it might not be, and some Maxim slave devices might still work in
-      // some situation.  For example, the DS18B20 seems to honor "Convert
-      // T" (0x44) commands that come after a Search ROM command, at least
-      // when there's only one slave on the bus.  Yet the DS18B20 datasheet
-      // clearly states in the "TRANSACTION SEQUENCE" section that a new
-      // transaction must be started after Search ROM (and for good reason,
-      // since this command doesn't address any particular slave).  So if
-      // we get a non-ROM command here, we have two choices:
-      //
-      //   1.  Do what the DS18B20 apparently does, and treat it as valid
-      //       (and return it from this function).
-      //
-      //   2.  Treat it as an error, and silently eat it (FIXME: or propagate
-      //       the error, if we decide we want to propagate errors from
-      //       this function).  WORK POINT: we need to do this to get a good
-      //       picture of what's causing the occasional bad read, or else
-      //       maybe try the all-serial version of the slave more, thought
-      //       it was failing unexpectedly right near the start of the master
-      //       sequence sheeshi
-      //
-      // I'm going with option 2 for the moment, but this is a sufficiently
-      // screwy issue that perhaps a client-visible option controlling or
-      // at least indicating this behavior is warranted.
-      if ( ! OWC_IS_ROM_COMMAND (*command_ptr) ) {
-        *command_ptr = OWC_NULL_COMMAND;
-      }
+  for ( ; ; ) {
+    switch ( ts ) {
+      case TSWFRP:
+        ows_wait_for_reset ();
+        ts = TSWFRC;
+        break;
+      case TSWFRC:
+        err = ows_read_byte (command_ptr);
+        if ( err == OWS_ERROR_RESET_DETECTED_AND_HANDLED ) {
+          // State doesn't change
+          break;
+        }
+        else if ( err != OWS_ERROR_NONE ) {
+          return err;
+        }
+        // Could just return this byte to do what real DS18B20 does?
+        if ( ! OWC_IS_ROM_COMMAND (*command_ptr) ) {
+          return OWS_ERROR_DID_NOT_GET_ROM_COMMAND;
+        }
+        if ( OWC_IS_TRANSACTION_INITIATING_ROM_COMMAND (*command_ptr) ) {
+          switch ( *command_ptr ) {
+            case OWC_READ_ROM_COMMAND:
+              err = ows_write_rom_id ();
+              break;
+            case OWC_MATCH_ROM_COMMAND:
+              err = ows_read_and_match_rom_id ();
+              break;
+            case OWC_SKIP_ROM_COMMAND:
+              // FIXME: WORK POINT: master says it doesn't get a presence
+              // pulse when it tries this... perhaps the problem has to
+              // do with the 1 that we send immediately after a convert?
+              // only a maybe
+              err = OWS_ERROR_NONE;
+              break;
+            default:
+              assert (FALSE);  // Shouldn't be here
+              break;
+          }
+          switch ( err ) {
+            case OWS_ERROR_NONE:
+              ts = TSWFFC;
+              break;
+            case OWS_ERROR_RESET_DETECTED_AND_HANDLED:
+              ts = TSWFRC;
+              break;
+            case OWS_ERROR_ROM_ID_MISMATCH:
+              ts = TSWFRP;
+              break;
+            default:
+              return err;
+              break;
+          }
+        }
+        else {
+          switch ( *command_ptr ) {
+            case OWC_SEARCH_ROM_COMMAND:
+              err = ows_answer_search ();
+              break;
+            case OWC_ALARM_SEARCH_COMMAND:
+              err = OWS_MAYBE_ANSWER_ALARM_SEARCH ();
+              if ( err != OWS_ERROR_NONE && err != OWS_ERROR_NOT_ALARMED ) {
+                return err;
+              }
+              break;
+            default:
+              assert (FALSE);  // Shouldn't be here
+              break;
+          }
+          switch ( err ) {
+            case OWS_ERROR_NONE:
+            case OWS_ERROR_NOT_ALARMED:
+              ts = TSWFRP;
+              break;
+            case OWS_ERROR_RESET_DETECTED_AND_HANDLED:
+              ts = TSWFRC;
+              break;
+            default:
+              return err;
+              break;
+          }
+        }
+        break;
+      case TSWFFC:
+        err = ows_read_byte (command_ptr);
+        switch ( err ) {
+          case OWS_ERROR_RESET_DETECTED_AND_HANDLED:
+            ts = TSWFRC;
+            break;
+          default:
+            return err;   // Note that err could be OWS_ERROR_NONE here
+            break;
+        }
+        break;
     }
-
-    switch ( *command_ptr ) {
-
-      case OWC_SEARCH_ROM_COMMAND:
-        // FIXME: we should perhaps just propagate errors everywhere, all
-        // the way to the top?  At the moment we eat them here
-        CPE (ows_answer_search ());
-        *command_ptr = OWC_NULL_COMMAND;
-        break;
-
-      case OWC_ALARM_SEARCH_COMMAND:
-        OWS_MAYBE_ANSWER_ALARM_SEARCH ();
-        *command_ptr = OWC_NULL_COMMAND;
-        break;
-
-      case OWC_READ_ROM_COMMAND:
-        // FIXME: again, swallowing errors is questionable policy
-        CPE (ows_write_rom_id ());
-        tfu = TRUE;
-        break;
-
-      case OWC_MATCH_ROM_COMMAND:
-        CPE (ows_read_and_match_rom_id ());
-        tfu = TRUE;
-        // FIXME: other errors during matching are swallowed...
-        break;
-
-      case OWC_SKIP_ROM_COMMAND:
-        tfu = TRUE;
-        break;
-
-    }
-
-    if ( tfu ) {
-      CPE (ows_wait_for_command (command_ptr));
-      // The master might be a weirdo and decide to send another ROM command
-      // instead of a function command, in which case we need to keep going.
-      if ( ! OWC_IS_ROM_COMMAND (*command_ptr) ) {
-        return OWS_ERROR_NONE;
-      }
-      else {
-        // FIXME: Now that we're propagating errors, this should probably
-        // be one, then the rest of this routine would be simpler
-        tfu = FALSE;
-      }
-    }
-
-  } while ( TRUE );
+  }
 
 }
 
@@ -443,25 +448,21 @@ ows_read_bit (uint8_t *data_bit_ptr)
 
   if ( pl < ST_SLAVE_READ_SLOT_SAMPLE_TIME * T1TPUS ) {
     *data_bit_ptr = 1;
-    ADD_BHIST(1);
   }
   // FIXME: use the time quantity symbols here, assuming this is right:
   // this is required to be less than tick delay C + D, D is the margin
   // since we expect the master to go high again after C
   else if ( pl < (60+10) * T1TPUS ) {
     *data_bit_ptr = 0;
-    ADD_BHIST(0);
   }
   else if ( pl > ST_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
     OWS_PRESENCE_PULSE ();
     *data_bit_ptr = 2;   // FIXME: im for debugging
-    ADD_BHIST(2);
     return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
   }
   else {
     *data_bit_ptr = 3;   // FIXME: im for debugging
-    ADD_BHIST(3);
     return OWS_ERROR_UNEXPECTED_PULSE_LENGTH;
   }
 
@@ -497,6 +498,7 @@ ows_write_bit (uint8_t data_bit)
     }
   }
   else if ( pl > ST_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
+    BTRAP ();   // FIXME: debug trap
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
     OWS_PRESENCE_PULSE ();
     return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
@@ -551,13 +553,47 @@ ows_write_rom_id (void)
   return OWS_ERROR_NONE;
 }
 
+// FIXME: note that the actual bit storage order in rom_id is wonky, it
+// should be documented somewhere, I believe is least significant byte first,
+// but then within bytes it most significant bit first.  Also, we could be
+// interpreting bits backwards from the real Maxim slave and not know it...
+
 // Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
 #define ID_BIT(bn) \
-  ((rom_id[bn / OWM_ID_BYTE_COUNT]) >> (bn % BITS_PER_BYTE) & B00000001)
+  ((rom_id[bn / BITS_PER_BYTE]) >> (bn % BITS_PER_BYTE) & B00000001)
 
 ows_error_t
 ows_answer_search (void)
 {
+  /*   FIXME: debug goop
+  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+    uint8_t byte_val = rom_id[ii];
+    for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; jj++ ) {
+      uint8_t bit_val = byte_val & (B10000000 >> jj) ? 1 : 0;
+      PFP ("%i", (int) bit_val);
+    }
+  }
+  PFP ("\n");
+  */
+  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+    uint8_t byte_val = rom_id[ii];
+    for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; jj++ ) {
+      uint8_t bit_val = byte_val & (B00000001 << jj) ? 1 : 0;
+      CPE (ows_write_bit (bit_val));
+      CPE (ows_write_bit (! bit_val));
+      uint8_t master_bit_val;
+      CPE (ows_read_bit (&master_bit_val));
+      // This is actually reasonably likely, but if its true we have lots
+      // of time, whereas if its not we have to keep up with the master for
+      // potentially all the remaining bits in the ID, so we want that path
+      // to be fast.
+      //if ( UNLIKELY (bit_val != master_bit_val) ) {
+      if ( bit_val != master_bit_val ) {
+        return OWS_ERROR_NONE;
+      }
+    }
+  }
+  /*
   for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT * BITS_PER_BYTE ; ii++ ) {
     uint8_t bv = ID_BIT (ii);
     CPE (ows_write_bit (bv));
@@ -568,6 +604,7 @@ ows_answer_search (void)
       return OWS_ERROR_NONE;
     }
   }
+  */
 
   return OWS_ERROR_NONE;
 }

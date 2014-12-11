@@ -48,10 +48,8 @@
 typedef enum {
   OWS_ERROR_NONE = 0,
   OWS_ERROR_UNEXPECTED_PULSE_LENGTH,
-  OWS_ERROR_LINE_UNEXPECTEDLY_LOW,
-  OWS_ERROR_GOT_RESET_PULSE,
+  OWS_ERROR_DID_NOT_GET_ROM_COMMAND,
   OWS_ERROR_RESET_DETECTED_AND_HANDLED,
-  OWS_ERROR_MISSED_RESET_DETECTED,
   OWS_ERROR_ROM_ID_MISMATCH,
   OWS_ERROR_NOT_ALARMED,
 } ows_error_t;
@@ -73,21 +71,39 @@ ows_init (uint8_t use_eeprom_id);
 
 // Wait for the initiation of a function command transaction intended for our
 // ROM ID (and possibly others as well if a OWS_SKIP_ROM_COMMAND was sent),
-// and return the function command itself.  In the meantime, automagically
-// respond to resets and participate in any slave searches (i.e. respond to
-// any incoming OWC_SEARCH_ROM_COMMAND or OWC_ALARM_SEARCH_COMMAND commands).
-// Any errors (funny-lengh pulses, aborted searches, etc.) are silently
-// ignored.
-// FIXME: update comments
+// and return the function command itself in *command_ptr.  See (FIXME:
+// trans desc ref here.)  In the meantime, automagically respond to resets
+// and participate in any slave searches (i.e. respond to any incoming
+// OWC_SEARCH_ROM_COMMAND or OWC_ALARM_SEARCH_COMMAND commands).  An error is
+// generated if any unexpected line behavior is encountered (abnormal pulse
+// lengths, unexpected mid-byte resets, etc.).  An error is *not* generated
+// when a potential transaction is aborted by the master at the end of one of
+// the steps listed in the "TRANSACTION SEQUENCE" section of the datasheet.
+// This policy allows this routine to automagically handle all ROM SEARCH,
+// READ ROM and the like, but also permits the somewhat weird case in
+// which the master sends a command that is useless except for transaction
+// initiation (a MATCH_ROM or SKIP_ROM), then doesn't actually follow it
+// with a function command.  An actual DS18B20 appears to tolerate this
+// misbehavior as well, however.  On the other hand we *do not* tolerate
+// function commands that aren't preceeded by a ROM command.  The DS18B20
+// seems to tolerate this (when its the only device on the bus), but its
+// completely contrary to the proscribed behavior for masters to do that,
+// and makes the implementation of this routine harder.  Use the lower-lever
+// portion of this interface if you know you have only one slave and don't
+// want to bother with addressing.  Masters that fail to send an entire
+// byte after issuing a reset pulse will cause this routine to hang until
+// they get around to doing that (or issuing another reset pulse).  FIXME:
+// do we correctly drop out until a reset pulse when we fail a MATCH_ROM?
 ows_error_t
 ows_wait_for_function_command (uint8_t *command_ptr);
 
-// Wait for a reset pulse, respond with a presence pulse, then try to
-// read a single byte from the master and return it.  Any additional reset
-// pulses that occur during this read attempt are also responded to with
-// presence pulses.  Any errors that occur while trying to read the byte
-// effectively cause a new wait for a reset pulse to begin.
-// FIXME: needs comments updated
+// Wait for a reset pulse, respond with a presence pulse, then try to read
+// a single byte from the master and return it.  An error is generated if
+// any unexpected line behavior is encountered (abnormal pulse lengths,
+// unexpected mid-byte resets, etc.  Any additional reset pulses that occur
+// during this read attempt are also responded to with presence pulses.
+// Any errors that occur while trying to read the byte effectively cause
+// a new wait for a reset pulse to begin.  FIXME: needs comments updated
 ows_error_t
 ows_wait_for_command (uint8_t *command_ptr);
 
@@ -146,7 +162,9 @@ extern uint8_t ows_alarm;
 
 // Like ows_answer_search(), but only participates if ows_alarm is non-zero.
 // This is the correct reaction to an OWC_ALARM_SEARCH_COMMAND.  If ows_alarm
-// is zero, this macro evaluates to OWS_ERROR_NOT_ALARMED.
+// is zero, this macro evaluates to OWS_ERROR_NOT_ALARMED.  FIXME: perhaps
+// we should just return OWS_ERROR_NONE if we aren't alarmed, since nothing
+// really went wrong in this case??
 #define OWS_MAYBE_ANSWER_ALARM_SEARCH() \
   (ows_alarm ? ows_answer_search () : OWS_ERROR_NOT_ALARMED)
 
