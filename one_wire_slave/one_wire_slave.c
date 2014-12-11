@@ -17,6 +17,32 @@
 #include "term_io.h"
 #include "util.h"
 
+// This is intended to help ensure that the master and other slaves are
+// behaving correctly.  If defined, it turns a number of points which slaves
+// can agreeably handle or return an error from into fatal blinky-traps.
+// You probably wouldn't want to use this in production, since it's very
+// trigger-happy about rejecting anything weird or pointless from the master.
+// See the actual use-point of the SMT() (Strict Mode Trap) macro for details.
+// FIXME: disable again for release version
+#define STRICT_MODE
+
+// This is like STRICT_MODE, but it causes the trap to indicate the trap
+// location in the source with its blink pattern.  Note that it doesn't
+// make sense to define both this and STRICT_MODE.
+//#define STRICT_MODE_WITH_LOCATION_OUTPUT
+
+#if defined(STRICT_MODE) && defined(STRICT_MODE_WITH_LOCATION_OUTPUT)
+#  error STRICT_MODE and STRICT_MODE_WITH_LOCATION_OUTPUT both defined
+#endif
+#if defined (STRICT_MODE)
+#  define SMT() BTRAP ()
+#elif defined (STRICT_MODE_WITH_LOCATION_OUTPUT)
+// FIXME: this is so messy and huge, and has yet to actually be used
+#  define SMT() BASSERT_FEEDING_WDT_SHOW_POINT (FALSE)
+#else
+#  define SMT()
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Line Drive, Sample, and Delay Routines
@@ -458,11 +484,13 @@ ows_read_bit (uint8_t *data_bit_ptr)
   else if ( pl > ST_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
     OWS_PRESENCE_PULSE ();
-    *data_bit_ptr = 2;   // FIXME: im for debugging
     return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
   }
   else {
-    *data_bit_ptr = 3;   // FIXME: im for debugging
+    // FIXME: so where don't we use SMT?  any errors other than
+    // ROM_ID_MISMATCH or NOT_ALARMED (which for that matter aren't really
+    // errors)?
+    SMT ();   // Because weird pulse lengths shouldn't happen
     return OWS_ERROR_UNEXPECTED_PULSE_LENGTH;
   }
 
@@ -498,12 +526,13 @@ ows_write_bit (uint8_t data_bit)
     }
   }
   else if ( pl > ST_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
-    BTRAP ();   // FIXME: debug trap
+    SMT ();   // Because we shouldn't get reset when master asked us to write
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
     OWS_PRESENCE_PULSE ();
     return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
   }
   else {
+    SMT ();   // Because weird pulse lengths shouldn't happen
     return OWS_ERROR_UNEXPECTED_PULSE_LENGTH;
   }
 
