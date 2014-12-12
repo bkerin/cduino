@@ -16,7 +16,8 @@
 //     and
 //
 //   * A common ground provided through the USB system, i.e. both Arduinos
-//     should be plugged into the same USB hub :)
+//     should be plugged into the same USB hub :)  FIXME: well that didnt work
+//     now did it
 //
 // The slave Arduino should be reset first, then the master should be reset
 // to kick off the tests.

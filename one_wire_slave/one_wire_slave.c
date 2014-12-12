@@ -150,9 +150,7 @@ ows_init (uint8_t use_eeprom_id)
 // The DS18B20 datasheet says 15 to 60 us.
 #define ST_DELAY_BEFORE_PRESENCE_PULSE 28
 
-// The DS18B20 datasheet says 60 to 240 us.  FIXME: do other 1-wire datasheets
-// give the same timing numbers?  the DS18B20 is somewhat old, maybe they've
-// sorted out new better numbers since then.
+// The DS18B20 datasheet says 60 to 240 us.
 #define ST_PRESENCE_PULSE_LENGTH 116
 
 // The DS18B20 datasheet says at least 1 us required from master, but the
@@ -160,10 +158,6 @@ ows_init (uint8_t use_eeprom_id)
 // of a slot.  So this one-cycle time is sort of a joke, and in fact its best
 // to not wait at all so we don't have to worry about the actual timer delay.
 #define ST_REQUIRED_READ_SLOT_START_LENGTH (1.0 / 16)
-
-// The total lenght of a slave read slot isn't supposed to be any longer
-// than this.
-#define ST_SLAVE_READ_SLOT_DURATION 60
 
 // This is the time the DS18B20 diagram indicates that it typically waits
 // from the time the line is pulled low by the master to when it (the slave)
@@ -185,12 +179,17 @@ ows_init (uint8_t use_eeprom_id)
 // / 2 here because it's, well, half way between when we must have the line
 // held low and when we must release it.  We could probably measure what
 // actual slaves do if necessary...
-/*  FIXME: trying a diff value here though first is theoretically fine:
 #define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME \
     (OWC_TICK_DELAY_E + OWC_TICK_DELAY_F / 2)
-*/
+// This also worked super dependably, which isn't too surprising given the
+// timing they both should be fine.  This one gives a margin of E on both
+// sides of the anticipated sample point, which makes a lot of sense also
+// (compared to the half-F that we use above).  FIXME: decide which is
+// safer/saner I guess
+/*
 #define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME \
   (OWC_TICK_DELAY_E * 2)
+*/
 
 // This is the longest that this slave implementation ever holds the line
 // low itself.  This is relevant because we want to let our interrupt
@@ -218,10 +217,12 @@ ows_init (uint8_t use_eeprom_id)
 #define T1OF() TIMER1_STOPWATCH_OVERFLOWED ()
 
 
-// Atomic version of T1US().  We have to use an atomic block to access
-// TCNT1 outside the ISR, so we have this macro that does that and sets
-// the double variable name argument given it to the elapsed us.
-// FIXME: hardcoded for our prescaler/F_CPU case to NOT be a double
+// Atomic version of T1US().  We have to use an atomic block to access TCNT1
+// outside the ISR, so we have this macro that does that and sets the double
+// variable name argument given it to the elapsed us.  FIXME: hardcoded for
+// our prescaler/F_CPU case to NOT be a double FIXME: at the moment we don't
+// use this.  It might be useful if we want to measure the time since we
+// saw any activity before running an idle function or something, but I dunno.
 #define AT1US(outvar)                     \
   do {                                    \
     uint16_t XxX_tt;                      \
@@ -246,10 +247,17 @@ volatile uint16_t pulse_length;
 ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 {
   if ( LINE_IS_HIGH () ) {
+
+    // FIXME: we could set a flag here, it would indicate slave being too
+    // slow and maybe trigger an error propagation or something... I dunno
+    // seems kinds complicated to essentially just catch user error (that
+    // error being overlong idle functions or time between calls into this
+    // interface).
     //if ( new_pulse  ) { PFP ("FIXME: debug: pulse stack-up detected"); }
     new_pulse = TRUE;
     pulse_length = TIMER1_STOPWATCH_TICKS ();
-    // FIXME: might want to check this too in final code:
+    // FIXME: might want to check this too in final code.  But really,
+    // more stuff in the ISR just to catch timeout errors?:
     //if ( T1OF () ) { PFP ("FIXME: debug: timer overflow detected"); }
   }
   else {
@@ -259,6 +267,8 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
     // extends the time in which we could work on it (admittedly while
     // another negative pulse is already in progress...)
     //new_pulse = FALSE;
+    // FIXME: for idle-time detection, we would need to reset for either edge.
+    // I sorta think not worth it.
     T1RESET ();
   }
 }
@@ -364,8 +374,6 @@ ows_read_and_match_rom_id (void)
 ows_error_t
 ows_wait_for_function_command (uint8_t *command_ptr)
 {
-  // FIXME: maybe we don't actually need OWC_NULL_COMMAND for anything now
-
   uint8_t ts = TSWFRP;                // Transaction State
   ows_error_t err = OWS_ERROR_NONE;   // Storage for most recent error
 
@@ -397,10 +405,6 @@ ows_wait_for_function_command (uint8_t *command_ptr)
               err = ows_read_and_match_rom_id ();
               break;
             case OWC_SKIP_ROM_COMMAND:
-              // FIXME: WORK POINT: master says it doesn't get a presence
-              // pulse when it tries this... perhaps the problem has to
-              // do with the 1 that we send immediately after a convert?
-              // only a maybe
               err = OWS_ERROR_NONE;
               break;
             default:
@@ -594,16 +598,6 @@ ows_write_rom_id (void)
 ows_error_t
 ows_answer_search (void)
 {
-  /*   FIXME: debug goop
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
-    uint8_t byte_val = rom_id[ii];
-    for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; jj++ ) {
-      uint8_t bit_val = byte_val & (B10000000 >> jj) ? 1 : 0;
-      PFP ("%i", (int) bit_val);
-    }
-  }
-  PFP ("\n");
-  */
   for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
     uint8_t byte_val = rom_id[ii];
     for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; jj++ ) {
@@ -622,6 +616,9 @@ ows_answer_search (void)
       }
     }
   }
+  // FIXME: used to be like this, though I'm not sure the bits are right
+  // (I think though because search worked.  Faster?  Smaller?  size-speed
+  // tradeoff?
   /*
   for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT * BITS_PER_BYTE ; ii++ ) {
     uint8_t bv = ID_BIT (ii);

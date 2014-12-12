@@ -22,10 +22,6 @@
 
 #define OWC_ID_SIZE_BYTES 1
 
-// This was isn't a real command: the slave implementation assumes that no
-// actual command has this value.
-#define OWC_NULL_COMMAND 0x00
-
 // FIXME: either figure out which number might be good to use for this,
 // or make it configurable or something, so we're not intruding into the
 // slave command space?  Then again, that only matters when the entire bus
