@@ -113,11 +113,12 @@ public use:
 <ul>
 
   <li><code>writeflash</code> -- Compile all .c files into object files using
-  settings appropriate for Arduino ardware, link them, and upload them together
-  with any fuse settings specified (see <a href="#lock_and_fuse_settings">
-  LOCK_AND_FUSE_SETTINGS</a> below) using the arduino bootloader method.  All
-  <code>.c</code> files are assumed to depend on all headers and on the
-  Makefile (so everything is recompiled if anything has changed).</li>
+  settings appropriate for Arduino hardware, link them, and upload them
+  together with any fuse settings specified (see
+  <a href="#lock_and_fuse_settings"> LOCK_AND_FUSE_SETTINGS</a> below) using
+  the arduino bootloader method.  All <code>.c</code> files are assumed to
+  depend on all headers and on the Makefile (so everything is recompiled if
+  anything has changed).</li>
 
   <li><code>write_random_id_to_eeprom</code> -- Use an AVRISPmkII programmer to
   write some random bytes to the beginning of the EEPROM.  This can be used to
