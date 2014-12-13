@@ -2,10 +2,10 @@
 //
 // Test driver: one_wire_master_test.h    Implementation: one_wire_master.c
 //
-// If you're new to one-wire you should first read the entire Maxim DS18B20
-// temperature sensor datasheet FIXME: link it.  Its hard to use one-wire
-// without at least a rough understanding of how the line signalling and
-// transaction schemes work.
+// If you're new to one-wire you should first read the entire
+// Maxim_DS18B20_datasheet.pdf.  Its hard to use one-wire without at
+// least a rough understanding of how the line signalling and transaction
+// schemes work.
 //
 // This interface features high-level routines that can handle all the
 // back-and-forth required to initiate a one-wire command transaction or

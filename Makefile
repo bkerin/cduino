@@ -171,6 +171,18 @@ xlinked_source_html:
             -e 's/((?<!\w)(?:$$frgx)(?!\.html|\:\d+))' \
             -e ' /<a href="$$1.html">$$1<\/a>/gx;' \
             *.html
+	# Add all .pdf files to the mix and link them (for datasheets, etc).
+	cd $@ && find .. -maxdepth 2 -name "*.pdf" -exec ln -s \{\} \;
+	# This turns any mention of a pdf file in the sources into a link.
+	# This works almost like the perl snippet above in this recipe, see the
+	# comments for that.  Too ugly to factor into a function :)
+	cd $@ ; \
+          perl -p -i \
+            -e '$$frgx ||= join("|", split("\n", `ls -1 *.pdf`));' \
+            -e '$$fre_dot_escape_done ||= ($$frgx =~ s/\./\\./g);' \
+            -e 's/((?<!\w)(?:$$frgx)(?!\.html|\:\d+))' \
+            -e ' /<a href="$$1">$$1<\/a>/gx;' \
+            *.html
 	rm $@/*.[ch]
 	rm $@/tags
 
