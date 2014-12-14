@@ -188,8 +188,8 @@ xlinked_source_html:
 	# to the page *after* the one requested for some datasheets (page one
 	# apparently counting as contents or something even though its not, and
 	# is labeled page one).  Note that this takes an extra eval pass on
-        # the substitution part (\e regex modifier).  FIXME: enable this if
-        # PDFs/browsers ever stop sucking.
+	# the substitution part (\e regex modifier).  FIXME: enable this
+	# instead of the above if PDFs/browsers ever stop sucking.
 	#cd $@ ; \
         #  perl -p -i \
         #    -e '$$frgx ||= join("|", split("\n", `ls -1 *.pdf`));' \
