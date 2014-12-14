@@ -174,14 +174,29 @@ xlinked_source_html:
 	# Add all .pdf files to the mix and link them (for datasheets, etc).
 	cd $@ && find .. -maxdepth 2 -name "*.pdf" -exec ln -s \{\} \;
 	# This works almost like the perl snippet above in this recipe, see the
-	# comments for that.  Too ugly to factor into a function :)
+	# comments for that.
 	cd $@ ; \
           perl -p -i \
             -e '$$frgx ||= join("|", split("\n", `ls -1 *.pdf`));' \
             -e '$$fre_dot_escape_done ||= ($$frgx =~ s/\./\\./g);' \
-            -e 's/((?<!\w)(?:$$frgx)(?!\.html|\:\d+))' \
-            -e ' /<a href="$$1">$$1<\/a>/gx;' \
+            -e 's/($$frgx)(,\s+page\s+(\d+))?' \
+            -e ' /"<a href=\"$$1".($$2?"":"")."\">$$1<\/a>$$2"/egx;' \
             *.html
+	# This version supports page number references, which would be great if
+	# the browsers supported page number references sanely, but they don't.
+	# Firefox seems to ignore them in URLs, and chrome helpfully takes us
+	# to the page *after* the one requested for some datasheets (page one
+	# apparently counting as contents or something even though its not, and
+	# is labeled page one).  Note that this takes an extra eval pass on
+        # the substitution part (\e regex modifier).  FIXME: enable this if
+        # PDFs/browsers ever stop sucking.
+	#cd $@ ; \
+        #  perl -p -i \
+        #    -e '$$frgx ||= join("|", split("\n", `ls -1 *.pdf`));' \
+        #    -e '$$fre_dot_escape_done ||= ($$frgx =~ s/\./\\./g);' \
+        #    -e 's/($$frgx)(,\s+page\s+(\d+))?' \
+        #    -e ' /"<a href=\"$$1".($$2?"#page=$$3":"")."\">$$1$$2<\/a>"/egx;' \
+        #    *.html
 	rm $@/*.[ch]
 	rm $@/tags
 

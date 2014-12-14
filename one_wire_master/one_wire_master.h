@@ -12,7 +12,7 @@
 // slave search or verify, and also access to the lower-level one-wire
 // functionality, such as bit- and byte-at-a-time communication.  Note that
 // the latter low-level functions are typically required to usefully complete
-// a transaction.  FIXME: actually provide the transaction-level interface.
+// a transaction.
 
 #ifndef ONE_WIRE_MASTER_H
 #define ONE_WIRE_MASTER_H
@@ -79,8 +79,7 @@ owm_init (void);
 // command correctly, since those don't elicit any response from the slave
 // (though they do change its state).  The function_command likely does
 // elicit a responst, but this routine doesn't read it, so correct receipt
-// of that command also cannot be verified by this routine.  FIXME: WORK
-// POINT: test this guy
+// of that command also cannot be verified by this routine.
 owm_error_t
 owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd);
 
@@ -94,13 +93,13 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd);
 // of these.
 //
 
-// Generate a 1-Wire reset.  Return TRUE if a resulting presence pulse is
-// detected, or FALSE otherwise.  NOTE: this is logically different than
-// the comments for the OWTouchReset() function from Maxim application
-// note AN126 indicate, since those seem backwards and confused.  FIXME:
-// I don't think its wrong relative to their code, so the question is why
-// do they do it that way?  Does it have to do with the search?  NOTE:
-// does not handle alarm presence from DS2404/DS1994.
+// Generate a 1-Wire reset.  Return TRUE if a resulting presence
+// pulse is detected, or FALSE otherwise.  NOTE: this is logically
+// different than the comments for the OWTouchReset() function from
+// Maxim_Application_Note_AN126.pdf indicate, since those seem backwards
+// and confused.  FIXME: I don't think its wrong relative to their code,
+// so the question is why do they do it that way?  Does it have to do with
+// the search?  NOTE: does not handle alarm presence from DS2404/DS1994.
 uint8_t
 owm_touch_reset (void);
 

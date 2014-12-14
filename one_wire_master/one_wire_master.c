@@ -17,13 +17,13 @@
 //
 // Line Drive, Sample, and Delay Routines
 //
-// These macros correspond to the uses of the inp and outp and tickDelay
-// functions of Maxim application note AN126.  We use macros to avoid
-// function call time overhead, which can be significant: Maxim Application
-// Note AN148 states that the most common programming error in 1-wire
-// programmin involves late sampling, which given that some samples occur
-// after proscribed waits of only 9 us requires some care, especially at
-// slower processor frequencies.
+// These macros correspond to the uses of the inp and outp and
+// tickDelay functions of Maxim_Application_Note_AN126.pdf.  We use
+// macros to avoid function call time overhead, which can be significant:
+// Maxim_Application_Note_AN148.pdf states that the most common programming
+// error in 1-wire programmin involves late sampling, which given that some
+// samples occur after proscribed waits of only 9 us requires some care,
+// especially at slower processor frequencies.
 
 // Release (tri-state) the one wire pin.  Note that this does not enable the
 // internal pullup.  See the commends near owm_init() in one_wire_master.h.
@@ -185,14 +185,15 @@ owm_read_id (uint8_t *id_buf)
 }
 
 // FIXME: i'm not seeing how crc8 is actually ever used to validate the
-// results of search()... it gets computed, but then what?
+// results of search()... it gets computed, but then what?  Update: looks like
+// this might require interface changes to allow the error to be propagated
 
 // Global search state
 static uint8_t rom_id[OWM_ID_BYTE_COUNT];   // Current ROM device ID
 static uint8_t last_discrep;                // Bit position of last discrepancy
-static uint8_t last_family_discrep;
+static uint8_t last_family_discrep;         // FIXXME: currently unused
 static uint8_t last_device_flag;            // True iff we got last slave
-static uint8_t crc8;
+static uint8_t crc8;                        // For most recent search() result
 
 // Length of slave ROM IDs, in bits
 #define ID_BIT_COUNT 64
@@ -233,7 +234,6 @@ search (uint8_t alarmed_slaves_only)
       last_discrep = 0;
       last_device_flag = FALSE;
       last_family_discrep = 0;
-      PFP ("FIXME: touch failure in search");
       return FALSE;
     }
     // Issue the appropriate search command

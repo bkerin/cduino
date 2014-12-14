@@ -24,6 +24,8 @@
 // trigger-happy about rejecting anything weird or pointless from the master.
 // See the actual use-point of the SMT() (Strict Mode Trap) macro for details.
 // FIXME: disable again for release version
+// FIXME: maybe this should just activate off DEBUG or something?
+// Dunno though I think I like it module-specific
 #define STRICT_MODE
 
 // This is like STRICT_MODE, but it causes the trap to indicate the trap
@@ -175,10 +177,10 @@ ows_init (uint8_t use_eeprom_id)
   (OWC_TICK_DELAY_A + OWC_TICK_DELAY_E / 2)
 
 // This is the time to hold the line low when sending a 0 to the master.
-// See Figure 1 of Maxim Application Note AN126.  We go with OWC_TICK_DELAY_F
-// / 2 here because it's, well, half way between when we must have the line
-// held low and when we must release it.  We could probably measure what
-// actual slaves do if necessary...
+// See Figure 1 of Maxim_Application_Note_AN126.pdf, page 2.  We go with
+// OWC_TICK_DELAY_F / 2 here because it's, well, half way between when
+// we must have the line held low and when we must release it.  We could
+// probably measure what actual slaves do if necessary...
 #define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME \
     (OWC_TICK_DELAY_E + OWC_TICK_DELAY_F / 2)
 // This also worked super dependably, which isn't too surprising given the
