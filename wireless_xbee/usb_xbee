@@ -1200,7 +1200,10 @@ configure_tty($df);
 # to happen at startup.  Perhaps any broken messages should first be flushed
 # somehow? Then again, how do we distinguish them from broken traffic that
 # just happens to arrive then?  Perhaps the real answer is that this very
-# common error message must be documented better :)
+# common error message must be documented better :) Really I think flushing
+# is the way to go.  Afterall if its restarted it can't prove that it didn't
+# just barely miss the message anyway.  I think tcflush from POSIX is the
+# way to go.
 
 if ( $cm ) {   # --command-mode {{{1
 
