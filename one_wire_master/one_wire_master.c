@@ -288,7 +288,7 @@ search (uint8_t alarmed_slaves_only)
         // rom_byte_mask
         id_bit_number++;
         rom_byte_mask <<= 1;
-        // If the mask is 0 then go to new SerialNum byte rom_byte_number
+        // If the mask is 0 then go to next byte
         // and reset mask
         if ( rom_byte_mask == 0 ) {
              // Incrementally update CRC

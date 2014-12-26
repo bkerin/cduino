@@ -28,11 +28,26 @@
 // Return type for at least some of the functions in this interface which
 // report errors.
 typedef enum {
+
   OWM_ERROR_NONE = 0,
+
+  // Caller supplied an invalid ROM command argument (one that doesn't satisfy
+  // OWM_IS_TRANSACTION_INITIATING_ROM_COMMAND()).  This is a client bug.
   OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND,
+
+  // Caller supplied an invalid function command argument (one that *does*
+  // satisfy OWM_IS_ROM_COMMAND()).  This is a client bug.
   OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND,
+
+  // The master (that's us) sent a reset pulse, but didn't receive any
+  // slave responses pulse.  This can happen when there's no slave present,
+  // or perhaps if the slaves are all busy, if they are the sort that don't
+  // always honor reset pulses.
   OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE,
+
+  // The master (that's us) received a ROM ID with an inconsistent CRC value.
   OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE
+
 } owm_error_t;
 
 // Intialize the one wire master interface.  All this does is set up the
@@ -61,9 +76,6 @@ owm_init (void);
 //                    command
 //
 // Return:
-//
-//   FIXME: really, shouldn't this be doing a reset? and that would give
-//   it some more potential error codes.
 //
 //   OWM_ERROR_NONE on succes, or an error code indicating the problem
 //   otherwise.  If the arguments are valid, the OWC_MATCH_ROM_COMMAND
@@ -96,10 +108,8 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd);
 // Generate a 1-Wire reset.  Return TRUE if a resulting presence
 // pulse is detected, or FALSE otherwise.  NOTE: this is logically
 // different than the comments for the OWTouchReset() function from
-// Maxim_Application_Note_AN126.pdf indicate, since those seem backwards
-// and confused.  FIXME: I don't think its wrong relative to their code,
-// so the question is why do they do it that way?  Does it have to do with
-// the search?  NOTE: does not handle alarm presence from DS2404/DS1994.
+// Maxim_Application_Note_AN126.pdf indicate it uses.  NOTE: does not handle
+// alarm presence from DS2404/DS1994.
 uint8_t
 owm_touch_reset (void);
 
