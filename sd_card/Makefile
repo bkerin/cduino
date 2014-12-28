@@ -25,5 +25,5 @@ CPPFLAGS += -DSD_CARD_SPI_SLAVE_SELECT_PIN=DIO_PIN_DIGITAL_4
 # If this is uncommented, we build a function which fetches a text description
 # of an SD card error.  However, this inevitably burns about 1k of program
 # memory for the strings (whether the function is called or not), so we
-# only build it on request.
+# provide this option so it can be disabled easily.
 CPPFLAGS += -DSD_CARD_BUILD_ERROR_DESCRIPTION_FUNCTION
