@@ -28,6 +28,12 @@ include generic.mk
 # The one_wire_master.h interface requires this to be defined at compile time.
 CPPFLAGS += -DOWM_PIN=DIO_PIN_DIGITAL_2
 
+# If this is uncommented, we build a function which fetches a text description
+# of a owm_result_t.  This inevitably burns some program memory for the
+# strings (whether the function is called or not), so we provide this option
+# so it can be disabled easily.
+CPPFLAGS += -DOWM_BUILD_RESULT_DESCRIPTION_FUNCTION
+
 # Exactly one of the following OWM_TEST_CONDITION_* macros must be defined.
 
 CPPFLAGS += -DOWM_TEST_CONDITION_SINGLE_SLAVE

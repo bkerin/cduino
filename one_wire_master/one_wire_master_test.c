@@ -63,6 +63,8 @@ print_owm_error (owm_error_t err)
   }
 }
 
+
+
 // FIXME: this could conceivably be genericized into util.h as well, maybe
 // taking a constant-to-string lookup table or so.
 #define PFP_ASSERT_NO_OWM_ERROR(err) \
@@ -83,8 +85,51 @@ pfp_assert_no_owm_error (
   }
 }
 
+/*
+#define PFP_ASSERT_SUCCESS(result, string_fetcher, string_buf) \
+  do {                                                         \
+    if ( UNLIKELY (result) ) {                                 \
+      PFP (                                                    \
+          "failure: %s:%i: %s: %s\n",                          \
+          file, line, func,                                    \
+          string_fetcher (result, string_buf) );               \
+      assert (FALSE);                                          \
+    }                                                          \
+  } while ( 0 )
+  */
+
+/*
+  pfp_assert_success ( \
+      (result), \
+      (void *) string_fetcher, \
+      string_buf, \
+      __FILE__, __LINE__, __func__ )
+static void
+pfp_assert_success (
+    owm_error_t result,
+    char *(*string_fetcher)(int result, char *string_buf),
+    char *string_buf,
+    char const *file,
+    int line,
+    char const *func )
+{
+  if ( UNLIKELY (result) ) {
+    PFP (
+        "failure: %s:%i: %s: %s\n",
+        file, line, func,
+        string_fetcher (result, string_buf) );
+    assert (FALSE);
+  }
+}
+*/
+
+char result_buf[OWM_RESULT_DESCRIPTION_MAX_LENGTH + 1];
+
+#define OWM_CHECK(result)                                          \
+  PFP_ASSERT_SUCCESS (result, owm_result_description, result_buf);
 
 // FIXME: this is another candidate to go in term_io.  or at least get docs
+/*
 #define PFP_ASSERT(cond) \
   pfp_assert ((cond), __FILE__, __LINE__, __func__, #cond)
 
@@ -102,6 +147,7 @@ pfp_assert (
     assert (FALSE);
   }
 }
+*/
 
 // The default incarnation of this test program expects a single slave,
 // but it can also be compiled and tweaked slightly to test a multi-slave bus.
@@ -198,25 +244,9 @@ main (void)
   }
   PFP ("ok, got slave presence pulse.\n");
 
-#ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
+  char rsb[OWM_RESULT_DESCRIPTION_MAX_LENGTH + 1];
 
-  // FIXME: DEBUG BLOCK: what happens if...
-  /*
-  uint64_t slave_rid42
-    = __builtin_bswap64 (UINT64_C (0x28444444222222bb));
-  for ( ; ; ) {
-    uint64_t lrid;
-    uint8_t found_slave = owm_read_id ((uint8_t *) &lrid);
-    if ( ! found_slave ) {
-      PFP ("no slave found (because no presence pulse)\n");
-    }
-    else if ( lrid != slave_rid42 ) {
-      PFP ("read wrong ID:");
-      print_slave_id (lrid);
-      PFP ("\n");
-    }
-  }
-  */
+#ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
 
   for ( ; ; ) {  // FIXME: for debug: do it forever...
 
@@ -228,24 +258,14 @@ main (void)
 
   uint64_t rid;   // ROM ID (of slave)
 
-  // FIXME: DEBUG BLOCK: what happens if...
-  /*
-  for ( ; ; ) {
-    uint8_t slave_found = owm_first ((uint8_t *) &rid);
-    if ( ! slave_found ) {
-      PFP ("no slave found\n");
-    }
-    else{
-      //PFP ("slave found\n");
-    }
-  }
-  */
-
   // We can use owm_read_id() because we know we have exactly one slave.
   PFP ("Trying owm_read_id()... ");
-  uint8_t slave_found = owm_read_id ((uint8_t *) &rid);
-  if ( (! slave_found) ) {
-    PFP ("failed: no slave found");
+  owm_error_t rslt = owm_read_id ((uint8_t *) &rid);  // One-wire Master Result
+  rslt = OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+  OWM_CHECK (rslt);
+  if ( rslt != OWM_ERROR_NONE ) {
+    // FIXME: should report string translation of rslt here
+    PFP ("failed: %s", owm_result_description (rslt, rsb));
     PFP_ASSERT (FALSE);
   }
   if ( rid != slave_rid ) {
@@ -255,7 +275,7 @@ main (void)
   PFP ("ok, found slave with previously discovered ID.\n");
 
   PFP ("Trying owm_first()... ");
-  slave_found = owm_first ((uint8_t *) &rid);
+  uint8_t slave_found = owm_first ((uint8_t *) &rid);
   if ( (! slave_found) ) {
     PFP ("failed: no slave found");
     PFP_ASSERT (FALSE);

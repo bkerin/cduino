@@ -13,6 +13,32 @@
 #include "term_io.h"
 #include "util.h"
 
+#ifdef OWM_BUILD_RESULT_DESCRIPTION_FUNCTION
+
+// This should be renamed to owm_result_string or something since its just
+// the name as a string now.
+char *
+owm_result_description (owm_error_t result, char *buf)
+{
+  switch ( result ) {
+
+#  define X(result_code)                   \
+    case result_code:                      \
+      strcpy_P (buf, PSTR (#result_code)); \
+      break;
+  OWM_RESULT_CODES
+#  undef X
+
+    default:
+      strcpy_P (buf, PSTR ("unhandled or unknown owm_error_t value"));
+      break;
+  }
+
+  return buf;
+}
+
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Line Drive, Sample, and Delay Routines
@@ -167,12 +193,12 @@ owm_read_bit (void)
 
 // FIXME: this routine has a really misleading name, sounce like a
 // owm_read_byte but really sends stuff first, ug
-uint8_t
+owm_error_t
 owm_read_id (uint8_t *id_buf)
 {
   uint8_t slave_presence = owm_touch_reset ();
   if ( ! slave_presence ) {
-    return FALSE;
+    return OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE;
   }
 
   uint8_t const read_rom_command = OWC_READ_ROM_COMMAND;
@@ -181,12 +207,10 @@ owm_read_id (uint8_t *id_buf)
     id_buf[ii] = owm_read_byte ();
   }
 
-  return TRUE;
-}
+  // FIXME: Here we must detect and report CRC errors
 
-// FIXME: i'm not seeing how crc8 is actually ever used to validate the
-// results of search()... it gets computed, but then what?  Update: looks like
-// this might require interface changes to allow the error to be propagated
+  return OWM_ERROR_NONE;
+}
 
 // Global search state
 static uint8_t rom_id[OWM_ID_BYTE_COUNT];   // Current ROM device ID
@@ -226,16 +250,21 @@ search (uint8_t alarmed_slaves_only)
   crc8 = 0;
 
   // If the last call was not the last one
-  if ( !last_device_flag )
+  if ( ! last_device_flag )
   {
+
     // 1-Wire reset
     if ( ! owm_touch_reset () ) {
       // Reset the search
       last_discrep = 0;
       last_device_flag = FALSE;
       last_family_discrep = 0;
+      // FIXME: for interface consistency we should arrange to propagate
+      // when this happens.  I think just setting a global that the clients
+      // check might be best, or I guess the signature could be changed.
       return FALSE;
     }
+
     // Issue the appropriate search command
     owm_write_byte (
         alarmed_slaves_only ?
@@ -246,7 +275,9 @@ search (uint8_t alarmed_slaves_only)
       // Read a bit and its complement
       id_bit = owm_read_bit ();
       cmp_id_bit = owm_read_bit ();
-      // Check for no devices on 1-wire
+      // Check for no elligible devices on 1-wire.  I would think this can
+      // only happen from noise or when doing an alarm search, since we only
+      // make it here if a presence pulse is received above.
       if ( (id_bit == 1) && (cmp_id_bit == 1) ) {
         break;
       }
@@ -291,10 +322,25 @@ search (uint8_t alarmed_slaves_only)
         // If the mask is 0 then go to next byte
         // and reset mask
         if ( rom_byte_mask == 0 ) {
-             // Incrementally update CRC
-             crc8 = _crc_ibutton_update (crc8, rom_id[rom_byte_number]);
-             rom_byte_number++;
-             rom_byte_mask = 1;
+          // Incrementally update CRC
+          crc8 = _crc_ibutton_update (crc8, rom_id[rom_byte_number]);
+          rom_byte_number++;
+          rom_byte_mask = 1;
+          // FIXME: WORK POINT: weirdly, this only fails the first time
+          // through this function.  Perhaps some global is not getting reset
+          // correctly? No, its just because the rom id byte 7 is still set to
+          // zero at this point on the first pass (its apparently not filled
+          // in yet at this point (we only just increated rob_byte_number
+          // afterall)
+          if ( rom_byte_number == 7 ) {
+            PFP ("\n\nrom byte value: %i\n", (int) rom_id[rom_byte_number]);
+            if ( crc8 != rom_id[rom_byte_number] ) {
+              PFP ("\ncrc failed\n\n");
+            }
+            else {
+              PFP ("\n\ncrc passed\n\n");
+            }
+          }
         }
       }
     }
@@ -324,7 +370,7 @@ search (uint8_t alarmed_slaves_only)
 }
 
 // Find the 'first' device on the one-wire bus.  If alarmed_slaves_only is
-// true, only slaves ith an active alarm condition are found.
+// true, only slaves with an active alarm condition are found.
 // Return TRUE  : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 static uint8_t
@@ -341,7 +387,7 @@ first (uint8_t alarmed_slaves_only)
 
 // Find the 'next' device on the one-wire bus.  If alarmed_slaves_only is
 // true, only slaves ith an active alarm condition are found.
-// Return TRUE : device found, ROM number in rom_id buffer
+// Return TRUE  : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 //
 static uint8_t
@@ -351,7 +397,7 @@ next (uint8_t alarmed_slaves_only)
 }
 
 // Verify that the device with the ROM number in rom_id buffer is present.
-// Return TRUE : device verified present
+// Return TRUE  : device verified present
 //        FALSE : device not present
 //
 static uint8_t

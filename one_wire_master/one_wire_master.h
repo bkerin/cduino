@@ -25,30 +25,99 @@
          the DIO_PIN_* tuple macros before this header is included)
 #endif
 
-// Return type for at least some of the functions in this interface which
-// report errors.
+// These are the result codes returned by many routines in this
+// interface.  X Macros are used here to ensure we stay in sync with the
+// owm_result_description() function.  The meanings of these values are
+// as follows:
+//
+/*
+  OWM_ERROR_NONE
+    -- No error
+
+  OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND
+    --
+  OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND
+  OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE
+  OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE
+  */
+
+// These are the result codes returned by many routines in this
+// interface.  X macros are used here to ensure we stay in sync with the
+// owm_result_description() function.
+// FIXME: I think its woth making these OWM_X macros, if for no other reason
+// than to avoid having them link to every other X macro in any other module
+// in the HTML versions of this header
+#define OWM_RESULT_CODES                                                      \
+                                                                              \
+  /* No error */                                                              \
+  X (OWM_ERROR_NONE)                                                          \
+                                                                              \
+  /* Caller supplied an invalid ROM command argument (one that doesn't     */ \
+  /* satisfy OWM_IS_TRANSACTION_INITIATING_ROM_COMMAND()).  This is a      */ \
+  /* caller bug.                                                           */ \
+  X (OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND)                    \
+                                                                              \
+  /* Caller supplied an invalid function command argument (one that does   */ \
+  /* satisfy OWM_IS_ROM_COMMAND()).  This is a caller bug.                 */ \
+  X (OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND)                   \
+                                                                              \
+  /* The master (that's us) sent a reset pulse, but didn't receive any     */ \
+  /* slave response pulse.  This can happen when there's no slave present, */ \
+  /* or perhaps if the slaves are all busy, if they are the sort that      */ \
+  /* don't always honor reset pulses.                                      */ \
+  X (OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE)                                    \
+                                                                              \
+  /* The master (that's us) received a ROM ID with an inconsistent CRC     */ \
+  /* value.                                                                */ \
+  X (OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE)
+
+// Return type representing the result of an operation.
+typedef enum {
+#define X(result_code) result_code,
+  OWM_RESULT_CODES
+#undef X
+} owm_error_t;
+
+/*
 typedef enum {
 
   OWM_ERROR_NONE = 0,
 
   // Caller supplied an invalid ROM command argument (one that doesn't satisfy
-  // OWM_IS_TRANSACTION_INITIATING_ROM_COMMAND()).  This is a client bug.
+  // OWM_IS_TRANSACTION_INITIATING_ROM_COMMAND()).  This is a caller bug.
   OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND,
 
   // Caller supplied an invalid function command argument (one that *does*
-  // satisfy OWM_IS_ROM_COMMAND()).  This is a client bug.
+  // satisfy OWM_IS_ROM_COMMAND()).  This is a caller bug.
   OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND,
 
   // The master (that's us) sent a reset pulse, but didn't receive any
-  // slave responses pulse.  This can happen when there's no slave present,
+  // slave response pulse.  This can happen when there's no slave present,
   // or perhaps if the slaves are all busy, if they are the sort that don't
   // always honor reset pulses.
   OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE,
 
   // The master (that's us) received a ROM ID with an inconsistent CRC value.
-  OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE
+  OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE,
 
 } owm_error_t;
+*/
+
+
+#ifdef OWM_BUILD_RESULT_DESCRIPTION_FUNCTION
+
+// FIXME: change this to a much less conservative value
+#  define OWM_RESULT_DESCRIPTION_MAX_LENGTH 142
+
+// Put a textual description of result in buf.  The buf argument must point
+// to a memory space large enough to hold OWM_RESULT_DESCRIPTION_MAX_LENGTH +
+// 1 bytes.  Using this function will make your program quite a bit bigger.
+// As a convenience, buf is returned.
+char *
+owm_result_description (owm_error_t result, char *buf);
+
+#endif
+
 
 // Intialize the one wire master interface.  All this does is set up the
 // chosen DIO pin.  It starts out set as an input without the internal pull-up
@@ -67,7 +136,7 @@ owm_init (void);
 //   rom_cmd          May be OWC_READ_ROM_COMMAND (if there's only one slave on
 //                    the bus), OWC_MATCH_ROM_COMMAND, or OWC_SKIP_ROM_COMMAND
 //
-//   rom_id           For OWC_READ_ROM_COMMAND, this caontain the read ROM ID
+//   rom_id           For OWC_READ_ROM_COMMAND, this cantains the read ROM ID
 //                    on return.  For OWC_MATCH_ROM_COMMAND, it must contain
 //                    the ROM ID being addressed.  For OWC_SKIP_ROM_COMMAND it
 //                    is unused (and may be NULL)
@@ -85,12 +154,12 @@ owm_init (void);
 //   mismatch on the read ROM ID.
 //
 // To actually complete the transaction, some slave- and transaction-specific
-// back-and-forth using the lower level function in this interface will
+// back-and-forth using the lower level functions in this interface will
 // likely be required.  Note that this routine cannot by itself ensure that
 // the slave has received any OWC_MATCH_ROM_COMMAND or OWC_SKIP_ROM_COMMAND
 // command correctly, since those don't elicit any response from the slave
 // (though they do change its state).  The function_command likely does
-// elicit a responst, but this routine doesn't read it, so correct receipt
+// elicit a response, but this routine doesn't read it, so correct receipt
 // of that command also cannot be verified by this routine.
 owm_error_t
 owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd);
@@ -135,11 +204,19 @@ owm_read_bit (void);
 
 // This function requires that exactly zero or one slaves be present on the
 // bus.  If we discover a slave, its ID is written into id_buf (which must
-// be a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE is returned.
-// If no slave responds to our presence pulse, FALSE is returned.  If there
-// are two or more slaves present, the results of this function are undefined
-// (later calls to this interface might behave strangely).
-uint8_t
+// be a pointer to OWM_ID_BYTE_COUNT bytes of space) and OWM_ERROR_NONE is
+// returned.  If no slave responds to our presence pulse, FALSE is returned.
+// If there are two or more slaves present, the results of this function
+// are undefined (later calls to this interface might behave strangely).
+//
+// Possible errors:
+//
+//   * OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE
+//   * OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE
+//
+// The contents of id_buf are unspecified if an error is returned.
+//
+owm_error_t
 owm_read_id (uint8_t *id_buf);
 
 // Find the "first" slave on the one-wire bus (in the sense of the discovery
