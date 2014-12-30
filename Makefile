@@ -132,13 +132,13 @@ check_api_test_driver_interface_implementation_crossrefs: \
           done \
         )
 
-check_lesson_doc_completeness: lessons.html \
-                               xlinked_source_html \
+check_lesson_doc_completeness: lessons.html            \
+                               xlinked_source_html     \
                                build_all_test_programs
-	for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do \
-          echo $$SF | perl -n -e 'm/\/lesson.*/ or exit 1' || continue; \
-          grep -q -P "\Q\"$$SF\"\E" $< || ERROR="no link to $$SF in $<"; \
-        done; \
+	for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do             \
+          echo $$SF | perl -n -e 'm/\/lesson.*/ or exit 1' || continue;     \
+          grep -q -P "\Q\"$$SF\"\E" $< || ERROR="no link to $$SF in $<";    \
+        done;                                                               \
         if [ -n "$$ERROR" ]; then echo $$ERROR 1>&2 && false; else true; fi
 
 # FIXME: would be nice to uniqueify function names between lessons and API so
@@ -156,30 +156,62 @@ xlinked_source_html:
 	# use the -maxdepth 2 option to find.
 	find . -maxdepth 2 -name "*.[ch]" -exec cp \{\} $@ \;
 	./nuke_non_highlightable_files.perl $@;
-	cd $@ ; source-highlight --gen-references=inline *.[ch]
-	# This gets a bit wild.  We use ||= to take advantage of non-lexical
-	# vars which aren't reinitialized every time through implicit -p loop,
-	# to save prohibitively expensive per-line recomputation of known file
-	# name regular expression.  The link-for-filename substitution has some
-	# negative look-behind and look-ahead assertions which prevent partial
-	# file names from matching and trim off some file name text that
-	# source-highlight itself produces.
-	cd $@ ; \
-          perl -p -i \
+	# It doesn't quite work to let source-highlight run ctags for us, since
+	# we want to remove a few spurious tags that get generated due to
+	# X macros and such.  We also force the language selection for .h files
+	# to C (instead of the default C++), and add a C language regex that
+	# creates enumerated constant tags for capitalized X macro arguments
+	# (since we use X macros for enumerated types, and comment the
+	# enumerated constants at this point).
+	cd $@ &&                                                         \
+          ctags                                                          \
+            --excmd=n --tag-relative=yes                                 \
+            --langmap=C:+.h                                              \
+            --regex-C='/_?X[[:space:]]*\(([A-Z0-9_]+)\)/\1/enumerator/e' \
+            *.[ch]
+	# Now we filter out some tag lines that ctags produces under the
+	# influence of X macro drugs :)  Note that we hard-wire an expression
+	# that matches what we use for our X macro list define.
+	cd $@ &&                                                          \
+	  perl                                                            \
+            -n -i                                                         \
+            -e 'm/^(?:\w+_)?X\s+.*\s+.*\s+d\s+.*$$/ or '                  \
+            -e 'm/^\w+_(?:RESULT|ERROR)_CODES\s+.*\s+e\s+enum:.*$$/ or '  \
+            -e 'print' \
+             tags
+	# The --ctags and --ctags-file options used here together tell
+	# source-highlight not to run ctags itself, but instead use the already
+	# generated tags file.
+	cd $@ &&                                        \
+          source-highlight --gen-references=inline      \
+                           --ctags='' --ctags-file=tags \
+                           *.[ch]
+
+	# Change mentions of source files in the source-highlight-generated
+	# HTML into hyperlinks.  This gets a bit wild.  We use ||= to take
+	# advantage of non-lexical vars which aren't reinitialized every time
+	# through implicit -p loop, to save prohibitively expensive per-line
+	# recomputation of known file name regular expression.  The
+	# link-for-filename substitution has some negative look-behind and
+	# look-ahead assertions which prevent partial file names from matching
+	# and trim off some file name text that source-highlight itself
+	# produces.
+	cd $@ &&                                                    \
+          perl -p -i                                                \
             -e '$$frgx ||= join("|", split("\n", `ls -1 *.[ch]`));' \
-            -e '$$fre_dot_escape_done ||= ($$frgx =~ s/\./\\./g);' \
-            -e 's/((?<!\w)(?:$$frgx)(?!\.html|\:\d+))' \
-            -e ' /<a href="$$1.html">$$1<\/a>/gx;' \
+            -e '$$fre_dot_escape_done ||= ($$frgx =~ s/\./\\./g);'  \
+            -e 's/((?<!\w)(?:$$frgx)(?!\.html|\:\d+))'              \
+            -e ' /<a href="$$1.html">$$1<\/a>/gx;'                  \
             *.html
 	# Add all .pdf files to the mix and link them (for datasheets, etc).
 	cd $@ && find .. -maxdepth 2 -name "*.pdf" -exec ln -s \{\} \;
 	# This works almost like the perl snippet above in this recipe, see the
 	# comments for that.
-	cd $@ ; \
+	cd $@ && \
           perl -p -i \
-            -e '$$frgx ||= join("|", split("\n", `ls -1 *.pdf`));' \
-            -e '$$fre_dot_escape_done ||= ($$frgx =~ s/\./\\./g);' \
-            -e 's/($$frgx)(,\s+page\s+(\d+))?' \
+            -e '$$frgx ||= join("|", split("\n", `ls -1 *.pdf`));'   \
+            -e '$$fre_dot_escape_done ||= ($$frgx =~ s/\./\\./g);'   \
+            -e 's/($$frgx)(,\s+page\s+(\d+))?'                       \
             -e ' /"<a href=\"$$1".($$2?"":"")."\">$$1<\/a>$$2"/egx;' \
             *.html
 	# This version supports page number references, which would be great if
@@ -190,11 +222,11 @@ xlinked_source_html:
 	# is labeled page one).  Note that this takes an extra eval pass on
 	# the substitution part (e regex modifier).  FIXME: enable this
 	# instead of the above if PDFs/browsers ever stop sucking.
-	#cd $@ ; \
+	#cd $@ && \
         #  perl -p -i \
-        #    -e '$$frgx ||= join("|", split("\n", `ls -1 *.pdf`));' \
-        #    -e '$$fre_dot_escape_done ||= ($$frgx =~ s/\./\\./g);' \
-        #    -e 's/($$frgx)(,\s+page\s+(\d+))?' \
+        #    -e '$$frgx ||= join("|", split("\n", `ls -1 *.pdf`));'            \
+        #    -e '$$fre_dot_escape_done ||= ($$frgx =~ s/\./\\./g);'            \
+        #    -e 's/($$frgx)(,\s+page\s+(\d+))?'                                \
         #    -e ' /"<a href=\"$$1".($$2?"#page=$$3":"")."\">$$1$$2<\/a>"/egx;' \
         #    *.html
 	rm $@/*.[ch]
