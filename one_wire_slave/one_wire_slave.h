@@ -94,6 +94,8 @@ ows_init (uint8_t use_eeprom_id);
 // byte after issuing a reset pulse will cause this routine to hang until
 // they get around to doing that (or issuing another reset pulse).  FIXME:
 // do we correctly drop out until a reset pulse when we fail a MATCH_ROM?
+// FIXME: should this actually be called ows_wait_for_transaction_start()
+// or so for symmetry with one_wire_master?
 ows_error_t
 ows_wait_for_function_command (uint8_t *command_ptr);
 
@@ -120,8 +122,6 @@ ows_write_bit (uint8_t data_bit);
 ows_error_t
 ows_read_bit (uint8_t *data_bit_ptr);
 
-
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Device Presense Confirmation/Discovery
@@ -131,15 +131,12 @@ ows_read_bit (uint8_t *data_bit_ptr);
 // family, or slaves with an active alarm condition.
 //
 
-// One wire ID size in bytes
-// FIXME: might be nice to use _SIZE for byte sizes, everywhere.  What do
+// FIXME: might be nice to use _SIZE_BYTES for byte sizes, everywhere.  What do
 // we do elsewhere?
-// FIXME: finnish factoring to one_wire_common.h also
-#define OWM_ID_BYTE_COUNT 8
 
 // This function requires that exactly one slave be present on the bus.
 // If we discover a slave, its ID is written into id_buf (which pust be
-// a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE is returned.
+// a pointer to OWC_ID_SIZE_BYTES bytes of space) and TRUE is returned.
 // If there is not exactly one slave present, the results of this function
 // are undefined (later calls to this interface might behave strangely).
 
@@ -169,7 +166,7 @@ extern uint8_t ows_alarm;
   (ows_alarm ? ows_answer_search () : OWS_ERROR_NOT_ALARMED)
 
 // Respond to a (just received) OWC_MATCH_ROM_COMMAND by reading up to
-// OWM_ID_BYTE_COUNT bytes, one bit at a time, and matching the bits to our
+// OWC_ID_SIZE_BYTES bytes, one bit at a time, and matching the bits to our
 // ROM ID.  Return OWS_ERROR_ROM_ID_MISMATCH as soon as we see a non-matching
 // bit, or OWS_ERROR_NONE if all bits match (i.e. the master is talking
 // to us).  Note that it isn't really an error if the ROM doesn't match,

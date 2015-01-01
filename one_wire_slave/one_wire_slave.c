@@ -45,46 +45,20 @@
 #  define SMT()
 #endif
 
-///////////////////////////////////////////////////////////////////////////////
-//
-// Line Drive, Sample, and Delay Routines
-//
-// These macros correspond to the uses of the inp and outp and tickDelay
-// functions of Maxim application note AN126.  We use macros to avoid
-// function call time overhead, which can be significant: Maxim application
-// note AN148 states that the most common programming error in 1-wire
-// programmin involves late sampling, which given that some samples occur
-// after proscribed waits of only 9 us requires some care, especially at
-// slower processor frequencies.
-
-// Release (tri-state) the one wire pin.  Note that this does
-// not enable the internal pullup.  See the comments near omw_init()
-// in one_wire_master.h.
-#define RELEASE_LINE()    \
-  DIO_INIT (              \
-      OWS_PIN,            \
-      DIO_INPUT,          \
-      DIO_DISABLE_PULLUP, \
-      DIO_DONT_CARE )
-
-// Drive the line of the one wire master pin low.
-#define DRIVE_LINE_LOW() \
-  DIO_INIT (             \
-      OWS_PIN,           \
-      DIO_OUTPUT,        \
-      DIO_DONT_CARE,     \
-      LOW )
-
-#define SAMPLE_LINE() DIO_READ (OWS_PIN)
-
-// We support only standard speed, not overdrive speed, so we make our tick
-// 1 us.
-#define TICK_TIME_IN_US 1.0
+// FIXME: WORK POINT: check that doc does ok with these being defined here
+// and in one_wire_master.h, should always still favor file-local definitions
+// I think, and looking for a second one isn't going to happen but I think
+// it doesn't die on that at least...
+// Aliases for some operations from one_wire_commoh.h (for readability).
+#define RELEASE_LINE()    OWC_RELEASE_LINE (OWS_PIN)
+#define DRIVE_LINE_LOW()  OWC_DRIVE_LINE_LOW (OWS_PIN)
+#define SAMPLE_LINE()     OWC_SAMPLE_LINE (OWS_PIN)
+#define TICK_DELAY(ticks) OWC_TICK_DELAY (ticks)
 
 // Timer1 ticks per microsecond
 #define T1TPUS 2
 
-static uint8_t rom_id[OWM_ID_BYTE_COUNT];
+static uint8_t rom_id[OWC_ID_SIZE_BYTES];
 
 static void
 set_rom_id (uint8_t use_eeprom_id)
@@ -93,7 +67,7 @@ set_rom_id (uint8_t use_eeprom_id)
   // TRUE, or the default part ID otherwise.  In either case the matching
   // CRC is added.
 
-  uint8_t const ncb = OWM_ID_BYTE_COUNT - 1;   // Non-CRC Bytes in the ROM ID
+  uint8_t const ncb = OWC_ID_SIZE_BYTES - 1;   // Non-CRC Bytes in the ROM ID
   uint8_t const pib = ncb - 1;   // Part ID Bytes in the ROM ID
 
   if ( use_eeprom_id ) {
@@ -349,7 +323,7 @@ uint8_t bhist_ii = 0;
 ows_error_t
 ows_read_and_match_rom_id (void)
 {
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
     for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; ii++ ) {
       uint8_t bit_value;
       CPE (ows_read_bit (&bit_value));
@@ -581,7 +555,7 @@ ows_write_byte (uint8_t data_byte)
 ows_error_t
 ows_write_rom_id (void)
 {
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
     CPE (ows_write_byte (rom_id[ii]));
   }
 
@@ -600,7 +574,7 @@ ows_write_rom_id (void)
 ows_error_t
 ows_answer_search (void)
 {
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
     uint8_t byte_val = rom_id[ii];
     for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; jj++ ) {
       uint8_t bit_val = byte_val & (B00000001 << jj) ? 1 : 0;
@@ -622,7 +596,7 @@ ows_answer_search (void)
   // (I think though because search worked.  Faster?  Smaller?  size-speed
   // tradeoff?
   /*
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT * BITS_PER_BYTE ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES * BITS_PER_BYTE ; ii++ ) {
     uint8_t bv = ID_BIT (ii);
     CPE (ows_write_bit (bv));
     CPE (ows_write_bit (! bv));
