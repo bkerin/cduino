@@ -26,22 +26,6 @@
 #endif
 
 // These are the result codes returned by many routines in this
-// interface.  X Macros are used here to ensure we stay in sync with the
-// owm_result_description() function.  The meanings of these values are
-// as follows:
-//
-/*
-  OWM_ERROR_NONE
-    -- No error
-
-  OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND
-    --
-  OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND
-  OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE
-  OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE
-  */
-
-// These are the result codes returned by many routines in this
 // interface.  X macros are used here to ensure we stay in sync with the
 // owm_result_description() function.
 // FIXME: I think its woth making these OWM_X macros, if for no other reason
@@ -78,32 +62,6 @@ typedef enum {
 #undef X
 } owm_error_t;
 
-/*
-typedef enum {
-
-  OWM_ERROR_NONE = 0,
-
-  // Caller supplied an invalid ROM command argument (one that doesn't satisfy
-  // OWM_IS_TRANSACTION_INITIATING_ROM_COMMAND()).  This is a caller bug.
-  OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND,
-
-  // Caller supplied an invalid function command argument (one that *does*
-  // satisfy OWM_IS_ROM_COMMAND()).  This is a caller bug.
-  OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND,
-
-  // The master (that's us) sent a reset pulse, but didn't receive any
-  // slave response pulse.  This can happen when there's no slave present,
-  // or perhaps if the slaves are all busy, if they are the sort that don't
-  // always honor reset pulses.
-  OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE,
-
-  // The master (that's us) received a ROM ID with an inconsistent CRC value.
-  OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE,
-
-} owm_error_t;
-*/
-
-
 #ifdef OWM_BUILD_RESULT_DESCRIPTION_FUNCTION
 
 // FIXME: change this to a much less conservative value
@@ -117,7 +75,6 @@ char *
 owm_result_description (owm_error_t result, char *buf);
 
 #endif
-
 
 // Intialize the one wire master interface.  All this does is set up the
 // chosen DIO pin.  It starts out set as an input without the internal pull-up
@@ -199,12 +156,9 @@ owm_read_bit (void);
 // particular families or with active alarm conditions aren't supported yet.
 //
 
-// One wire ID size in bytes
-#define OWM_ID_BYTE_COUNT 8
-
 // This function requires that exactly zero or one slaves be present on the
 // bus.  If we discover a slave, its ID is written into id_buf (which must
-// be a pointer to OWM_ID_BYTE_COUNT bytes of space) and OWM_ERROR_NONE is
+// be a pointer to OWC_ID_SIZE_BYTES bytes of space) and OWM_ERROR_NONE is
 // returned.  If no slave responds to our presence pulse, FALSE is returned.
 // If there are two or more slaves present, the results of this function
 // are undefined (later calls to this interface might behave strangely).
@@ -222,7 +176,7 @@ owm_read_id (uint8_t *id_buf);
 // Find the "first" slave on the one-wire bus (in the sense of the discovery
 // order of the one-wire search algorithm described in Maxim application
 // note AN187).  If a slave is discovered, its ID is written into id_buf
-// (which mucst be a pointer to OWM_ID_BYTE_COUNT bytes of space) and TRUE
+// (which mucst be a pointer to OWC_ID_SIZE_BYTES bytes of space) and TRUE
 // is returned.  If no slave is discovered, FALSE is returned.  Note that
 // this resets any search which is already in progress.
 uint8_t
@@ -233,12 +187,12 @@ owm_first (uint8_t *id_buf);
 // the discovery order of the one-wire search algorithm described in Maxim
 // application note AN187).  This continues a search begun by a previous
 // call to owm_first().  If another slave is found, its ID is written into
-// id_buf (which must be a pointer to OWM_ID_BYTE_COUNT bytes of space and
+// id_buf (which must be a pointer to OWC_ID_SIZE_BYTES bytes of space and
 // TRUE is returned.  If no additional slave is found, FALSE is returned.
 uint8_t
 owm_next (uint8_t *id_buf);
 
-// Return true iff device with ID equal to the value in the OWM_ID_BYTE_COUNT
+// Return true iff device with ID equal to the value in the OWC_ID_SIZE_BYTES
 // bytes pointed to by id_buf is present on the bus, or FALSE otherwise.
 // Note that unlike owm_read_id(), this function is safe to use when there
 // are multiple devices on the bus.  When this function returns, the global

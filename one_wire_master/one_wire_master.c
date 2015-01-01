@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <string.h>
 #include <util/crc16.h>
-#include <util/delay.h>
 
 #include "dio.h"
 #include "one_wire_common.h"
@@ -30,7 +29,7 @@ owm_result_description (owm_error_t result, char *buf)
 #  undef X
 
     default:
-      strcpy_P (buf, PSTR ("unhandled or unknown owm_error_t value"));
+      strcpy_P (buf, PSTR ("unhandled or invalid owm_error_t value"));
       break;
   }
 
@@ -39,45 +38,11 @@ owm_result_description (owm_error_t result, char *buf)
 
 #endif
 
-///////////////////////////////////////////////////////////////////////////////
-//
-// Line Drive, Sample, and Delay Routines
-//
-// These macros correspond to the uses of the inp and outp and
-// tickDelay functions of Maxim_Application_Note_AN126.pdf.  We use
-// macros to avoid function call time overhead, which can be significant:
-// Maxim_Application_Note_AN148.pdf states that the most common programming
-// error in 1-wire programmin involves late sampling, which given that some
-// samples occur after proscribed waits of only 9 us requires some care,
-// especially at slower processor frequencies.
-
-// Release (tri-state) the one wire pin.  Note that this does not enable the
-// internal pullup.  See the commends near owm_init() in one_wire_master.h.
-#define RELEASE_LINE()    \
-  DIO_INIT (              \
-      OWM_PIN,            \
-      DIO_INPUT,          \
-      DIO_DISABLE_PULLUP, \
-      DIO_DONT_CARE )
-
-// Drive the line of the one wire pin low.
-#define DRIVE_LINE_LOW() \
-  DIO_INIT (             \
-      OWM_PIN,           \
-      DIO_OUTPUT,        \
-      DIO_DONT_CARE,     \
-      LOW )
-
-#define SAMPLE_LINE() DIO_READ (OWM_PIN)
-
-// We support only standard speed, not overdrive speed, so we make our tick
-// 1 us.
-#define TICK_TIME_IN_US 1.0
-
-// WARNING: the argument to this macro must be a valid constant double
-// or constand integer expression that the compiler knows is constant at
-// compile time.  Pause for exactly ticks ticks.
-#define TICK_DELAY(ticks) _delay_us (TICK_TIME_IN_US * ticks)
+// Aliases for some operations from one_wire_commoh.h (for readability).
+#define RELEASE_LINE()    OWC_RELEASE_LINE (OWM_PIN)
+#define DRIVE_LINE_LOW()  OWC_DRIVE_LINE_LOW (OWM_PIN)
+#define SAMPLE_LINE()     OWC_SAMPLE_LINE (OWM_PIN)
+#define TICK_DELAY(ticks) OWC_TICK_DELAY (ticks)
 
 void
 owm_init (void)
@@ -106,9 +71,9 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd)
     case OWC_READ_ROM_COMMAND:
       {
         uint8_t crc = 0;
-        for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+        for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
           rom_id[ii] = owm_read_byte ();
-          uint8_t const ncb = OWM_ID_BYTE_COUNT - 1;   // Non-CRC Bytes (in ID)
+          uint8_t const ncb = OWC_ID_SIZE_BYTES - 1;   // Non-CRC Bytes (in ID)
           if ( LIKELY (ii < ncb) ) {
             crc = _crc_ibutton_update (crc, rom_id[ii]);
           }
@@ -122,7 +87,7 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd)
       }
 
     case OWC_MATCH_ROM_COMMAND:
-      for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+      for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
         owm_write_byte (rom_id[ii]);
       }
       break;
@@ -203,17 +168,17 @@ owm_read_id (uint8_t *id_buf)
 
   uint8_t const read_rom_command = OWC_READ_ROM_COMMAND;
   owm_write_byte (read_rom_command);
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
     id_buf[ii] = owm_read_byte ();
   }
 
-  // FIXME: Here we must detect and report CRC errors
+  // FIXME: Here we must detect and report CRC errors.  Or somewhere
 
   return OWM_ERROR_NONE;
 }
 
 // Global search state
-static uint8_t rom_id[OWM_ID_BYTE_COUNT];   // Current ROM device ID
+static uint8_t rom_id[OWC_ID_SIZE_BYTES];   // Current ROM device ID
 static uint8_t last_discrep;                // Bit position of last discrepancy
 static uint8_t last_family_discrep;         // FIXXME: currently unused
 static uint8_t last_device_flag;            // True iff we got last slave
@@ -344,7 +309,7 @@ search (uint8_t alarmed_slaves_only)
         }
       }
     }
-    while ( rom_byte_number < OWM_ID_BYTE_COUNT );
+    while ( rom_byte_number < OWC_ID_SIZE_BYTES );
 
     // If the search was successful...
     if ( ! ((id_bit_number <= ID_BIT_COUNT) || (crc8 != 0)) ) {
@@ -404,11 +369,11 @@ static uint8_t
 verify (void)
 {
   uint8_t result;
-  unsigned char rom_backup[OWM_ID_BYTE_COUNT];
+  unsigned char rom_backup[OWC_ID_SIZE_BYTES];
   uint8_t ld_backup, ldf_backup, lfd_backup;
 
   // Keep a backup copy of the current state
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
      rom_backup[ii] = rom_id[ii];
   }
   ld_backup = last_discrep;
@@ -422,7 +387,7 @@ verify (void)
   if ( search (FALSE) ) {
      // Check if same device found
      result = TRUE;
-     for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++)
+     for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++)
      {
         if ( rom_backup[ii] != rom_id[ii] )
         {
@@ -436,7 +401,7 @@ verify (void)
   }
 
   // Restore the search state
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
      rom_id[ii] = rom_backup[ii];
   }
   last_discrep = ld_backup;
@@ -452,7 +417,7 @@ owm_first (uint8_t *id_buf)
   uint8_t result = first (FALSE);
 
   if ( result ) {
-    memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
+    memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
   return result;
@@ -464,7 +429,7 @@ owm_next (uint8_t *id_buf)
   uint8_t result = next (FALSE);
 
   if ( result ) {
-    memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
+    memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
   return result;
@@ -473,7 +438,7 @@ owm_next (uint8_t *id_buf)
 uint8_t
 owm_verify (uint8_t *id_buf)
 {
-  memcpy (rom_id, id_buf, OWM_ID_BYTE_COUNT);
+  memcpy (rom_id, id_buf, OWC_ID_SIZE_BYTES);
   uint8_t result = verify ();
 
   return result;
@@ -485,7 +450,7 @@ owm_first_alarmed (uint8_t *id_buf)
   uint8_t result = first (TRUE);
 
   if ( result ) {
-    memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
+    memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
   return result;
@@ -496,7 +461,7 @@ owm_next_alarmed (uint8_t *id_buf)
 {
   uint8_t result = next (TRUE);
   if ( result ) {
-    memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
+    memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
   return result;

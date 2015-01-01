@@ -1,8 +1,8 @@
-// This header describes one-wire characteristics that aren't specific
-// to any particular slave device, and also some constants used in to
-// implement extra features that this library provides.  These values are
-// (necessarily) identical in the one_wire_master and one_wire_slave modules,
-// so they get their own header.
+// This header describes fundamental characteristics and operations of
+// the one-wire protocol.  These values are (necessarily) identical in the
+// one_wire_master and one_wire_slave modules, so they get their own header.
+
+#include <util/delay.h>
 
 #ifndef ONE_WIRE_COMMON_H
 #define ONE_WIRE_COMMON_H
@@ -20,16 +20,46 @@
 #define OWC_TICK_DELAY_I  70
 #define OWC_TICK_DELAY_J 410
 
-#define OWC_ID_SIZE_BYTES 1
 
-// FIXME: either figure out which number might be good to use for this,
-// or make it configurable or something, so we're not intruding into the
-// slave command space?  Then again, that only matters when the entire bus
-// is being addressed (SKIP_ROM).
-// This command is used to implement an extra feature provided by
-// the one_wire_master and one_wire_slave interfaces in this library:
-// sleep-on-request.  See the sleep functions in those interfaces for details.
-#define OWC_SLEEP_COMMAND 0x77
+///////////////////////////////////////////////////////////////////////////////
+//
+// Line Drive, Sample, and Delay Routines
+//
+// These macros correspond to the uses of the inp and outp and
+// tickDelay functions of Maxim_Application_Note_AN126.pdf.  We use
+// macros to avoid function call time overhead, which can be significant:
+// Maxim_Application_Note_AN148.pdf states that the most common programming
+// error in 1-wire programmin involves late sampling, which given that some
+// samples occur after proscribed waits of only 9 us requires some care,
+// especially at slower processor frequencies.
+
+// Release (tri-state) pin.  Note that this does not enable the internal
+// pullup.  See the commends near owm_init() in one_wire_master.h.
+#define OWC_RELEASE_LINE(pin) \
+  DIO_INIT (pin, DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE)
+
+// Drive pin low.
+#define OWC_DRIVE_LINE_LOW(pin) \
+  DIO_INIT (pin, DIO_OUTPUT, DIO_DONT_CARE, LOW)
+
+#define OWC_SAMPLE_LINE(pin) DIO_READ (pin)
+
+// We support only standard speed, not overdrive speed, so we make our tick
+// 1 us.
+#define OWC_TICK_TIME_IN_US 1.0
+
+// WARNING: the argument to this macro must be a valid constant double
+// or constand integer expression that the compiler knows is constant at
+// compile time.  Pause for exactly ticks ticks.
+#define OWC_TICK_DELAY(ticks) _delay_us (OWC_TICK_TIME_IN_US * ticks)
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+// The ROM ID present in all slave devices consists of a one byte family code
+// (shared by all parts of a given type), a six byte ID unique to each part,
+// and an 8 bit CRC computer from the other seven bytes.
+#define OWC_ID_SIZE_BYTES 8
 
 // These are the standard ROM ID search and addressing commands common to
 // all one-wire devices, see the DS18B20 datasheet "ROM COMMANDS" section.
@@ -55,6 +85,5 @@
   ( command ==  OWC_READ_ROM_COMMAND || \
     command == OWC_MATCH_ROM_COMMAND || \
     command ==  OWC_SKIP_ROM_COMMAND    )
-
 
 #endif  // ONE_WIRE_COMMON_H

@@ -1,3 +1,6 @@
+// FIXME: this needs updating to match the newer version of one_wire-master.c,
+// I guess
+
 // This is a version of one_wire_master.c that has been armed with extra
 // code that can be used to determine the timing that one-wire slave
 // devices actually use.  It's actually only useful for figuring out how
@@ -254,7 +257,7 @@ owm_read_id (uint8_t *id_buf)
 
   uint8_t const read_rom_command = OWC_READ_ROM_COMMAND;
   owm_write_byte (read_rom_command);
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
     id_buf[ii] = owm_read_byte ();
   }
 
@@ -262,7 +265,7 @@ owm_read_id (uint8_t *id_buf)
 }
 
 // Global search state
-static uint8_t rom_id[OWM_ID_BYTE_COUNT];   // Current ROM device ID
+static uint8_t rom_id[OWC_ID_SIZE_BYTES];   // Current ROM device ID
 static uint8_t last_discrep;                // Bit position of last discrepancy
 static uint8_t last_family_discrep;
 static uint8_t last_device_flag;            // True iff we got last slave
@@ -365,7 +368,7 @@ search (void)
         }
       }
     }
-    while ( rom_byte_number < OWM_ID_BYTE_COUNT );
+    while ( rom_byte_number < OWC_ID_SIZE_BYTES );
 
     // If the search was successful...
     if ( ! ((id_bit_number <= ID_BIT_COUNT) || (crc8 != 0)) ) {
@@ -419,12 +422,12 @@ next (void)
 static uint8_t
 verify (void)
 {
-  unsigned char rom_backup[OWM_ID_BYTE_COUNT];
+  unsigned char rom_backup[OWC_ID_SIZE_BYTES];
   uint8_t result;
   uint8_t ld_backup, ldf_backup, lfd_backup;
 
   // Keep a backup copy of the current state
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
      rom_backup[ii] = rom_id[ii];
   }
   ld_backup = last_discrep;
@@ -438,7 +441,7 @@ verify (void)
   if ( search() ) {
      // Check if same device found
      result = TRUE;
-     for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++)
+     for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++)
      {
         if ( rom_backup[ii] != rom_id[ii] )
         {
@@ -452,7 +455,7 @@ verify (void)
   }
 
   // Restore the search state
-  for ( uint8_t ii = 0 ; ii < OWM_ID_BYTE_COUNT ; ii++ ) {
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
      rom_id[ii] = rom_backup[ii];
   }
   last_discrep = ld_backup;
@@ -468,7 +471,7 @@ owm_first (uint8_t *id_buf)
   uint8_t result = first ();
 
   if ( result ) {
-    memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
+    memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
   return result;
@@ -479,7 +482,7 @@ owm_next (uint8_t *id_buf)
 {
   uint8_t result = next ();
   if ( result ) {
-    memcpy (id_buf, rom_id, OWM_ID_BYTE_COUNT);
+    memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
   return result;
@@ -488,7 +491,7 @@ owm_next (uint8_t *id_buf)
 uint8_t
 owm_verify (uint8_t *id_buf)
 {
-  memcpy (rom_id, id_buf, OWM_ID_BYTE_COUNT);
+  memcpy (rom_id, id_buf, OWC_ID_SIZE_BYTES);
   uint8_t result = verify ();
   return result;
 }
