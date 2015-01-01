@@ -229,6 +229,9 @@ xlinked_source_html:
         #    -e 's/($$frgx)(,\s+page\s+(\d+))?'                                \
         #    -e ' /"<a href=\"$$1".($$2?"#page=$$3":"")."\">$$1$$2<\/a>"/egx;' \
         #    *.html
+        # FIXXME: would be sort of nice to move this entire target into this
+        # script (and change its name).
+	./disambiguate_crossrefs.perl
 	rm $@/*.[ch]
 	rm $@/tags
 
