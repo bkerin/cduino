@@ -79,26 +79,32 @@ term_io_getline (char *linebuf);
     }                                                 \
   } while ( 0 )
 
-// This macro is intended to make it easier to check the results of
-// functions that return status codes (with 0 meaning succes and other
-// values indicating various errors).  The string_fetcher is a function that
-// gets the string form of the enumerated value result, and string_buf is
-// supposed to point to storage for that string.  See the use case (of the
-// synonym PFP_ASSERT_SUCCESS()) in one_wire_master_test.c.
+// Like TERM_IO_PFP_ASSERT(), but it trips whenever it's reached.
+#define TERM_IO_PFP_ASSERT_NOT_REACHED()                               \
+  do {                                                                 \
+    PFP ("%s:%i: %s: Assertion failed: code should not be reached.\n", \
+        __FILE__, __LINE__, __func__ );                                \
+    assert (FALSE);                                                    \
+  } while ( 0 )
+
+// Assert that result is 0 This macro is intended to make it easier to check
+// the results of functions that return status codes where 0 means succes and
+// other values indicating errors or abnormal conditions.  The string_fetcher
+// is a function that gets the string form of the enumerated value result,
+// and string_buf is supposed to point to storage for that string.  See the
+// use case (of the synonym PFP_ASSERT_SUCCESS()) in one_wire_master_test.c.
+// This macro is guaranteed to evaluate it's result argument exactly once.
 #define TERM_IO_PFP_ASSERT_SUCCESS(result, string_fetcher, string_buf) \
   do {                                                                 \
     int XxX_result = result;                                           \
     if ( UNLIKELY (XxX_result) ) {                                     \
       PFP (                                                            \
-          "failure: %s:%i: %s: %s\n",                                  \
+          "%s:%i: %s: failure: %s\n",                                  \
           __FILE__, __LINE__, __func__,                                \
           string_fetcher (XxX_result, string_buf) );                   \
       assert (FALSE);                                                  \
     }                                                                  \
   } while ( 0 )
-
-// FIXME: WORK POINT: test out latest with XxX_ prefix, make not should be
-// function for that reason at least
 
 // The whole point of the above macros is that they take some typing out of
 // the edit-compile-debug cycle, so you may like to stick something like
@@ -106,18 +112,20 @@ term_io_getline (char *linebuf);
 // bottom of the Makefile for your module to make things even easier :)
 #ifdef TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 
-#  define PFP                TERM_IO_PFP
-#  define PTP                TERM_IO_PTP
-#  define PHP                TERM_IO_PHP
-#  define PFP_ASSERT         TERM_IO_PFP_ASSERT
-#  define PFP_ASSERT_SUCCESS TERM_IO_PFP_ASSERT_SUCCESS
+#  define PFP                    TERM_IO_PFP
+#  define PTP                    TERM_IO_PTP
+#  define PHP                    TERM_IO_PHP
+#  define PFP_ASSERT             TERM_IO_PFP_ASSERT
+#  define PFP_ASSERT_NOT_REACHED TERM_IO_PFP_ASSERT_NOT_REACHED
+#  define PFP_ASSERT_SUCCESS     TERM_IO_PFP_ASSERT_SUCCESS
 
 // Perhaps you even like to use lower case :)
-#  define pfp                TERM_IO_PFP
-#  define ptp                TERM_IO_PTP
-#  define php                TERM_IO_PHP
-#  define pfp_assert         TERM_IO_PFP_ASSERT
-#  define pfp_assert_success TERM_IO_PFP_ASSERT_SUCCESS
+#  define pfp                    TERM_IO_PFP
+#  define ptp                    TERM_IO_PTP
+#  define php                    TERM_IO_PHP
+#  define pfp_assert             TERM_IO_PFP_ASSERT
+#  define pfp_assert_not_reached TERM_IO_PFP_ASSERT_NOT_REACHED
+#  define pfp_assert_success     TERM_IO_PFP_ASSERT_SUCCESS
 
 #endif
 

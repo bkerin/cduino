@@ -27,13 +27,10 @@
 
 // These are the result codes returned by many routines in this
 // interface.  X macros are used here to ensure we stay in sync with the
-// owm_result_description() function.
-// FIXME: I think its woth making these OWM_X macros, if for no other reason
-// than to avoid having them link to every other X macro in any other module
-// in the HTML versions of this header
+// owm_result_as_string() function.
 #define OWM_RESULT_CODES                                                      \
                                                                               \
-  /* No error */                                                              \
+  /* No error.  Note that this code must be first.  */                        \
   X (OWM_ERROR_NONE)                                                          \
                                                                               \
   /* Caller supplied an invalid ROM command argument (one that doesn't     */ \
@@ -64,15 +61,14 @@ typedef enum {
 
 #ifdef OWM_BUILD_RESULT_DESCRIPTION_FUNCTION
 
-// FIXME: change this to a much less conservative value
-#  define OWM_RESULT_DESCRIPTION_MAX_LENGTH 142
+#  define OWM_RESULT_DESCRIPTION_MAX_LENGTH 81
 
-// Put a textual description of result in buf.  The buf argument must point
-// to a memory space large enough to hold OWM_RESULT_DESCRIPTION_MAX_LENGTH +
+// Put the string form of result in buf.  The buf argument must point to
+// a memory space large enough to hold OWM_RESULT_DESCRIPTION_MAX_LENGTH +
 // 1 bytes.  Using this function will make your program quite a bit bigger.
 // As a convenience, buf is returned.
 char *
-owm_result_description (owm_error_t result, char *buf);
+owm_result_as_string (owm_error_t result, char *buf);
 
 #endif
 

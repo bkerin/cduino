@@ -17,19 +17,20 @@
 // This should be renamed to owm_result_string or something since its just
 // the name as a string now.
 char *
-owm_result_description (owm_error_t result, char *buf)
+owm_result_as_string (owm_error_t result, char *buf)
 {
   switch ( result ) {
 
-#  define X(result_code)                   \
-    case result_code:                      \
-      strcpy_P (buf, PSTR (#result_code)); \
+#  define X(result_code)                                                      \
+    case result_code:                                                         \
+      PFP_ASSERT (strlen (#result_code) < OWM_RESULT_DESCRIPTION_MAX_LENGTH); \
+      strcpy_P (buf, PSTR (#result_code));                                    \
       break;
   OWM_RESULT_CODES
 #  undef X
 
     default:
-      strcpy_P (buf, PSTR ("unhandled or invalid owm_error_t value"));
+      PFP_ASSERT_NOT_REACHED ();
       break;
   }
 
