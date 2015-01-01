@@ -84,7 +84,7 @@ term_io_getline (char *linebuf);
 // values indicating various errors).  The string_fetcher is a function that
 // gets the string form of the enumerated value result, and string_buf is
 // supposed to point to storage for that string.  See the use case (of the
-// synonym PFP_ASSERT_SUCCESS()) in one_wire_master_test.c
+// synonym PFP_ASSERT_SUCCESS()) in one_wire_master_test.c.
 #define TERM_IO_PFP_ASSERT_SUCCESS(result, string_fetcher, string_buf) \
   do {                                                                 \
     int XxX_result = result;                                           \
