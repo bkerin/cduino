@@ -77,6 +77,18 @@ sub disambiguated_chunk ($$) # {{{1
             }
         }
 
+        elsif ( $sfn =~ m/one_wire_slave\.c\.html$/ ) {
+            if ( $rt eq 'sd_card_private.h' ) {
+                ;
+            }
+            elsif ( $rn eq 'rom_id' and $rt eq 'one_wire_master.c' ) {
+                ;
+            }
+            else {
+                push(@nr, $_);
+            }
+        }
+
         else {
             push(@nr, $_);
         }
