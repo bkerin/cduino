@@ -208,3 +208,7 @@ foreach ( readdir(XSD) ) {
     m/.*\.[ch]\.html/ or next;
     disambiguate_crossrefs_in_file("$xsd/$_");
 }
+
+closedir(XSD) or die;
+
+exit 0;
