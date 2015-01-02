@@ -1,4 +1,4 @@
-// Implementation of the interface described in one_wire_master.h.
+// Implementation of the interface described in one_wire_slave.h.
 
 #include <assert.h>
 #include <avr/eeprom.h>

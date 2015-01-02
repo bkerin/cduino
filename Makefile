@@ -104,9 +104,11 @@ git_push: build_all_test_programs clean_all_modules
 # to be linked to from somewhere in the top level API document.  NOTE: FNP
 # below is the "File No Path".  NOTE: the check for the text of the link
 # depends on finding that text on a line with nothing else but white space.
-check_api_doc_completeness: apis_and_sources.html \
-                            xlinked_source_html \
-                            build_all_test_programs
+check_api_doc_completeness: \
+  apis_and_sources.html \
+  xlinked_source_html \
+  check_api_test_driver_interface_implementation_crossrefs \
+  build_all_test_programs
 	for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do \
           FNP=`echo $$SF | perl -p -e 's/.*\/(.*)\.html/$$1/'`; \
           echo $$SF | perl -n -e 'not m/\/lesson.*/ or exit 1' || continue; \
@@ -122,8 +124,6 @@ check_api_doc_completeness: apis_and_sources.html \
 
 # Verify that the different related source files that go into a module
 # mention each other in the way that we like them to.
-#check_api_test_driver_interface_implementation_crossrefs: \
-#  xlinked_source_html build_all_test_programs
 check_api_test_driver_interface_implementation_crossrefs: \
   xlinked_source_html
 	( \

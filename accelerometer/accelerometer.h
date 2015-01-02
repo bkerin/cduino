@@ -1,6 +1,6 @@
 // Interface to ST Microelectronics LIS331(HH/DLH) solid state accelerometers.
 //
-// Test driver: accelerometer_test.c    Implementation: accelerometer.h
+// Test driver: accelerometer_test.c    Implementation: accelerometer.c
 //
 // Only a few features of the underlying lis331dlh_driver_private.h are
 // brought out directly in this interface.  See that file for interrupt

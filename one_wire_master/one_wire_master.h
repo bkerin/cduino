@@ -1,6 +1,6 @@
 // One-wire master interface (software interface -- requires only one IO pin)
 //
-// Test driver: one_wire_master_test.h    Implementation: one_wire_master.c
+// Test driver: one_wire_master_test.c    Implementation: one_wire_master.c
 //
 // If you're new to one-wire you should first read the entire
 // Maxim_DS18B20_datasheet.pdf.  Its hard to use one-wire without at

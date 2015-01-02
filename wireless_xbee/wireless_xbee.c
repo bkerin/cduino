@@ -1,4 +1,4 @@
-// Implementation of the interface escribed in wireless_xbee.h.
+// Implementation of the interface described in wireless_xbee.h.
 
 // We're using assert() to handle errors, we can't let clients turn it off.
 #ifdef NDEBUG
