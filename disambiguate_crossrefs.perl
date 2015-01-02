@@ -67,7 +67,7 @@ sub disambiguated_chunk ($$) # {{{1
 
         # If its a AVR libc ISR declaration, nuke its like to other such
         # declarations in other files.
-        if ( $ccl =~ m/^\s*ISR\s*\(.+\)\s*$/ ) {
+        elsif ( $ccl =~ m/^\s*ISR\s*\(.+\)\s*$/ ) {
             ;
         }
 
@@ -88,6 +88,17 @@ sub disambiguated_chunk ($$) # {{{1
                 ;
             }
             elsif ( $rn eq 'rom_id' and $rt eq 'one_wire_master.c' ) {
+                ;
+            }
+            else {
+                push(@nr, $_);
+            }
+        }
+
+        # The lessons are stand-alone source files that should only refer
+        # to themselves.
+        elsif ( $sfn =~ m/(lesson\d+[ab]?\.c)\.html$/ ) {
+            if ( $rt ne $1 ) {
                 ;
             }
             else {

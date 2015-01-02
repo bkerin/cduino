@@ -141,11 +141,6 @@ check_lesson_doc_completeness: lessons.html            \
         done;                                                               \
         if [ -n "$$ERROR" ]; then echo $$ERROR 1>&2 && false; else true; fi
 
-# FIXME: would be nice to uniqueify function names between lessons and API so
-# we didn't end up with messy multiple way links in the HTML-ized headers.
-# I think the lesson-API conflicts are pretty much gone, lots of lessons
-# still have overlapping tags though.
-
 # Generate cross linked header and source files as a simple form of API
 # documentation (and for browsable source).
 .PHONY: xlinked_source_html
