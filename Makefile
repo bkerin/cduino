@@ -128,7 +128,7 @@ check_api_test_driver_interface_implementation_crossrefs: \
   xlinked_source_html
 	( \
           for SF in $$(ls -1 xlinked_source_html/*.[ch].html); do \
-            ./check_crossrefs.perl $$SF || exit 1; \
+            ./check_header_crossrefs.perl $$SF || exit 1; \
           done \
         )
 
