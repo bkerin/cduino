@@ -57,11 +57,17 @@ sub disambiguated_chunk ($$) # {{{1
         my $rt = $2;   # Reference Target (file)
 
         # FIXXME: well, I guess it would be nice to nuke even non-ambiguous
-        # references in this case, but things would have to change elsewhere...
+        # references in this case, but we don't end up here for those...
         # If the reference appears to be a function definition parameter
         # name...
-        if ( $ccl =~ m/^\w+\s*\(.*$rn\s*(?=,|\)).*\)\s*$/ ) {
+        if ( $ccl =~ m/^\w+\s*\(.*$rn\s*(?=,|\)).*\)\s*;?\s*$/ ) {
             # ...don't treat it as a reference at all.
+            ;
+        }
+
+        # If its a AVR libc ISR declaration, nuke its like to other such
+        # declarations in other files.
+        if ( $ccl =~ m/^\s*ISR\s*\(.+\)\s*$/ ) {
             ;
         }
 
