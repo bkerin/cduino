@@ -30,8 +30,28 @@
 // owm_result_as_string() function.
 #define OWM_RESULT_CODES                                                      \
                                                                               \
-  /* No error.  Note that this code must be first.  */                        \
+  /* No error.  Note that this code must be first.                         */ \
   X (OWM_ERROR_NONE)                                                          \
+                                                                              \
+  /* The master (that's us) sent a reset pulse, but didn't receive any     */ \
+  /* slave response pulse.  This can happen when there's no slave present, */ \
+  /* or perhaps if the slaves are all busy, if they are the sort that      */ \
+  /* don't always honor reset pulses :).                                   */ \
+  X (OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE)                                    \
+                                                                              \
+  /* This occurs when either owm_next() or owm_next_alarmed() fails to     */ \
+  /* find another slave, or when owm_first_alarmed() fails to find a first */ \
+  /* alarmed slave.                                                        */ \
+  X (OWM_ERROR_NO_SUCH_SLAVE)                                                 \
+                                                                              \
+  /* Got one values for both a bit and its compliment, in a situation      */ \
+  /* where this shouldn't happen (i.e. not during the first bit of an      */ \
+  /* owm_alarm_first() call)                                               */ \
+  X (OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT)              \
+                                                                              \
+  /* The master (that's us) received a ROM ID with an inconsistent CRC     */ \
+  /* value.                                                                */ \
+  X (OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE)                            \
                                                                               \
   /* Caller supplied an invalid ROM command argument (one that doesn't     */ \
   /* satisfy OWM_IS_TRANSACTION_INITIATING_ROM_COMMAND()).  This is a      */ \
@@ -42,15 +62,8 @@
   /* satisfy OWM_IS_ROM_COMMAND()).  This is a caller bug.                 */ \
   X (OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND)                   \
                                                                               \
-  /* The master (that's us) sent a reset pulse, but didn't receive any     */ \
-  /* slave response pulse.  This can happen when there's no slave present, */ \
-  /* or perhaps if the slaves are all busy, if they are the sort that      */ \
-  /* don't always honor reset pulses.                                      */ \
-  X (OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE)                                    \
-                                                                              \
-  /* The master (that's us) received a ROM ID with an inconsistent CRC     */ \
-  /* value.                                                                */ \
-  X (OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE)
+  /* Some unknown problem occurred (probably a bug).                       */ \
+  X (OWM_ERROR_UNKNOWN_PROBLEM)
 
 // Return type representing the result of an operation.
 typedef enum {
@@ -172,10 +185,10 @@ owm_read_id (uint8_t *id_buf);
 // Find the "first" slave on the one-wire bus (in the sense of the discovery
 // order of the one-wire search algorithm described in Maxim application
 // note AN187).  If a slave is discovered, its ID is written into id_buf
-// (which mucst be a pointer to OWC_ID_SIZE_BYTES bytes of space) and TRUE
-// is returned.  If no slave is discovered, FALSE is returned.  Note that
-// this resets any search which is already in progress.
-uint8_t
+// (which mucst be a pointer to OWC_ID_SIZE_BYTES bytes of space) and
+// OWM_ERROR_NONE is returned, otherwise a non-zero error code is returned.
+// Note that this resets any search which is already in progress.
+owm_error_t
 owm_first (uint8_t *id_buf);
 
 // Require an immediately preceeding call to owm_first() or owm_next() to

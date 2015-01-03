@@ -155,19 +155,15 @@ main (void)
   PFP ("Trying owm_read_id()... ");
   OWM_CHECK (owm_read_id ((uint8_t *) &rid));  // One-wire Master Result
   if ( rid != slave_rid ) {
-    PFP ("failed: discovered slave ID is different");
+    PFP ("failed: discovered slave ID is different\n");
     PFP_ASSERT (FALSE);
   }
   PFP ("ok, found slave with previously discovered ID.\n");
 
   PFP ("Trying owm_first()... ");
-  uint8_t slave_found = owm_first ((uint8_t *) &rid);
-  if ( (! slave_found) ) {
-    PFP ("failed: no slave found");
-    PFP_ASSERT (FALSE);
-  }
+  OWM_CHECK (owm_first ((uint8_t *) &rid));
   if ( rid != slave_rid ) {
-    PFP ("failed: discovered slave ID is different");
+    PFP ("failed: discovered slave ID is different\n");
     PFP_ASSERT (FALSE);
   }
   PFP ("ok, found slave with previously discovered ID.\n");
@@ -175,9 +171,11 @@ main (void)
   // Verify that owm_next() (following the owm_first() call above) returns
   // false, since there is only one slave on the bus.
   PFP ("Trying owm_next()... ");
-  slave_found = owm_next ((uint8_t *) &rid);
-  if ( slave_found ) {
-    PFP ("failed: unexpectedly returned true");
+  owm_error_t error = owm_next ((uint8_t *) &rid);
+  if ( error != OWM_ERROR_NO_SUCH_SLAVE ) {
+    PFP (
+        "failed: returned %s instead of OWM_ERROR_NO_SUCH_SLAVE\n",
+        owm_result_as_string (error, result_buf) );
     PFP_ASSERT (FALSE);
   }
   PFP ("ok, no next slave found.\n");
@@ -188,7 +186,7 @@ main (void)
   // that can be uncommented to cause and slave created using that interface
   // to consider itself alarmed, however.
   PFP ("Trying owm_first_alarmed()... ");
-  slave_found = owm_first_alarmed ((uint8_t *) &rid);
+  uint8_t slave_found = owm_first_alarmed ((uint8_t *) &rid);
   if ( ! slave_found ) {
     PFP ("no alarmed slaves found (usually ok, see source).\n");
   }

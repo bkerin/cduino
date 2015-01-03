@@ -157,8 +157,6 @@ owm_read_bit (void)
   return result;
 }
 
-// FIXME: this routine has a really misleading name, sounce like a
-// owm_read_byte but really sends stuff first, ug
 owm_error_t
 owm_read_id (uint8_t *id_buf)
 {
@@ -169,20 +167,37 @@ owm_read_id (uint8_t *id_buf)
 
   uint8_t const read_rom_command = OWC_READ_ROM_COMMAND;
   owm_write_byte (read_rom_command);
+  uint8_t crc = 0;
+  uint8_t const lnbo = OWC_ID_SIZE_BYTES - 1 - 1;   // Last Non-crc Byte Offset
   for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
     id_buf[ii] = owm_read_byte ();
+    if ( ii <= lnbo ) {
+      crc = _crc_ibutton_update (crc, id_buf[ii]);
+    }
+    else {
+      if ( crc != id_buf[ii] ) {
+        return OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+      }
+    }
   }
-
-  // FIXME: Here we must detect and report CRC errors.  Or somewhere
 
   return OWM_ERROR_NONE;
 }
+
+// These are errors that can occur in the search() funtion.
+#define SEARCH_ERROR_NONE    0   // No error
+#define SEARCH_ERROR_NPP     1   // No Presence Pulse
+#define SEARCH_ERROR_GBAC    2   // Got 1s for Bit and Compliment
+#define SEARCH_ERROR_BAD_CRC 3   // Got bad ROM ID CRC value
+#define SEARCH_ERROR_SPLD    4   // Searched Past Last Device
 
 // Global search state
 static uint8_t rom_id[OWC_ID_SIZE_BYTES];   // Current ROM device ID
 static uint8_t last_discrep;                // Bit position of last discrepancy
 static uint8_t last_family_discrep;         // FIXXME: currently unused
 static uint8_t last_device_flag;            // True iff we got last slave
+static uint8_t search_error;                // One of the SEARCH_ERROR_* values
+static uint8_t gbac_bit_number;             // Bit number of SEARCH_ERROR_GBAC
 static uint8_t crc8;                        // For most recent search() result
 
 // Length of slave ROM IDs, in bits
@@ -213,11 +228,16 @@ search (uint8_t alarmed_slaves_only)
   rom_byte_number = 0;
   rom_byte_mask = 1;
   search_result = FALSE;
+  search_error = SEARCH_ERROR_NONE;
+  gbac_bit_number = 0;
   crc8 = 0;
 
   // If the last call was not the last one
-  if ( ! last_device_flag )
-  {
+  if ( last_device_flag ) {
+    search_error = SEARCH_ERROR_SPLD;
+  }
+
+  else {
 
     // 1-Wire reset
     if ( ! owm_touch_reset () ) {
@@ -228,6 +248,7 @@ search (uint8_t alarmed_slaves_only)
       // FIXME: for interface consistency we should arrange to propagate
       // when this happens.  I think just setting a global that the clients
       // check might be best, or I guess the signature could be changed.
+      search_error = SEARCH_ERROR_NPP;
       return FALSE;
     }
 
@@ -245,6 +266,8 @@ search (uint8_t alarmed_slaves_only)
       // only happen from noise or when doing an alarm search, since we only
       // make it here if a presence pulse is received above.
       if ( (id_bit == 1) && (cmp_id_bit == 1) ) {
+        search_error = SEARCH_ERROR_GBAC;
+        gbac_bit_number = id_bit_number;
         break;
       }
       else {
@@ -292,28 +315,19 @@ search (uint8_t alarmed_slaves_only)
           crc8 = _crc_ibutton_update (crc8, rom_id[rom_byte_number]);
           rom_byte_number++;
           rom_byte_mask = 1;
-          // FIXME: WORK POINT: weirdly, this only fails the first time
-          // through this function.  Perhaps some global is not getting reset
-          // correctly? No, its just because the rom id byte 7 is still set to
-          // zero at this point on the first pass (its apparently not filled
-          // in yet at this point (we only just increated rob_byte_number
-          // afterall)
-          if ( rom_byte_number == 7 ) {
-            PFP ("\n\nrom byte value: %i\n", (int) rom_id[rom_byte_number]);
-            if ( crc8 != rom_id[rom_byte_number] ) {
-              PFP ("\ncrc failed\n\n");
-            }
-            else {
-              PFP ("\n\ncrc passed\n\n");
-            }
-          }
         }
       }
     }
     while ( rom_byte_number < OWC_ID_SIZE_BYTES );
 
-    // If the search was successful...
-    if ( ! ((id_bit_number <= ID_BIT_COUNT) || (crc8 != 0)) ) {
+    if ( search_error ) {
+      ;
+    }
+    else if ( crc8 != 0 ) {
+      search_error = SEARCH_ERROR_BAD_CRC;
+    }
+    else {
+      // Search was successful
       last_discrep = last_zero;
       // If this was the last device...
       if ( last_discrep == 0 ) {
@@ -336,10 +350,10 @@ search (uint8_t alarmed_slaves_only)
 }
 
 // Find the 'first' device on the one-wire bus.  If alarmed_slaves_only is
-// true, only slaves with an active alarm condition are found.
-// Return TRUE  : device found, ROM number in rom_id buffer
-//        FALSE : device not found, end of search
-static uint8_t
+// true, only slaves with an active alarm condition are found.  On succes,
+// the discovered ROM ID is place in rom_id and OWM_ERROR_NONE_IS RETURNED.
+// On failure a non-zero error code is returned.
+static owm_error_t
 first (uint8_t alarmed_slaves_only)
 {
   // Reset the search state
@@ -347,19 +361,69 @@ first (uint8_t alarmed_slaves_only)
   last_device_flag = FALSE;
   last_family_discrep = 0;
 
-  return search (alarmed_slaves_only);
-}
+  uint8_t search_result = search (alarmed_slaves_only);
 
+  if ( search_result ) {
+    return OWM_ERROR_NONE;
+  }
+  else {
+    switch ( search_error ) {
+      case SEARCH_ERROR_NPP:
+        return OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE;
+        break;
+      case SEARCH_ERROR_GBAC:
+        if ( alarmed_slaves_only && gbac_bit_number == 1 ) {
+          return OWM_ERROR_NO_SUCH_SLAVE;
+        }
+        else {
+          return OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
+        }
+        break;
+      case SEARCH_ERROR_BAD_CRC:
+        return OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+        break;
+      case SEARCH_ERROR_SPLD:
+        return OWM_ERROR_NO_SUCH_SLAVE;
+        break;
+      default:
+        return OWM_ERROR_UNKNOWN_PROBLEM;
+        break;
+    }
+  }
+}
 
 // Find the 'next' device on the one-wire bus.  If alarmed_slaves_only is
 // true, only slaves ith an active alarm condition are found.
 // Return TRUE  : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 //
-static uint8_t
+static owm_error_t
 next (uint8_t alarmed_slaves_only)
 {
-  return search (alarmed_slaves_only);
+  uint8_t search_result = search (alarmed_slaves_only);
+
+  if ( search_result ) {
+    return OWM_ERROR_NONE;
+  }
+  else {
+    switch ( search_error ) {
+      case SEARCH_ERROR_NPP:
+        return OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE;
+        break;
+      case SEARCH_ERROR_GBAC:
+        return OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
+        break;
+      case SEARCH_ERROR_BAD_CRC:
+        return OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+        break;
+      case SEARCH_ERROR_SPLD:
+        return OWM_ERROR_NO_SUCH_SLAVE;
+        break;
+      default:
+        return OWM_ERROR_UNKNOWN_PROBLEM;
+        break;
+    }
+  }
 }
 
 // Verify that the device with the ROM number in rom_id buffer is present.
@@ -412,12 +476,12 @@ verify (void)
   return result;
 }
 
-uint8_t
+owm_error_t
 owm_first (uint8_t *id_buf)
 {
-  uint8_t result = first (FALSE);
+  owm_error_t result = first (FALSE);
 
-  if ( result ) {
+  if ( result == OWM_ERROR_NONE ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
@@ -427,9 +491,9 @@ owm_first (uint8_t *id_buf)
 uint8_t
 owm_next (uint8_t *id_buf)
 {
-  uint8_t result = next (FALSE);
+  owm_error_t result = next (FALSE);
 
-  if ( result ) {
+  if ( result == OWM_ERROR_NONE ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
