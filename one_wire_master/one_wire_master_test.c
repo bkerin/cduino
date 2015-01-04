@@ -164,11 +164,11 @@ main (void)
   // Verify that owm_next() (following the owm_first() call above) returns
   // OWM_ERROR_NO_SUCH_SLAVE, since there is only one slave on the bus.
   PFP ("Trying owm_next()... ");
-  owm_error_t error = owm_next ((uint8_t *) &rid);
-  if ( error != OWM_ERROR_NO_SUCH_SLAVE ) {
+  owm_result_t result = owm_next ((uint8_t *) &rid);
+  if ( result != OWM_ERROR_NO_SUCH_SLAVE ) {
     PFP (
         "failed: returned %s instead of OWM_ERROR_NO_SUCH_SLAVE\n",
-        owm_result_as_string (error, result_buf) );
+        owm_result_as_string (result, result_buf) );
     PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, no next slave found.\n");
@@ -179,11 +179,11 @@ main (void)
   // that can be uncommented to cause and slave created using that interface
   // to consider itself alarmed, however.
   PFP ("Trying owm_first_alarmed()... ");
-  error = owm_first_alarmed ((uint8_t *) &rid);
-  if ( error == OWM_ERROR_NO_SUCH_SLAVE ) {
+  result = owm_first_alarmed ((uint8_t *) &rid);
+  if ( result == OWM_ERROR_NO_SUCH_SLAVE ) {
     PFP ("no alarmed slaves found (usually ok, see source).\n");
   }
-  else if ( error == OWM_ERROR_NONE ) {
+  else if ( result == OWM_ERROR_NONE ) {
     PFP ("found alarmed slave (ID: ");
     print_slave_id (slave_rid);
     PFP (").\n");
@@ -192,7 +192,7 @@ main (void)
     PFP (
         "failed: returned %s instead of OWM_ERROR_NO_SUCH_SLAVE or "
         "OWM_ERROR_NONE\n",
-        owm_result_as_string (error, result_buf) );
+        owm_result_as_string (result, result_buf) );
     PFP_ASSERT_NOT_REACHED ();
   }
 
@@ -204,11 +204,11 @@ main (void)
   // Verify the owm_verify() works as expected when given a nonexistend RID.
   PFP ("Trying owm_verify() with nonexistent ID... ");
   uint64_t nerid = rid + 42;   // NonExistent RID
-  error = owm_verify ((uint8_t *) &nerid);
-  if ( error != OWM_ERROR_NO_SUCH_SLAVE ) {
+  result = owm_verify ((uint8_t *) &nerid);
+  if ( result != OWM_ERROR_NO_SUCH_SLAVE ) {
     PFP (
         "failed: returned %s instead of OWM_ERROR_NO_SUCH_SLAVE\n",
-        owm_result_as_string (error, result_buf) );
+        owm_result_as_string (result, result_buf) );
     PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, no such slave found.\n");
@@ -241,9 +241,6 @@ main (void)
   // still come out the same.  If it doesn't, that could indicate that
   // owm_start_transaction() isn't working right.
 
-  // FIXME: well assert is a pretty lousy way to detect how tests fail,
-  // might want to conditionally print something or so...
-
   PFP ("Trying owm_start_transaction() with READ_ROM... ");
   uint64_t slave_rid_3rd_reading;
   OWM_CHECK (
@@ -251,7 +248,7 @@ main (void)
         OWC_READ_ROM_COMMAND,
         (uint8_t *) &slave_rid_3rd_reading,
         DS18B20_COMMANDS_CONVERT_T_COMMAND ) );
-  PFP_ASSERT (slave_rid_3rd_reading = slave_rid);
+  PFP_ASSERT (slave_rid_3rd_reading == slave_rid);
   conversion_complete = 0;
   while ( ! (conversion_complete = owm_read_bit ()) ) {
     ;
@@ -369,6 +366,9 @@ main (void)
     = __builtin_bswap64 (UINT64_C (OWM_SECOND_SLAVE_ID));
 
   uint64_t rid;   // ROM ID
+
+  // FIXME: this test condition still need consolidated to use OWM_CHECK
+  // and PFP_ASSERT(cond)
 
   PFP ("Trying owm_first()... ");
   uint8_t slave_found = owm_first ((uint8_t *) &rid);

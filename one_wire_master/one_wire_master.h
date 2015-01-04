@@ -81,7 +81,7 @@ typedef enum {
 #define X(result_code) result_code,
   OWM_RESULT_CODES
 #undef X
-} owm_error_t;
+} owm_result_t;
 
 #ifdef OWM_BUILD_RESULT_DESCRIPTION_FUNCTION
 
@@ -92,7 +92,7 @@ typedef enum {
 // 1 bytes.  Using this function will make your program quite a bit bigger.
 // As a convenience, buf is returned.
 char *
-owm_result_as_string (owm_error_t result, char *buf);
+owm_result_as_string (owm_result_t result, char *buf);
 
 #endif
 
@@ -138,7 +138,7 @@ owm_init (void);
 // (though they do change its state).  The function_command likely does
 // elicit a response, but this routine doesn't read it, so correct receipt
 // of that command also cannot be verified by this routine.
-owm_error_t
+owm_result_t
 owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -190,7 +190,7 @@ owm_read_bit (void);
 //
 // The contents of id_buf are unspecified if an error is returned.
 //
-owm_error_t
+owm_result_t
 owm_read_id (uint8_t *id_buf);
 
 // Find the "first" slave on the one-wire bus (in the sense of the discovery
@@ -199,7 +199,7 @@ owm_read_id (uint8_t *id_buf);
 // (which mucst be a pointer to OWC_ID_SIZE_BYTES bytes of space) and
 // OWM_ERROR_NONE is returned, otherwise a non-zero error code is returned.
 // Note that this resets any search which is already in progress.
-owm_error_t
+owm_result_t
 owm_first (uint8_t *id_buf);
 
 // Require an immediately preceeding call to owm_first() or owm_next()
@@ -213,7 +213,7 @@ owm_first (uint8_t *id_buf);
 // non-zero result code will be OWM_ERROR_NO_SUCH_SLAVE will be returned.
 // (additional calls to this routine may wrap the search back to the start
 // of the slave list, but this behavior is not guaranteed).
-owm_error_t
+owm_result_t
 owm_next (uint8_t *id_buf);
 
 // Return true iff device with ID equal to the value in the OWC_ID_SIZE_BYTES
@@ -222,26 +222,16 @@ owm_next (uint8_t *id_buf);
 // are multiple devices on the bus.  When this function returns, the global
 // search state is restored (so for example the next call to owm_next()
 // should behave as if the call to this routine never occurred).
-owm_error_t
+owm_result_t
 owm_verify (uint8_t *id_buf);
 
 // Like owm_first(), but only finds slaves with an active alarm condition.
-owm_error_t
+owm_result_t
 owm_first_alarmed (uint8_t *id_buf);
 
 // Like owm_next(), but only finds slaves with an active alarm condition.
-owm_error_t
+owm_result_t
 owm_next_alarmed (uint8_t *id_buf);
-
-// FIXXME: it would be nice to add a filter for alarm search (EC command).
-// This command might actually be useful, since it makes it possible to scan
-// an entire bus for any devices needing immediate attention.  It wouldn't
-// be too hard to add support for this either: I think all that would be
-// required would be for the search() function in one_wire_master.c to
-// take a alarm_only argument, and then issue an EC command instead of an
-// OWC_SEARCH_ROM_COMMAND if that argument was true.  It could be tested
-// using the DS18B20 temperature alarm functionality, but setting those
-// alarms up is somewhat of a hassle, so we haven't bothered yet.
 
 ///////////////////////////////////////////////////////////////////////////////
 //

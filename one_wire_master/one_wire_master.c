@@ -14,10 +14,8 @@
 
 #ifdef OWM_BUILD_RESULT_DESCRIPTION_FUNCTION
 
-// This should be renamed to owm_result_string or something since its just
-// the name as a string now.
 char *
-owm_result_as_string (owm_error_t result, char *buf)
+owm_result_as_string (owm_result_t result, char *buf)
 {
   switch ( result ) {
 
@@ -26,7 +24,7 @@ owm_result_as_string (owm_error_t result, char *buf)
       PFP_ASSERT (strlen (#result_code) < OWM_RESULT_DESCRIPTION_MAX_LENGTH); \
       strcpy_P (buf, PSTR (#result_code));                                    \
       break;
-  OWM_RESULT_CODES
+    OWM_RESULT_CODES
 #  undef X
 
     default:
@@ -51,7 +49,7 @@ owm_init (void)
   RELEASE_LINE ();
 }
 
-owm_error_t
+owm_result_t
 owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd)
 {
   if ( ! OWC_IS_TRANSACTION_INITIATING_ROM_COMMAND (rom_cmd) ) {
@@ -157,7 +155,7 @@ owm_read_bit (void)
   return result;
 }
 
-owm_error_t
+owm_result_t
 owm_read_id (uint8_t *id_buf)
 {
   uint8_t slave_presence = owm_touch_reset ();
@@ -359,7 +357,7 @@ search (uint8_t alarmed_slaves_only)
 // true, only slaves with an active alarm condition are found.  On succes,
 // the discovered ROM ID is place in rom_id and OWM_ERROR_NONE_IS RETURNED.
 // On failure a non-zero error code is returned.
-static owm_error_t
+static owm_result_t
 first (uint8_t alarmed_slaves_only)
 {
   // Reset the search state
@@ -411,7 +409,7 @@ first (uint8_t alarmed_slaves_only)
 // Return TRUE  : device found, ROM number in rom_id buffer
 //        FALSE : device not found, end of search
 //
-static owm_error_t
+static owm_result_t
 next (uint8_t alarmed_slaves_only)
 {
   uint8_t search_result = search (alarmed_slaves_only);
@@ -446,10 +444,10 @@ next (uint8_t alarmed_slaves_only)
 
 // Verify that the device with the ROM number in rom_id buffer is present.
 // Return OWM_ERROR_NONE if it is, or a non-zero error code otherwise.
-static owm_error_t
+static owm_result_t
 verify (void)
 {
-  owm_error_t result;
+  owm_result_t result;
   unsigned char rom_backup[OWC_ID_SIZE_BYTES];
   uint8_t ld_backup, ldf_backup, lfd_backup;
 
@@ -512,10 +510,10 @@ verify (void)
   return result;
 }
 
-owm_error_t
+owm_result_t
 owm_first (uint8_t *id_buf)
 {
-  owm_error_t result = first (FALSE);
+  owm_result_t result = first (FALSE);
 
   if ( result == OWM_ERROR_NONE ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
@@ -524,10 +522,10 @@ owm_first (uint8_t *id_buf)
   return result;
 }
 
-owm_error_t
+owm_result_t
 owm_next (uint8_t *id_buf)
 {
-  owm_error_t result = next (FALSE);
+  owm_result_t result = next (FALSE);
 
   if ( result == OWM_ERROR_NONE ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
@@ -536,20 +534,20 @@ owm_next (uint8_t *id_buf)
   return result;
 }
 
-owm_error_t
+owm_result_t
 owm_verify (uint8_t *id_buf)
 {
   memcpy (rom_id, id_buf, OWC_ID_SIZE_BYTES);
 
-  owm_error_t result = verify ();
+  owm_result_t result = verify ();
 
   return result;
 }
 
-owm_error_t
+owm_result_t
 owm_first_alarmed (uint8_t *id_buf)
 {
-  owm_error_t result = first (TRUE);
+  owm_result_t result = first (TRUE);
 
   if ( result == OWM_ERROR_NONE ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
@@ -558,10 +556,10 @@ owm_first_alarmed (uint8_t *id_buf)
   return result;
 }
 
-owm_error_t
+owm_result_t
 owm_next_alarmed (uint8_t *id_buf)
 {
-  owm_error_t result = first (TRUE);
+  owm_result_t result = first (TRUE);
 
   if ( result == OWM_ERROR_NONE ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
@@ -581,13 +579,16 @@ owm_write_byte (uint8_t data)
   }
 }
 
-// Like the other functions, these come from Maxim Application Note AN187.
-// But they didn't seem to work right for me, I think just because their
-// interaction with owm_first()/owm_next() is weird.  And they seem sort
-// of pointless: surely clients can just remember things by family for
-// themsleves after the initial scan if the need to?  I guess it could
-// make things a tiny bit faster in the presence of hot-plug devices or
-// something but I have difficulty imagining caring.
+// FIXXME: Like the other functions, these come from Maxim Application
+// Note AN187.  But they didn't seem to work right for me.  Actually
+// maybe they did, because I recenty read that if they can't find one
+// of the targetted family of slaves, it just ends up finding another.
+// With our new improved search function that can signal errors, we could
+// perhaps detect this and propagate a real error, if it seemed worth it.
+// These functions seem sort of pointless: surely clients can just remember
+// things by family for themsleves after the initial scan if the need to?
+// I guess it could make things a tiny bit faster in the presence of hot-plug
+// devices or something but I have difficulty imagining caring.
 //void
 //owm_target_setup (uint8_t family_code)
 //{
