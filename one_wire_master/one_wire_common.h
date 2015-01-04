@@ -8,7 +8,7 @@
 #define ONE_WIRE_COMMON_H
 
 // Tick delays for various parts of the one-wire protocol, as described in
-// Table 2 in Maxim application note AN126 FIXME: link it
+// Table 2 on Maxim_Application_Note_AN126.pdf, page 3.
 #define OWC_TICK_DELAY_A   6
 #define OWC_TICK_DELAY_B  64
 #define OWC_TICK_DELAY_C  60
