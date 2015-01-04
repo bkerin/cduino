@@ -41,17 +41,28 @@
                                                                               \
   /* This occurs when either owm_next() or owm_next_alarmed() fails to     */ \
   /* find another slave, or when owm_first_alarmed() fails to find a first */ \
-  /* alarmed slave.                                                        */ \
+  /* alarmed slave.  Note that when there are no slaves present on the bus */ \
+  /* OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE will result, not this.           */ \
   X (OWM_ERROR_NO_SUCH_SLAVE)                                                 \
                                                                               \
   /* Got one values for both a bit and its compliment, in a situation      */ \
   /* where this shouldn't happen (i.e. not during the first bit of an      */ \
-  /* owm_alarm_first() call)                                               */ \
+  /* owm_alarm_first() call).  Note that when no slaves are present, many  */ \
+  /* routines in this module return OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE,  */ \
+  /* not this value.  This result could perhaps occur due to a line eror,  */ \
+  /* or if a slave is disconnected during a search.                        */ \
   X (OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT)              \
                                                                               \
   /* The master (that's us) received a ROM ID with an inconsistent CRC     */ \
   /* value.                                                                */ \
   X (OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE)                            \
+                                                                              \
+  /* A search operation saw what appeared to be a slave with ROM ID byte 0 */ \
+  /* with a value of 0.  Well behaved slaves should never have a ROM ID    */ \
+  /* with a byte 0 of 0, because this is how a ground-faulted data line    */ \
+  /* (or misbhaving slave that's stuck low) ends up making its presence    */ \
+  /* known for the first time.                                             */ \
+  X (OWM_ERROR_GOT_ROM_ID_WITH_BYTE_0_OF_0_PROBABLE_GROUNDED_DATA_LINE)       \
                                                                               \
   /* Caller supplied an invalid ROM command argument (one that doesn't     */ \
   /* satisfy OWM_IS_TRANSACTION_INITIATING_ROM_COMMAND()).  This is a      */ \
@@ -191,14 +202,22 @@ owm_read_id (uint8_t *id_buf);
 owm_error_t
 owm_first (uint8_t *id_buf);
 
-// Require an immediately preceeding call to owm_first() or owm_next() to
-// have occurred.  Find the "next" slave on the one-wire bus (in the sense of
-// the discovery order of the one-wire search algorithm described in Maxim
-// application note AN187).  This continues a search begun by a previous
-// call to owm_first().  If another slave is found, its ID is written into
-// id_buf (which must be a pointer to OWC_ID_SIZE_BYTES bytes of space and
-// TRUE is returned.  If no additional slave is found, FALSE is returned.
-uint8_t
+// Require an immediately preceeding call to owm_first() or owm_next()
+// to have occurred.  Find the "next" slave on the one-wire bus (in the
+// sense of the discovery order of the one-wire search algorithm described
+// in Maxim application note AN187).  This continues a search begun by
+// a previous call to owm_first().  If another slave is found, its ID
+// is written into id_buf (which must be a pointer to OWC_ID_SIZE_BYTES
+// bytes of space and TRUE is returned, otherwise a non-zero result code
+// is returned.  If the end of the list of slaves has been reached, the
+// non-zero result code will be OWM_ERROR_NO_SUCH_SLAVE and the internal
+// search state will be reset such that the next owm_next() call will
+// find the first slave again.  FIXME: I think its best not to document
+// this behavior, because its sort of weird and pointless, and some of the
+// global search parameters are not explicitly initialized unto owm_first()
+// (it probably works because they start 0 anyway, but I don't feel like
+// verifying that making the initialization explicit).
+owm_error_t
 owm_next (uint8_t *id_buf);
 
 // Return true iff device with ID equal to the value in the OWC_ID_SIZE_BYTES

@@ -41,7 +41,7 @@
 
 char result_buf[OWM_RESULT_DESCRIPTION_MAX_LENGTH + 1];
 
-#define OWM_CHECK(result)                                          \
+#define OWM_CHECK(result)                                        \
   PFP_ASSERT_SUCCESS (result, owm_result_as_string, result_buf);
 
 // The default incarnation of this test program expects a single slave,
@@ -118,6 +118,8 @@ print_slave_id (uint64_t id)
   }
 }
 
+#include <util/crc16.h>
+
 int
 main (void)
 {
@@ -135,7 +137,7 @@ main (void)
   uint8_t slave_presence = owm_touch_reset ();
   if ( ! slave_presence ) {
     PFP ("failed: non-true was returned");
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, got slave presence pulse.\n");
 
@@ -156,7 +158,7 @@ main (void)
   OWM_CHECK (owm_read_id ((uint8_t *) &rid));  // One-wire Master Result
   if ( rid != slave_rid ) {
     PFP ("failed: discovered slave ID is different\n");
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, found slave with previously discovered ID.\n");
 
@@ -164,21 +166,24 @@ main (void)
   OWM_CHECK (owm_first ((uint8_t *) &rid));
   if ( rid != slave_rid ) {
     PFP ("failed: discovered slave ID is different\n");
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, found slave with previously discovered ID.\n");
 
   // Verify that owm_next() (following the owm_first() call above) returns
-  // false, since there is only one slave on the bus.
+  // OWM_ERROR_NO_SUCH_SLAVE, since there is only one slave on the bus.
   PFP ("Trying owm_next()... ");
   owm_error_t error = owm_next ((uint8_t *) &rid);
   if ( error != OWM_ERROR_NO_SUCH_SLAVE ) {
     PFP (
         "failed: returned %s instead of OWM_ERROR_NO_SUCH_SLAVE\n",
         owm_result_as_string (error, result_buf) );
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, no next slave found.\n");
+
+  // FIXME: WORK POINT: make sure that running owm_next another time after
+  // it hits the end of the list actually does act like owm_first().
 
   // The normal test arrangement doesn't feature any alarmed slaves.  Its kind
   // of a pain to program the alarm condition on real DS18B20 devices and
@@ -198,12 +203,21 @@ main (void)
 
   // owm_verify() should work with either a single or multiple slaves.
   PFP ("Trying owm_verify() with previously discoved ID... ");
-  slave_found = owm_verify ((uint8_t *) &rid);
-  if ( ! slave_found ) {
-    PFP ("failed: unexpectedly returned false");
-    PFP_ASSERT (FALSE);
-  }
+  OWM_CHECK (owm_verify ((uint8_t *) &rid));
+  error = owm_verify ((uint8_t *) &rid);
   PFP ("ok, ID verified.\n");
+
+  // Verify the owm_verify() works as expected when given a nonexistend RID.
+  PFP ("Trying owm_verify() with nonexistent ID... ");
+  uint64_t nerid = rid + 42;   // NonExistent RID
+  error = owm_verify ((uint8_t *) &nerid);
+  if ( error != OWM_ERROR_NO_SUCH_SLAVE ) {
+    PFP (
+        "failed: returned %s instead of OWM_ERROR_NO_SUCH_SLAVE\n",
+        owm_result_as_string (error, result_buf) );
+    PFP_ASSERT_NOT_REACHED ();
+  }
+  PFP ("ok, no such slave found.\n");
 
   PFP ("Starting temperature conversion... ");
   // FIXME: the master should probably get some sort of
@@ -366,14 +380,14 @@ main (void)
   uint8_t slave_found = owm_first ((uint8_t *) &rid);
   if ( ! slave_found ) {
     PFP ("failed: didn't discover any slaves");
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   if ( rid != first_slave_id ) {
     PFP ("failed: discovered first slave ID was ");
     print_slave_id (rid);
     PFP (", not the expected ");
     print_slave_id (first_slave_id);
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, found 1st slave with expected ID ");
   print_slave_id (rid);
@@ -383,14 +397,14 @@ main (void)
   slave_found = owm_next ((uint8_t *) &rid);
   if ( ! slave_found ) {
     PFP ("failed: didn't discover a second slave");
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   if ( rid != second_slave_id ) {
     PFP ("failed: discovered second slave ID was ");
     print_slave_id (rid);
     PFP (", not the expected ");
     print_slave_id (second_slave_id);
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, found 2nd slave with expected ID ");
   print_slave_id (rid);
@@ -402,7 +416,7 @@ main (void)
   slave_found = owm_next ((uint8_t *) &rid);
   if ( slave_found ) {
     PFP ("failed: unexpectedly returned true");
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, no next slave found.\n");
 
@@ -410,7 +424,7 @@ main (void)
   slave_found = owm_verify ((uint8_t *) &rid);
   if ( ! slave_found ) {
     PFP ("failed: didn't find slave");
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, found it.\n");
 
@@ -418,7 +432,7 @@ main (void)
   slave_found = owm_verify ((uint8_t *) &rid);
   if ( ! slave_found ) {
     PFP ("failed: didn't find slave");
-    PFP_ASSERT (FALSE);
+    PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, found it.\n");
 
