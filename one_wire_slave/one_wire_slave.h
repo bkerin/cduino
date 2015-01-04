@@ -27,6 +27,15 @@
 #  define OWS_FAMILY_CODE 0x42
 #endif
 
+// Using 0x00 as a family code value is not allowed, because the master
+// considers it an error if it sees it, which is sensible because that's
+// what a data-line-to-ground fault (or slave stuck grounding the line)
+// ends up looking like during a search (and the search is the first point
+// where this fault condition is detectable).
+#if OWS_FAMILY_CODE == 0x00
+#  error invalid OWS_FAMILY_CODE setting of 0x00
+#endif
+
 // The second through seventh bytes of the ROM ID are supposed to be unique
 // to each part.  There's support in ows_init() for loading a unique code
 // from EEPROM, but in case clients don't want to deal with setting that
