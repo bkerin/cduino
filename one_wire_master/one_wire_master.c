@@ -53,10 +53,10 @@ owm_result_t
 owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd)
 {
   if ( ! OWC_IS_TRANSACTION_INITIATING_ROM_COMMAND (rom_cmd) ) {
-    return OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND;
+    return OWM_RESULT_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND;
   }
   if ( OWC_IS_ROM_COMMAND (function_cmd) ) {
-    return OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND;
+    return OWM_RESULT_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND;
   }
 
   if ( ! owm_touch_reset () ) {
@@ -78,7 +78,7 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd)
           }
           else {
             if ( crc != rom_id[ii] ) {
-              return OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+              return OWM_RESULT_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
             }
           }
         }
@@ -174,7 +174,7 @@ owm_read_id (uint8_t *id_buf)
     }
     else {
       if ( crc != id_buf[ii] ) {
-        return OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+        return OWM_RESULT_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
       }
     }
   }
@@ -384,21 +384,22 @@ first (uint8_t alarmed_slaves_only)
           return OWM_RESULT_NO_SUCH_SLAVE;
         }
         else {
-          return OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
+          return
+            OWM_RESULT_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
         }
         break;
       case SEARCH_ERROR_BAD_CRC:
-        return OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+        return OWM_RESULT_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
         break;
       case SEARCH_ERROR_SPLD:
         return OWM_RESULT_NO_SUCH_SLAVE;
         break;
       case SEARCH_ERROR_RID0IS0:
         return
-          OWM_ERROR_GOT_ROM_ID_WITH_BYTE_0_OF_0_PROBABLE_GROUNDED_DATA_LINE;
+          OWM_RESULT_ERROR_GOT_ROM_ID_WITH_BYTE_0_OF_0_PROBABLE_GROUNDED_LINE;
         break;
       default:
-        return OWM_ERROR_UNKNOWN_PROBLEM;
+        return OWM_RESULT_ERROR_UNKNOWN_PROBLEM;
         break;
     }
   }
@@ -422,20 +423,21 @@ next (uint8_t alarmed_slaves_only)
         return OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE;
         break;
       case SEARCH_ERROR_GBAC:
-        return OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
+        return
+          OWM_RESULT_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
         break;
       case SEARCH_ERROR_BAD_CRC:
-        return OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+        return OWM_RESULT_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
         break;
       case SEARCH_ERROR_SPLD:
         return OWM_RESULT_NO_SUCH_SLAVE;
         break;
       case SEARCH_ERROR_RID0IS0:
         return
-          OWM_ERROR_GOT_ROM_ID_WITH_BYTE_0_OF_0_PROBABLE_GROUNDED_DATA_LINE;
+          OWM_RESULT_ERROR_GOT_ROM_ID_WITH_BYTE_0_OF_0_PROBABLE_GROUNDED_LINE;
         break;
       default:
-        return OWM_ERROR_UNKNOWN_PROBLEM;
+        return OWM_RESULT_ERROR_UNKNOWN_PROBLEM;
         break;
     }
   }
@@ -478,22 +480,23 @@ verify (void)
         result = OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE;
         break;
       case SEARCH_ERROR_GBAC:
-        result = OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
+        result
+          = OWM_RESULT_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
         break;
       case SEARCH_ERROR_BAD_CRC:
-        result = OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
+        result = OWM_RESULT_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
         break;
       case SEARCH_ERROR_SPLD:
         // We should never get SEARCH_ERROR_SPLD in this context, since we
         // reset globals to avoid that before calling search().
-        result = OWM_ERROR_UNKNOWN_PROBLEM;
+        result = OWM_RESULT_ERROR_UNKNOWN_PROBLEM;
         break;
       case SEARCH_ERROR_RID0IS0:
         return
-          OWM_ERROR_GOT_ROM_ID_WITH_BYTE_0_OF_0_PROBABLE_GROUNDED_DATA_LINE;
+          OWM_RESULT_ERROR_GOT_ROM_ID_WITH_BYTE_0_OF_0_PROBABLE_GROUNDED_LINE;
         break;
       default:
-        result = OWM_ERROR_UNKNOWN_PROBLEM;
+        result = OWM_RESULT_ERROR_UNKNOWN_PROBLEM;
         break;
     }
   }

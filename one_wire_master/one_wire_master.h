@@ -26,11 +26,12 @@
 #endif
 
 // These are the result codes returned by many routines in this interface.
-// The ones beginning with OWM_ERROR_ probably shouldn't occur if all the
-// hardware and software is correct, the ones beginning with just OWM_ might
-// be ok or not, depending on the nature of the hardware (e.g. dynamic or
-// fixed slave set) X macros are used here to ensure we stay in sync with
-// the owm_result_as_string() function.
+// The ones beginning with OWM_RESULT_ERROR_ probably shouldn't occur if all
+// the hardware and software is correct, except perhaps under abnormal noise.
+// The ones beginning with just OWM_ might be ok or not, depending on the
+// nature of the hardware (e.g. dynamic or fixed slave set).  X macros
+// are used here to ensure we stay in sync with the owm_result_as_string()
+// function.
 #define OWM_RESULT_CODES                                                      \
                                                                               \
   /* Note that this code must be first, so that it ends up with value 0.   */ \
@@ -39,45 +40,52 @@
   /* The master (that's us) sent a reset pulse, but didn't receive any     */ \
   /* slave response pulse.  This can happen when there's no slave present, */ \
   /* or perhaps if the slaves are all busy, if they are the sort that      */ \
-  /* don't always honor reset pulses :).                                   */ \
+  /* don't always honor reset pulses.  So far as I know official Maxim     */ \
+  /* slaves always honor reset pulses, but if you use the one_wire_slave.h */ \
+  /* interface to creat your own slaves, you may be tempted to ignore or   */ \
+  /* delay your reaction to them at times.                                 */ \
   X (OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE)                                   \
                                                                               \
   /* This occurs when either owm_next() or owm_next_alarmed() fails to     */ \
-  /* find another slave, or when owm_first_alarmed() fails to find a first */ \
-  /* alarmed slave.  Note that when there are no slaves present on the bus */ \
-  /* OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE will result, not this.          */ \
+  /* find another slave, when owm_first_alarmed() fails to find a first    */ \
+  /* alarmed slave, or when owm_verify() operates correctly but doesn't    */ \
+  /* find the requested slave.  Note that when there are no slaves present */ \
+  /* on the bus OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE will result, not     */ \
+  /* this.                                                                 */ \
   X (OWM_RESULT_NO_SUCH_SLAVE)                                                \
                                                                               \
   /* Got one values for both a bit and its compliment, in a situation      */ \
   /* where this shouldn't happen (i.e. not during the first bit of an      */ \
-  /* owm_alarm_first() call).  Note that when no slaves are present, many  */ \
-  /* routines in this module return OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE, */ \
-  /* not this value.  This result could perhaps occur due to a line eror,  */ \
-  /* or if a slave is disconnected during a search.                        */ \
-  X (OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT)              \
+  /* owm_first_alarmed() call).  Note that when no slaves are present,     */ \
+  /* many  routines in this module return                                  */ \
+  /* OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE, not this value.  This result   */ \
+  /* could perhaps occur due to a line eror,  or if a slave is             */ \
+  /* disconnected during a search.                                         */ \
+  /* FIXME: verify that this doesn't happen for alarmed_next()             */ \
+  X (OWM_RESULT_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT)       \
                                                                               \
   /* The master (that's us) received a ROM ID with an inconsistent CRC     */ \
   /* value.                                                                */ \
-  X (OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE)                            \
+  X (OWM_RESULT_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE)                     \
                                                                               \
   /* A search operation saw what appeared to be a slave with ROM ID byte 0 */ \
   /* with a value of 0.  Well behaved slaves should never have a ROM ID    */ \
   /* with a byte 0 of 0, because this is how a ground-faulted data line    */ \
-  /* (or misbhaving slave that's stuck low) ends up making its presence    */ \
-  /* known for the first time.                                             */ \
-  X (OWM_ERROR_GOT_ROM_ID_WITH_BYTE_0_OF_0_PROBABLE_GROUNDED_DATA_LINE)       \
+  /* (or misbhaving slave that's stuck holding the line low) ends up       */ \
+  /* making its presence known for the first time.                         */ \
+  X (OWM_RESULT_ERROR_GOT_ROM_ID_WITH_BYTE_0_OF_0_PROBABLE_GROUNDED_LINE)     \
                                                                               \
   /* Caller supplied an invalid ROM command argument (one that doesn't     */ \
   /* satisfy OWM_IS_TRANSACTION_INITIATING_ROM_COMMAND()).  This is a      */ \
   /* caller bug.                                                           */ \
-  X (OWM_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND)                    \
+  X (OWM_RESULT_ERROR_GOT_INVALID_TRANSACTION_INITIATION_COMMAND)             \
                                                                               \
   /* Caller supplied an invalid function command argument (one that does   */ \
   /* satisfy OWM_IS_ROM_COMMAND()).  This is a caller bug.                 */ \
-  X (OWM_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND)                   \
+  X (OWM_RESULT_ERROR_GOT_ROM_COMMAND_INSTEAD_OF_FUNCTION_COMMAND)            \
                                                                               \
-  /* Some unknown problem occurred (probably a bug).                       */ \
-  X (OWM_ERROR_UNKNOWN_PROBLEM)
+  /* Some unknown problem occurred (probably a bug in this module).        */ \
+  X (OWM_RESULT_ERROR_UNKNOWN_PROBLEM)
 
 // Return type representing the result of an operation.
 typedef enum {
@@ -130,8 +138,8 @@ owm_init (void);
 //   otherwise.  If the arguments are valid, the OWC_MATCH_ROM_COMMAND
 //   and OWC_SKIP_ROM_COMMAND flavors of this routine should
 //   always succeed.  The OWC_READ_ROM_COMMAND flavor will return
-//   OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE when it detects a CRC
-//   mismatch on the read ROM ID.
+//   OWM_RESULT_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE when it detects
+//   a CRC mismatch on the read ROM ID.
 //
 // To actually complete the transaction, some slave- and transaction-specific
 // back-and-forth using the lower level functions in this interface will
