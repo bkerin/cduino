@@ -546,23 +546,24 @@ owm_verify (uint8_t *id_buf)
   return result;
 }
 
-uint8_t
+owm_error_t
 owm_first_alarmed (uint8_t *id_buf)
 {
-  uint8_t result = first (TRUE);
+  owm_error_t result = first (TRUE);
 
-  if ( result ) {
+  if ( result == OWM_ERROR_NONE ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
   return result;
 }
 
-uint8_t
+owm_error_t
 owm_next_alarmed (uint8_t *id_buf)
 {
-  uint8_t result = next (TRUE);
-  if ( result ) {
+  owm_error_t result = first (TRUE);
+
+  if ( result == OWM_ERROR_NONE ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 

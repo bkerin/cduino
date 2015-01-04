@@ -226,11 +226,11 @@ owm_error_t
 owm_verify (uint8_t *id_buf);
 
 // Like owm_first(), but only finds slaves with an active alarm condition.
-uint8_t
+owm_error_t
 owm_first_alarmed (uint8_t *id_buf);
 
 // Like owm_next(), but only finds slaves with an active alarm condition.
-uint8_t
+owm_error_t
 owm_next_alarmed (uint8_t *id_buf);
 
 // FIXXME: it would be nice to add a filter for alarm search (EC command).

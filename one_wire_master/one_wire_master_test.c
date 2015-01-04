@@ -182,29 +182,32 @@ main (void)
   }
   PFP ("ok, no next slave found.\n");
 
-  // FIXME: WORK POINT: make sure that running owm_next another time after
-  // it hits the end of the list actually does act like owm_first().
-
   // The normal test arrangement doesn't feature any alarmed slaves.  Its kind
   // of a pain to program the alarm condition on real DS18B20 devices and
   // I haven't done so.  The one_wire_slave_test.c program contains a line
   // that can be uncommented to cause and slave created using that interface
   // to consider itself alarmed, however.
   PFP ("Trying owm_first_alarmed()... ");
-  uint8_t slave_found = owm_first_alarmed ((uint8_t *) &rid);
-  if ( ! slave_found ) {
+  error = owm_first_alarmed ((uint8_t *) &rid);
+  if ( error == OWM_ERROR_NO_SUCH_SLAVE ) {
     PFP ("no alarmed slaves found (usually ok, see source).\n");
   }
-  else {
+  else if ( error == OWM_ERROR_NONE ) {
     PFP ("found alarmed slave (ID: ");
     print_slave_id (slave_rid);
     PFP (").\n");
+  }
+  else {
+    PFP (
+        "failed: returned %s instead of OWM_ERROR_NO_SUCH_SLAVE or "
+        "OWM_ERROR_NONE\n",
+        owm_result_as_string (error, result_buf) );
+    PFP_ASSERT_NOT_REACHED ();
   }
 
   // owm_verify() should work with either a single or multiple slaves.
   PFP ("Trying owm_verify() with previously discoved ID... ");
   OWM_CHECK (owm_verify ((uint8_t *) &rid));
-  error = owm_verify ((uint8_t *) &rid);
   PFP ("ok, ID verified.\n");
 
   // Verify the owm_verify() works as expected when given a nonexistend RID.
