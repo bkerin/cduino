@@ -25,30 +25,33 @@
          the DIO_PIN_* tuple macros before this header is included)
 #endif
 
-// These are the result codes returned by many routines in this
-// interface.  X macros are used here to ensure we stay in sync with the
-// owm_result_as_string() function.
+// These are the result codes returned by many routines in this interface.
+// The ones beginning with OWM_ERROR_ probably shouldn't occur if all the
+// hardware and software is correct, the ones beginning with just OWM_ might
+// be ok or not, depending on the nature of the hardware (e.g. dynamic or
+// fixed slave set) X macros are used here to ensure we stay in sync with
+// the owm_result_as_string() function.
 #define OWM_RESULT_CODES                                                      \
                                                                               \
-  /* No error.  Note that this code must be first.                         */ \
-  X (OWM_ERROR_NONE)                                                          \
+  /* Note that this code must be first, so that it ends up with value 0.   */ \
+  X (OWM_RESULT_SUCCESS)                                                      \
                                                                               \
   /* The master (that's us) sent a reset pulse, but didn't receive any     */ \
   /* slave response pulse.  This can happen when there's no slave present, */ \
   /* or perhaps if the slaves are all busy, if they are the sort that      */ \
   /* don't always honor reset pulses :).                                   */ \
-  X (OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE)                                    \
+  X (OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE)                                   \
                                                                               \
   /* This occurs when either owm_next() or owm_next_alarmed() fails to     */ \
   /* find another slave, or when owm_first_alarmed() fails to find a first */ \
   /* alarmed slave.  Note that when there are no slaves present on the bus */ \
-  /* OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE will result, not this.           */ \
-  X (OWM_ERROR_NO_SUCH_SLAVE)                                                 \
+  /* OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE will result, not this.          */ \
+  X (OWM_RESULT_NO_SUCH_SLAVE)                                                \
                                                                               \
   /* Got one values for both a bit and its compliment, in a situation      */ \
   /* where this shouldn't happen (i.e. not during the first bit of an      */ \
   /* owm_alarm_first() call).  Note that when no slaves are present, many  */ \
-  /* routines in this module return OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE,  */ \
+  /* routines in this module return OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE, */ \
   /* not this value.  This result could perhaps occur due to a line eror,  */ \
   /* or if a slave is disconnected during a search.                        */ \
   X (OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT)              \
@@ -123,7 +126,7 @@ owm_init (void);
 //
 // Return:
 //
-//   OWM_ERROR_NONE on succes, or an error code indicating the problem
+//   OWM_RESULT_SUCCESS on succes, or an error code indicating the problem
 //   otherwise.  If the arguments are valid, the OWC_MATCH_ROM_COMMAND
 //   and OWC_SKIP_ROM_COMMAND flavors of this routine should
 //   always succeed.  The OWC_READ_ROM_COMMAND flavor will return
@@ -178,18 +181,10 @@ owm_read_bit (void);
 
 // This function requires that exactly zero or one slaves be present on the
 // bus.  If we discover a slave, its ID is written into id_buf (which must
-// be a pointer to OWC_ID_SIZE_BYTES bytes of space) and OWM_ERROR_NONE is
-// returned.  If no slave responds to our presence pulse, FALSE is returned.
-// If there are two or more slaves present, the results of this function
-// are undefined (later calls to this interface might behave strangely).
-//
-// Possible errors:
-//
-//   * OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE
-//   * OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE
-//
-// The contents of id_buf are unspecified if an error is returned.
-//
+// be a pointer to OWC_ID_SIZE_BYTES bytes of space) and OWM_RESULT_SUCCESS
+// is returned, otherwise a non-zero result code is returned.  If there are
+// two or more slaves present, the results of this function are undefined
+// (later calls to this interface might behave strangely).
 owm_result_t
 owm_read_id (uint8_t *id_buf);
 
@@ -197,29 +192,30 @@ owm_read_id (uint8_t *id_buf);
 // order of the one-wire search algorithm described in Maxim application
 // note AN187).  If a slave is discovered, its ID is written into id_buf
 // (which mucst be a pointer to OWC_ID_SIZE_BYTES bytes of space) and
-// OWM_ERROR_NONE is returned, otherwise a non-zero error code is returned.
-// Note that this resets any search which is already in progress.
+// OWM_RESULT_SUCCESS is returned, otherwise a non-zero error code is
+// returned.  Note that this resets any search which is already in progress.
 owm_result_t
 owm_first (uint8_t *id_buf);
 
-// Require an immediately preceeding call to owm_first() or owm_next()
-// to have occurred.  Find the "next" slave on the one-wire bus (in the
-// sense of the discovery order of the one-wire search algorithm described
-// in Maxim application note AN187).  This continues a search begun by
-// a previous call to owm_first().  If another slave is found, its ID
-// is written into id_buf (which must be a pointer to OWC_ID_SIZE_BYTES
-// bytes of space and TRUE is returned, otherwise a non-zero result code
+// Require an immediately preceeding call to owm_first() or owm_next() to
+// have occurred.  Find the "next" slave on the one-wire bus (in the sense of
+// the discovery order of the one-wire search algorithm described in Maxim
+// application note AN187).  This continues a search begun by a previous
+// call to owm_first().  If another slave is found, its ID is written into
+// id_buf (which must be a pointer to OWC_ID_SIZE_BYTES bytes of space)
+// and OWM_RESULT_SUCCESS is returned, otherwise a non-zero result code
 // is returned.  If the end of the list of slaves has been reached, the
-// non-zero result code will be OWM_ERROR_NO_SUCH_SLAVE will be returned.
-// (additional calls to this routine may wrap the search back to the start
-// of the slave list, but this behavior is not guaranteed).
+// non-zero result code will be OWM_RESULT_NO_SUCH_SLAVE.  Additional calls
+// to this routine may wrap the search back to the start of the slave list,
+// but this behavior is not guaranteed.
 owm_result_t
 owm_next (uint8_t *id_buf);
 
-// Return true iff device with ID equal to the value in the OWC_ID_SIZE_BYTES
-// bytes pointed to by id_buf is present on the bus, or FALSE otherwise.
-// Note that unlike owm_read_id(), this function is safe to use when there
-// are multiple devices on the bus.  When this function returns, the global
+// Return OWM_RESULT_SUCCESS iff device with ID equal to the value in
+// the OWC_ID_SIZE_BYTES bytes pointed to by id_buf is confirmed to be
+// present on the bus, or a non-zero result code otherwise.  Note that
+// unlike owm_read_id(), this function is safe to use when there are
+// multiple devices on the bus.  When this function returns, the global
 // search state is restored (so for example the next call to owm_next()
 // should behave as if the call to this routine never occurred).
 owm_result_t
@@ -232,6 +228,7 @@ owm_first_alarmed (uint8_t *id_buf);
 // Like owm_next(), but only finds slaves with an active alarm condition.
 owm_result_t
 owm_next_alarmed (uint8_t *id_buf);
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //

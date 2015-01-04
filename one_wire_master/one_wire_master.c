@@ -60,7 +60,7 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd)
   }
 
   if ( ! owm_touch_reset () ) {
-    return OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE;
+    return OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE;
   }
 
   owm_write_byte (rom_cmd);
@@ -101,7 +101,7 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd)
 
   owm_write_byte (function_cmd);
 
-  return OWM_ERROR_NONE;
+  return OWM_RESULT_SUCCESS;
 }
 
 uint8_t
@@ -160,7 +160,7 @@ owm_read_id (uint8_t *id_buf)
 {
   uint8_t slave_presence = owm_touch_reset ();
   if ( ! slave_presence ) {
-    return OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE;
+    return OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE;
   }
 
   uint8_t const read_rom_command = OWC_READ_ROM_COMMAND;
@@ -179,7 +179,7 @@ owm_read_id (uint8_t *id_buf)
     }
   }
 
-  return OWM_ERROR_NONE;
+  return OWM_RESULT_SUCCESS;
 }
 
 // These are errors that can occur in the search() funtion.
@@ -354,9 +354,9 @@ search (uint8_t alarmed_slaves_only)
 }
 
 // Find the 'first' device on the one-wire bus.  If alarmed_slaves_only is
-// true, only slaves with an active alarm condition are found.  On succes,
-// the discovered ROM ID is place in rom_id and OWM_ERROR_NONE_IS RETURNED.
-// On failure a non-zero error code is returned.
+// true, only slaves with an active alarm condition are found.  On success,
+// the discovered ROM ID is placed in rom_id and OWM_RESULT_SUCCESS is
+// returned, otherwise a non-zero result code is returned.
 static owm_result_t
 first (uint8_t alarmed_slaves_only)
 {
@@ -368,7 +368,7 @@ first (uint8_t alarmed_slaves_only)
   uint8_t search_result = search (alarmed_slaves_only);
 
   if ( search_result ) {
-    return OWM_ERROR_NONE;
+    return OWM_RESULT_SUCCESS;
   }
   else {
     switch ( search_error ) {
@@ -377,11 +377,11 @@ first (uint8_t alarmed_slaves_only)
       // to make them match the order of X macros in one_wire_master.h,
       // which in turn should be ordered for clarity of presentation.
       case SEARCH_ERROR_NPP:
-        return OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE;
+        return OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE;
         break;
       case SEARCH_ERROR_GBAC:
         if ( alarmed_slaves_only && gbac_bit_number == 1 ) {
-          return OWM_ERROR_NO_SUCH_SLAVE;
+          return OWM_RESULT_NO_SUCH_SLAVE;
         }
         else {
           return OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
@@ -391,7 +391,7 @@ first (uint8_t alarmed_slaves_only)
         return OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
         break;
       case SEARCH_ERROR_SPLD:
-        return OWM_ERROR_NO_SUCH_SLAVE;
+        return OWM_RESULT_NO_SUCH_SLAVE;
         break;
       case SEARCH_ERROR_RID0IS0:
         return
@@ -405,22 +405,21 @@ first (uint8_t alarmed_slaves_only)
 }
 
 // Find the 'next' device on the one-wire bus.  If alarmed_slaves_only is
-// true, only slaves ith an active alarm condition are found.
-// Return TRUE  : device found, ROM number in rom_id buffer
-//        FALSE : device not found, end of search
-//
+// true, only slaves ith an active alarm condition are found.  On success,
+// th ediscovered ROM ID is placed in rom_id and and OWM_RESULT_SUCCESS IS
+// returned, otherwise a non-zero result code is returned.
 static owm_result_t
 next (uint8_t alarmed_slaves_only)
 {
   uint8_t search_result = search (alarmed_slaves_only);
 
   if ( search_result ) {
-    return OWM_ERROR_NONE;
+    return OWM_RESULT_SUCCESS;
   }
   else {
     switch ( search_error ) {
       case SEARCH_ERROR_NPP:
-        return OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE;
+        return OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE;
         break;
       case SEARCH_ERROR_GBAC:
         return OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
@@ -429,7 +428,7 @@ next (uint8_t alarmed_slaves_only)
         return OWM_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE;
         break;
       case SEARCH_ERROR_SPLD:
-        return OWM_ERROR_NO_SUCH_SLAVE;
+        return OWM_RESULT_NO_SUCH_SLAVE;
         break;
       case SEARCH_ERROR_RID0IS0:
         return
@@ -443,7 +442,7 @@ next (uint8_t alarmed_slaves_only)
 }
 
 // Verify that the device with the ROM number in rom_id buffer is present.
-// Return OWM_ERROR_NONE if it is, or a non-zero error code otherwise.
+// Return OWM_RESULT_SUCCESS if it is, or a non-zero result code otherwise.
 static owm_result_t
 verify (void)
 {
@@ -465,10 +464,10 @@ verify (void)
 
   if ( search (FALSE) ) {
      // Check if same device found
-     result = OWM_ERROR_NONE;
+     result = OWM_RESULT_SUCCESS;
      for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
         if ( rom_backup[ii] != rom_id[ii] ) {
-            result = OWM_ERROR_NO_SUCH_SLAVE;
+            result = OWM_RESULT_NO_SUCH_SLAVE;
             break;
         }
      }
@@ -476,7 +475,7 @@ verify (void)
   else {
     switch ( search_error ) {
       case SEARCH_ERROR_NPP:
-        result = OWM_ERROR_DID_NOT_GET_PRESENCE_PULSE;
+        result = OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE;
         break;
       case SEARCH_ERROR_GBAC:
         result = OWM_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT;
@@ -515,7 +514,7 @@ owm_first (uint8_t *id_buf)
 {
   owm_result_t result = first (FALSE);
 
-  if ( result == OWM_ERROR_NONE ) {
+  if ( result == OWM_RESULT_SUCCESS ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
@@ -527,7 +526,7 @@ owm_next (uint8_t *id_buf)
 {
   owm_result_t result = next (FALSE);
 
-  if ( result == OWM_ERROR_NONE ) {
+  if ( result == OWM_RESULT_SUCCESS ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
@@ -549,7 +548,7 @@ owm_first_alarmed (uint8_t *id_buf)
 {
   owm_result_t result = first (TRUE);
 
-  if ( result == OWM_ERROR_NONE ) {
+  if ( result == OWM_RESULT_SUCCESS ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 
@@ -561,7 +560,7 @@ owm_next_alarmed (uint8_t *id_buf)
 {
   owm_result_t result = first (TRUE);
 
-  if ( result == OWM_ERROR_NONE ) {
+  if ( result == OWM_RESULT_SUCCESS ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);
   }
 

@@ -162,12 +162,12 @@ main (void)
   PFP ("ok, found slave with previously discovered ID.\n");
 
   // Verify that owm_next() (following the owm_first() call above) returns
-  // OWM_ERROR_NO_SUCH_SLAVE, since there is only one slave on the bus.
+  // OWM_RESULT_NO_SUCH_SLAVE, since there is only one slave on the bus.
   PFP ("Trying owm_next()... ");
   owm_result_t result = owm_next ((uint8_t *) &rid);
-  if ( result != OWM_ERROR_NO_SUCH_SLAVE ) {
+  if ( result != OWM_RESULT_NO_SUCH_SLAVE ) {
     PFP (
-        "failed: returned %s instead of OWM_ERROR_NO_SUCH_SLAVE\n",
+        "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE\n",
         owm_result_as_string (result, result_buf) );
     PFP_ASSERT_NOT_REACHED ();
   }
@@ -180,18 +180,18 @@ main (void)
   // to consider itself alarmed, however.
   PFP ("Trying owm_first_alarmed()... ");
   result = owm_first_alarmed ((uint8_t *) &rid);
-  if ( result == OWM_ERROR_NO_SUCH_SLAVE ) {
+  if ( result == OWM_RESULT_NO_SUCH_SLAVE ) {
     PFP ("no alarmed slaves found (usually ok, see source).\n");
   }
-  else if ( result == OWM_ERROR_NONE ) {
+  else if ( result == OWM_RESULT_SUCCESS ) {
     PFP ("found alarmed slave (ID: ");
     print_slave_id (slave_rid);
     PFP (").\n");
   }
   else {
     PFP (
-        "failed: returned %s instead of OWM_ERROR_NO_SUCH_SLAVE or "
-        "OWM_ERROR_NONE\n",
+        "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE or "
+        "OWM_RESULT_SUCCESS\n",
         owm_result_as_string (result, result_buf) );
     PFP_ASSERT_NOT_REACHED ();
   }
@@ -205,9 +205,9 @@ main (void)
   PFP ("Trying owm_verify() with nonexistent ID... ");
   uint64_t nerid = rid + 42;   // NonExistent RID
   result = owm_verify ((uint8_t *) &nerid);
-  if ( result != OWM_ERROR_NO_SUCH_SLAVE ) {
+  if ( result != OWM_RESULT_NO_SUCH_SLAVE ) {
     PFP (
-        "failed: returned %s instead of OWM_ERROR_NO_SUCH_SLAVE\n",
+        "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE\n",
         owm_result_as_string (result, result_buf) );
     PFP_ASSERT_NOT_REACHED ();
   }
