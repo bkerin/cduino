@@ -54,19 +54,19 @@ term_io_getline (char *linebuf);
 #define TERM_IO_PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
 
 // Print Trace Point message.  Useful for debugging.
-#define TERM_IO_PTP() \
-  TERM_IO_PFP ( \
+#define TERM_IO_PTP()                                   \
+  TERM_IO_PFP (                                         \
       "trace point: file %s, line %d, function %s()\n", \
       __FILE__, __LINE__, __func__ )
 
 // Print Halt Point message and call exit(1).  Note that exit will disable
 // all interrupts before entering an infinite loop.
-#define TERM_IO_PHP() \
-  do { \
-    TERM_IO_PFP ( \
+#define TERM_IO_PHP()                                    \
+  do {                                                   \
+    TERM_IO_PFP (                                        \
         "halt point: file %s, line %d, function %s()\n", \
-        __FILE__, __LINE__, __func__); \
-    exit (1); \
+        __FILE__, __LINE__, __func__);                   \
+    exit (1);                                            \
   } while ( 0 );
 
 // This macro is supposed to print a message like assert() on a big computer.
