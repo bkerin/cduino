@@ -210,13 +210,9 @@ owm_first (uint8_t *id_buf);
 // is written into id_buf (which must be a pointer to OWC_ID_SIZE_BYTES
 // bytes of space and TRUE is returned, otherwise a non-zero result code
 // is returned.  If the end of the list of slaves has been reached, the
-// non-zero result code will be OWM_ERROR_NO_SUCH_SLAVE and the internal
-// search state will be reset such that the next owm_next() call will
-// find the first slave again.  FIXME: I think its best not to document
-// this behavior, because its sort of weird and pointless, and some of the
-// global search parameters are not explicitly initialized unto owm_first()
-// (it probably works because they start 0 anyway, but I don't feel like
-// verifying that making the initialization explicit).
+// non-zero result code will be OWM_ERROR_NO_SUCH_SLAVE will be returned.
+// (additional calls to this routine may wrap the search back to the start
+// of the slave list, but this behavior is not guaranteed).
 owm_error_t
 owm_next (uint8_t *id_buf);
 
@@ -226,7 +222,7 @@ owm_next (uint8_t *id_buf);
 // are multiple devices on the bus.  When this function returns, the global
 // search state is restored (so for example the next call to owm_next()
 // should behave as if the call to this routine never occurred).
-uint8_t
+owm_error_t
 owm_verify (uint8_t *id_buf);
 
 // Like owm_first(), but only finds slaves with an active alarm condition.
