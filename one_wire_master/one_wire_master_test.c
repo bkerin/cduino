@@ -135,10 +135,7 @@ main (void)
 
   PFP ("Trying owm_touch_reset()... ");
   uint8_t slave_presence = owm_touch_reset ();
-  if ( ! slave_presence ) {
-    PFP ("failed: non-true was returned");
-    PFP_ASSERT_NOT_REACHED ();
-  }
+  PFP_ASSERT (slave_presence);
   PFP ("ok, got slave presence pulse.\n");
 
 #ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
@@ -156,18 +153,12 @@ main (void)
   // We can use owm_read_id() because we know we have exactly one slave.
   PFP ("Trying owm_read_id()... ");
   OWM_CHECK (owm_read_id ((uint8_t *) &rid));  // One-wire Master Result
-  if ( rid != slave_rid ) {
-    PFP ("failed: discovered slave ID is different\n");
-    PFP_ASSERT_NOT_REACHED ();
-  }
+  PFP_ASSERT (rid == slave_rid);   // Should be the same as last time
   PFP ("ok, found slave with previously discovered ID.\n");
 
   PFP ("Trying owm_first()... ");
   OWM_CHECK (owm_first ((uint8_t *) &rid));
-  if ( rid != slave_rid ) {
-    PFP ("failed: discovered slave ID is different\n");
-    PFP_ASSERT_NOT_REACHED ();
-  }
+  PFP_ASSERT (rid == slave_rid);   // Should be the same as last time
   PFP ("ok, found slave with previously discovered ID.\n");
 
   // Verify that owm_next() (following the owm_first() call above) returns
@@ -255,11 +246,11 @@ main (void)
 
   PFP ("Trying owm_start_transaction() with READ_ROM... ");
   uint64_t slave_rid_3rd_reading;
-  owm_error_t err = owm_start_transaction (
-      OWC_READ_ROM_COMMAND,
-      (uint8_t *) &slave_rid_3rd_reading,
-      DS18B20_COMMANDS_CONVERT_T_COMMAND );
-  OWM_CHECK (err);
+  OWM_CHECK (
+      owm_start_transaction (
+        OWC_READ_ROM_COMMAND,
+        (uint8_t *) &slave_rid_3rd_reading,
+        DS18B20_COMMANDS_CONVERT_T_COMMAND ) );
   PFP_ASSERT (slave_rid_3rd_reading = slave_rid);
   conversion_complete = 0;
   while ( ! (conversion_complete = owm_read_bit ()) ) {
@@ -268,11 +259,11 @@ main (void)
   PFP ("seemed ok.\n");
 
   PFP ("Trying owm_start_transaction() with MATCH_ROM... ");
-  err = owm_start_transaction (
-      OWC_MATCH_ROM_COMMAND,
-      (uint8_t *) &slave_rid,
-      DS18B20_COMMANDS_CONVERT_T_COMMAND );
-  PFP_ASSERT (err == OWM_ERROR_NONE);
+  OWM_CHECK (
+      owm_start_transaction (
+        OWC_MATCH_ROM_COMMAND,
+        (uint8_t *) &slave_rid,
+        DS18B20_COMMANDS_CONVERT_T_COMMAND ) );
   conversion_complete = 0;
   while ( ! (conversion_complete = owm_read_bit ()) ) {
     ;
@@ -280,11 +271,11 @@ main (void)
   PFP ("seemed ok.\n");
 
   PFP ("Trying owm_start_transaction() with SKIP_ROM... ");
-  err = owm_start_transaction (
-      OWC_SKIP_ROM_COMMAND,
-      NULL,
-      DS18B20_COMMANDS_CONVERT_T_COMMAND );
-  PFP_ASSERT (err == OWM_ERROR_NONE);
+  OWM_CHECK (
+      owm_start_transaction (
+        OWC_SKIP_ROM_COMMAND,
+        NULL,
+        DS18B20_COMMANDS_CONVERT_T_COMMAND ) );
   conversion_complete = 0;
   while ( ! (conversion_complete = owm_read_bit ()) ) {
     ;
