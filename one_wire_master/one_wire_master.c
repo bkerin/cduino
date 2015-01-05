@@ -8,10 +8,13 @@
 #include "dio.h"
 #include "one_wire_common.h"
 #include "one_wire_master.h"
-// This is convenient if we need to debug:
+// Its convenient to use term_io if we need to debug:
 //#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
-#include "term_io.h"
+//#include "term_io.h"
 #include "util.h"
+
+// FIXME: WORK POINT: reorder things in this file to match the order in
+// the header as appropriate.
 
 #ifdef OWM_BUILD_RESULT_DESCRIPTION_FUNCTION
 
