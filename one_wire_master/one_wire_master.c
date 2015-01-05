@@ -372,10 +372,6 @@ first (uint8_t alarmed_slaves_only)
   }
   else {
     switch ( search_error ) {
-      // FIXME: consider the order of these errors here and elsewhere.
-      // Could reorder for speed in typical cases, but I think its better
-      // to make them match the order of X macros in one_wire_master.h,
-      // which in turn should be ordered for clarity of presentation.
       case SEARCH_ERROR_NPP:
         return OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE;
         break;
