@@ -195,6 +195,19 @@ main (void)
         owm_result_as_string (result, result_buf) );
     PFP_ASSERT_NOT_REACHED ();
   }
+  if ( result == OWM_RESULT_SUCCESS ) {
+    // If owm_first_alarmed() found an alarmed slave, its reasonable to look
+    // for another one, which we try here.
+    PFP ("Trying own_next_alarmed()... ");
+    result = owm_next_alarmed ((uint8_t *) &rid);
+    if ( result != OWM_RESULT_NO_SUCH_SLAVE ) {
+      PFP (
+          "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE\n",
+          owm_result_as_string (result, result_buf) );
+      PFP_ASSERT_NOT_REACHED ();
+    }
+    PFP ("ok, no next alarmed slave found.\n");
+  }
 
   // owm_verify() should work with either a single or multiple slaves.
   PFP ("Trying owm_verify() with previously discoved ID... ");

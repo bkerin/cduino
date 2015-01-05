@@ -8,8 +8,8 @@
 #include "dio.h"
 #include "one_wire_common.h"
 #include "one_wire_master.h"
-// FIXME: remove this debug goop
-#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+// This is convenient if we need to debug:
+//#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 #include "util.h"
 
@@ -20,16 +20,16 @@ owm_result_as_string (owm_result_t result, char *buf)
 {
   switch ( result ) {
 
-#  define X(result_code)                                                      \
-    case result_code:                                                         \
-      PFP_ASSERT (strlen (#result_code) < OWM_RESULT_DESCRIPTION_MAX_LENGTH); \
-      strcpy_P (buf, PSTR (#result_code));                                    \
+#  define X(result_code)                                                  \
+    case result_code:                                                     \
+      assert (strlen (#result_code) < OWM_RESULT_DESCRIPTION_MAX_LENGTH); \
+      strcpy_P (buf, PSTR (#result_code));                                \
       break;
     OWM_RESULT_CODES
 #  undef X
 
     default:
-      PFP_ASSERT_NOT_REACHED ();
+      assert (FALSE);   // Shouldn't be here
       break;
   }
 
@@ -624,7 +624,7 @@ owm_first_alarmed (uint8_t *id_buf)
 owm_result_t
 owm_next_alarmed (uint8_t *id_buf)
 {
-  owm_result_t result = first (TRUE);
+  owm_result_t result = next (TRUE);
 
   if ( result == OWM_RESULT_SUCCESS ) {
     memcpy (id_buf, rom_id, OWC_ID_SIZE_BYTES);

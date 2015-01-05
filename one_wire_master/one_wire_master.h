@@ -61,7 +61,6 @@
   /* OWM_RESULT_DID_NOT_GET_PRESENCE_PULSE, not this value.  This result   */ \
   /* could perhaps occur due to a line eror,  or if a slave is             */ \
   /* disconnected during a search.                                         */ \
-  /* FIXME: verify that this doesn't happen for alarmed_next()             */ \
   X (OWM_RESULT_ERROR_UNEXPECTEDLY_GOT_ONES_FOR_BIT_AND_ITS_COMPLIMENT)       \
                                                                               \
   /* The master (that's us) received a ROM ID with an inconsistent CRC     */ \
