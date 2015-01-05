@@ -8,11 +8,10 @@
 // schemes work.
 //
 // This interface features high-level routines that can handle all the
-// back-and-forth required to initiate a one-wire command transaction or
-// slave search or verify, and also access to the lower-level one-wire
-// functionality, such as bit- and byte-at-a-time communication.  Note that
-// the latter low-level functions are typically required to usefully complete
-// a transaction.
+// back-and-forth required to scan the bus or initiate a one-wire command
+// transaction, and also lower-level one-wire functionality, such as bit-
+// and byte-at-a-time communication.  Note that the latter low-level
+// functions are typically required to usefully complete a transaction.
 
 #ifndef ONE_WIRE_MASTER_H
 #define ONE_WIRE_MASTER_H
@@ -138,7 +137,7 @@ owm_free_rom_ids_list (uint8_t **rom_ids);
 //   rom_cmd          May be OWC_READ_ROM_COMMAND (if there's only one slave on
 //                    the bus), OWC_MATCH_ROM_COMMAND, or OWC_SKIP_ROM_COMMAND
 //
-//   rom_id           For OWC_READ_ROM_COMMAND, this cantains the read ROM ID
+//   rom_id           For OWC_READ_ROM_COMMAND, this contains the read ROM ID
 //                    on return.  For OWC_MATCH_ROM_COMMAND, it must contain
 //                    the ROM ID being addressed.  For OWC_SKIP_ROM_COMMAND it
 //                    is unused (and may be NULL)
@@ -188,13 +187,34 @@ owm_write_bit (uint8_t value);
 uint8_t
 owm_read_bit (void);
 
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Byte Write/Read
+//
+
+// Write byte.  The LSB is written first.
+void
+owm_write_byte (uint8_t data);
+
+// Read byte.  The LSB is read first.
+uint8_t
+owm_read_byte (void);
+
+// Fancy simultaneous read/write.  Sort of.  I guess, I haven't used it. It's
+// supposed to be more efficient.  See Maxim Application Note AN126. WARNING:
+// FIXXME: This comes straight from AN126, but I haven't tested it.
+uint8_t
+owm_touch_byte (uint8_t data);
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Device Presense Confirmation/Discovery
 //
 // These functions allow the presence of particular slaves to be confirmed,
-// or the bus searched for all slaves.  FIXXME: searches for slaves from
-// particular families or with active alarm conditions aren't supported yet.
+// or the bus searched for all slaves or all alarmed slaves.  You might be
+// able to to use owm_scan_bus() instead of these lower-level functions.
 //
 
 // This function requires that exactly zero or one slaves be present on the
@@ -246,25 +266,5 @@ owm_first_alarmed (uint8_t *id_buf);
 // Like owm_next(), but only finds slaves with an active alarm condition.
 owm_result_t
 owm_next_alarmed (uint8_t *id_buf);
-
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// Byte Write/Read
-//
-
-// Write byte.  The LSB is written first.
-void
-owm_write_byte (uint8_t data);
-
-// Read byte.  The LSB is read first.
-uint8_t
-owm_read_byte (void);
-
-// Fancy simultaneous read/write.  Sort of.  I guess, I haven't used it. It's
-// supposed to be more efficient.  See Maxim Application Note AN126. WARNING:
-// FIXXME: This comes straight from AN126, but I haven't tested it.
-uint8_t
-owm_touch_byte (uint8_t data);
 
 #endif // ONE_WIRE_MASTER_H
