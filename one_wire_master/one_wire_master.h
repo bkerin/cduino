@@ -116,8 +116,23 @@ owm_result_as_string (owm_result_t result, char *buf);
 void
 owm_init (void);
 
-// Start the transaction sequence as described in the Maxim DS18B20
-// datasheet, "TRANSACTION SEQUENCE" section.
+// Attempt to find all slaves present on the bus and store their ROM IDs in
+// a newly allocated NULL-terminated list.  If at least one slave is found
+// and no errors occur during the scan, then OWM_RESULT_SUCCESS is returned
+// and *rom_ids is set to the first element of the new list, otherwise a
+// non-zero result code is returned and no new memory ends up allocated.
+owm_result_t
+owm_scan_bus (uint8_t ***rom_ids_ptr);
+
+// Free the memory allocated by a previous call to owm_scan_bus().
+void
+owm_free_rom_ids_list (uint8_t **rom_ids);
+
+// Start the transaction sequence as described in the
+// Maxim_DS18B20_datasheet.pdf page 10, "TRANSACTION SEQUENCE" section.
+// This routine performs steps 1, 2, and the first half of 3 from this
+// sequence (the function-specific communication required to complete the
+// transaction is not performed).
 //
 // Arguments:
 //
@@ -134,12 +149,8 @@ owm_init (void);
 //
 // Return:
 //
-//   OWM_RESULT_SUCCESS on succes, or an error code indicating the problem
-//   otherwise.  If the arguments are valid, the OWC_MATCH_ROM_COMMAND
-//   and OWC_SKIP_ROM_COMMAND flavors of this routine should
-//   always succeed.  The OWC_READ_ROM_COMMAND flavor will return
-//   OWM_RESULT_ERROR_GOT_ROM_ID_WITH_INCORRECT_CRC_BYTE when it detects
-//   a CRC mismatch on the read ROM ID.
+//   OWM_RESULT_SUCCESS on succes, or a non-zero result code otherwise.
+//   indicating the problem otherwise.
 //
 // To actually complete the transaction, some slave- and transaction-specific
 // back-and-forth using the lower level functions in this interface will

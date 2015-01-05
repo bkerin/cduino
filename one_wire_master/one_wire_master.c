@@ -1,6 +1,7 @@
 // Implementation of the interface described in one_wire_master.h.
 
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 #include <util/crc16.h>
 
@@ -47,6 +48,72 @@ void
 owm_init (void)
 {
   RELEASE_LINE ();
+}
+
+owm_result_t
+owm_scan_bus (uint8_t ***rom_ids_ptr)
+{
+
+  uint8_t *crid;      // Current ROM ID
+  owm_result_t sfr;   // Search Function Result
+  uint8_t dsc = 0;    // Discovered Slave Count
+
+  crid = calloc (1, OWC_ID_SIZE_BYTES);
+  assert (crid != NULL);
+  sfr = owm_first (crid);
+  if ( sfr == OWM_RESULT_SUCCESS ) {
+    // Allocate space in list for new crid and terminating NULL.
+    *rom_ids_ptr = calloc (2, sizeof (uint8_t **));
+    assert (*rom_ids_ptr != NULL);
+    (*rom_ids_ptr)[dsc++] = crid;
+    (*rom_ids_ptr)[dsc] = NULL;
+  }
+  else {
+    free (crid);
+    *rom_ids_ptr = NULL;
+    return sfr;
+  }
+
+  do {
+    crid = calloc (1, OWC_ID_SIZE_BYTES);
+    assert (crid != NULL);
+    sfr = owm_next (crid);
+    if ( sfr == OWM_RESULT_SUCCESS ) {
+      // Reallocate with dsc + 2 for space for new crid and terminating NULL.
+      *rom_ids_ptr = realloc (*rom_ids_ptr, (dsc + 2) * sizeof (uint8_t **));
+      assert (*rom_ids_ptr != NULL);
+      (*rom_ids_ptr)[dsc++] = crid;
+      (*rom_ids_ptr)[dsc] = NULL;
+    }
+    else {
+      free (crid);
+    }
+  } while ( sfr == OWM_RESULT_SUCCESS );
+
+  if ( sfr == OWM_RESULT_NO_SUCH_SLAVE ) {
+    // We expect to eventually hit the end of the list, so this is success
+    return OWM_RESULT_SUCCESS;
+  }
+  else {
+    owm_free_rom_ids_list (*rom_ids_ptr);
+    *rom_ids_ptr = NULL;
+    return sfr;
+  }
+}
+
+// Free whatever scan results have made it into rom_ids.
+void
+owm_free_rom_ids_list (uint8_t **rom_ids)
+{
+  if ( rom_ids == NULL ) {
+    return;
+  }
+
+  for ( uint8_t **cridp = rom_ids ; *cridp != NULL ; cridp++ ) {
+    free (*cridp);
+  }
+
+  free (rom_ids);
 }
 
 owm_result_t

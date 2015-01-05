@@ -64,17 +64,17 @@ static uint8_t spb[DS18B20_SCRATCHPAD_SIZE];   // DS18B20 Scratchpad Buffer
 static uint64_t
 ds18b20_init_and_rom_command (void)
 {
-  // Requies exactly one DS18B20 slave to be present on the bus.  Perform the
-  // Initialization (Step 1) and ROM Command (Step 2) steps of the transaction
-  // sequence described in the DS18B20 datasheet, and return the discovered
-  // ROM code of the slave.  Note that functions that perform this operation
+  // Requies exactly one DS18B20 slave to be present on the bus.  Perform
+  // the Initialization (Step 1) and ROM Command (Step 2) steps of the
+  // transaction sequence described in the
+  // Maxim_DS18B20_datasheet.pdf, page 10, and return the discovered ROM ID
+  // code of the slave.  Note that functions that perform this operation
   // in a single call are available in the one_wire_master.h interface,
   // but here we perform them manually as a cross-check.
 
-  // Prompt the slave(s) to respond with a "presence pulse".  This corresponds
-  // to the "INITIALIZATION" step (Step 1) described in the DS18B20 datasheet.
-  // FIXME: would be nice to have datasheet available on web and linked to
-  // by the docs...
+  // Prompt the slave(s) to respond with a "presence pulse".
+  // This corresponds to the "INITIALIZATION" step described in the
+  // Maxim_DS18B20_datasheet.pdf, page 10.
   uint8_t slave_presence = owm_touch_reset ();
   PFP_ASSERT (slave_presence);
 
@@ -201,7 +201,7 @@ main (void)
   OWM_CHECK (owm_verify ((uint8_t *) &rid));
   PFP ("ok, ID verified.\n");
 
-  // Verify the owm_verify() works as expected when given a nonexistend RID.
+  // Verify that owm_verify() works as expected when given a nonexistend RID.
   PFP ("Trying owm_verify() with nonexistent ID... ");
   uint64_t nerid = rid + 42;   // NonExistent RID
   result = owm_verify ((uint8_t *) &nerid);
@@ -213,12 +213,20 @@ main (void)
   }
   PFP ("ok, no such slave found.\n");
 
+  PFP ("Trying owm_scan_bus()... ");
+  uint64_t **rom_ids;
+  OWM_CHECK (owm_scan_bus ((uint8_t ***) (&rom_ids)));
+  PFP_ASSERT (*(rom_ids[0]) == rid);
+  PFP_ASSERT (rom_ids[1] == NULL);
+  PFP ("ok.\n");
+
+  // Repeatedly doing owm_scan_bus() and owm_free_rom_ids_list() has also
+  // been tried to check for leaks.
+  PFP ("Trying owm_free_rom_ids_list()... ");
+  owm_free_rom_ids_list ((uint8_t **) rom_ids);
+  PFP ("seemed to work.\n");
+
   PFP ("Starting temperature conversion... ");
-  // FIXME: the master should probably get some sort of
-  // owm_start_command_transaction() or so which would take SKIP_ROM,
-  // READ_ROM, or MATCH_ROM (and for this last one an ID), this would wrap
-  // up the entire command-transaction initiation process as used by for
-  // example the DS18B20.
   // NOTE: the DS18B20 doesn't seem to require an addressing command before
   // the "Convert T" command here, which is contrary to its own datasheet.
   // I guess if there's only one slave on the bus it works ok, but its sort of
