@@ -118,8 +118,6 @@ print_slave_id (uint64_t id)
   }
 }
 
-#include <util/crc16.h>
-
 int
 main (void)
 {
