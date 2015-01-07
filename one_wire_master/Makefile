@@ -23,8 +23,6 @@ AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
 include generic.mk
 
-# FIXME: USE OWM_ prefix for test conditions?  dio doesn't do it...
-
 # The one_wire_master.h interface requires this to be defined at compile time.
 CPPFLAGS += -DOWM_PIN=DIO_PIN_DIGITAL_2
 
@@ -35,6 +33,8 @@ CPPFLAGS += -DOWM_PIN=DIO_PIN_DIGITAL_2
 CPPFLAGS += -DOWM_BUILD_RESULT_DESCRIPTION_FUNCTION
 
 # Exactly one of the following OWM_TEST_CONDITION_* macros must be defined.
+
+# FIXME: USE OWM_ prefix for test conditions?  dio doesn't do it...
 
 CPPFLAGS += -DOWM_TEST_CONDITION_SINGLE_SLAVE
 
