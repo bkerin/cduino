@@ -176,6 +176,7 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd);
 // different than the comments for the OWTouchReset() function from
 // Maxim_Application_Note_AN126.pdf indicate it uses.  NOTE: does not handle
 // alarm presence from DS2404/DS1994.
+// FIXME: when you think about it, touch_reset is a sorta weird name, ya?
 uint8_t
 owm_touch_reset (void);
 

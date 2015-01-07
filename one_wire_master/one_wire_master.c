@@ -1,6 +1,7 @@
 // Implementation of the interface described in one_wire_master.h.
 
 #include <assert.h>
+#include <avr/pgmspace.h>
 #include <stdlib.h>
 #include <string.h>
 #include <util/crc16.h>
