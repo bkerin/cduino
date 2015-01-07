@@ -224,18 +224,14 @@ assignment arguments to make:
   more feature-complete (and bigger) or more minimal (and smaller)
   implementation of <code>printf()</code> and friends.  By default, most
   <code>printf()</code> features are supported, with the notable exception of
-  floating point output.  See the comments in the <code>generic.mk</code> for
+  floating point output.  See the comments in <code>generic.mk</code> for
   details.</li>
 
   <li><code>CPP_VERSION_CONTROL_COMMIT_DEFINE_FLAGS</code> -- By default this
-  is set such that if <code>git rev-parse</code> works in the build directory,
-  the CPP macro <code>VERSION_CONTROL_COMMIT</code> gets defined to the first
-  16 hex digits of the git commit pointed to by git HEAD, or is undefined
-  otherwise.  The version control commit can then be retrieved from the source
-  as a string literal using
-  <code>EXPAND_AND_STRINGIFY(VERSION_CONTROL_COMMIT)</code>.  Note that
-  if <code>VERSION_CONTROL_COMMIT</code> is undefined,  it will end up
-  stringified as itself.</li>
+  is set such that <code>EXPAND_AND_STRINGIFY(VERSION_CONTROL_COMMIT)</code> in
+  the source will expand to a string literal containing the first 16 hex digits
+  of the git commit pointed to by the git HEAD if you're using git, or the
+  string "VERSION_CONTROL_COMMIT" otherwise.</li>
 
   <li><code>CPP_DEBUG_DEFINE_FLAGS</code> -- This can be used to pass define
   options to the C preprocessor to enable conditional debugging sections or the
