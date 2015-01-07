@@ -354,6 +354,13 @@
 #define LOW_BYTE(two_byte_value)                                        \
   ((uint8_t) (((uint16_t) two_byte_value) & 0x00ff))
 
+// Stringify argument, i.e. return a string literal consisting of the
+// unexpanded arg.
+#define STRINGIFY(arg) #arg
+
+// First expand arg, then STRINGIFY() it.
+#define EXPAND_AND_STRINGIFY(arg) STRINGIFY (arg)
+
 // Macros for more readable/writable binary bit patterns {{{1
 #define B0 0
 #define B00 0
