@@ -564,8 +564,10 @@ ows_write_rom_id (void)
 
 // FIXME: note that the actual bit storage order in rom_id is wonky, it
 // should be documented somewhere, I believe is least significant byte first,
-// but then within bytes it most significant bit first.  Also, we could be
-// interpreting bits backwards from the real Maxim slave and not know it...
+// but then within bytes it most significant bit first.  actually this
+// might be how maxim depicts in on one of their tech notes im not sure.
+// Also, we could be interpreting bits backwards from the real Maxim slave
+// and not know it...
 
 // Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
 #define ID_BIT(bn) \
