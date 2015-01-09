@@ -171,12 +171,11 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd);
 // of these.
 //
 
-// Generate a 1-Wire reset.  Return TRUE if a resulting presence
-// pulse is detected, or FALSE otherwise.  NOTE: this is logically
-// different than the comments for the OWTouchReset() function from
-// Maxim_Application_Note_AN126.pdf indicate it uses.  NOTE: does not handle
-// alarm presence from DS2404/DS1994.
-// FIXME: when you think about it, touch_reset is a sorta weird name, ya?
+// Generate a 1-Wire reset, and then listen for a presence pulse.  Return
+// TRUE if a presence pulse is detected, or FALSE otherwise.  NOTE: this
+// is logically different than the comments for the OWTouchReset() function
+// from Maxim_Application_Note_AN126.pdf indicate it uses.  NOTE: does not
+// handle alarm presence from DS2404/DS1994.
 uint8_t
 owm_touch_reset (void);
 

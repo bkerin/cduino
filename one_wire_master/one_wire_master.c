@@ -226,6 +226,56 @@ owm_read_bit (void)
   return result;
 }
 
+void
+owm_write_byte (uint8_t data)
+{
+  // Loop to write each bit in the byte, LSB first
+  for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ )
+  {
+    owm_write_bit (data & B00000001);
+    data >>= 1;   // Shift to get to next bit
+  }
+}
+
+uint8_t
+owm_read_byte (void)
+{
+  uint8_t result = 0;
+
+  // Loop to read each bit in the byte, LSB first.
+  for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ ) {
+    result >>= 1;  // Shift the result to get ready for the next bit
+    // If result is one, then set MS bit
+    if ( owm_read_bit () ) {
+      result |= B10000000;
+    }
+  }
+
+  return result;
+}
+
+uint8_t
+owm_touch_byte (uint8_t data)
+{
+  uint8_t result = 0;
+  for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ ) {
+    // Shift the result to get it ready for the next bit
+    result >>= 1;
+    // If sending a '1' then read a bit, otherwise write a '0'
+    if ( data & B00000001 ) {
+      if ( owm_read_bit () ) {
+        result |= B10000000;
+      }
+    }
+    else {
+      owm_write_bit (0);
+    }
+    // Shift the data byte for the next bit
+    data >>= 1;
+  }
+  return result;
+}
+
 owm_result_t
 owm_read_id (uint8_t *id_buf)
 {
@@ -637,17 +687,6 @@ owm_next_alarmed (uint8_t *id_buf)
   return result;
 }
 
-void
-owm_write_byte (uint8_t data)
-{
-  // Loop to write each bit in the byte, LSB first
-  for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ )
-  {
-    owm_write_bit (data & B00000001);
-    data >>= 1;   // Shift to get to next bit
-  }
-}
-
 // FIXXME: Like the other functions, these come from Maxim Application
 // Note AN187.  But they didn't seem to work right for me.  Actually
 // maybe they did, because I recenty read that if they can't find one
@@ -681,42 +720,3 @@ owm_write_byte (uint8_t data)
 //     last_device_flag = TRUE;
 //  }
 //}
-
-uint8_t
-owm_read_byte (void)
-{
-  uint8_t result = 0;
-
-  // Loop to read each bit in the byte, LSB first.
-  for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ ) {
-    result >>= 1;  // Shift the result to get ready for the next bit
-    // If result is one, then set MS bit
-    if ( owm_read_bit () ) {
-      result |= B10000000;
-    }
-  }
-
-  return result;
-}
-
-uint8_t
-owm_touch_byte (uint8_t data)
-{
-  uint8_t result = 0;
-  for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ ) {
-    // Shift the result to get it ready for the next bit
-    result >>= 1;
-    // If sending a '1' then read a bit, otherwise write a '0'
-    if ( data & B00000001 ) {
-      if ( owm_read_bit () ) {
-        result |= B10000000;
-      }
-    }
-    else {
-      owm_write_bit (0);
-    }
-    // Shift the data byte for the next bit
-    data >>= 1;
-  }
-  return result;
-}
