@@ -45,10 +45,6 @@
 #  define SMT()
 #endif
 
-// FIXME: WORK POINT: check that doc does ok with these being defined here
-// and in one_wire_master.h, should always still favor file-local definitions
-// I think, and looking for a second one isn't going to happen but I think
-// it doesn't die on that at least...
 // Aliases for some operations from one_wire_commoh.h (for readability).
 #define RELEASE_LINE()    OWC_RELEASE_LINE (OWS_PIN)
 #define DRIVE_LINE_LOW()  OWC_DRIVE_LINE_LOW (OWS_PIN)
@@ -348,7 +344,7 @@ ows_read_and_match_rom_id (void)
 #define TSWFFC  2
 
 ows_error_t
-ows_wait_for_function_command (uint8_t *command_ptr)
+ows_wait_for_function_transaction (uint8_t *command_ptr)
 {
   uint8_t ts = TSWFRP;                // Transaction State
   ows_error_t err = OWS_ERROR_NONE;   // Storage for most recent error

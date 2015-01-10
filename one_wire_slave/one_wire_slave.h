@@ -78,15 +78,16 @@ typedef enum {
 void
 ows_init (uint8_t use_eeprom_id);
 
-// Wait for the initiation of a function command transaction intended for our
-// ROM ID (and possibly others as well if a OWS_SKIP_ROM_COMMAND was sent),
-// and return the function command itself in *command_ptr.  See (FIXME:
-// trans desc ref here.)  In the meantime, automagically respond to resets
-// and participate in any slave searches (i.e. respond to any incoming
-// OWC_SEARCH_ROM_COMMAND or OWC_ALARM_SEARCH_COMMAND commands).  An error is
-// generated if any unexpected line behavior is encountered (abnormal pulse
-// lengths, unexpected mid-byte resets, etc.).  An error is *not* generated
-// when a potential transaction is aborted by the master at the end of one of
+// Wait for the initiation of a function command transaction intended
+// for our ROM ID (and possibly others as well if a OWS_SKIP_ROM_COMMAND
+// was sent), and return the function command itself in *command_ptr.
+// See Maxim_DS18B20_datasheet.pdf page 10, "TRANSACTION SEQUENCE" section.
+// In the meantime, automagically respond to resets and participate in any
+// slave searches (i.e. respond to any incoming OWC_SEARCH_ROM_COMMAND
+// or OWC_ALARM_SEARCH_COMMAND commands).  An error is generated if
+// any unexpected line behavior is encountered (abnormal pulse lengths,
+// unexpected mid-byte resets, etc.).  An error is *not* generated when
+// a potential transaction is aborted by the master at the end of one of
 // the steps listed in the "TRANSACTION SEQUENCE" section of the datasheet.
 // This policy allows this routine to automagically handle all ROM SEARCH,
 // READ ROM and the like, but also permits the somewhat weird case in
@@ -106,15 +107,16 @@ ows_init (uint8_t use_eeprom_id);
 // FIXME: should this actually be called ows_wait_for_transaction_start()
 // or so for symmetry with one_wire_master?
 ows_error_t
-ows_wait_for_function_command (uint8_t *command_ptr);
+ows_wait_for_function_transaction (uint8_t *command_ptr);
 
 // Wait for a reset pulse, respond with a presence pulse, then try to read
 // a single byte from the master and return it.  An error is generated if
 // any unexpected line behavior is encountered (abnormal pulse lengths,
 // unexpected mid-byte resets, etc.  Any additional reset pulses that occur
-// during this read attempt are also responded to with presence pulses.
-// Any errors that occur while trying to read the byte effectively cause
-// a new wait for a reset pulse to begin.  FIXME: needs comments updated
+// during this read attempt are also responded to with presence pulses
+// (and OWS_ERROR_RESET_DETECTED_AND_HANDLED is returned).  Any errors that
+// occur while trying to read the byte effectively cause a new wait for a
+// reset pulse to begin.
 ows_error_t
 ows_wait_for_command (uint8_t *command_ptr);
 
@@ -133,21 +135,13 @@ ows_read_bit (uint8_t *data_bit_ptr);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Device Presense Confirmation/Discovery
+// Device Presense Confirmation/Discovery Support
 //
-// These functions allow the presence of particular slaves to be confirmed,
-// or the bus searched for all slaves, slave from or not from of a particular
-// family, or slaves with an active alarm condition.
+// These routines support slave participation in master-initiated device
+// discovery.  Note that the higher-level routines in this interface can
+// handle this stuff transparently.  FIXME: name the routine to use.
 //
-
-// FIXME: might be nice to use _SIZE_BYTES for byte sizes, everywhere.  What do
-// we do elsewhere?
-
-// This function requires that exactly one slave be present on the bus.
-// If we discover a slave, its ID is written into id_buf (which pust be
-// a pointer to OWC_ID_SIZE_BYTES bytes of space) and TRUE is returned.
-// If there is not exactly one slave present, the results of this function
-// are undefined (later calls to this interface might behave strangely).
+//
 
 // This is the appropriate response to a OWC_READ_ROM_COMMAND.
 // FIXME: consistify ID, id, rom_id names externally at least

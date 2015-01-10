@@ -150,14 +150,14 @@ main (void)
 
   // The one_wire_master_test.c program does a search for alarmed slaves.
   // Uncomment this line to cause this slave to consider itself alarmed :)
-  //ows_alarm = 42;
+  ows_alarm = 42;
 
   PFP ("Ready to start tests, reset the master now\n");
 
   for ( ; ; ) {
 
     uint8_t fcmd;
-    err = ows_wait_for_function_command (&fcmd);
+    err = ows_wait_for_function_transaction (&fcmd);
 
     // For diagnostic purposes we do this.  Normally printing something out
     // at this point might take too much time that could otherwise be spent
