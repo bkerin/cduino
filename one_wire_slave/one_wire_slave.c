@@ -231,7 +231,9 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
     new_pulse = TRUE;
     pulse_length = TIMER1_STOPWATCH_TICKS ();
     // FIXME: might want to check this too in final code.  But really,
-    // more stuff in the ISR just to catch timeout errors?:
+    // more stuff in the ISR just to catch timeout errors?  But, at 16 MHz
+    // FCPU and timer1 prescaler of 1, this sucker overflows after only
+    // 4 ms, could easily happen and cause mayhem
     //if ( T1OF () ) { PFP ("FIXME: debug: timer overflow detected"); }
   }
   else {

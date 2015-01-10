@@ -14,6 +14,16 @@
 
 #include "dio.h"
 #include "one_wire_common.h"
+#include "timer1_stopwatch.h"
+
+// Timer1 Stopwatch Frequency Required.  Since we're timing quite short
+// pulses, we don't want to deal with a timer that can't even measure
+// them accurately.
+#define OWS_T1SFR 1000000
+
+#if F_CPU / TIMER1_STOPWATCH_PRESCALER_DIVIDER < OWS_T1SFR
+#  error F_CPU / TIMER1_STOPWATCH_PRESCALER_DIVIDER is too small
+#endif
 
 #ifndef OWS_PIN
 #  error OWS_PIN not defined (it must be explicitly set to one of \
@@ -166,10 +176,8 @@ extern uint8_t ows_alarm;
 // ROM ID.  Return OWS_ERROR_ROM_ID_MISMATCH as soon as we see a non-matching
 // bit, or OWS_ERROR_NONE if all bits match (i.e. the master is talking
 // to us).  Note that it isn't really an error if the ROM doesn't match,
-// it just means the master doesn't want to talk to us.  This routine
-// can also return other errors propagated from ows_read_bit().  FIXME:
-// I guess all the routines should mention possible error return values,
-// or else they should be described once in some central place.
+// it just means the master doesn't want to talk to us.  This routine can
+// also return other errors propagated from ows_read_bit().
 ows_error_t
 ows_read_and_match_id (void);
 

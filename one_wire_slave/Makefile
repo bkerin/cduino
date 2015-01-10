@@ -24,7 +24,8 @@ CPPFLAGS += -DOWS_PIN=DIO_PIN_DIGITAL_2
 # This module requires us to use a prescaler setting st we get at least
 # 1 us resolution on the timer.  This setting works for 16 MHz (gives a
 # 2 MHz timer1).  If the cpu were at 1MHz, would need to use a prescaler
-# setting of 1.  FIXME: implement these timer requirements.
+# setting of 1.  FIXME: 1 MHz cpu might not work anyway because of slowness
+# running other code, this needs tested/reasoned about a bit.
 CPPFLAGS += -DTIMER1_STOPWATCH_PRESCALER_DIVIDER=8
 
 # This is the Maxim family code for the DS18B20.  Since our test/demo

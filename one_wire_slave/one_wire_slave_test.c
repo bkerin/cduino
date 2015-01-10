@@ -13,11 +13,8 @@
 //
 //   * a second Arduino running this test program, connected to the first
 //     Arduino via a single wire (by default to OWS_PIN DIO_PIN_DIGITAL_2),
-//     and
-//
-//   * A common ground provided through the USB system, i.e. both Arduinos
-//     should be plugged into the same USB hub :)  FIXME: well that didnt work
-//     now did it
+//     and sharing a common ground FIXME: verify that we can power second
+//     arduino from first and all communication works.
 //
 // The slave Arduino should be reset first, then the master should be reset
 // to kick off the tests.
