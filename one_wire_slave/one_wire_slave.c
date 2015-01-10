@@ -33,6 +33,8 @@
 // make sense to define both this and STRICT_MODE.
 //#define STRICT_MODE_WITH_LOCATION_OUTPUT
 
+// FIXME: BTRAP() refs generate excruciatingly messy links in documentation
+
 #if defined(STRICT_MODE) && defined(STRICT_MODE_WITH_LOCATION_OUTPUT)
 #  error STRICT_MODE and STRICT_MODE_WITH_LOCATION_OUTPUT both defined
 #endif
@@ -317,7 +319,7 @@ uint8_t bhist_ii = 0;
 // FIXME: I may need to be relocated
 //
 ows_error_t
-ows_read_and_match_rom_id (void)
+ows_read_and_match_id (void)
 {
   for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
     for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; ii++ ) {
@@ -371,10 +373,10 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
         if ( OWC_IS_TRANSACTION_INITIATING_ROM_COMMAND (*command_ptr) ) {
           switch ( *command_ptr ) {
             case OWC_READ_ROM_COMMAND:
-              err = ows_write_rom_id ();
+              err = ows_write_id ();
               break;
             case OWC_MATCH_ROM_COMMAND:
-              err = ows_read_and_match_rom_id ();
+              err = ows_read_and_match_id ();
               break;
             case OWC_SKIP_ROM_COMMAND:
               err = OWS_ERROR_NONE;
@@ -549,7 +551,7 @@ ows_write_byte (uint8_t data_byte)
 }
 
 ows_error_t
-ows_write_rom_id (void)
+ows_write_id (void)
 {
   for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
     CPE (ows_write_byte (rom_id[ii]));

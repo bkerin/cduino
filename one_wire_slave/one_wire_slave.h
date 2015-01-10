@@ -102,10 +102,7 @@ ows_init (uint8_t use_eeprom_id);
 // portion of this interface if you know you have only one slave and don't
 // want to bother with addressing.  Masters that fail to send an entire
 // byte after issuing a reset pulse will cause this routine to hang until
-// they get around to doing that (or issuing another reset pulse).  FIXME:
-// do we correctly drop out until a reset pulse when we fail a MATCH_ROM?
-// FIXME: should this actually be called ows_wait_for_transaction_start()
-// or so for symmetry with one_wire_master?
+// they get around to doing that (or issuing another reset pulse).
 ows_error_t
 ows_wait_for_function_transaction (uint8_t *command_ptr);
 
@@ -138,15 +135,13 @@ ows_read_bit (uint8_t *data_bit_ptr);
 // Device Presense Confirmation/Discovery Support
 //
 // These routines support slave participation in master-initiated device
-// discovery.  Note that the higher-level routines in this interface can
-// handle this stuff transparently.  FIXME: name the routine to use.
-//
+// discovery.  Note that ows_wait_for_function_transaction() can handle
+// this stuff automagically.
 //
 
 // This is the appropriate response to a OWC_READ_ROM_COMMAND.
-// FIXME: consistify ID, id, rom_id names externally at least
 ows_error_t
-ows_write_rom_id (void);
+ows_write_id (void);
 
 // Answer a (just received) OWC_SEARCH_ROM_COMMAND by engaging in the search
 // process described in Maxim Application Note AN187.
@@ -162,9 +157,7 @@ extern uint8_t ows_alarm;
 
 // Like ows_answer_search(), but only participates if ows_alarm is non-zero.
 // This is the correct reaction to an OWC_ALARM_SEARCH_COMMAND.  If ows_alarm
-// is zero, this macro evaluates to OWS_ERROR_NOT_ALARMED.  FIXME: perhaps
-// we should just return OWS_ERROR_NONE if we aren't alarmed, since nothing
-// really went wrong in this case??
+// is zero, this macro evaluates to OWS_ERROR_NOT_ALARMED.
 #define OWS_MAYBE_ANSWER_ALARM_SEARCH() \
   (ows_alarm ? ows_answer_search () : OWS_ERROR_NOT_ALARMED)
 
@@ -178,17 +171,8 @@ extern uint8_t ows_alarm;
 // I guess all the routines should mention possible error return values,
 // or else they should be described once in some central place.
 ows_error_t
-ows_read_and_match_rom_id (void);
+ows_read_and_match_id (void);
 
-// FIXME: it would be nice to add a filter for alarm search (EC command).
-// This command might actually be useful, since it makes it possible to scan
-// an entire bus for any devices needing immediate attention.  It wouldn't
-// be too hard to add support for this either: I think all that would be
-// required would be for the search() function in one_wire_master.c to
-// take a alarm_only argument, and then issue an EC command instead of an
-// OWM_SEARCH_ROM_COMMAND if that argument was true.  It could be tested
-// using the DS18B20 temperature alarm functionality, but setting those
-// alarms up is somewhat of a hassle, so we haven't bothered yet.
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -206,12 +190,5 @@ ows_write_byte (uint8_t data_byte);
 // immediately propagated and returned by this routine.
 ows_error_t
 ows_read_byte (uint8_t *data_byte_ptr);
-
-// Fancy simultaneous read/write.  Sort of.  I guess, I haven't used it. It's
-// supposed to be more efficient.  See Maxim Application Note AN126. WARNING:
-// FIXXME: This comes straight from AN126, but I haven't tested it.
-// FIXME: is this how slave does it?
-uint8_t
-ows_touch_byte (uint8_t data);
 
 #endif // ONE_WIRE_SLAVE_H
