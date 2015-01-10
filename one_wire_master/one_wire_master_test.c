@@ -1,7 +1,13 @@
 // Test/demo for the one_wire_master.h interface.
 //
-// Note that this test program tests some lower-level functions earlier
-// than owm_start_transaction(), which is the one you probably want to use.
+// If you're new to one-wire you should first read the entire
+// Maxim_DS18B20_datasheet.pdf.  Its hard to use one-wire without at
+// least a rough understanding of how the line signalling and transaction
+// schemes work.
+//
+// This test program tests many lower-level functions before owm_scan_bus()
+// and owm_start_transaction(), which are the ones you probably want to
+// use to initiate transactions.
 //
 // By default, this test program requires exactly one slave to be present:
 // a Maxim DS18B20 temperature sensor connected to the chosen one wire master
