@@ -684,16 +684,17 @@ owm_next_alarmed (uint8_t *id_buf)
   return result;
 }
 
-// FIXXME: Like the other functions, these come from Maxim Application
-// Note AN187.  But they didn't seem to work right for me.  Actually
-// maybe they did, because I recenty read that if they can't find one
-// of the targetted family of slaves, it just ends up finding another.
-// With our new improved search function that can signal errors, we could
-// perhaps detect this and propagate a real error, if it seemed worth it.
-// These functions seem sort of pointless: surely clients can just remember
-// things by family for themsleves after the initial scan if the need to?
-// I guess it could make things a tiny bit faster in the presence of hot-plug
-// devices or something but I have difficulty imagining caring.
+// FIXXME: Like the other functions, these come from
+// Maxim_Application_Note_AN187.pdf.  But they didn't seem to work right
+// for me.  Actually maybe they did, because I recenty read that if they
+// can't find one of the targetted family of slaves, it just ends up
+// finding one of another family.  With our new improved search function
+// that can signal errors, we could perhaps detect this and propagate a real
+// error, if it seemed worth it.  These functions seem sort of pointless:
+// surely clients can just remember things by family for themsleves after
+// the initial scan if the need to?  I guess it could make things a tiny
+// bit faster in the presence of hot-plug devices or something but I have
+// difficulty imagining caring.
 //void
 //owm_target_setup (uint8_t family_code)
 //{

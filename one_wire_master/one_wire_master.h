@@ -202,9 +202,10 @@ owm_write_byte (uint8_t data);
 uint8_t
 owm_read_byte (void);
 
-// Fancy simultaneous read/write.  Sort of.  I guess, I haven't used it. It's
-// supposed to be more efficient.  See Maxim Application Note AN126. WARNING:
-// FIXXME: This comes straight from AN126, but I haven't tested it.
+// Fancy simultaneous read/write.  Sort of.  I guess, I
+// haven't used it. It's supposed to be more efficient.  See
+// Maxim_Application_Note_AN126.pdf. WARNING: FIXXME: This comes straight
+// from AN126, but I haven't tested it.
 uint8_t
 owm_touch_byte (uint8_t data);
 
@@ -227,23 +228,24 @@ owm_touch_byte (uint8_t data);
 owm_result_t
 owm_read_id (uint8_t *id_buf);
 
-// Find the "first" slave on the one-wire bus (in the sense of the discovery
-// order of the one-wire search algorithm described in Maxim application
-// note AN187).  If a slave is discovered, its ID is written into id_buf
-// (which mucst be a pointer to OWC_ID_SIZE_BYTES bytes of space) and
-// OWM_RESULT_SUCCESS is returned, otherwise a non-zero error code is
-// returned.  Note that this resets any search which is already in progress.
+// Find the "first" slave on the one-wire bus (in the sense of
+// the discovery order of the one-wire search algorithm described in
+// Maxim_Application_Note_AN187.pdf).  If a slave is discovered, its ID is
+// written into id_buf (which mucst be a pointer to OWC_ID_SIZE_BYTES bytes
+// of space) and OWM_RESULT_SUCCESS is returned, otherwise a non-zero error
+// code is returned.  Note that this resets any search which is already
+// in progress.
 owm_result_t
 owm_first (uint8_t *id_buf);
 
-// Require an immediately preceeding call to owm_first() or owm_next() to
-// have occurred.  Find the "next" slave on the one-wire bus (in the sense of
-// the discovery order of the one-wire search algorithm described in Maxim
-// application note AN187).  This continues a search begun by a previous
-// call to owm_first().  If another slave is found, its ID is written into
-// id_buf (which must be a pointer to OWC_ID_SIZE_BYTES bytes of space)
-// and OWM_RESULT_SUCCESS is returned, otherwise a non-zero result code
-// is returned.  If the end of the list of slaves has been reached, the
+// Require an immediately preceeding call to owm_first() or owm_next()
+// to have occurred.  Find the "next" slave on the one-wire bus (in the
+// sense of the discovery order of the one-wire search algorithm described
+// in Maxim_Application_Note_AN187.pdf).  This continues a search begun by
+// a previous call to owm_first().  If another slave is found, its ID is
+// written into id_buf (which must be a pointer to OWC_ID_SIZE_BYTES bytes
+// of space) and OWM_RESULT_SUCCESS is returned, otherwise a non-zero result
+// code is returned.  If the end of the list of slaves has been reached, the
 // non-zero result code will be OWM_RESULT_NO_SUCH_SLAVE.  Additional calls
 // to this routine may wrap the search back to the start of the slave list,
 // but this behavior is not guaranteed.

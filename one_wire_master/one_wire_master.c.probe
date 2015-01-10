@@ -59,13 +59,13 @@
 //
 // Line Drive, Sample, and Delay Routines
 //
-// These macros correspond to the uses of the inp and outp and tickDelay
-// functions of Maxim application note AN126.  We use macros to avoid
-// function call time overhead, which can be significant: Maxim application
-// note AN148 states that the most common programming error in 1-wire
-// programmin involves late sampling, which given that some samples occur
-// after proscribed waits of only 9 us requires some care, especially at
-// slower processor frequencies.
+// These macros correspond to the uses of the inp and outp and
+// tickDelay functions of Maxim_Application_Note_AN126.pdf.  We use
+// macros to avoid function call time overhead, which can be significant:
+// Maxim_Application_Note_AN148.pdf states that the most common programming
+// error in 1-wire programmin involves late sampling, which given that some
+// samples occur after proscribed waits of only 9 us requires some care,
+// especially at slower processor frequencies.
 
 // Release (tri-state) the one wire pin.  Note that this does not enable the
 // internal pullup.  See the commends near owm_init() in one_wire_master.h.
@@ -507,7 +507,7 @@ owm_write_byte (uint8_t data)
   }
 }
 
-// Like the other functions, these come from Maxim Application Note AN187.
+// Like the other functions, these come from Maxim_Application_Note_AN187.pdf.
 // But they didn't seem to work right for me, I think just because their
 // interaction with owm_first()/owm_next() is weird.  And they seem sort
 // of pointless: surely clients can just remember things by family for
