@@ -14,9 +14,6 @@
 //#include "term_io.h"
 #include "util.h"
 
-// FIXME: WORK POINT: reorder things in this file to match the order in
-// the header as appropriate.
-
 #ifdef OWM_BUILD_RESULT_DESCRIPTION_FUNCTION
 
 char *

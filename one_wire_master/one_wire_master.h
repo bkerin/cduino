@@ -12,6 +12,7 @@
 // transaction, and also lower-level one-wire functionality, such as bit-
 // and byte-at-a-time communication.  Note that the latter low-level
 // functions are typically required to usefully complete a transaction.
+// The higher-level routines are presented first in this interface.
 
 #ifndef ONE_WIRE_MASTER_H
 #define ONE_WIRE_MASTER_H
