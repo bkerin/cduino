@@ -1,5 +1,7 @@
-// FIXME: this needs updating to match the newer version of one_wire-master.c,
-// I guess
+// This file is now slightly out of sync with the actual one_wire_master.h
+// interface.  Updating it would be fairly easy, but since I already have
+// the slave timing number I need I haven't done it.
+#error This file needs to be updated before it can be used
 
 // This is a version of one_wire_master.c that has been armed with extra
 // code that can be used to determine the timing that one-wire slave
