@@ -32,30 +32,28 @@ CPPFLAGS += -DOWM_PIN=DIO_PIN_DIGITAL_2
 # so it can be disabled easily.
 CPPFLAGS += -DOWM_BUILD_RESULT_DESCRIPTION_FUNCTION
 
-# Exactly one of the following OWM_TEST_CONDITION_* macros must be defined.
+# Exactly one of the following TEST_CONDITION_* macros must be defined.
 
-# FIXME: USE OWM_ prefix for test conditions?  dio doesn't do it...
-
-CPPFLAGS += -DOWM_TEST_CONDITION_SINGLE_SLAVE
+CPPFLAGS += -DTEST_CONDITION_SINGLE_SLAVE
 
 # Uncomment these to test a multi-slave bus configuration.
-#CPPFLAGS += -DOWM_TEST_CONDITION_MULTIPLE_SLAVES
+#CPPFLAGS += -DTEST_CONDITION_MULTIPLE_SLAVES
 
 # For the multiple-slave tests to work, you must determine your actual
 # slave IDs beforehand and fill them in here.  The test output for the
-# OWM_TEST_CONDITION_SINGLE_SLAVE code outputs the ID of the slave it finds
-# -- it can be run multiple times with different slaves devices to find
-# all their IDs.  Note the IDs must also be assigned correctly to first and
+# TEST_CONDITION_SINGLE_SLAVE code outputs the ID of the slave it finds --
+# it can be run multiple times with different slaves devices to find all
+# their IDs.  Note the IDs must also be assigned correctly to first and
 # second positions with respect to the discovery order of the one-wire bus
 # search algorithm.  It might be easiest to try both orders :) The individual
 # bytes of these IDs should be given in the order they occur in the ID.
 # The test program takes care of swapping them to account for endianness.
-#CPPFLAGS += -DOWM_FIRST_SLAVE_ID=0x28542a8e060000b4
-#CPPFLAGS += -DOWM_SECOND_SLAVE_ID=0x289ae53005000015
+#CPPFLAGS += -DFIRST_SLAVE_ID=0x28542a8e060000b4
+#CPPFLAGS += -DSECOND_SLAVE_ID=0x289ae53005000015
 
 # Ensure that exactly one test condition is defined.
-ifneq ($(words $(filter -DOWM_TEST_CONDITION_%,$(CPPFLAGS))),1)
-  $(error Exactly one OWM_TEST_CONDITION_* must be defined)
+ifneq ($(words $(filter -DTEST_CONDITION_%,$(CPPFLAGS))),1)
+  $(error Exactly one TEST_CONDITION_* must be defined)
 endif
 
 # This is only required by the one_wire_master.c.probe program, which isn't

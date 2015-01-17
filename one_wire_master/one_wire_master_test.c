@@ -55,7 +55,7 @@ char result_buf[OWM_RESULT_DESCRIPTION_MAX_LENGTH + 1];
 
 // The functions that perform DS18B20-specific operations are only used in
 // the default single-slave test condition.
-#ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
+#ifdef TEST_CONDITION_SINGLE_SLAVE
 
 #  define DS18B20_FAMILY_CODE UINT8_C (0x28)
 
@@ -142,7 +142,7 @@ main (void)
   PFP_ASSERT (slave_presence);
   PFP ("ok, got slave presence pulse.\n");
 
-#ifdef OWM_TEST_CONDITION_SINGLE_SLAVE
+#ifdef TEST_CONDITION_SINGLE_SLAVE
 
   for ( ; ; ) {  // FIXME: for debug: do it forever...
 
@@ -375,20 +375,20 @@ main (void)
 
 #endif
 
-#ifdef OWM_TEST_CONDITION_MULTIPLE_SLAVES
+#ifdef TEST_CONDITION_MULTIPLE_SLAVES
 
-#ifndef OWM_FIRST_SLAVE_ID
-#  error OWM_FIRST_SLAVE_ID is not defined
+#ifndef FIRST_SLAVE_ID
+#  error FIRST_SLAVE_ID is not defined
 #endif
-#ifndef OWM_SECOND_SLAVE_ID
-#  error OWM_SECOND_SLAVE_ID is not defined
+#ifndef SECOND_SLAVE_ID
+#  error SECOND_SLAVE_ID is not defined
 #endif
 
   // Account for endianness by swapping the bytes of the literal ID values.
   uint64_t first_slave_id
-    = __builtin_bswap64 (UINT64_C (OWM_FIRST_SLAVE_ID));
+    = __builtin_bswap64 (UINT64_C (FIRST_SLAVE_ID));
   uint64_t second_slave_id
-    = __builtin_bswap64 (UINT64_C (OWM_SECOND_SLAVE_ID));
+    = __builtin_bswap64 (UINT64_C (SECOND_SLAVE_ID));
 
   uint64_t rid;   // ROM ID
 
