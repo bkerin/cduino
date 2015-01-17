@@ -17,20 +17,25 @@
 #include "term_io.h"
 #include "util.h"
 
-// This is intended to help ensure that the master and other slaves are
-// behaving correctly.  If defined, it turns a number of points which slaves
-// can agreeably handle or return an error from into fatal blinky-traps.
-// You probably wouldn't want to use this in production, since it's very
-// trigger-happy about rejecting anything weird or pointless from the master.
-// See the actual use-point of the SMT() (Strict Mode Trap) macro for details.
-// FIXME: disable again for release version
-// FIXME: maybe this should just activate off DEBUG or something?
-// Dunno though I think I like it module-specific
+// WARNING: if defined, this creates trap points that deliberately prevent
+// the watchdog timer from triggering a reset.  This is intended both to
+// help ensure that the master and other slaves are behaving correctly,
+// and to catch failures in this slave itself.  If defined, it turns a
+// number of points which slaves can agreeably handle or return an error
+// from into fatal blinky-traps, and also adds some code to the pin change
+// ISR to detect cases where this slave itself is too slow to catch a reset
+// pulse.  You wouldn't want to use this in production, since it's very
+// trigger-happy about rejecting anything weird or pointless, and could
+// theoretically be triggered by a burst of noise on the line.  See the
+// actual use-points of the SMT() (Strict Mode Trap) macro for details.
+// Note that this macro does FIXME: disable again for release version
 #define STRICT_MODE
 
-// This is like STRICT_MODE, but it causes the trap to indicate the trap
-// location in the source with its blink pattern.  Note that it doesn't
-// make sense to define both this and STRICT_MODE.
+// WARNING: if defined, this creates trap points that deliberately prevent
+// the watchdog timer from triggering a reset.  This is like STRICT_MODE,
+// but it causes the trap to indicate the trap location in the source with
+// its blink pattern.  Note that it doesn't make sense to define both this
+// and STRICT_MODE.
 //#define STRICT_MODE_WITH_LOCATION_OUTPUT
 
 // FIXME: BTRAP() refs generate excruciatingly messy links in documentation
@@ -39,7 +44,7 @@
 #  error STRICT_MODE and STRICT_MODE_WITH_LOCATION_OUTPUT both defined
 #endif
 #if defined (STRICT_MODE)
-#  define SMT() BTRAP ()
+#  define SMT() BTRAP_FEEDING_WDT ()
 #elif defined (STRICT_MODE_WITH_LOCATION_OUTPUT)
 // FIXME: this is so messy and huge, and has yet to actually be used
 #  define SMT() BASSERT_FEEDING_WDT_SHOW_POINT (FALSE)
@@ -175,12 +180,17 @@ ows_init (uint8_t use_eeprom_id)
 // measured value of ST_RESET_PULSE_LENGTH_REQUIRED.  We have to do that
 // because the interrupt handler counts interrupts caused when the slave
 // itself drives the line low, so the ensuing line-low time ends up counting
-// towardes reset pulse time.  Because ST_RESET_PULSE_LENGTH_REQUIRED +
+// towards reset pulse time.  Because ST_RESET_PULSE_LENGTH_REQUIRED +
 // ST_LONGEST_SLAVE_LOW_PULSE_LENGTH is still considerably less than the 480
-// us pulse that well-behaved masters send, this shouldn't be a problem.
-// The value of this macro is ST_PRESENCE_PULSE_LENGTH because that's the
-// longest the slave should ever have to hold the line low.
+// us pulse that well-behaved masters are required to send, this shouldn't be
+// a problem.  The value of this macro is ST_PRESENCE_PULSE_LENGTH because
+// that's the longest the slave should ever have to hold the line low.
 #define ST_LONGEST_SLAVE_LOW_PULSE_LENGTH ST_PRESENCE_PULSE_LENGTH
+
+// This is the reset pulse lengh this slave implementation requires.
+// See the comments for the addends in the value for details.
+#define OUR_REQUIRED_RESET_PULSE_LENGTH \
+  (ST_LONGEST_SLAVE_LOW_PULSE_LENGTH + ST_LONGEST_SLAVE_LOW_PULSE_LENGTH)
 
 // Convenience macros
 #define T1RESET() TIMER1_STOPWATCH_RESET ()
@@ -222,29 +232,42 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 {
   if ( LINE_IS_HIGH () ) {
 
-    // FIXME: we could set a flag here, it would indicate slave being too
-    // slow and maybe trigger an error propagation or something... I dunno
-    // seems kinds complicated to essentially just catch user error (that
-    // error being overlong idle functions or time between calls into this
-    // interface).
-    //if ( new_pulse  ) { PFP ("FIXME: debug: pulse stack-up detected"); }
+    // If the slave is too slow, we might end up with a seeing a second
+    // low-high transition (i.e. end of low pulse) before the previous pulse
+    // is handled.  In strict mode we trap this, rather than just going on
+    // (i.e. rather than waiting for the master to figure out there's a
+    // problem and sending another reset).
+#if defined(STRICT_MODE) || defined(STRICT_MODE_WITH_LOCATION_OUTPUT)
+    if ( UNLIKELY (new_pulse) ) { SMT (); }
+#endif
+
     new_pulse = TRUE;
     pulse_length = TIMER1_STOPWATCH_TICKS ();
-    // FIXME: might want to check this too in final code.  But really,
-    // more stuff in the ISR just to catch timeout errors?  But, at 16 MHz
-    // FCPU and timer1 prescaler of 1, this sucker overflows after only
-    // 4 ms, could easily happen and cause mayhem
-    //if ( T1OF () ) { PFP ("FIXME: debug: timer overflow detected"); }
+
+    // If the timer overflows while the line is low, somebody has held the
+    // line low far too long (at 16 MHz F_CPU with a timer1 prescaler setting
+    // of 1, it still takes more than 4 ms to get an overflow).
+#if defined(STRICT_MODE) || defined(STRICT_MODE_WITH_LOCATION_OUTPUT)
+    if ( UNLIKELY (T1OF ()) ) { SMT (); }
+#else
+    // Without STRICT_MODE, we just report a really long pulse :)
+    if ( UNLIKELY (T1OF ()) ) { pulse_length = UINT16_MAX; }
+#endif
+
   }
+
   else {
-    // FIXME: we used to clear new_pulse here.  This effectively
-    // erases any unhandled pulse from our minds.  But is that good?
-    // wait_for_pulse_end() clears it anyway, and not clearing it here
-    // extends the time in which we could work on it (admittedly while
-    // another negative pulse is already in progress...)
+
+    // We used to clear new_pulse here.  This effectively erases any unhandled
+    // pulse from our minds.  But now if STRICT_MODE is enabled we consider
+    // unhandled pulses to be fatal.  Also, not clearing it here extends the
+    // time in which we could work on it (admittedly while another negative
+    // pulse is already in progress...)
     //new_pulse = FALSE;
-    // FIXME: for idle-time detection, we would need to reset for either edge.
-    // I sorta think not worth it.
+
+    // NOTE: we could in theory move this outside the conditional st we
+    // reset for both positive and negative edges, in order to perform
+    // idle-time detection.
     T1RESET ();
   }
 }
@@ -255,7 +278,7 @@ wait_for_pulse_end (void)
   // Wait for the positive edge that occurs at the end of a negative pulse,
   // then return the negative pulse duration in timer1 ticks.  In fact this
   // waits for a flag variable to be set from a pin change ISR, which seems
-  // to be considerably more rebust than pure delta detecton would probably
+  // to be considerably more robust than pure delta detecton would probably
   // be: see pcint_test.c.disabled in the one_wire_slave module directory
   // for some tests I did to verify how this interrupt works.
 
