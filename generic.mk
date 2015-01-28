@@ -229,16 +229,18 @@ AVRLIBC_PRINTF_LDFLAGS ?=
 
 ##### Versioning and Debugging CPP Flags (Overridable) {{{1
 
-# Arrange for VERSION_CONTROL_COMMIT to be set at compile-time if possible.
-# By default this is set such that if git rev-parse works in the build
-# directory, the CPP macro VERSION_CONTROL_COMMIT gets defined to the first
-# 16 hex digits of the git commit pointed to by git HEAD, or is undefined
-# otherwise.  The version control commit can then be retrieved from the
-# source as a string literal using EXPAND_AND_STRING (VERSION_CONTROL_COMMIT).
-# Note that if VERSION_CONTROL_COMMITis undefined, it will end up stringified
-# as itself.
+# Arrange for VERSION_CONTROL_COMMIT to be set at compile-time if
+# possible.  By default this is set such that if git rev-parse works in
+# the build directory and the build directory is clean the CPP macro
+# VERSION_CONTROL_COMMIT gets defined to the first 16 hex digits of
+# the git commit pointed to by git HEAD, or is undefined otherwise.
+# The version control commit can then be retrieved from the source as
+# a string literal using EXPAND_AND_STRINGIFY (VERSION_CONTROL_COMMIT)
+# (from util.h).  Note that if VERSION_CONTROL_COMMIT is undefined, it will
+# end up stringified as itself.
 CPP_VERSION_CONTROL_COMMIT_DEFINE_FLAGS ?= \
   `(git rev-parse 2>/dev/null) && \
+   (git status | grep -q 'nothing to commit, working directory clean') && \
    echo -DVERSION_CONTROL_COMMIT=$$(git rev-parse --short=16 HEAD)`
 
 # It's often convenient to compile code slightly differently when debugging
@@ -246,6 +248,7 @@ CPP_VERSION_CONTROL_COMMIT_DEFINE_FLAGS ?= \
 # something like '-DDEBUG' then say '#ifdef DEBUG' in the code to do logging
 # and such.
 CPP_DEBUG_DEFINE_FLAGS ?=
+
 
 ##### Computed File Names and Settings {{{1
 
