@@ -21,6 +21,11 @@
 #  error AVR Libc version 1.8.0 or later is required
 #endif
 
+// This library uses some GNU-specific features.
+#ifndef __GNUC__
+#  error __GNUC__ not defined
+#endif
+
 #define HIGH 0x01
 #define LOW  0x00
 
