@@ -48,9 +48,6 @@ term_io_getline (char *linebuf);
 
 // PrintF using Program memory.  This macro makes it easier to store the
 // format arguments to printf_P calls in program space.
-#ifndef __GNUC__
-#  error GNU C is required by a nearby comma-swallowing macro
-#endif
 #define TERM_IO_PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
 
 // Print Trace Point message.  Useful for debugging.
@@ -87,9 +84,9 @@ term_io_getline (char *linebuf);
     assert (FALSE);                                                    \
   } while ( 0 )
 
-// Assert that result is 0 This macro is intended to make it easier to check
-// the results of functions that return status codes where 0 means succes and
-// other values indicating errors or abnormal conditions.  The string_fetcher
+// Assert that result is 0.  This macro is intended to make it easier to check
+// the results of functions that return status codes where 0 means success and
+// other values indicate errors or abnormal conditions.  The string_fetcher
 // is a function that gets the string form of the enumerated value result,
 // and string_buf is supposed to point to storage for that string.  See the
 // use case (of the synonym PFP_ASSERT_SUCCESS()) in one_wire_master_test.c.
