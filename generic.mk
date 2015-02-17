@@ -238,8 +238,8 @@ AVRLIBC_PRINTF_LDFLAGS ?=
 # a string literal using EXPAND_AND_STRINGIFY (VERSION_CONTROL_COMMIT)
 # (from util.h).  Note that if VERSION_CONTROL_COMMIT is undefined, it will
 # end up stringified as itself.
-CPP_VERSION_CONTROL_COMMIT_DEFINE_FLAGS ?= \
-  `(git rev-parse 2>/dev/null) && \
+CPP_VERSION_CONTROL_COMMIT_DEFINE_FLAGS ?=                                \
+  `(git rev-parse 2>/dev/null) &&                                         \
    (git status | grep -q 'nothing to commit, working directory clean') && \
    echo -DVERSION_CONTROL_COMMIT=$$(git rev-parse --short=16 HEAD)`
 
