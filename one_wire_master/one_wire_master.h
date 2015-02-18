@@ -119,11 +119,12 @@ owm_init (void);
 // a newly allocated NULL-terminated list.  If at least one slave is found
 // and no errors occur during the scan, then OWM_RESULT_SUCCESS is returned
 // and *rom_ids is set to the first element of the new list, otherwise a
-// non-zero result code is returned and no new memory ends up allocated.
+// non-zero result code is returned and no new memory is allocated.
 owm_result_t
 owm_scan_bus (uint8_t ***rom_ids_ptr);
 
 // Free the memory allocated by a previous call to owm_scan_bus().
+// If rom_ids is NULL nothing is freed (becuase there's nothing to free).
 void
 owm_free_rom_ids_list (uint8_t **rom_ids);
 
