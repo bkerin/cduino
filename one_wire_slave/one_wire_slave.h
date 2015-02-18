@@ -140,6 +140,27 @@ ows_write_bit (uint8_t data_bit);
 ows_error_t
 ows_read_bit (uint8_t *data_bit_ptr);
 
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Byte Write/Read
+//
+
+// Write up to eight bits in a row.  The least significant bit is written
+// first.  Any error that can occur in the underlying ows_write_bit()
+// routine is immediately propagated and returned by this routine.
+ows_error_t
+ows_write_byte (uint8_t data_byte);
+
+// Read up to eight bits in a row.  The least significant bit is read first.
+// Any error that can occur in the underlying ows_read_bit() routine is
+// immediately propagated and returned by this routine.
+ows_error_t
+ows_read_byte (uint8_t *data_byte_ptr);
+
+#endif // ONE_WIRE_SLAVE_H
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Device Presense Confirmation/Discovery Support
@@ -155,6 +176,7 @@ ows_write_id (void);
 
 // Answer a (just received) OWC_SEARCH_ROM_COMMAND by engaging in the search
 // process described in Maxim Application Note AN187.
+// FIXME: referencize above ap-note reference
 ows_error_t
 ows_answer_search (void);
 
@@ -182,21 +204,3 @@ ows_error_t
 ows_read_and_match_id (void);
 
 
-///////////////////////////////////////////////////////////////////////////////
-//
-// Byte Write/Read
-//
-
-// Write up to eight bits in a row.  The least significant bit is written
-// first.  Any error that can occur in the underlying ows_write_bit()
-// routine is immediately propagated and returned by this routine.
-ows_error_t
-ows_write_byte (uint8_t data_byte);
-
-// Read up to eight bits in a row.  The least significant bit is read first.
-// Any error that can occur in the underlying ows_read_bit() routine is
-// immediately propagated and returned by this routine.
-ows_error_t
-ows_read_byte (uint8_t *data_byte_ptr);
-
-#endif // ONE_WIRE_SLAVE_H

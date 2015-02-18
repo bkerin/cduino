@@ -66,12 +66,12 @@ static uint8_t rom_id[OWC_ID_SIZE_BYTES];
 static void
 set_rom_id (uint8_t use_eeprom_id)
 {
-  // Set up the ROM ID in rom_id, using EEPROM data if use_eeprom_id is
+  // Load the ROM ID into rom_id, using EEPROM data if use_eeprom_id is
   // TRUE, or the default part ID otherwise.  In either case the matching
   // CRC is added.
 
   uint8_t const ncb = OWC_ID_SIZE_BYTES - 1;   // Non-CRC Bytes in the ROM ID
-  uint8_t const pib = ncb - 1;   // Part ID Bytes in the ROM ID
+  uint8_t const pib = ncb - 1;                 // Part ID Bytes in the ROM ID
 
   if ( use_eeprom_id ) {
     rom_id[0] = OWS_FAMILY_CODE;
@@ -295,76 +295,6 @@ wait_for_pulse_end (void)
   return npl;
 }
 
-// Drive the line low for the time required to indicate presence to the
-// master, then call wait_for_pulse_end() to swallow the pulse that this
-// causes the ISR to detect.
-// FIXME: if the master starts another reset pulse while we're doing this,
-// we end up eating that instead, which is arguably very wrong behavior.
-// Perhaps we should be doing something with the return value from
-// wait_for_pulse_end() here
-#define OWS_PRESENCE_PULSE()              \
-  do {                                    \
-    DRIVE_LINE_LOW ();                    \
-    _delay_us (ST_PRESENCE_PULSE_LENGTH); \
-    RELEASE_LINE ();                      \
-    wait_for_pulse_end ();                \
-  } while ( 0 )
-
-void
-ows_wait_for_reset (void)
-{
-  while ( wait_for_pulse_end () < OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
-    ;
-  }
-  _delay_us ((double) ST_DELAY_BEFORE_PRESENCE_PULSE);
-
-  OWS_PRESENCE_PULSE ();
-}
-
-// Call call, Propagating Errors.  The call argument must be a call to a
-// function returning ows_err_t.
-#define CPE(call)                      \
-  do {                                 \
-    ows_error_t XxX_err = call;        \
-    if ( XxX_err != OWS_ERROR_NONE ) { \
-      return XxX_err;                  \
-    }                                  \
-  } while ( 0 )
-
-ows_error_t
-ows_wait_for_command (uint8_t *command_ptr)
-{
-  ows_wait_for_reset ();
-
-  CPE (ows_read_byte (command_ptr));
-
-  return OWS_ERROR_NONE;
-}
-
-// FIXME: I may need to be relocated
-//
-ows_error_t
-ows_read_and_match_id (void)
-{
-  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
-    for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; ii++ ) {
-      uint8_t bit_value;
-      CPE (ows_read_bit (&bit_value));
-      if ( bit_value != ((rom_id[ii]) >> jj) ) {
-        /*
-        PFP (
-            "wrong bit value %i at byte %i, bit %i\n",
-            (int) bit_value,
-            (int) ii, (int) jj );
-            */
-        return OWS_ERROR_ROM_ID_MISMATCH;
-      }
-    }
-  }
-
-  return OWS_ERROR_NONE;
-}
-
 // Transaction State Waiting For (Reset Pulse|ROM Command|Function Command).
 #define TSWFRP  0
 #define TSWFRC  1
@@ -470,34 +400,51 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
 
 }
 
-ows_error_t
-ows_read_bit (uint8_t *data_bit_ptr)
-{
-  uint16_t pl = wait_for_pulse_end ();
 
-  if ( pl < ST_SLAVE_READ_SLOT_SAMPLE_TIME * T1TPUS ) {
-    *data_bit_ptr = 1;
-  }
-  // FIXME: use the time quantity symbols here, assuming this is right:
-  // this is required to be less than tick delay C + D, D is the margin
-  // since we expect the master to go high again after C
-  else if ( pl < (60+10) * T1TPUS ) {
-    *data_bit_ptr = 0;
-  }
-  else if ( pl > OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
-    _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
-    OWS_PRESENCE_PULSE ();
-    return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
-  }
-  else {
-    // FIXME: so where don't we use SMT?  any errors other than
-    // ROM_ID_MISMATCH or NOT_ALARMED (which for that matter aren't really
-    // errors)?
-    SMT ();   // Because weird pulse lengths shouldn't happen
-    return OWS_ERROR_UNEXPECTED_PULSE_LENGTH;
-  }
+// Call call, Propagating Errors.  The call argument must be a call to a
+// function returning ows_err_t.
+#define CPE(call)                      \
+  do {                                 \
+    ows_error_t XxX_err = call;        \
+    if ( XxX_err != OWS_ERROR_NONE ) { \
+      return XxX_err;                  \
+    }                                  \
+  } while ( 0 )
+
+ows_error_t
+ows_wait_for_command (uint8_t *command_ptr)
+{
+  ows_wait_for_reset ();
+
+  CPE (ows_read_byte (command_ptr));
 
   return OWS_ERROR_NONE;
+}
+
+// Drive the line low for the time required to indicate presence to the
+// master, then call wait_for_pulse_end() to swallow the pulse that this
+// causes the ISR to detect.
+// FIXME: if the master starts another reset pulse while we're doing this,
+// we end up eating that instead, which is arguably very wrong behavior.
+// Perhaps we should be doing something with the return value from
+// wait_for_pulse_end() here
+#define OWS_PRESENCE_PULSE()              \
+  do {                                    \
+    DRIVE_LINE_LOW ();                    \
+    _delay_us (ST_PRESENCE_PULSE_LENGTH); \
+    RELEASE_LINE ();                      \
+    wait_for_pulse_end ();                \
+  } while ( 0 )
+
+void
+ows_wait_for_reset (void)
+{
+  while ( wait_for_pulse_end () < OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
+    ;
+  }
+  _delay_us ((double) ST_DELAY_BEFORE_PRESENCE_PULSE);
+
+  OWS_PRESENCE_PULSE ();
 }
 
 // Drive the line low for the time required to indicate a value of zero
@@ -543,6 +490,49 @@ ows_write_bit (uint8_t data_bit)
 }
 
 ows_error_t
+ows_read_bit (uint8_t *data_bit_ptr)
+{
+  uint16_t pl = wait_for_pulse_end ();
+
+  if ( pl < ST_SLAVE_READ_SLOT_SAMPLE_TIME * T1TPUS ) {
+    *data_bit_ptr = 1;
+  }
+  // FIXME: use the time quantity symbols here, assuming this is right:
+  // this is required to be less than tick delay C + D, D is the margin
+  // since we expect the master to go high again after C
+  else if ( pl < (60+10) * T1TPUS ) {
+    *data_bit_ptr = 0;
+  }
+  else if ( pl > OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
+    _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
+    OWS_PRESENCE_PULSE ();
+    return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
+  }
+  else {
+    // FIXME: so where don't we use SMT?  any errors other than
+    // ROM_ID_MISMATCH or NOT_ALARMED (which for that matter aren't really
+    // errors)?
+    SMT ();   // Because weird pulse lengths shouldn't happen
+    return OWS_ERROR_UNEXPECTED_PULSE_LENGTH;
+  }
+
+  return OWS_ERROR_NONE;
+}
+
+ows_error_t
+ows_write_byte (uint8_t data_byte)
+{
+  // Loop to write each bit in the byte, LS-bit first
+  for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ )
+  {
+    CPE (ows_write_bit (data_byte & B00000001));
+    data_byte >>= 1;   // Shift to get to next bit
+  }
+
+  return OWS_ERROR_NONE;
+}
+
+ows_error_t
 ows_read_byte (uint8_t *data_byte_ptr)
 {
   for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ ) {
@@ -557,19 +547,6 @@ ows_read_byte (uint8_t *data_byte_ptr)
     if ( bit_value ) {
       (*data_byte_ptr) |= B10000000;
     }
-  }
-
-  return OWS_ERROR_NONE;
-}
-
-ows_error_t
-ows_write_byte (uint8_t data_byte)
-{
-  // Loop to write each bit in the byte, LS-bit first
-  for ( uint8_t ii = 0; ii < BITS_PER_BYTE; ii++ )
-  {
-    CPE (ows_write_bit (data_byte & B00000001));
-    data_byte >>= 1;   // Shift to get to next bit
   }
 
   return OWS_ERROR_NONE;
@@ -611,8 +588,7 @@ ows_answer_search (void)
       // of time, whereas if its not we have to keep up with the master for
       // potentially all the remaining bits in the ID, so we want that path
       // to be fast.
-      //if ( UNLIKELY (bit_val != master_bit_val) ) {
-      if ( bit_val != master_bit_val ) {
+      if ( UNLIKELY (bit_val != master_bit_val) ) {
         return OWS_ERROR_NONE;
       }
     }
@@ -637,3 +613,26 @@ ows_answer_search (void)
 }
 
 uint8_t ows_alarm = 0;
+
+ows_error_t
+ows_read_and_match_id (void)
+{
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
+    for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; ii++ ) {
+      uint8_t bit_value;
+      CPE (ows_read_bit (&bit_value));
+      if ( bit_value != ((rom_id[ii]) >> jj) ) {
+        // FIXME: remove this debug stuff eventually
+        /*
+        PFP (
+            "wrong bit value %i at byte %i, bit %i\n",
+            (int) bit_value,
+            (int) ii, (int) jj );
+            */
+        return OWS_ERROR_ROM_ID_MISMATCH;
+      }
+    }
+  }
+
+  return OWS_ERROR_NONE;
+}
