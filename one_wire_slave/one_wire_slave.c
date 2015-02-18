@@ -231,9 +231,9 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 {
   if ( LINE_IS_HIGH () ) {
 
-    // If the slave is too slow, we might end up with a seeing a second
-    // low-high transition (i.e. end of low pulse) before the previous pulse
-    // is handled.  In strict mode we trap this, rather than just going on
+    // If the slave is too slow, we might end up seeing a second low-high
+    // transition (i.e. end of low pulse) before the previous pulse is
+    // handled.  In strict mode we trap this, rather than just going on
     // (i.e. rather than waiting for the master to figure out there's a
     // problem and sending another reset).
 #if defined(STRICT_MODE) || defined(STRICT_MODE_WITH_LOCATION_OUTPUT)
@@ -449,7 +449,8 @@ ows_wait_for_reset (void)
 
 // Drive the line low for the time required to indicate a value of zero
 // when writing a bit, then call wait_for_pulse_end() to swallow the pulse
-// that this causes the ISR to detect.
+// that this causes the ISR to detect.  FIXME: this has the same problem
+// as OWS_PRESENCE_PULSE(): it might end up eating a reset pulse.
 #define OWS_ZERO_PULSE()                            \
   do {                                              \
     DRIVE_LINE_LOW ();                              \
@@ -562,13 +563,6 @@ ows_write_id (void)
   return OWS_ERROR_NONE;
 }
 
-// FIXME: note that the actual bit storage order in rom_id is wonky, it
-// should be documented somewhere, I believe is least significant byte first,
-// but then within bytes it most significant bit first.  actually this
-// might be how maxim depicts in on one of their tech notes im not sure.
-// Also, we could be interpreting bits backwards from the real Maxim slave
-// and not know it...
-
 // Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
 #define ROM_ID_BIT(bn) \
   (((rom_id[bn / BITS_PER_BYTE]) >> (bn % BITS_PER_BYTE)) & B00000001)
@@ -604,13 +598,6 @@ ows_read_and_match_id (void)
       uint8_t bit_value;
       CPE (ows_read_bit (&bit_value));
       if ( bit_value != ((rom_id[ii]) >> jj) ) {
-        // FIXME: remove this debug stuff eventually
-        /*
-        PFP (
-            "wrong bit value %i at byte %i, bit %i\n",
-            (int) bit_value,
-            (int) ii, (int) jj );
-            */
         return OWS_ERROR_ROM_ID_MISMATCH;
       }
     }

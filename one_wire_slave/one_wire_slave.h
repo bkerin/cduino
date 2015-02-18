@@ -62,8 +62,7 @@
 // comments above the ows_init() declaration below.
 #define OWS_PART_ID_EEPROM_ADDRESS 0
 
-// Return type for functions in this interface which report errors.  FIXME:
-// figure out which of these we end up using
+// Return type for functions in this interface which report errors.
 typedef enum {
   OWS_ERROR_NONE = 0,
   OWS_ERROR_UNEXPECTED_PULSE_LENGTH,
@@ -175,8 +174,7 @@ ows_error_t
 ows_write_id (void);
 
 // Answer a (just received) OWC_SEARCH_ROM_COMMAND by engaging in the search
-// process described in Maxim Application Note AN187.
-// FIXME: referencize above ap-note reference
+// process described in Maxim_Application_Note_AN187.pdf.
 ows_error_t
 ows_answer_search (void);
 
