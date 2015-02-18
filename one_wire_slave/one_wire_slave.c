@@ -156,14 +156,19 @@ ows_init (uint8_t use_eeprom_id)
 // See Figure 1 of Maxim_Application_Note_AN126.pdf, page 2.  We go with
 // OWC_TICK_DELAY_F / 2 here because it's, well, half way between when
 // we must have the line held low and when we must release it.  We could
-// probably measure what actual slaves do if necessary...
+// probably measure what actual slaves do if necessary.  Waiting F/2 has
+// the disadvantage of pushing the total low time closer to the length of
+// a presence pulse, though its still 20+ ms short of the minimum required
+// time so it should be ok, and it gives the master more time to get around
+// to reading the line compared to the alternative below.
 #define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME \
     (OWC_TICK_DELAY_E + OWC_TICK_DELAY_F / 2)
-// This also worked super dependably, which isn't too surprising given the
+// This also worked super dependably, which isn't too surprising: given the
 // timing they both should be fine.  This one gives a margin of E on both
 // sides of the anticipated sample point, which makes a lot of sense also
-// (compared to the half-F that we use above).  FIXME: decide which is
-// safer/saner I guess
+// (compared to the F/2 that we use above).  This keeps the total zero pulse
+// length farther from that of a presense pulse, but gives the master less
+// time to get around to reading the zero pulse.
 /*
 #define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME \
   (OWC_TICK_DELAY_E * 2)
@@ -257,11 +262,11 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 
   else {
 
-    // We used to clear new_pulse here.  This effectively erases any unhandled
-    // pulse from our minds.  But now if STRICT_MODE is enabled we consider
-    // unhandled pulses to be fatal.  Also, not clearing it here extends the
-    // time in which we could work on it (admittedly while another negative
-    // pulse is already in progress...)
+    // We used to clear new_pulse here.  This effectively erases any
+    // unhandled pulse from our minds.  But now if STRICT_MODE is enabled
+    // we consider unhandled pulses to be fatal.  Otherwise, not clearing
+    // it here extends the time in which we could work on it (admittedly
+    // while another negative pulse is already in progress...)
     //new_pulse = FALSE;
 
     // NOTE: we could in theory move this outside the conditional st we
