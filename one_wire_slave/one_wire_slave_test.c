@@ -68,10 +68,11 @@ print_ows_error (ows_error_t err)
   }
 }
 
-// This is like BASERT_FEEDING_WDT_SHOW_POINT() from util.h, but it doesn't
-// wast a huge blob of code space every use.  FIXME: it would be nice if
-// util supplied an efficient version like this, but it would have to stop
-// being a header-only module.
+// This is like BASERT_FEEDING_WDT_SHOW_POINT() from util.h, but it also
+// tries to print a string version of the error and doesn't waste a huge
+// blob of code space every use.  FIXXME: it would be nice if util supplied
+// an efficient version like this, but it would have to stop being a
+// header-only module.
 static void
 bassert_feeding_wdt_show_point (uint8_t condition, char const *file, int line)
 {
@@ -80,7 +81,6 @@ bassert_feeding_wdt_show_point (uint8_t condition, char const *file, int line)
       size_t XxX_fnl = strlen (file);
       BLINK_OUT_UINT32_FEEDING_WDT (XxX_fnl);
       BLINK_OUT_UINT32_FEEDING_WDT (line);
-      // FIXME: comment that this function does this
       print_ows_error (err);
       PFP ("\n");
     }
