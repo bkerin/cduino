@@ -63,7 +63,7 @@
 #define OWS_PART_ID_EEPROM_ADDRESS 0
 
 // Return type for functions in this interface which report errors.  FIXME:
-// figure out which of thest we end up using
+// figure out which of these we end up using
 typedef enum {
   OWS_ERROR_NONE = 0,
   OWS_ERROR_UNEXPECTED_PULSE_LENGTH,
