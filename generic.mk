@@ -227,7 +227,13 @@ LOCK_AND_FUSE_SETTINGS ?=
 AVRLIBC_PRINTF_LDFLAGS ?=
 
 
-##### Versioning and Debugging CPP Flags (Overridable) {{{1
+##### Debugging and Versioning CPP Flags (Overridable) {{{1
+
+# It's often convenient to compile code slightly differently when debugging
+# will be done, this variable gets put in CPPFLAGS so you can set it to
+# something like '-DDEBUG' then say '#ifdef DEBUG' in the code to do logging
+# and such.
+CPP_DEBUG_DEFINE_FLAGS ?=
 
 # Arrange for VERSION_CONTROL_COMMIT to be set at compile-time if
 # possible.  By default this is set such that if git rev-parse works in
@@ -242,12 +248,6 @@ CPP_VERSION_CONTROL_COMMIT_DEFINE_FLAGS ?=                                \
   `(git rev-parse 2>/dev/null) &&                                         \
    (git status | grep -q 'nothing to commit, working directory clean') && \
    echo -DVERSION_CONTROL_COMMIT=$$(git rev-parse --short=16 HEAD)`
-
-# It's often convenient to compile code slightly differently when debugging
-# will be done, this variable gets put in CPPFLAGS so you can set it to
-# something like '-DDEBUG' then say '#ifdef DEBUG' in the code to do logging
-# and such.
-CPP_DEBUG_DEFINE_FLAGS ?=
 
 
 ##### Computed File Names and Settings {{{1
