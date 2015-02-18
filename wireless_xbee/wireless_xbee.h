@@ -181,11 +181,11 @@
    // transmissions do indeed get scrambled up if you rush things, so we
    // give it a full 20 ms.  XBee doze mode (SM=2) is worth considering if
    // you need faster wake-up (at the cost of more power of course).
-#  define WX_WAKE() \
-     do { \
+#  define WX_WAKE()                         \
+     do {                                   \
      DIO_SET_LOW (WX_SLEEP_RQ_CONTROL_PIN); \
-     float XxX_wakeup_time_ms = 20.0; \
-     _delay_ms (XxX_wakeup_time_ms); \
+     float XxX_wakeup_time_ms = 20.0;       \
+     _delay_ms (XxX_wakeup_time_ms);        \
    } while ( 0 )
 
 #endif
@@ -211,19 +211,19 @@
    // so we give it plenty of time.  We reconfigure the control pin as an
    // input when we're not using it out of paranoia about power waste (this
    // is why there is no seperate macro to initialized the reset control pin).
-#  define WX_RESET() \
-     do { \
-       WX_WAKE (); \
+#  define WX_RESET()                                                    \
+     do {                                                               \
+       WX_WAKE ();                                                      \
        DIO_INIT (WX_RESET_CONTROL_PIN, DIO_OUTPUT, DIO_DONT_CARE, LOW); \
-       float XxX_reset_hold_time_us = 142.0; \
-       _delay_us (XxX_reset_hold_time_us); \
-       DIO_INIT ( \
-         WX_RESET_CONTROL_PIN, \
-         DIO_INPUT, \
-         DIO_DISABLE_PULLUP, \
-         DIO_DONT_CARE ); \
-      float XxX_reboot_time_ms = 42.0; \
-      _delay_ms (XxX_reboot_time_ms); \
+       float XxX_reset_hold_time_us = 142.0;                            \
+       _delay_us (XxX_reset_hold_time_us);                              \
+       DIO_INIT (                                                       \
+         WX_RESET_CONTROL_PIN,                                          \
+         DIO_INPUT,                                                     \
+         DIO_DISABLE_PULLUP,                                            \
+         DIO_DONT_CARE );                                               \
+      float XxX_reboot_time_ms = 42.0;                                  \
+      _delay_ms (XxX_reboot_time_ms);                                   \
     } while ( 0 )
 
 #endif
@@ -340,6 +340,7 @@ wx_restore_defaults (void);
 #define WX_GET_BYTE()                   UART_GET_BYTE()
 #define WX_UART_FLUSH_RX_BUFFER()       UART_FLUSH_RX_BUFFER()
 
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Simple Frame Interface (NOT using XBee API mode)
@@ -362,28 +363,28 @@ wx_restore_defaults (void);
 // Complete packets shorter than WX_TRANSPARENT_MODE_MAX_PACKET_SIZE
 // bytes can be transmitted simply by not sending any bytes for at least
 // WX_TRANSPARENT_MODE_PACKETIZATION_TIMEOUT_BYTES worth of time.
-#define WX_TRANSPARENT_MODE_MAX_PACKET_SIZE 100
+#define WX_TRANSPARENT_MODE_MAX_PACKET_SIZE             100
 #define WX_TRANSPARENT_MODE_PACKETIZATION_TIMEOUT_BYTES 0x03
 
 // The CRC and payload portions of frames will have the following byte
 // values prefixed by an escape byte when they occur: 0x7E (ASCII '~'),
 // 0x7D (ASCII '}'), 0x11 (ASCII device control 1, and 0x13 (ASCII device
 // control 3).  If the data supplied to the frame transmission function
-// contains many values that need to be escaped, the escaped frame size can
-// end up exceeding WX_TRANSPARENT_MODE_MAX_PACKET_SIZE bytes.  However, the
-// size of escaped data is at most twice its unescaped size.  We therefore
-// have maximum safe sizes for unescaped payloads, and for unescaped payloads
-// that include no bytes that need to be escaped.
-#define WX_FRAME_DELIMITER_LENGTH 1   // Leading frame delimiter isn't escaped
-#define WX_FRAME_LENGTH_FIELD_LENGTH 2
-#define WX_FRAME_MAX_CRC_BYTES_WITH_ESCAPES 8
+// contains many values that need to be escaped, the escaped frame
+// size can end up exceeding WX_TRANSPARENT_MODE_MAX_PACKET_SIZE bytes.
+// However, the size of escaped data is at most twice its unescaped size.
+// We therefore have maximum safe sizes for unescaped payloads, and for
+// unescaped payloads that include no bytes that need to be escaped.
+#define WX_FRAME_DELIMITER_LENGTH                    1
+#define WX_FRAME_LENGTH_FIELD_LENGTH                 2
+#define WX_FRAME_MAX_CRC_BYTES_WITH_ESCAPES          8
 #define WX_FRAME_MAX_PAYLOAD_ESCAPE_EXPANSION_FACTOR 2
 #define WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE \
-  (   WX_TRANSPARENT_MODE_MAX_PACKET_SIZE \
-    - WX_FRAME_DELIMITER_LENGTH \
-    - WX_FRAME_LENGTH_FIELD_LENGTH \
+  (   WX_TRANSPARENT_MODE_MAX_PACKET_SIZE                           \
+    - WX_FRAME_DELIMITER_LENGTH                                     \
+    - WX_FRAME_LENGTH_FIELD_LENGTH                                  \
     - WX_FRAME_MAX_CRC_BYTES_WITH_ESCAPES )
-#define WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH \
+#define WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH                    \
   ( WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE / \
     WX_FRAME_MAX_PAYLOAD_ESCAPE_EXPANSION_FACTOR )
 
@@ -453,12 +454,6 @@ wx_put_frame (uint8_t count, void const *buf);
 uint8_t
 wx_put_string_frame (char const *str);
 
-
-// FIXME: put somewhere better or remove or something
-#ifndef __GNUC__
-#  error __GNUC__ not defined
-#endif
-
 // Convenience wrapper around wx_put_string_frame().  The expanded string
 // must not be longer than WX_FRAME_SAFE_UNESCAPED_PAYLOAD_LENGTH bytes.
 // Returns TRUE on success, or FALSE on error.
@@ -466,6 +461,40 @@ wx_put_string_frame (char const *str);
 uint8_t
 wx_put_string_frame_printf (char const *format, ...)
   __attribute__ ((format (printf, 1, 2)));
+
+// This is like wx_put_string_frame_printf(), but the caller promises
+// that the expanded string will not include any characters that the
+// XBee protocol requires to be escaped.  In other words, the expanded
+// string must not include any of the following byte values: 0x7E
+// (ASCII '~'), 0x7D (ASCII '}'), 0x11 (ASCII device control 1, and 0x13
+// (ASCII device control 3).  This allows longer strings to safely be
+// sent as single frames.  The expanded string must not be longer than
+// WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE.  Returns TRUE
+// on success, or FALSE on error.
+// FIXME: check that this works
+uint8_t
+wx_put_string_frame_printf_no_escapes_needed (char const *format, ...)
+  __attribute__ ((format (printf, 1, 2)));
+
+// FIXXME: I guess we could support all the TERM_IO_PTP(), TERM_IO_PHP(),
+// etc. functions like what term_io.h supports, but I think I'll only do
+// that when it becomes clear that it would be worth it.
+
+
+// Transmit a log message.  The expanded message must not be longer than
+// WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE characters,
+// and must not contain and characters that require escaping, or you will
+// instead get a message indicating your transgression.
+void
+wx_log_message (char const *format, ...)
+  __attribute__ ((format (printf, 1, 2)));
+
+// If WX_DEBUG_LOGGING is defined, WX_DLOG() logs, otherwise it does nothing.
+#ifdef WX_DEBUG_LOGGING
+#  define WX_DLOG(format, ...) wx_log_message (format, ## __VA_ARGS__)
+#else
+#  define WX_DLOG(format, ...) do { ; } while ( 0 )
+#endif
 
 // Spend up to about timeout milliseconds trying to receive a frame with up
 // to mfps (Maximum Frame Payload Size) unescaped payload bytes into buf.
@@ -535,6 +564,7 @@ wx_get_frame (uint8_t mfps, uint8_t *rfps, void *buf, uint16_t timeout);
 // the possible trailing NUL).  This is a thin wrapper around wx_get_frame().
 uint8_t
 wx_get_string_frame (uint8_t msl, char *str, uint16_t timeout);
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //

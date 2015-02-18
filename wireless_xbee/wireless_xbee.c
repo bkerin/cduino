@@ -480,6 +480,76 @@ wx_put_string_frame_printf (char const *format, ...)
   return wx_put_string_frame (es);
 }
 
+// Max Frame Length With No Bytes Requiring Escape.  Slightly less ugly alias.
+#define MFLWNBRE WX_FRAME_SAFE_PAYLOAD_LENGTH_WITH_NO_BYTES_REQUIRING_ESCAPE
+
+uint8_t
+wx_put_string_frame_printf_no_escapes_needed (char const *format, ...)
+{
+  // Expanded String
+  char es[MFLWNBRE + 1];
+
+  va_list ap;
+  va_start (ap, format);
+  int char_count = vsnprintf (es, MFLWNBRE + 1, format, ap);
+  va_end (ap);
+
+  // Scan the string to make sure the user hasn't violated their promise
+  // not to send characters requiring escaping.
+  for ( uint8_t ii = 0 ; ii < strlen (es) ; ii++ ) {
+    switch ( es[ii] ) {
+      case '~':
+      case '}':
+      case 0x11:
+      case 0x13:
+        return FALSE;
+        break;
+      default:
+        break;
+    }
+  }
+
+  if ( char_count > MFLWNBRE ) {
+    return FALSE;
+  }
+
+  return wx_put_string_frame (es);
+}
+
+void
+wx_log_message (char const *format, ...)
+{
+  char es[MFLWNBRE + 1];   // Expanded String
+
+  va_list ap;
+  va_start (ap, format);
+  int cpc = vsnprintf (es, MFLWNBRE + 1, format, ap);
+  assert (cpc > 0);
+
+  if ( cpc >= MFLWNBRE + 1 ) {
+    strcpy (es, "\nexpanded wx_log_message() arg too long\n");
+  }
+
+  // Verify that expanded string has no chars needing escaping.
+  for ( uint8_t ii = 0 ; ii < cpc ; ii++ ) {
+    switch ( es[ii] ) {
+      case '~':
+      case '}':
+      case 0x11:
+      case 0x13:
+        strcpy (
+            es,
+            "\nexpanded wx_log_message() arg has '~', '}', 0x11, or 0x13\n");
+        break;
+      default:
+        break;
+    }
+  }
+
+  uint8_t sentinel = wx_put_string_frame (es);
+  assert (sentinel);
+}
+
 #define FRAME_STATE_OUTSIDE_FRAME                     1
 #define FRAME_STATE_AT_LENGTH_XORED_FLAG              2
 #define FRAME_STATE_AT_LENGTH_ITSELF                  3
