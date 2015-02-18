@@ -570,44 +570,26 @@ ows_write_id (void)
 // and not know it...
 
 // Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
-#define ID_BIT(bn) \
-  ((rom_id[bn / BITS_PER_BYTE]) >> (bn % BITS_PER_BYTE) & B00000001)
+#define ROM_ID_BIT(bn) \
+  (((rom_id[bn / BITS_PER_BYTE]) >> (bn % BITS_PER_BYTE)) & B00000001)
 
 ows_error_t
 ows_answer_search (void)
 {
-  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
-    uint8_t byte_val = rom_id[ii];
-    for ( uint8_t jj = 0 ; jj < BITS_PER_BYTE ; jj++ ) {
-      uint8_t bit_val = byte_val & (B00000001 << jj) ? 1 : 0;
-      CPE (ows_write_bit (bit_val));
-      CPE (ows_write_bit (! bit_val));
-      uint8_t master_bit_val;
-      CPE (ows_read_bit (&master_bit_val));
-      // This is actually reasonably likely, but if its true we have lots
-      // of time, whereas if its not we have to keep up with the master for
-      // potentially all the remaining bits in the ID, so we want that path
-      // to be fast.
-      if ( UNLIKELY (bit_val != master_bit_val) ) {
-        return OWS_ERROR_NONE;
-      }
-    }
-  }
-  // FIXME: used to be like this, though I'm not sure the bits are right
-  // (I think though because search worked.  Faster?  Smaller?  size-speed
-  // tradeoff?
-  /*
   for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES * BITS_PER_BYTE ; ii++ ) {
-    uint8_t bv = ID_BIT (ii);
+    uint8_t bv = ROM_ID_BIT (ii);   // Bit Value
     CPE (ows_write_bit (bv));
     CPE (ows_write_bit (! bv));
     uint8_t mbv;
     CPE (ows_read_bit (&mbv));
-    if ( bv != mbv ) {
+    // This is actually reasonably likely, but if its true we have lots
+    // of time, whereas if its not we have to keep up with the master for
+    // potentially all the remaining bits in the ID, so we want that path
+    // to be fast.
+    if ( UNLIKELY (bv != mbv) ) {
       return OWS_ERROR_NONE;
     }
   }
-  */
 
   return OWS_ERROR_NONE;
 }
