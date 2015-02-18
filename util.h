@@ -83,7 +83,7 @@
 // do other fancy things.  To use a different pin, you generally have to
 // do '#undef some_macro' then '#define some_macro' again with the DDRB,
 // DDB5, PORTB, and PORB5 argument in the right hand side of the original
-// definition replaces as appropriate in the new definition.
+// definition replaced as appropriate in the new definition.
 
 // Set pin for output low and toggle it high-low bc times, ~mspb ms per cycle.
 // Useful for making LEDs blink See CHKP() for an example of how to call
