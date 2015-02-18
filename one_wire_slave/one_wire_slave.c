@@ -18,27 +18,31 @@
 #include "util.h"
 
 // WARNING: if defined, this creates trap points that deliberately prevent
-// the watchdog timer from triggering a reset.  This is intended both to
-// help ensure that the master and other slaves are behaving correctly,
-// and to catch failures in this slave itself.  If defined, it turns a
-// number of points which slaves can agreeably handle or return an error
-// from into fatal blinky-traps, and also adds some code to the pin change
-// ISR to detect cases where this slave itself is too slow to catch a reset
-// pulse.  You wouldn't want to use this in production, since it's very
-// trigger-happy about rejecting anything weird or pointless, and could
-// theoretically be triggered by a burst of noise on the line.  See the
-// actual use-points of the SMT() (Strict Mode Trap) macro for details.
-// Note that this macro does FIXME: disable again for release version
+// the watchdog timer from triggering a reset.  Note that since this uses
+// the blinky trap stuff, it may be necessary to redefine some of the blinky
+// macros from util.h for this to work if your LED isn't where the existing
+// version of that macro expects.  FIXME: those macros use us a single define
+// to control where the LED is found, I can't tell easily myself now what I'm
+// supposed to be changing.  This is intended both to help ensure that the
+// master and other slaves are behaving correctly, and to catch failures in
+// this slave itself.  If defined, it turns a number of points which slaves
+// can agreeably handle or return an error from into fatal blinky-traps,
+// and also adds some code to the pin change ISR to detect cases where this
+// slave itself is too slow to catch a reset pulse.  You wouldn't want to
+// use this in production, since it's very trigger-happy about rejecting
+// anything weird or pointless, and could theoretically be triggered by
+// a burst of noise on the line.  See the actual use-points of the SMT()
+// (Strict Mode Trap) macro for details.  Note that this macro does FIXME:
+// disable again for release version
 #define STRICT_MODE
 
 // WARNING: if defined, this creates trap points that deliberately prevent
-// the watchdog timer from triggering a reset.  This is like STRICT_MODE,
-// but it causes the trap to indicate the trap location in the source with
-// its blink pattern.  Note that it doesn't make sense to define both this
-// and STRICT_MODE.
+// the watchdog timer from triggering a reset.  Note that it may be necessary
+// to redefine one of the blinky macros from util.h for this to work if your
+// LED isn't in the usual spot.  This is like STRICT_MODE, but it causes the
+// trap to indicate the trap location in the source with its blink pattern.
+// Note that it doesn't make sense to define both this and STRICT_MODE.
 //#define STRICT_MODE_WITH_LOCATION_OUTPUT
-
-// FIXME: BTRAP() refs generate excruciatingly messy links in documentation
 
 #if defined(STRICT_MODE) && defined(STRICT_MODE_WITH_LOCATION_OUTPUT)
 #  error STRICT_MODE and STRICT_MODE_WITH_LOCATION_OUTPUT both defined
