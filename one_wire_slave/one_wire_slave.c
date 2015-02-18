@@ -117,10 +117,9 @@ ows_init (uint8_t use_eeprom_id)
 // actual Maxim DS18B20 devices have been found to use, or values that
 // we have derived logically from our understanding of the protocol; see
 // one_wire_master.c.probe from the one_wire_master module for the source
-// of the experimental values.
-
-// FIXME: clone back to old experimental vals from prenuked now that we
-// require a 1 MHz or better timer1
+// of the experimental values.  Some of these got tweaked a tiny bit at
+// some point from the pure experimental values to divide evenly by two or
+// something, but it shouldn't have been enough to matter.
 
 // The DS18B20 datasheet and AN126 both say masters are supposed to send
 // 480 us pulse minimum.
@@ -189,8 +188,8 @@ ows_init (uint8_t use_eeprom_id)
 
 // This is the reset pulse lengh this slave implementation requires.
 // See the comments for the addends in the value for details.
-#define OUR_REQUIRED_RESET_PULSE_LENGTH \
-  (ST_LONGEST_SLAVE_LOW_PULSE_LENGTH + ST_LONGEST_SLAVE_LOW_PULSE_LENGTH)
+#define OUR_RESET_PULSE_LENGTH_REQUIRED \
+  (ST_RESET_PULSE_LENGTH_REQUIRED + ST_LONGEST_SLAVE_LOW_PULSE_LENGTH)
 
 // Convenience macros
 #define T1RESET() TIMER1_STOPWATCH_RESET ()
@@ -299,6 +298,10 @@ wait_for_pulse_end (void)
 // Drive the line low for the time required to indicate presence to the
 // master, then call wait_for_pulse_end() to swallow the pulse that this
 // causes the ISR to detect.
+// FIXME: if the master starts another reset pulse while we're doing this,
+// we end up eating that instead, which is arguably very wrong behavior.
+// Perhaps we should be doing something with the return value from
+// wait_for_pulse_end() here
 #define OWS_PRESENCE_PULSE()              \
   do {                                    \
     DRIVE_LINE_LOW ();                    \
@@ -310,7 +313,7 @@ wait_for_pulse_end (void)
 void
 ows_wait_for_reset (void)
 {
-  while ( wait_for_pulse_end () < ST_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
+  while ( wait_for_pulse_end () < OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
     ;
   }
   _delay_us ((double) ST_DELAY_BEFORE_PRESENCE_PULSE);
@@ -337,9 +340,6 @@ ows_wait_for_command (uint8_t *command_ptr)
 
   return OWS_ERROR_NONE;
 }
-
-uint8_t bhist[22];
-uint8_t bhist_ii = 0;
 
 // FIXME: I may need to be relocated
 //
@@ -484,7 +484,7 @@ ows_read_bit (uint8_t *data_bit_ptr)
   else if ( pl < (60+10) * T1TPUS ) {
     *data_bit_ptr = 0;
   }
-  else if ( pl > ST_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
+  else if ( pl > OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
     OWS_PRESENCE_PULSE ();
     return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
@@ -528,7 +528,7 @@ ows_write_bit (uint8_t data_bit)
       OWS_ZERO_PULSE ();
     }
   }
-  else if ( pl > ST_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
+  else if ( pl > OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
     SMT ();   // Because we shouldn't get reset when master asked us to write
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
     OWS_PRESENCE_PULSE ();
