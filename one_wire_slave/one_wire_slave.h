@@ -92,37 +92,40 @@ ows_init (uint8_t use_eeprom_id);
 // was sent), and return the function command itself in *command_ptr.
 // See Maxim_DS18B20_datasheet.pdf page 10, "TRANSACTION SEQUENCE" section.
 // In the meantime, automagically respond to resets and participate in any
-// slave searches (i.e. respond to any incoming OWC_SEARCH_ROM_COMMAND
-// or OWC_ALARM_SEARCH_COMMAND commands).  An error is generated if
-// any unexpected line behavior is encountered (abnormal pulse lengths,
-// unexpected mid-byte resets, etc.).  An error is *not* generated when
-// a potential transaction is aborted by the master at the end of one of
-// the steps listed in the "TRANSACTION SEQUENCE" section of the datasheet.
-// This policy allows this routine to automagically handle all ROM SEARCH,
-// READ ROM and the like, but also permits the somewhat weird case in
-// which the master sends a command that is useless except for transaction
-// initiation (a MATCH_ROM or SKIP_ROM), then doesn't actually follow it
-// with a function command.  An actual DS18B20 appears to tolerate this
-// misbehavior as well, however.  On the other hand we *do not* tolerate
-// function commands that aren't preceeded by a ROM command.  The DS18B20
-// seems to tolerate this (when its the only device on the bus), but its
-// completely contrary to the proscribed behavior for masters to do that,
-// and makes the implementation of this routine harder.  Use the lower-lever
-// portion of this interface if you know you have only one slave and don't
-// want to bother with addressing.  Masters that fail to send an entire
-// byte after issuing a reset pulse will cause this routine to hang until
-// they get around to doing that (or issuing another reset pulse).
+// slave searches (i.e. respond to any incoming OWC_SEARCH_ROM_COMMAND or
+// OWC_ALARM_SEARCH_COMMAND commands).  An error is generated if a pulse
+// with an abnormal lenght (i.e. normal bit communication or reset lengh)
+// is encountered.  An error is *not* generated when a potential transaction
+// is aborted by the master by a new reset pulse.  This policy allows this
+// routine to automagically handle all ROM SEARCH, READ ROM and the like,
+// but also permits the somewhat weird case in which the master sends a
+// command that is useless except for transaction initiation (a MATCH_ROM
+// or SKIP_ROM), then doesn't actually follow it with a function command.
+// An actual DS18B20 appears to tolerate this misbehavior as well, however.
+// On the other hand we *do not* tolerate function commands that aren't
+// preceeded by a ROM command.  The DS18B20 seems to tolerate this (when its
+// the only device on the bus), but its completely contrary to the proscribed
+// behavior for masters to do that, and makes the implementation of this
+// routine harder.  Use the lower-level portion of this interface if you
+// know you have only one slave and don't want to bother with addressing.
+// Masters that fail to send an entire byte after issuing a reset pulse
+// will cause this routine to hang until they get around to doing that
+// (or issuing another reset pulse).
 ows_error_t
 ows_wait_for_function_transaction (uint8_t *command_ptr);
 
-// Wait for a reset pulse, respond with a presence pulse, then try to read
-// a single byte from the master and return it.  An error is generated if
-// any unexpected line behavior is encountered (abnormal pulse lengths,
-// unexpected mid-byte resets, etc.  Any additional reset pulses that occur
-// during this read attempt are also responded to with presence pulses
-// (and OWS_ERROR_RESET_DETECTED_AND_HANDLED is returned).  Any errors that
-// occur while trying to read the byte effectively cause a new wait for a
-// reset pulse to begin.
+// Wait for a reset pulse, respond with a presence pulse, then try
+// to read a single byte from the master and return it.  An error is
+// generated if any unexpected line behavior is encountered (abnormal
+// pulse lengths, unexpected mid-byte resets, etc.  Any additional reset
+// pulses that occur during this read attempt are also responded to with
+// presence pulses (and OWS_ERROR_RESET_DETECTED_AND_HANDLED is returned).
+// Any errors that occur while trying to read the byte effectively cause
+// a new wait for a reset pulse to begin.  You should probably just use
+// ows_wait_for_function_transaction() instead of this.  FIXME: this will
+// probably end up needing to be updated to support idle functions, which
+// is kind of an annoying waste since we don't use it anywhere, so maye it
+// should just go away.
 ows_error_t
 ows_wait_for_command (uint8_t *command_ptr);
 

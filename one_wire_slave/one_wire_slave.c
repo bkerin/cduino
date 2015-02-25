@@ -338,7 +338,12 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
         else if ( err != OWS_ERROR_NONE ) {
           return err;
         }
-        // Could just return this byte to do what real DS18B20 does?
+        // ProbablyDontFIXXME: We might be able to just return this byte to
+        // do what real DS18B20 does with respect to commands that don't
+        // include any addressing (i.e. no Step 2 of the the "TRANSACTION
+        // SEQUENCE" described in the DS18B20 datasheet).  I haven't thought
+        // it through fully though, and the interface currently says that
+        // we return an error in this case.
         if ( ! OWC_IS_ROM_COMMAND (*command_ptr) ) {
           return OWS_ERROR_DID_NOT_GET_ROM_COMMAND;
         }
@@ -379,14 +384,14 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
               break;
             case OWC_ALARM_SEARCH_COMMAND:
               err = OWS_MAYBE_ANSWER_ALARM_SEARCH ();
-              // FIXME: why does this need its own return??  Would the
-              // switch below not work?  Actually this looks slightly wrong,
-              // since OWS_ERROR_RESET_DETECTED_AND_HANDLED will generate
-              // an error in this case, but not for a SEARCH_ROM_COMMAND,
-              // and why make that distinction?  Still, this should clearly
-              // get its own private commit maybe as a last fix
               if ( err != OWS_ERROR_NONE && err != OWS_ERROR_NOT_ALARMED ) {
-                return err;
+                // In strict mode, asynchronous resets in particular aren't
+                // acceptable here.  To actually hit this code, it would be
+                // necessary to remove the SMT() call from one of the bit
+                // commands -- but it might be worth doing this if things
+                // aren't working.  Note that we don't have SMT() traps in
+                // place for all higher-level failure points.
+                SMT ();
               }
               break;
             default:
