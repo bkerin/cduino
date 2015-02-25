@@ -18,30 +18,38 @@
 #include "util.h"
 
 // WARNING: if defined, this creates trap points that deliberately prevent
-// the watchdog timer from triggering a reset.  Note that since this uses
-// the blinky trap stuff, it may be necessary to redefine some of the blinky
-// macros from util.h for this to work if your LED isn't where the existing
-// version of that macro expects.  FIXME: those macros use us a single define
-// to control where the LED is found, I can't tell easily myself now what I'm
-// supposed to be changing.  This is intended both to help ensure that the
-// master and other slaves are behaving correctly, and to catch failures in
-// this slave itself.  If defined, it turns a number of points which slaves
-// can agreeably handle or return an error from into fatal blinky-traps,
-// and also adds some code to the pin change ISR to detect cases where this
-// slave itself is too slow to catch a reset pulse.  You wouldn't want to
-// use this in production, since it's very trigger-happy about rejecting
-// anything weird or pointless, and could theoretically be triggered by
-// a burst of noise on the line.  See the actual use-points of the SMT()
-// (Strict Mode Trap) macro for details.  Note that this macro does FIXME:
-// disable again for release version
+// the watchdog timer from triggering a reset.
+//
+// WARNING: its possible that the code added by this define might induce
+// hiesenburgs, especially at lower CPU frequencies.
+//
+// Note that since this uses the blinky trap stuff, it may be necessary
+// to redefine some of the blinky macros from util.h for this to work if
+// your LED isn't where the existing version of that macro expects.  FIXME:
+// those macros use us a single define to control where the LED is found,
+// I can't easily figure out myself now what I'm supposed to be changing.
+//
+// This is intended both to help ensure that the master and other slaves
+// are behaving correctly, and to catch failures in this slave itself.
+// If defined, it turns a number of points which slaves can agreeably handle
+// or return an error from into fatal blinky-traps, and also adds some code
+// to the pin change ISR to detect cases where this slave itself is too slow
+// to catch a reset pulse.  You wouldn't want to use this in production,
+// since it's very trigger-happy about rejecting anything weird or pointless,
+// and could theoretically be triggered by a burst of noise on the line.
+// For example, the traps this inserts will trigger if the master sends an
+// asynchronous reset when the slave is expecting to read or write a bit,
+// which is a perfectly reasonable thing for a production master to decide
+// to do (it just shouldn't happen accidently).  See the actual use-points
+// of the SMT() (Strict Mode Trap) macro for details.  Note that this macro
+// does FIXME: disable again for release version
 #define STRICT_MODE
 
-// WARNING: if defined, this creates trap points that deliberately prevent
-// the watchdog timer from triggering a reset.  Note that it may be necessary
-// to redefine one of the blinky macros from util.h for this to work if your
-// LED isn't in the usual spot.  This is like STRICT_MODE, but it causes the
-// trap to indicate the trap location in the source with its blink pattern.
-// Note that it doesn't make sense to define both this and STRICT_MODE.
+// WARNING: see the above warnings for STRICT_MODE.
+//
+// This is like STRICT_MODE, but it causes the trap to indicate the trap
+// location in the source with its blink pattern.  Note that it doesn't
+// make sense to define both this and STRICT_MODE.
 //#define STRICT_MODE_WITH_LOCATION_OUTPUT
 
 #if defined(STRICT_MODE) && defined(STRICT_MODE_WITH_LOCATION_OUTPUT)
@@ -143,7 +151,7 @@ ows_init (uint8_t use_eeprom_id)
 
 // This is the time the DS18B20 diagram indicates that it typically waits
 // from the time the line is pulled low by the master to when it (the slave)
-// samples.
+// samples when reading a bit.
 #define ST_SLAVE_READ_SLOT_SAMPLE_TIME 32
 
 // This is the maximum pulse lengh we will tolerate when looking for the
@@ -274,8 +282,8 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
     //new_pulse = FALSE;
 
     // NOTE: we could in theory move this outside the conditional st we
-    // reset for both positive and negative edges, in order to perform
-    // idle-time detection.
+    // reset for both positive and negative edges, in order to keep track
+    // of idle time.
     T1RESET ();
   }
 }
@@ -371,6 +379,12 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
               break;
             case OWC_ALARM_SEARCH_COMMAND:
               err = OWS_MAYBE_ANSWER_ALARM_SEARCH ();
+              // FIXME: why does this need its own return??  Would the
+              // switch below not work?  Actually this looks slightly wrong,
+              // since OWS_ERROR_RESET_DETECTED_AND_HANDLED will generate
+              // an error in this case, but not for a SEARCH_ROM_COMMAND,
+              // and why make that distinction?  Still, this should clearly
+              // get its own private commit maybe as a last fix
               if ( err != OWS_ERROR_NONE && err != OWS_ERROR_NOT_ALARMED ) {
                 return err;
               }
@@ -478,6 +492,31 @@ ows_write_bit (uint8_t data_bit)
   // the bus is supposed to be released again by the end of the time slot F
   // (55) us later.
 
+  // ProbabablyDontFIXXME: our general strategy of waiting for the end of a
+  // pulse and considering the length of the detected pulse to necessarily
+  // constitute a deliberate signal from the master is potentially less
+  // robust than if we somehow polled continuously and threw out everything
+  // that didn't fall at the particular sample point of interest.  In the
+  // presense of noies that manages to jerk the line high despite the master
+  // trying to hold it low, our strategy will fail for any premature noise,
+  // not just noise that happens to fall at the sample point.  Come to
+  // think of it, I guess we could wait for pulses in a loop until we get an
+  // elapsed time that puts us at what we consider the optimal sample point
+  // for a given operation.  But if we find ourselves having to do that,
+  // it raises the question of what we should really consider to count
+  // as a reset pulse.  I don't have a good sense for how common noise
+  // of sufficient power to cause false pulse ends is in practice.  Also,
+  // while studying the behavior of real Maxim slaves, I found cases where
+  // they considered *any* low pulse (even the shortest I could generate
+  // with function-call-free hard-wired code) to count as a low pulse,
+  // despite the spec for masters calling for some specific (small) number
+  // of us of delay.  In other words, the official slaves didn't appear to
+  // be filtering anything in terms of false low pulses, which should be
+  // less firmly pulled low than the line is when we're pulling it low.
+  // This in turn suggests that spurious pull-up/pull-down events aren't
+  // much of a problem in practice, which probably means that the pulse
+  // lengh measurement strategy being used here is fine.
+
   uint16_t pl = wait_for_pulse_end ();
 
   if ( pl < ST_SLAVE_WRITE_SLOT_START_PULSE_MAX_LENGTH * T1TPUS ) {
@@ -507,13 +546,13 @@ ows_read_bit (uint8_t *data_bit_ptr)
   if ( pl < ST_SLAVE_READ_SLOT_SAMPLE_TIME * T1TPUS ) {
     *data_bit_ptr = 1;
   }
-  // FIXME: use the time quantity symbols here, assuming this is right:
-  // this is required to be less than tick delay C + D, D is the margin
-  // since we expect the master to go high again after C
-  else if ( pl < (60+10) * T1TPUS ) {
+  // Note that D is the margin since we expect the master to go high again
+  // after C.
+  else if ( pl < ( OWC_TICK_DELAY_C + OWC_TICK_DELAY_D ) * T1TPUS ) {
     *data_bit_ptr = 0;
   }
   else if ( pl > OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
+    SMT ();   // Because the master shouldn't reset when we're expecting a bit
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
     OWS_PRESENCE_PULSE ();
     return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
@@ -590,6 +629,12 @@ ows_answer_search (void)
     // potentially all the remaining bits in the ID, so we want that path
     // to be fast.
     if ( UNLIKELY (bv != mbv) ) {
+      // Note that we don't return OWS_ERROR_ROM_ID_MISMATCH here.  This is
+      // a bit of a judgement call, but since this function is supposed to
+      // be used to respond to a SEARCH_ROM command, and its not really
+      // an error when we drop out of such a search, and clients of this
+      // interface shouldn't have to care one way or the other, we don't
+      // report mismatches as error.
       return OWS_ERROR_NONE;
     }
   }
