@@ -34,17 +34,17 @@
 #define TRUE  0x01
 #define FALSE 0x00
 
-// FIXME: I think these macros should return floats.  Its gross to require
-// an explicit cast.  But that would require an audit of existing uses.
-// Requiring the cast at least makes it clear when we can tolerate a
-// float result.  WARNING: unless the argument a contains an explicit cast
-// to double, the results of CLOCK_CYCLES_TO_MICROSECONDS() are subject
-// to integer truncation.  WARNING: Only F_CPU values of greater that 1MHz
-// with even multiples of 1MHz result in accurate settings for these macros.
-// There are some alternate low-frequency macros which are pretty close,
-// but haven't been tested.
-#if F_CPU >= 1000000L
-#  define CLOCK_CYCLES_PER_MICROSECOND() (F_CPU / 1000000L)
+// WARNING: unless the argument a contains an explicit cast to float or
+// double, the results of CLOCK_CYCLES_TO_MICROSECONDS() are subject to
+// integer truncation.  This is somewhat gross, but at least makes it clear
+// when we can tolerate a float result.
+#if F_CPU % 1000000UL != 0
+// The time conversions below don't work right for F_CPU values that aren't a
+// multiple of 1MHz.  If you don't think you care you might just remove this.
+#  error F_CPU is not a multiple of 1MHz
+#endif
+#if F_CPU >= 1000000UL
+#  define CLOCK_CYCLES_PER_MICROSECOND() (F_CPU / 1000000UL)
 #  define CLOCK_CYCLES_TO_MICROSECONDS(a) \
      ((a) / CLOCK_CYCLES_PER_MICROSECOND())
 #  define MICROSECONDS_TO_CLOCK_CYCLES(a) \
@@ -52,8 +52,8 @@
 #else
 #  error Interface untested with low-f clocks.  Remove #error and try :)
 #  warning CLOCK_CYCLES_PER_MICROSECOND() would be less than 1 at this F_CPU
-#  define CLOCK_CYCLES_TO_MICROSECONDS(a) (((a) * 1000L) / (F_CPU / 1000L))
-#  define MICROSECONDS_TO_CLOCK_CYCLES(a) (((a) * (F_CPU / 1000L)) / 1000L)
+#  define CLOCK_CYCLES_TO_MICROSECONDS(a) (((a) * 1000UL) / (F_CPU / 1000UL))
+#  define MICROSECONDS_TO_CLOCK_CYCLES(a) (((a) * (F_CPU / 1000UL)) / 1000UL)
 #endif
 
 // Branch prediction macros.  These let you hint the compiler whether a
@@ -126,6 +126,20 @@
 // to CHKP() apply to this macro.
 #define BASSERT(condition)                                          \
   do { if ( UNLIKELY (! (condition)) ) { BTRAP (); } } while ( 0 )
+
+// FIXME: this blinky debug interface now needs dio.h and should become
+// its own module
+#include "dio.h"
+
+#ifndef DBL_PIN
+#  error DBL_PIN is not defined
+#endif
+
+#define DBL_INIT() \
+  do { DIO_INIT (DBL_PIN, DIO_OUTPUT, DIO_DONT_CARE, LOW); } while ( 0 );
+
+#define DBL_ON() do { DIO_SET_HIGH (DBL_PIN); } while ( 0 )
+#define DBL_OFF() do { DIO_SET_LOW (DBL_PIN); } while ( 0 )
 
 // Do a busy wait for about Delay Time (dt) milliseconds while feeding the
 // watchdog timer about every 5 milliseconds.  Useful for some assertion
@@ -285,7 +299,7 @@
 
 // Like assert(), but first stores the file and line of the violation
 // at EEPROM address LASSER_EEPROM_ADDRESS.  It can be retrieved later
-// with GET_LASSER_MESSAGE(), or cleared with CLEAR_LASSERT_MESSAGE().
+// with GET_LASSERT_MESSAGE(), or cleared with CLEAR_LASSERT_MESSAGE().
 // This may be useful for chasing down rare failures.
 #define LASSERT(condition)                                                    \
   do {                                                                        \
