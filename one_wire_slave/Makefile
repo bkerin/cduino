@@ -16,9 +16,14 @@ AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
 include generic.mk
 
+# Pin to use for debug LED output.  FIXME: this will be the default probably
+# once blinky debug has its own module.  Assuming it seems smart to have
+# it have a default.
+CPPFLAGS += -DDBL_PIN=DIO_PIN_PB5
+
 # FIXME: USE OWS_ prefix for test conditions?  dio doesn't do it...
 
-# The one_wire_master.h interface requires this to be defined at compile time.
+# The one_wire_slave.h interface requires this to be defined at compile time.
 CPPFLAGS += -DOWS_PIN=DIO_PIN_DIGITAL_2
 
 # This module requires us to use a prescaler setting st we get at least

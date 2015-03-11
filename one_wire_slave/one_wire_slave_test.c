@@ -17,7 +17,7 @@
 //     arduino from first and all communication works.
 //
 // The slave Arduino should be reset first, then the master should be reset
-// to kick off the tests.
+// when prompted to kick off the tests.
 //
 // Because the slave needs to respond quickly to requests from the master,
 // it can't take the time to provide incremental diagnostic output via
@@ -34,6 +34,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "debug_led.h"  // FIXME: remove when done, I think
 #include "dio.h"
 #include "ds18b20_commands.h"
 #include "one_wire_slave.h"
@@ -43,12 +44,16 @@
 
 static ows_error_t err = OWS_ERROR_NONE;
 
+// FIXME: this should be ows_result_as_string as in owm module
 static void
-print_ows_error (ows_error_t err)
+print_ows_error (ows_error_t result)
 {
-  switch ( err ) {
+  switch ( result ) {
     case OWS_ERROR_NONE:
       PFP ("OWS_ERROR_NONE");
+      break;
+    case OWS_ERROR_TIMEOUT:
+      PFP ("OWS_ERROR_TIMEOUT");
       break;
     case OWS_ERROR_UNEXPECTED_PULSE_LENGTH:
       PFP ("OWS_ERROR_UNEXPECTED_PULSE_LENGTH");
@@ -130,6 +135,8 @@ send_fake_ds18b20_scratchpad_contents (void)
 int
 main (void)
 {
+  DBL_INIT ();  // FIXME: remove when done, I think
+
   // This isn't what we're testing exactly, but we need to know if it's
   // working or not to interpret other results.
   term_io_init ();
@@ -149,26 +156,56 @@ main (void)
   // Uncomment this line to cause this slave to consider itself alarmed :)
   ows_alarm = 42;
 
-  PFP ("Ready to start tests, reset the master now\n");
+  uint8_t fcmd;         // Function Command
+  ows_error_t result;   // Storage for function "results" (exit codes anyway)
+  uint16_t timeout;     // Storage for timeout setting
+
+  PFP ("\n");
+
+  PFP ("About to start timeout tests.  Ensure that master is silent now.\n");
+  double const mdtms = 2042;   // Message Display Time in ms FIXME: up for prod
+  _delay_ms (mdtms);
+  PFP ("Testing ows_wait_for_function_transaction() with minimum timeout... ");
+  timeout = 1;   // Minimum setting
+  result = ows_wait_for_function_transaction (&fcmd, timeout);
+  PFP_ASSERT (result = OWS_ERROR_TIMEOUT);
+  PFP ("ok.\n");
+  PFP ("Testing ows_wait_for_function_transaction() with maximum timeout... ");
+  timeout = OWS_MAX_TIMEOUT_US;
+  result = ows_wait_for_function_transaction (&fcmd, timeout);
+  PFP_ASSERT (result = OWS_ERROR_TIMEOUT);
+  PFP ("ok.\n");
+
+  PFP ("\n");
+
+  PFP ("Ready to start master-slave tests, reset the master now\n");
 
   for ( ; ; ) {
 
-    uint8_t fcmd;
-    err = ows_wait_for_function_transaction (&fcmd);
+    // We're going to perform the remaining tests using the minimum timeout
+    // setting, in order to exercise things: if everything works properly,
+    // the master should still be able to communicate with us despite
+    // regular timeouts and restarts of ows_wait_for_function_transaction().
+    // In practice OWS_NO_TIMEOUT could be used if the slave only needs to
+    // do things on demand (and doesn't want to sleep), or some value between
+    // the minimum (1) and OWS_MAX_TIMEOUT_US.  Of course, if the slave does
+    // anything time-consuming between ows_wait_for_function_transaction()
+    // calls, the delay might get to be to much for the master to tolerate
+    // without compensating code (it wouldn't get presence pulses in time).
+    timeout = 1;
 
-    // For diagnostic purposes we do this.  Normally printing something out
-    // at this point might take too much time that could otherwise be spent
-    // eating the error and waiting for the line to sort itself out :)
-    if ( err ) {
-      /*
-      if ( err && err != OWS_ERROR_RESET_DETECTED_AND_HANDLED ) {
-        PFP ("\n");
-        PFP ("Got error: ");
-        print_ows_error (err);
-        PFP ("\n");
-      }
-      */
-      continue;
+    result = ows_wait_for_function_transaction (&fcmd, timeout);
+
+    if ( result != OWS_ERROR_NONE                       &&
+         result != OWS_ERROR_RESET_DETECTED_AND_HANDLED &&
+         result != OWS_ERROR_TIMEOUT ) {
+      // For diagnostic purposes we do this.  Normally printing something
+      // out at this point might take too much time that could otherwise be
+      // spent eating the error and waiting for the line to sort itself out :)
+      PFP ("\n");
+      PFP ("Unexpted ows_wait_for_function_transaction() result: ");
+      print_ows_error (result);
+      PFP ("\n");
     }
 
     switch ( fcmd ) {
@@ -192,7 +229,9 @@ main (void)
         break;
 
       default:
-        BASSERT_SPE (0);   // Shouldn't be here unless the master screwed up
+        // FIXME: this should maybe still be here but we shouldn't end up
+        // in switch if we got a timeout above.
+        //BASSERT_SPE (0);   // Shouldn't be here unless the master screwed up
         break;
 
     }

@@ -16,6 +16,14 @@
 #include "one_wire_common.h"
 #include "timer1_stopwatch.h"
 
+// I haven't tried this module at frequencies lower than this.  Since there
+// are probably many code sections where we depend on the processor going fast
+// enough to get things done quicker that the (fairly speed) one-wire protocol
+// requires, there's a good chance it wouldn't work right at slower speeds.
+#if F_CPU < 4000000
+# error F_CPU too small
+#endif
+
 // Timer1 Stopwatch Frequency Required.  Since we're timing quite short
 // pulses, we don't want to deal with a timer that can't even measure
 // them accurately.
@@ -23,6 +31,15 @@
 
 #if F_CPU / TIMER1_STOPWATCH_PRESCALER_DIVIDER < OWS_T1SFR
 #  error F_CPU / TIMER1_STOPWATCH_PRESCALER_DIVIDER is too small
+#endif
+
+// FIXXME: There's probably no real reason we couldn't support F_CPU/timer1
+// prescaler combinations that result in non-integer timer1 ticks/us, but
+// the implementation doesn't currently do it and a little care would be
+// required to convert it to do so at least without using more floating
+// point math, and I haven't had the need.
+#if CLOCK_CYCLES_PER_MICROSECOND () % TIMER1_STOPWATCH_PRESCALER_DIVIDER != 0
+#  error timer1 ticks per microsecond is not an integer
 #endif
 
 #ifndef OWS_PIN
@@ -65,6 +82,7 @@
 // Return type for functions in this interface which report errors.
 typedef enum {
   OWS_ERROR_NONE = 0,
+  OWS_ERROR_TIMEOUT,
   OWS_ERROR_UNEXPECTED_PULSE_LENGTH,
   OWS_ERROR_DID_NOT_GET_ROM_COMMAND,
   OWS_ERROR_RESET_DETECTED_AND_HANDLED,
@@ -87,6 +105,18 @@ typedef enum {
 void
 ows_init (uint8_t use_eeprom_id);
 
+// See the description of the ows_wait_for_function_transaction routine
+// for an explanation of this.  Note that the magic number here is the
+// approximate margin (after possibly some truncation) in processor cycles.
+// This number is highly conservative, since there's no big cost to slightly
+// shorter timeouts, and still the possibility that you might want to do
+// something gross in one of your ISRs :)
+#define OWS_MAX_TIMEOUT_US \
+  ((uint16_t) CLOCK_CYCLES_TO_MICROSECONDS (UINT16_MAX - 14242))
+
+// Value to pass when timeouts should not be used.
+#define OWS_NO_TIMEOUT 0
+
 // Wait for the initiation of a function command transaction intended
 // for our ROM ID (and possibly others as well if a OWS_SKIP_ROM_COMMAND
 // was sent), and return the function command itself in *command_ptr.
@@ -103,7 +133,7 @@ ows_init (uint8_t use_eeprom_id);
 // or SKIP_ROM), then doesn't actually follow it with a function command.
 // An actual DS18B20 appears to tolerate this misbehavior as well, however.
 // On the other hand we *do not* tolerate function commands that aren't
-// preceeded by a ROM command.  The DS18B20 seems to tolerate this (when its
+// preceeded by a ROM command.  The DS18B20 seems to tolerate them (when its
 // the only device on the bus), but its completely contrary to the proscribed
 // behavior for masters to do that, and makes the implementation of this
 // routine harder.  Use the lower-level portion of this interface if you
@@ -111,10 +141,34 @@ ows_init (uint8_t use_eeprom_id);
 // Masters that fail to send an entire byte after issuing a reset pulse
 // will cause this routine to hang until they get around to doing that
 // (or issuing another reset pulse).
+//
+// FIXME: perhaps for consistency we should be ignoring short pulses in this routine as well, since that's what ows_wait_for_reset() currently does.
+//
+// If timeout is not zero, this routine will return OWS_ERROR_TIMEOUT iff:
+//
+//   * it's waiting for a reset pulse, and
+//
+//   * the line stays high for more than timeout_us microseconds +/- one
+//     timer1 timer tick.
+//
+// If not zero, the timeout value is required to be no greater than
+// OWS_MAX_TIMEOUT_US.  This limit is required by the implementation in
+// order to ensure that timer1 overflow doesn't cause a timeout to be missed.
+//
+// Note that a timeout won't happen if other slaves are talking continually,
+// or if the master hangs this slave by stopping mid-byte or otherwise
+// misbehaving.  This timeout implementation is intended as a simple way
+// to integrate this routine into a loop in a slave that wants to do other
+// things (including perhaps going to sleep if there's no activity, thereby
+// gauranteeing that it won't be a truly well-behaved one-wire slave, but who
+// cares).  If you need guaranteed latency regardless of network activity,
+// perhaps you should add another processor to your design, or reconsider
+// your use or one-wire for communication with the single processor.
+//
 ows_error_t
-ows_wait_for_function_transaction (uint8_t *command_ptr);
+ows_wait_for_function_transaction (uint8_t *command_ptr, uint16_t timeout_us);
 
-// Wait for a reset pulse, respond with a presence pulse, then try
+// Wait for a reset pulse, and respond with a presence pulse, then try
 // to read a single byte from the master and return it.  An error is
 // generated if any unexpected line behavior is encountered (abnormal
 // pulse lengths, unexpected mid-byte resets, etc.  Any additional reset
@@ -122,17 +176,17 @@ ows_wait_for_function_transaction (uint8_t *command_ptr);
 // presence pulses (and OWS_ERROR_RESET_DETECTED_AND_HANDLED is returned).
 // Any errors that occur while trying to read the byte effectively cause
 // a new wait for a reset pulse to begin.  You should probably just use
-// ows_wait_for_function_transaction() instead of this.  FIXME: this will
-// probably end up needing to be updated to support idle functions, which
-// is kind of an annoying waste since we don't use it anywhere, so maye it
-// should just go away.
+// ows_wait_for_function_transaction() instead of this.
 ows_error_t
 ows_wait_for_command (uint8_t *command_ptr);
 
 // Block until a reset pulse from the master is seen, then produce a
-// corresponding presence pulse and return.
-void
-ows_wait_for_reset (void);
+// corresponding presence pulse and return.  If timeout_us is not zero,
+// this routine will return OWS_ERROR_TIMEOUT if the line stays high for
+// at least timeout_us microseconds.  Pulses short of the length required
+// for a reset pulse are silently ignored.
+ows_error_t
+ows_wait_for_reset (uint16_t timeout_us);
 
 // Write bit (which should be 0 or 1).
 ows_error_t
@@ -203,5 +257,3 @@ extern uint8_t ows_alarm;
 // also return other errors propagated from ows_read_bit().
 ows_error_t
 ows_read_and_match_id (void);
-
-

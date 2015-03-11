@@ -8,6 +8,7 @@
 #include <util/crc16.h>
 #include <util/delay.h>
 
+#include "debug_led.h"
 #include "dio.h"
 #include "one_wire_common.h"
 #include "one_wire_slave.h"
@@ -23,11 +24,13 @@
 // WARNING: its possible that the code added by this define might induce
 // hiesenburgs, especially at lower CPU frequencies.
 //
-// Note that since this uses the blinky trap stuff, it may be necessary
-// to redefine some of the blinky macros from util.h for this to work if
-// your LED isn't where the existing version of that macro expects.  FIXME:
-// those macros use us a single define to control where the LED is found,
-// I can't easily figure out myself now what I'm supposed to be changing.
+// WARNING: these traps are so strict that the tests in one_wire_master_test.h
+// will trip them (because they do things like issue two resets in a row
+// without issuing a command).
+//
+// Note that since this uses some stuff from debug_led.h, it may be necessary
+// to define DBL_PIN in your Makefile some of the blinky macros from util.h
+// for this to work if you aren't using the normal PB5-connected on-board LED.
 //
 // This is intended both to help ensure that the master and other slaves
 // are behaving correctly, and to catch failures in this slave itself.
@@ -41,25 +44,24 @@
 // asynchronous reset when the slave is expecting to read or write a bit,
 // which is a perfectly reasonable thing for a production master to decide
 // to do (it just shouldn't happen accidently).  See the actual use-points
-// of the SMT() (Strict Mode Trap) macro for details.  Note that this macro
-// does FIXME: disable again for release version
-#define STRICT_MODE
+// of the SMT() (Strict Mode Trap) macro for details.
+//#define STRICT_MODE
 
 // WARNING: see the above warnings for STRICT_MODE.
 //
 // This is like STRICT_MODE, but it causes the trap to indicate the trap
 // location in the source with its blink pattern.  Note that it doesn't
-// make sense to define both this and STRICT_MODE.
+// make sense to define both this and STRICT_MODE.  Note also that this
+// makes the code huge.
 //#define STRICT_MODE_WITH_LOCATION_OUTPUT
 
 #if defined(STRICT_MODE) && defined(STRICT_MODE_WITH_LOCATION_OUTPUT)
 #  error STRICT_MODE and STRICT_MODE_WITH_LOCATION_OUTPUT both defined
 #endif
 #if defined (STRICT_MODE)
-#  define SMT() BTRAP_FEEDING_WDT ()
+#  define SMT() DBL_TRAP ()
 #elif defined (STRICT_MODE_WITH_LOCATION_OUTPUT)
-// FIXME: this is so messy and huge, and has yet to actually be used
-#  define SMT() BASSERT_FEEDING_WDT_SHOW_POINT (FALSE)
+#  define SMT() DBL_ASSERT_NOT_REACHED_SHOW_POINT ();
 #else
 #  define SMT()
 #endif
@@ -70,8 +72,9 @@
 #define SAMPLE_LINE()     OWC_SAMPLE_LINE (OWS_PIN)
 #define TICK_DELAY(ticks) OWC_TICK_DELAY (ticks)
 
-// Timer1 ticks per microsecond
-#define T1TPUS 2
+// Timer1 Ticks Per microsecond.
+#define T1TPUS \
+  (CLOCK_CYCLES_PER_MICROSECOND () / TIMER1_STOPWATCH_PRESCALER_DIVIDER)
 
 static uint8_t rom_id[OWC_ID_SIZE_BYTES];
 
@@ -208,39 +211,17 @@ ows_init (uint8_t use_eeprom_id)
 #define OUR_RESET_PULSE_LENGTH_REQUIRED \
   (ST_RESET_PULSE_LENGTH_REQUIRED + ST_LONGEST_SLAVE_LOW_PULSE_LENGTH)
 
-// Convenience macros
-#define T1RESET() TIMER1_STOPWATCH_RESET ()
-//#define T1US()    ((double) TIMER1_STOPWATCH_MICROSECONDS ())
-// Hard-coded for our prescaler/F_CPU to not be a double.  This version
-// must be used only in ISR, otherwise use AT1US().
-#define T1US() (TIMER1_STOPWATCH_TICKS() * 4)
-#define T1OF() TIMER1_STOPWATCH_OVERFLOWED ()
-
-
-// Atomic version of T1US().  We have to use an atomic block to access TCNT1
-// outside the ISR, so we have this macro that does that and sets the double
-// variable name argument given it to the elapsed us.  FIXME: hardcoded for
-// our prescaler/F_CPU case to NOT be a double FIXME: at the moment we don't
-// use this.  It might be useful if we want to measure the time since we
-// saw any activity before running an idle function or something, but I dunno.
-#define AT1US(outvar)                     \
-  do {                                    \
-    uint16_t XxX_tt;                      \
-    ATOMIC_BLOCK (ATOMIC_RESTORESTATE)    \
-    {                                     \
-      XxX_tt = TIMER1_STOPWATCH_TICKS (); \
-    }                                     \
-    outvar = XxX_tt * 4;                  \
-  } while (0)
-
 // Readability macros
 #define LINE_IS_HIGH() (  SAMPLE_LINE ())
 #define LINE_IS_LOW()  (! SAMPLE_LINE ())
 
-// When the pin change ISR observes a positive edge, it sets new_pulse and
-// records the pulse_length in timer1 ticks of the new pulse.
+// When the pin change ISR observes a positive edge, it sets new_pulse
+// and records the pulse_length in timer1 ticks of the new pulse.  When it
+// observes a negative edge, it just records the fact, in case we care for
+// purposes of measuring timeouts.
 volatile uint8_t new_pulse = FALSE;
 volatile uint16_t pulse_length;
+volatile uint8_t new_negative_edge = FALSE;
 
 // This ISR keeps track of the length of low pulses.  When we see the end
 // of one we consider that we've seen a reset and set a client-visible flag.
@@ -264,15 +245,21 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
     // line low far too long (at 16 MHz F_CPU with a timer1 prescaler setting
     // of 1, it still takes more than 4 ms to get an overflow).
 #if defined(STRICT_MODE) || defined(STRICT_MODE_WITH_LOCATION_OUTPUT)
-    if ( UNLIKELY (T1OF ()) ) { SMT (); }
+    if ( UNLIKELY (TIMER1_STOPWATCH_OVERFLOWED ()) ) {
+      SMT ();
+    }
 #else
     // Without STRICT_MODE, we just report a really long pulse :)
-    if ( UNLIKELY (T1OF ()) ) { pulse_length = UINT16_MAX; }
+    if ( UNLIKELY (TIMER1_STOPWATCH_OVERFLOWED ()) ) {
+      pulse_length = UINT16_MAX;
+    }
 #endif
 
   }
 
   else {
+
+    new_negative_edge = TRUE;
 
     // We used to clear new_pulse here.  This effectively erases any
     // unhandled pulse from our minds.  But now if STRICT_MODE is enabled
@@ -284,7 +271,7 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
     // NOTE: we could in theory move this outside the conditional st we
     // reset for both positive and negative edges, in order to keep track
     // of idle time.
-    T1RESET ();
+    TIMER1_STOPWATCH_RESET ();
   }
 }
 
@@ -318,7 +305,7 @@ wait_for_pulse_end (void)
 #define TSWFFC  2
 
 ows_error_t
-ows_wait_for_function_transaction (uint8_t *command_ptr)
+ows_wait_for_function_transaction (uint8_t *command_ptr, uint16_t timeout)
 {
   uint8_t ts = TSWFRP;                // Transaction State
   ows_error_t err = OWS_ERROR_NONE;   // Storage for most recent error
@@ -326,7 +313,10 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
   for ( ; ; ) {
     switch ( ts ) {
       case TSWFRP:
-        ows_wait_for_reset ();
+        err = ows_wait_for_reset (timeout);
+        if ( err != OWS_ERROR_NONE ) {
+          return err;
+        }
         ts = TSWFRC;
         break;
       case TSWFRC:
@@ -345,6 +335,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
         // it through fully though, and the interface currently says that
         // we return an error in this case.
         if ( ! OWC_IS_ROM_COMMAND (*command_ptr) ) {
+          SMT ();
           return OWS_ERROR_DID_NOT_GET_ROM_COMMAND;
         }
         if ( OWC_IS_TRANSACTION_INITIATING_ROM_COMMAND (*command_ptr) ) {
@@ -428,7 +419,6 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
 
 }
 
-
 // Call call, Propagating Errors.  The call argument must be a call to a
 // function returning ows_err_t.
 #define CPE(call)                      \
@@ -442,7 +432,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
 ows_error_t
 ows_wait_for_command (uint8_t *command_ptr)
 {
-  ows_wait_for_reset ();
+  ows_wait_for_reset (0);
 
   CPE (ows_read_byte (command_ptr));
 
@@ -464,15 +454,98 @@ ows_wait_for_command (uint8_t *command_ptr)
     wait_for_pulse_end ();                \
   } while ( 0 )
 
-void
-ows_wait_for_reset (void)
+// Convert microseconds (as an integer) to timer1 ticks (rounded down).
+#define US2T1T(us) (                    \
+    MICROSECONDS_TO_CLOCK_CYCLES(us) /  \
+    TIMER1_STOPWATCH_PRESCALER_DIVIDER)
+
+ows_error_t
+ows_wait_for_reset (uint16_t timeout_us)
 {
-  while ( wait_for_pulse_end () < OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
-    ;
+  // If a timeout has been requested and the line is high, start counting
+  // time to see if we hit a timeout.  Once it goes low, wait for the end
+  // of the pulse and see if its long enough to constitute a reset pulse.
+  // Repeat.  Note that due to the way wait_for_pulse_end() is implemented,
+  // there is no potential timing error in the case where the line goes
+  // high after the test for that, but before wait_for_pulse_end() fires:
+  // wait_for_pulse_end() actually monitors a global flag that gets set
+  // from the pin change ISR (just like this routine itself), so it catches
+  // pulse ends that just happened.  FIXXME: perhaps it should be renamed
+  // to wait_for_and_or_handle_pulse_end() or something :)
+  do {
+    if ( timeout_us != OWS_NO_TIMEOUT && LINE_IS_HIGH () ) {
+      assert (timeout_us <= OWS_MAX_TIMEOUT_US);
+
+      uint8_t sts = FALSE;   // Start Time Set
+      uint16_t start_ticks = 42;   // Initializer is just for the compiler
+      for ( ; ; ) {
+        uint8_t got_negative_edge = FALSE;
+        // FIXME: this is still maybe slightly busted.  We could end up
+        // with a left-over negative edge detection from a previous call
+        // where negative edges weren't monitored (though that would be
+        // weird client behavior), and this is the only case we care and
+        // clear them.  I think probably the solution is to clear that
+        // flag in the OWS_NO_TIMEOUT case (perhaps at the return point?),
+        // thereby guaranteeing that we don't have any left-over flag at
+        // that point at least.
+        ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
+        {
+          got_negative_edge = new_negative_edge;
+          new_negative_edge = FALSE;
+        }
+        if ( got_negative_edge ) {
+          break;
+        }
+        // Since we have timer1 running anyway, we might as well use it to
+        // implement timeouts.
+        uint16_t current_ticks;
+        if ( UNLIKELY (! sts) ) {
+          // Note that due to the way AVRs do things we have to use an atomic
+          // block here, since timer1 is also accessed from the ISR.  Yes,
+          // even when reading this is required.
+          ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
+          {
+            // By setting current_ticks to start_ticks on the first time
+            // through, we effectively guarantee that the conditional part of
+            // the outer loop will be checked at least once, thereby running
+            // wait_for_pulse_end() and picking up any pending pulse end.
+            start_ticks = TIMER1_STOPWATCH_TICKS ();
+            current_ticks = start_ticks;
+          }
+          sts = TRUE;
+        } else {
+          // See above comment about why an atomic block is needed here.
+          ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
+          {
+            // Note that the period of these timer1 checks determines the
+            // margin required between the timeout in timer1 ticks and
+            // the timer1 maximum value (actually the number of disting
+            // possible timer1 values, since we handle overflow).  The actual
+            // OWS_MAX_TIMEOUT_US interface value is highly conservative
+            // (to allow for large ISRs, slow processor speeds etc.).
+            current_ticks = TIMER1_STOPWATCH_TICKS ();
+          }
+        }
+        // Compensate for timer overflow
+        int32_t et = ((int32_t) current_ticks) - ((int32_t) start_ticks);
+        if ( et < 0 ) {
+          et = UINT16_MAX - start_ticks + current_ticks + 1;
+          assert (et > 0);
+        }
+        if ( UNLIKELY (((uint32_t) et) > US2T1T (timeout_us)) ) {
+          return OWS_ERROR_TIMEOUT;
+        }
+      }
+      sts = FALSE;
+    }
   }
+  while ( wait_for_pulse_end () < OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS );
+
   _delay_us ((double) ST_DELAY_BEFORE_PRESENCE_PULSE);
 
   OWS_PRESENCE_PULSE ();
+
+  return OWS_ERROR_NONE;
 }
 
 // Drive the line low for the time required to indicate a value of zero
@@ -563,9 +636,6 @@ ows_read_bit (uint8_t *data_bit_ptr)
     return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
   }
   else {
-    // FIXME: so where don't we use SMT?  any errors other than
-    // ROM_ID_MISMATCH or NOT_ALARMED (which for that matter aren't really
-    // errors)?
     SMT ();   // Because weird pulse lengths shouldn't happen
     return OWS_ERROR_UNEXPECTED_PULSE_LENGTH;
   }
