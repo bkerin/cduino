@@ -66,7 +66,8 @@ term_io_getline (char *linebuf);
     exit (1);                                            \
   } while ( 0 );
 
-// This macro is supposed to print a message like assert() on a big computer.
+// This macro is supposed to Print a Failure Point message like assert()
+// on a big computer.
 #define TERM_IO_PFP_ASSERT(condition)                 \
   do {                                                \
     if ( UNLIKELY (! (condition)) ) {                 \
