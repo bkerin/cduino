@@ -17,9 +17,6 @@
 // Delay Time Atom Size.  See the context below.
 #define DTAS 5
 
-// FIXME: possibly all malloc() use should probably go away, since it might
-// cause memory fragmentation and weird bugs
-
 // The _delay_ms() and _delay_us() functions of AVR libc *REQUIRE* their
 // arguments to be recognizable to GCC as double constants at compile-time.
 // If they aren't various weird horrible effects can occur, including
