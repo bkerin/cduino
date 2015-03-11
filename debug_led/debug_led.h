@@ -75,6 +75,8 @@ dbl_multiblink (uint16_t time_per_cycle, uint8_t count);
 #define DBL_ASSERT(condition) \
   do { if ( UNLIKELY (! (condition)) ) { DBL_TRAP (); } } while ( 0 )
 
+// Well this ends up looking a lot like DBL_TRAP() doesn't it now :) For
+// some reason my brain wanted them both.
 #define DBL_ASSERT_NOT_REACHED() DBL_ASSERT (FALSE)
 
 // "Display" uint32_t Value To Display.  The integer is represented using
