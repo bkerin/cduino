@@ -35,8 +35,6 @@ CPPFLAGS += -DOWM_BUILD_RESULT_DESCRIPTION_FUNCTION
 # Exactly one of the following TEST_CONDITION_* macros must be defined.
 
 CPPFLAGS += -DTEST_CONDITION_SINGLE_SLAVE
-
-# Uncomment these to test a multi-slave bus configuration.
 #CPPFLAGS += -DTEST_CONDITION_MULTIPLE_SLAVES
 
 # For the multiple-slave tests to work, you must determine your actual
@@ -57,5 +55,5 @@ ifneq ($(words $(filter -DTEST_CONDITION_%,$(CPPFLAGS))),1)
 endif
 
 # This is only required by the one_wire_master.c.probe program, which isn't
-# normally required by users.
+# normally required by users (or up-to-date anymore).
 #CPPFLAGS += -DTIMER1_STOPWATCH_PRESCALER_DIVIDER=8
