@@ -4,9 +4,9 @@
 //
 // Debugging with a LED can drive you mad.  But this approach it can be
 // effective in simple cases, and unlike approaches using other communication
-// interfaces, it's super-fast and therefore much less prone to create
-// heisenbergs.  Still, you should probably consider the debugging features
-// available in term_io.h and wireless_xbee.h first.
+// interfaces, it uses no other resources and it's super-fast and therefore
+// much less prone to create heisenbergs.  But consider the debugging
+// features available in term_io.h and wireless_xbee.h first.
 //
 // Bugs in debugging code can be particularly confusing.  You can trip
 // yourself up by:
@@ -17,6 +17,9 @@
 //
 //   * Using a watchdog timer, and not defing DBL_FEED_WDT (but be careful
 //     with that).
+//
+//   * Running out of RAM, especially inside a debugging routine itself.  The
+//     results are undefined.
 //
 
 #ifndef DEBUG_LED_H
@@ -72,6 +75,8 @@ dbl_multiblink (uint16_t time_per_cycle, uint8_t count);
 #define DBL_ASSERT(condition) \
   do { if ( UNLIKELY (! (condition)) ) { DBL_TRAP (); } } while ( 0 )
 
+#define DBL_ASSERT_NOT_REACHED() DBL_ASSERT (FALSE)
+
 // "Display" uint32_t Value To Display.  The integer is represented using
 // these steps:
 //
@@ -108,7 +113,22 @@ dbl_display_uint32 (uint32_t vtd);
     }                                           \
   } while ( 0 )
 
-// FIXME: maybe put some prefix-free version as in term_io?  Also, WORK
-// POINT: time to test it
+#define DBL_ASSERT_NOT_REACHED_SHOW_POINT() DBL_ASSERT_SHOW_POINT (FALSE)
+
+// If the user requests it, provide some namespace-busting short-form macros.
+// NOTE that DBL_INIT() must be called as usual (no alias is provided for it).
+#ifdef DBL_POLLUTE_NAMESPACE
+#  define ON         DBL_ON
+#  define OFF        DBL_OFF
+// FIXME: for migration from when these were in util.h, we have this ifndef
+#  ifndef CHKP
+#    define CHKP       DBL_CHKP
+#  endif
+#  define TRAP       DBL_TRAP
+#  define ASSERT     DBL_ASSERT
+#  define ASSERTNR   DBL_ASSERT_NOT_REACHED
+#  define ASSERTSP   DBL_ASSERT_SHOW_POINT
+#  define ASSERTNRSP DBL_ASSERT_NOT_REACHED_SHOW_POINT
+#endif
 
 #endif // DEBUG_LED_H

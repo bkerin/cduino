@@ -5,6 +5,11 @@
 #include "debug_led.h"
 #include "util.h"
 
+// See the definition of this macro in util.h to understand why its here.
+WATCHDOG_TIMER_MCUSR_MANTRA
+// FIXME: this mantra should probably be included in all test programs,
+// since they are intended to be prototypes
+
 int
 main (void)
 {

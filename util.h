@@ -26,6 +26,52 @@
 #  error __GNUC__ not defined
 #endif
 
+// Backup and clear the MCUSR regester early in the AVR boot process (to
+// ensure we don't enter a continual reset loop; see above comment).
+
+// This funny blob of code should be included with almost every AVR program,
+// even if they don't ever intentionally use the watchdog timer (WDT) at all.
+// Modern Arduino bootloaders may include equivalent code and so not need
+// this, but other programming methods (e.g. AVRISPmkII) should deninitely
+// use it.  Simply add the mantra macro to the source file containing
+// the main function, nothing more is required.
+//
+// The reason for this is that the WDT could just possibly get
+// turned on accidently by bad code or even electrical noise,
+// and if the MCUSR register isn't correctly cleared early in the
+// boot process, an infinite series of resets might occur.  See
+// http://www.nongnu.org/avr-libc/user-manual/group__avr__watchdog.html
+// for details.
+//
+// As a bonus, this mantra gives you a global uint8_t variable called
+// mcusr_mirror.  If the Arduino bootloader hasn't already cleared MCUSR
+// when fetch_and_clear_mcusr() happens, this variable will contain the
+// original contents of MCUSR, which can be used to determine the cause of
+// the most recent reset (see the description of the MCUSR register in the
+// AVR datasheet).  If the Arduino bootloader has already cleared MCUSR,
+// then mcusr_mirror will contain nothing useful.  In practice this means
+// that mcusr_mirror is only useful if you're not using the Arduino bootloader
+// for programming, but instead are using an AVRISPmkII or the like (see the
+// UPLOAD_METHOD definition in generic.mk).  Note that an extern declaration
+// must be added to access this variable from other source files.
+//
+#define WATCHDOG_TIMER_MCUSR_MANTRA                           \
+                                                              \
+  uint8_t mcusr_mirror __attribute__ ((section (".noinit"))); \
+                                                              \
+  void                                                        \
+  fetch_and_clear_mcusr (void)                                \
+    __attribute__((naked))                                    \
+    __attribute__((section(".init3")));                       \
+                                                              \
+  void                                                        \
+  fetch_and_clear_mcusr (void)                                \
+  {                                                           \
+    mcusr_mirror = MCUSR;                                     \
+    MCUSR = 0x00;                                             \
+    wdt_disable ();                                           \
+  }
+
 #define HIGH 0x01
 #define LOW  0x00
 
@@ -129,14 +175,8 @@
 
 // FIXME: this blinky debug interface now needs dio.h and should become
 // its own module
+// FIXME: don't forget to check for unndeeded headers when you remove this crud.
 #include "dio.h"
-
-#ifndef DBL_PIN
-#  error DBL_PIN is not defined
-#endif
-
-#define DBL_INIT() \
-  do { DIO_INIT (DBL_PIN, DIO_OUTPUT, DIO_DONT_CARE, LOW); } while ( 0 );
 
 #define DBL_ON() do { DIO_SET_HIGH (DBL_PIN); } while ( 0 )
 #define DBL_OFF() do { DIO_SET_LOW (DBL_PIN); } while ( 0 )

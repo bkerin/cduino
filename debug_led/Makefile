@@ -13,21 +13,25 @@ include generic.mk
 # makes them more useful for debugging, but of course not so good for the WDT.
 #CPPFLAGS += -DDBL_FEED_WDT
 
-# If this is defined, the test program will enable a short
-# watchdog timer timeout, and the blinky output will therefore not work
-# correctly unless DBL_FEED_WDT is defined.
+# If this is defined, namespace-polluting short-form aliases for some of
+# the macros in this interface are defined.
+#CPPFLAGS += -DDBL_POLLUTE_NAMESPACE
+
+# If this is defined, the test program will enable a short watchdog timer
+# timeout, and the blinky output will therefore not work correctly unless
+# DBL_FEED_WDT is defined.
 #CPPFLAGS += -DENABLE_WDT
 
 # Ease case here represents a different feature of this module's interface.
 # Its not practical to test them all in the same program in this case, since
 # most of them cause the program to loop forever.  These don't represent
 # any different in the hardware, only in the interface module to test.
-#CPPFLAGS += -DTEST_CASE_MULTIBLINK
+CPPFLAGS += -DTEST_CASE_MULTIBLINK
 #CPPFLAGS += -DTEST_CASE_CHKP
 #CPPFLAGS += -DTEST_CASE_TRAP
 #CPPFLAGS += -DTEST_CASE_ASSERT
 #CPPFLAGS += -DTEST_CASE_DISPLAY_UINT32
-CPPFLAGS += -DTEST_CASE_ASSERT_SHOW_POINT
+#CPPFLAGS += -DTEST_CASE_ASSERT_SHOW_POINT
 
 # Ensure that exactly one test case is defined.
 ifneq ($(words $(filter -DTEST_CASE_%,$(CPPFLAGS))),1)

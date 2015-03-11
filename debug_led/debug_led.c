@@ -8,28 +8,32 @@
 
 #include "debug_led.h"
 
-#ifndef DBL_FEED_WDT
+#ifdef DBL_FEED_WDT
 #  define MAYBE_FEED_WDT() wdt_reset ()
 #else
 #  define MAYBE_FEED_WDT() do { ; } while ( 0 )
 #endif
 
-// Delay Atom Size.  See the context below.
-#define DAS 5
+// Delay Time Atom Size.  See the context below.
+#define DTAS 5
+
+// FIXME: possibly all malloc() use should probably go away, since it might
+// cause memory fragmentation and weird bugs
 
 // The _delay_ms() and _delay_us() functions of AVR libc *REQUIRE* their
 // arguments to be recognizable to GCC as double constants at compile-time.
 // If they aren't various weird horrible effects can occur, including
 // excessively long randomish delays, etc.  So for safety we have this
 // macro as a way to get approximately correct largish delays.  Of course,
-// using this for short delays would be insane.
-// FIXME: checkif its worth functionalizing this guy
-#define DELAY_APPROX(time_ms)                                         \
-  do {                                                                \
-    for ( uint16_t XxX_ii = 0 ; XxX_ii <= time_ms ; XxX_ii += DAS ) { \
-      _delay_ms (DAS);                                                \
-      MAYBE_FEED_WDT ();                                              \
-    }                                                                 \
+// using this for short delays would be insane.  It wastes about 25 bytes
+// of flash to make this a macro rather than a function, but it should save
+// a little bit of stack which is good for debugging functions.
+#define DELAY_APPROX(time_ms)                                          \
+  do {                                                                 \
+    for ( uint16_t XxX_ii = 0 ; XxX_ii <= time_ms ; XxX_ii += DTAS ) { \
+      _delay_ms (DTAS);                                                \
+      MAYBE_FEED_WDT ();                                               \
+    }                                                                  \
   } while ( 0 )
 
 void
@@ -43,6 +47,8 @@ dbl_multiblink (uint16_t time_per_cycle, uint8_t count)
   }
 }
 
+// This is just big enough to hold all the digits of a uint32_t and a
+// trailing nul byte.
 #define STRING_BUFFER_SIZE 11
 
 void
