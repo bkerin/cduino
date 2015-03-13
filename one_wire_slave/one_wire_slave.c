@@ -439,20 +439,22 @@ ows_wait_for_command (uint8_t *command_ptr)
   return OWS_ERROR_NONE;
 }
 
-// Drive the line low for the time required to indicate presence to the
-// master, then call wait_for_pulse_end() to swallow the pulse that this
-// causes the ISR to detect.
-// FIXME: if the master starts another reset pulse while we're doing this,
-// we end up eating that instead, which is arguably very wrong behavior.
-// Perhaps we should be doing something with the return value from
-// wait_for_pulse_end() here
-#define OWS_PRESENCE_PULSE()              \
-  do {                                    \
-    DRIVE_LINE_LOW ();                    \
-    _delay_us (ST_PRESENCE_PULSE_LENGTH); \
-    RELEASE_LINE ();                      \
-    wait_for_pulse_end ();                \
-  } while ( 0 )
+// Handle a (presumably just received) reset pulse, by delaying a short time,
+// then sending a presence pulse, swallowing the pulse end that results
+// hopefully from the presence pulse itself, and repeating the procedure
+// until a pulse shorter than a reset pulse is received.  By verifying
+// that the presence pulse is short enough, we're handling the situation
+// where the master sends a series of reset pulses in a row without paying
+// attention to our answering presence pulse).
+// FIXME: maybe we dont want the OWS prefix, since this is private?
+// FIXME: should this be a function?
+#define OWS_HANDLE_RESET_PULSE()                                     \
+  do {                                                               \
+    _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);                      \
+    DRIVE_LINE_LOW ();                                               \
+    _delay_us (ST_PRESENCE_PULSE_LENGTH);                            \
+    RELEASE_LINE ();                                                 \
+  } while ( wait_for_pulse_end () > ST_RESET_PULSE_LENGTH_REQUIRED )
 
 // Convert microseconds (as an integer) to timer1 ticks (rounded down).
 #define US2T1T(us) (                    \
@@ -480,14 +482,14 @@ ows_wait_for_reset (uint16_t timeout_us)
       uint16_t start_ticks = 42;   // Initializer is just for the compiler
       for ( ; ; ) {
         uint8_t got_negative_edge = FALSE;
-        // FIXME: this is still maybe slightly busted.  We could end up
-        // with a left-over negative edge detection from a previous call
-        // where negative edges weren't monitored (though that would be
-        // weird client behavior), and this is the only case we care and
-        // clear them.  I think probably the solution is to clear that
-        // flag in the OWS_NO_TIMEOUT case (perhaps at the return point?),
-        // thereby guaranteeing that we don't have any left-over flag at
-        // that point at least.
+        // FIXME: this is still maybe slightly busted.  We could end up with
+        // a left-over negative edge detection from a previous call where
+        // negative edges weren't monitored (though it would count as weird
+        // client behavior to sometimes use timeouts and sometimes not), and
+        // this is the only case we care and clear them.  I think probably
+        // the solution is to clear that flag in the OWS_NO_TIMEOUT case
+        // (perhaps at the return point?), thereby guaranteeing that we
+        // don't have any left-over flag at that point at least.
         ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
         {
           got_negative_edge = new_negative_edge;
@@ -541,9 +543,7 @@ ows_wait_for_reset (uint16_t timeout_us)
   }
   while ( wait_for_pulse_end () < OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS );
 
-  _delay_us ((double) ST_DELAY_BEFORE_PRESENCE_PULSE);
-
-  OWS_PRESENCE_PULSE ();
+  OWS_HANDLE_RESET_PULSE ();
 
   return OWS_ERROR_NONE;
 }
@@ -551,7 +551,7 @@ ows_wait_for_reset (uint16_t timeout_us)
 // Drive the line low for the time required to indicate a value of zero
 // when writing a bit, then call wait_for_pulse_end() to swallow the pulse
 // that this causes the ISR to detect.  FIXME: this has the same problem
-// as OWS_PRESENCE_PULSE(): it might end up eating a reset pulse.
+// as OWS_PRESENCE_PULSE() used to: it might end up eating a reset pulse.
 #define OWS_ZERO_PULSE()                            \
   do {                                              \
     DRIVE_LINE_LOW ();                              \
@@ -604,8 +604,7 @@ ows_write_bit (uint8_t data_bit)
   }
   else if ( pl > OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
     SMT ();   // Because we shouldn't get reset when master asked us to write
-    _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
-    OWS_PRESENCE_PULSE ();
+    OWS_HANDLE_RESET_PULSE ();
     return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
   }
   else {
@@ -631,8 +630,7 @@ ows_read_bit (uint8_t *data_bit_ptr)
   }
   else if ( pl > OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
     SMT ();   // Because the master shouldn't reset when we're expecting a bit
-    _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
-    OWS_PRESENCE_PULSE ();
+    OWS_HANDLE_RESET_PULSE ();
     return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
   }
   else {
