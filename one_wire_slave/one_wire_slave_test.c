@@ -162,7 +162,7 @@ main (void)
 
   PFP ("\n");
 
-  PFP ("About to start timeout tests.  Ensure that master is silent now.\n");
+  PFP ("About to start timeout tests.  Ensure that the master is silent\n");
   double const mdtms = 2042;   // Message Display Time in ms FIXME: up for prod
   _delay_ms (mdtms);
   PFP ("Testing ows_wait_for_function_transaction() with minimum timeout... ");
