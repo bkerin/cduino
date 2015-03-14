@@ -22,6 +22,7 @@
 // is still connected, it should be possible to run
 //
 //   make -rR run_screen
+// FIXME: ensure that other modules that use screen mention how to run it
 //
 // from the module directory to see the test results.
 //
