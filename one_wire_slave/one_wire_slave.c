@@ -190,20 +190,20 @@ ows_init (uint8_t use_eeprom_id)
 */
 
 // This is the longest that this slave implementation ever holds the line
-// low itself.  This is relevant because we want to let our interrupt
-// handler do all the resetting of the hardware timer that we use to
-// detect reset pulses without having to flip the reset detector on and
-// off or anything.  This policy avoids timer access atomicity issues
-// and generally keeps things simple.  The consequence is that we end up
-// requiring reset pulses up to this much longer than the experimentally
-// measured value of ST_RESET_PULSE_LENGTH_REQUIRED.  We have to do that
-// because the interrupt handler counts interrupts caused when the slave
-// itself drives the line low, so the ensuing line-low time ends up counting
-// towards reset pulse time.  Because ST_RESET_PULSE_LENGTH_REQUIRED +
-// ST_LONGEST_SLAVE_LOW_PULSE_LENGTH is still considerably less than the 480
-// us pulse that well-behaved masters are required to send, this shouldn't be
-// a problem.  The value of this macro is ST_PRESENCE_PULSE_LENGTH because
-// that's the longest the slave should ever have to hold the line low.
+// low itself.  This is relevant because we want to let our interrupt handler
+// do all the resetting of the hardware timer that we use to detect reset
+// pulses without having to flip the reset detector on and off or anything.
+// This policy avoids timer access atomicity issues and generally keeps
+// things simple.  The consequence is that we end up requiring reset
+// pulses up to this much longer than the experimentally measured value of
+// ST_RESET_PULSE_LENGTH_REQUIRED.  We have to do that because the interrupt
+// handler counts interrupts caused when the slave itself drives the line
+// low, so that time ends up counting towards reset pulse time.  Because
+// ST_RESET_PULSE_LENGTH_REQUIRED + ST_LONGEST_SLAVE_LOW_PULSE_LENGTH is
+// still considerably less than the 480 us pulse that well-behaved masters
+// are required to send, this shouldn't be a problem.  The value of this
+// macro is ST_PRESENCE_PULSE_LENGTH because that's the longest the slave
+// should ever have to hold the line low.
 #define ST_LONGEST_SLAVE_LOW_PULSE_LENGTH ST_PRESENCE_PULSE_LENGTH
 
 // This is the reset pulse lengh this slave implementation requires.
@@ -448,13 +448,15 @@ ows_wait_for_command (uint8_t *command_ptr)
 // attention to our answering presence pulse).
 // FIXME: maybe we dont want the OWS prefix, since this is private?
 // FIXME: should this be a function?
-#define OWS_HANDLE_RESET_PULSE()                                     \
-  do {                                                               \
-    _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);                      \
-    DRIVE_LINE_LOW ();                                               \
-    _delay_us (ST_PRESENCE_PULSE_LENGTH);                            \
-    RELEASE_LINE ();                                                 \
-  } while ( wait_for_pulse_end () > ST_RESET_PULSE_LENGTH_REQUIRED )
+// FIXME: test that reset trains actually work (needs test from master side)
+#define OWS_HANDLE_RESET_PULSE()                          \
+  do {                                                    \
+    _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);           \
+    DRIVE_LINE_LOW ();                                    \
+    _delay_us (ST_PRESENCE_PULSE_LENGTH);                 \
+    RELEASE_LINE ();                                      \
+  } while ( wait_for_pulse_end ()                         \
+            >= OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS );
 
 // Convert microseconds (as an integer) to timer1 ticks (rounded down).
 #define US2T1T(us) (                    \
