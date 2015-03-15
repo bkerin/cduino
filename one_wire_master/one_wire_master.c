@@ -9,9 +9,9 @@
 #include "dio.h"
 #include "one_wire_common.h"
 #include "one_wire_master.h"
-// Its convenient to use term_io if we need to debug:
-//#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
-//#include "term_io.h"
+// Its convenient to use term_io if we need to debug:  FIXME: disable prod
+#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+#include "term_io.h"
 #include "util.h"
 
 #ifdef OWM_BUILD_RESULT_DESCRIPTION_FUNCTION
@@ -138,9 +138,9 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd)
     case OWC_READ_ROM_COMMAND:
       {
         uint8_t crc = 0;
+        uint8_t const ncb = OWC_ID_SIZE_BYTES - 1;   // Non-CRC Bytes (in ID)
         for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
           rom_id[ii] = owm_read_byte ();
-          uint8_t const ncb = OWC_ID_SIZE_BYTES - 1;   // Non-CRC Bytes (in ID)
           if ( LIKELY (ii < ncb) ) {
             crc = _crc_ibutton_update (crc, rom_id[ii]);
           }
@@ -283,11 +283,14 @@ owm_read_id (uint8_t *id_buf)
 
   uint8_t const read_rom_command = OWC_READ_ROM_COMMAND;
   owm_write_byte (read_rom_command);
+
+  // FIXME: this chunk could be factored, its common at least with the READ_ROM
+  // chunk in OWC_READ_ROM_COMMAND
   uint8_t crc = 0;
-  uint8_t const lnbo = OWC_ID_SIZE_BYTES - 1 - 1;   // Last Non-crc Byte Offset
+  uint8_t const ncb = OWC_ID_SIZE_BYTES - 1;   // Non-CRC Bytes (in ID)
   for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
     id_buf[ii] = owm_read_byte ();
-    if ( ii <= lnbo ) {
+    if ( LIKELY (ii < ncb) ) {
       crc = _crc_ibutton_update (crc, id_buf[ii]);
     }
     else {
