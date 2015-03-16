@@ -162,6 +162,8 @@ main (void)
 
   PFP ("\n");
 
+  // FIXME: timeout tests disabled for now
+  /*
   PFP ("About to start timeout tests.  Ensure that the master is silent\n");
   double const mdtms = 2042;   // Message Display Time in ms FIXME: up for prod
   _delay_ms (mdtms);
@@ -175,6 +177,7 @@ main (void)
   result = ows_wait_for_function_transaction (&fcmd, timeout);
   PFP_ASSERT (result = OWS_ERROR_TIMEOUT);
   PFP ("ok.\n");
+  */
 
   PFP ("\n");
 

@@ -148,8 +148,13 @@ ows_init (uint8_t use_eeprom_id);
 //
 //   * it's waiting for a reset pulse, and
 //
+//   * there is no recent line activity that hasn't been handled yet, and
+//
 //   * the line stays high for more than timeout_us microseconds +/- one
-//     timer1 timer tick.
+//     timer1 timer tick and a small amount of code overhead.
+//
+// Pending (negative) pulse ends in particular are always processed as
+// pulses, rather than triggering a timeout.
 //
 // If not zero, the timeout value is required to be no greater than
 // OWS_MAX_TIMEOUT_US.  This limit is required by the implementation in
@@ -157,13 +162,15 @@ ows_init (uint8_t use_eeprom_id);
 //
 // Note that a timeout won't happen if other slaves are talking continually,
 // or if the master hangs this slave by stopping mid-byte or otherwise
-// misbehaving.  This timeout implementation is intended as a simple way
-// to integrate this routine into a loop in a slave that wants to do other
-// things (including perhaps going to sleep if there's no activity, thereby
-// gauranteeing that it won't be a truly well-behaved one-wire slave, but who
-// cares).  If you need guaranteed latency regardless of network activity,
-// perhaps you should add another processor to your design, or reconsider
-// your use or one-wire for communication with the single processor.
+// misbehaving.  This timeout implementation is intended as a simple
+// way to integrate this routine into a loop in a slave that wants to do
+// other things (including perhaps going to sleep if there's no activity,
+// thereby gauranteeing that it won't be a truly well-behaved one-wire
+// slave, but who cares).  If you need guaranteed latency regardless of
+// FIXME: so how exactly will these timeouts interact with sleep?
+// arbitrary network activity, perhaps you should add another processor to
+// your design, or reconsider your use of one-wire for communication with
+// the single processor, or run an RTOS instead.
 //
 ows_error_t
 ows_wait_for_function_transaction (uint8_t *command_ptr, uint16_t timeout_us);

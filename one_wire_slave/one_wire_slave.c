@@ -215,13 +215,12 @@ ows_init (uint8_t use_eeprom_id)
 #define LINE_IS_HIGH() (  SAMPLE_LINE ())
 #define LINE_IS_LOW()  (! SAMPLE_LINE ())
 
-// When the pin change ISR observes a positive edge, it sets new_pulse
-// and records the pulse_length in timer1 ticks of the new pulse.  When it
-// observes a negative edge, it just records the fact, in case we care for
-// purposes of measuring timeouts.
+// When the pin change ISR observes any change, it sets new_line_activity.
+// When it observes a positive edge, it sets new_pulse and records the
+// pulse_length in timer1 ticks of the new pulse.
+volatile uint8_t new_line_activity = FALSE;
 volatile uint8_t new_pulse = FALSE;
 volatile uint16_t pulse_length;
-volatile uint8_t new_negative_edge = FALSE;
 
 // This ISR keeps track of the length of low pulses.  When we see the end
 // of one we consider that we've seen a reset and set a client-visible flag.
@@ -259,8 +258,6 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 
   else {
 
-    new_negative_edge = TRUE;
-
     // We used to clear new_pulse here.  This effectively erases any
     // unhandled pulse from our minds.  But now if STRICT_MODE is enabled
     // we consider unhandled pulses to be fatal.  Otherwise, not clearing
@@ -273,6 +270,8 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
     // of idle time.
     TIMER1_STOPWATCH_RESET ();
   }
+
+  new_line_activity = TRUE;
 }
 
 static uint16_t
@@ -449,6 +448,12 @@ ows_wait_for_command (uint8_t *command_ptr)
 // FIXME: maybe we dont want the OWS prefix, since this is private?
 // FIXME: should this be a function?
 // FIXME: test that reset trains actually work (needs test from master side)
+//
+// FIXME: the fact that this gets called from ows_wait_for_reset() probably
+// breaks the promises that routine makes since we call wait_for_pulse_end()
+// in a loop without counting time.  Its probably simpler to just fix
+// the innermost wait loop to handle timeouts, and would give a better
+// interfact too
 #define OWS_HANDLE_RESET_PULSE()                          \
   do {                                                    \
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);           \
@@ -477,29 +482,26 @@ ows_wait_for_reset (uint16_t timeout_us)
   // pulse ends that just happened.  FIXXME: perhaps it should be renamed
   // to wait_for_and_or_handle_pulse_end() or something :)
   do {
-    if ( timeout_us != OWS_NO_TIMEOUT && LINE_IS_HIGH () ) {
-      assert (timeout_us <= OWS_MAX_TIMEOUT_US);
 
-      uint8_t sts = FALSE;   // Start Time Set
-      uint16_t start_ticks = 42;   // Initializer is just for the compiler
+    uint16_t start_ticks = 42;   // Initializer is just for the compiler
+    uint8_t sts = FALSE;   // start_ticks Set
+
+    if ( timeout_us != OWS_NO_TIMEOUT ) {
+
+      // We're going to count time to see if we should report a timeout.
       for ( ; ; ) {
-        uint8_t got_negative_edge = FALSE;
-        // FIXME: this is still maybe slightly busted.  We could end up with
-        // a left-over negative edge detection from a previous call where
-        // negative edges weren't monitored (though it would count as weird
-        // client behavior to sometimes use timeouts and sometimes not), and
-        // this is the only case we care and clear them.  I think probably
-        // the solution is to clear that flag in the OWS_NO_TIMEOUT case
-        // (perhaps at the return point?), thereby guaranteeing that we
-        // don't have any left-over flag at that point at least.
+
+        // Check for line activity
+        uint8_t nlac = FALSE;   // new_line_activity Copy
         ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
         {
-          got_negative_edge = new_negative_edge;
-          new_negative_edge = FALSE;
+          nlac = new_line_activity;
+          new_line_activity = FALSE;
         }
-        if ( got_negative_edge ) {
+        if ( nlac ) {
           break;
         }
+
         // Since we have timer1 running anyway, we might as well use it to
         // implement timeouts.
         uint16_t current_ticks;
@@ -512,7 +514,8 @@ ows_wait_for_reset (uint16_t timeout_us)
             // By setting current_ticks to start_ticks on the first time
             // through, we effectively guarantee that the conditional part of
             // the outer loop will be checked at least once, thereby running
-            // wait_for_pulse_end() and picking up any pending pulse end.
+            // wait_for_pulse_end() and picking up any pending pulse end
+            // preferentially to reporting a timeout.
             start_ticks = TIMER1_STOPWATCH_TICKS ();
             current_ticks = start_ticks;
           }
