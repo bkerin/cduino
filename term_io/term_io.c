@@ -212,3 +212,18 @@ term_io_getline (char *linebuf)
     }
   }
 }
+
+// FIXME: this can't be implemented yet, see the comments by the prototype
+// in term_io.h for details.
+//int
+//printf_P_safer (char const *fmt, ...)
+//{
+//  assert (0);   // Can't implement yet because no vprintf_P
+//
+//  va_list ap;
+//  va_start (ap, fmt);
+//  int char_count = vprintf (racp, max_length + 1, format, ap);
+//  va_end (ap);
+//  g_assert (char_count <= max_length);
+//
+//}

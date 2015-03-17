@@ -46,6 +46,17 @@ term_io_init (void);
 int
 term_io_getline (char *linebuf);
 
+// FIXME: This is intended as a version of printf_P() that tries to check
+// the types of the variadic arguments as GCC normally does.  It could
+// then be used in TERM_IO_PFP() etc.  However, there are two problems:
+// the PSTR() macro which wraps the format argument to *_P functions seems
+// to prevent the attribute from triggering the warnings, and also for some
+// reason avr libc doesn't appear to provide vprintf() (though oddly is
+// *does* provide vsprintf()), so this wrapper can't be implemented yet.
+// If avr libc gets fixed somehow then this could just go away instead.
+//int
+//printf_P_safer (char const *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+
 // PrintF using Program memory.  This macro makes it easier to store the
 // format arguments to printf_P calls in program space.
 #define TERM_IO_PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
