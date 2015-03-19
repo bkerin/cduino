@@ -105,6 +105,15 @@ typedef enum {
 void
 ows_init (uint8_t use_eeprom_id);
 
+// FIXME: document.
+// FIXME: Needs limits
+void
+ows_set_timeout (uint16_t timeout_us);
+
+// FIXME: doc: OWS_NO_TIMEOUT (0) or a value, from min (max combined low
+// pulse length) up to max (UINT16_MAX with standoff as old version)
+extern uint16_t ows_timeout_us;
+
 // See the description of the ows_wait_for_function_transaction routine
 // for an explanation of this.  Note that the magic number here is the
 // approximate margin (after possibly some truncation) in processor cycles.
@@ -171,9 +180,9 @@ ows_init (uint8_t use_eeprom_id);
 // arbitrary network activity, perhaps you should add another processor to
 // your design, or reconsider your use of one-wire for communication with
 // the single processor, or run an RTOS instead.
-//
+// FIXME: update docs now timeout is a global setting
 ows_error_t
-ows_wait_for_function_transaction (uint8_t *command_ptr, uint16_t timeout_us);
+ows_wait_for_function_transaction (uint8_t *command_ptr);
 
 // Wait for a reset pulse, and respond with a presence pulse, then try
 // to read a single byte from the master and return it.  An error is
@@ -192,8 +201,9 @@ ows_wait_for_command (uint8_t *command_ptr);
 // this routine will return OWS_ERROR_TIMEOUT if the line stays high for
 // at least timeout_us microseconds.  Pulses short of the length required
 // for a reset pulse are silently ignored.
+// FIXME: fix docs now that timeout time is a global
 ows_error_t
-ows_wait_for_reset (uint16_t timeout_us);
+ows_wait_for_reset (void);
 
 // Write bit (which should be 0 or 1).
 ows_error_t

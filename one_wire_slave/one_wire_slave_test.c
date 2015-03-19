@@ -158,7 +158,6 @@ main (void)
 
   uint8_t fcmd;         // Function Command
   ows_error_t result;   // Storage for function "results" (exit codes anyway)
-  uint16_t timeout;     // Storage for timeout setting
 
   PFP ("\n");
 
@@ -195,9 +194,14 @@ main (void)
     // anything time-consuming between ows_wait_for_function_transaction()
     // calls, the delay might get to be to much for the master to tolerate
     // without compensating code (it wouldn't get presence pulses in time).
-    timeout = 1;
+    //
+    // FIXME: still do the above, but change to use the global timeout
+    // interface
+    //ows_timeout_us = 40042;
+    ows_set_timeout (20042);
+    //timeout = 1;
 
-    result = ows_wait_for_function_transaction (&fcmd, timeout);
+    result = ows_wait_for_function_transaction (&fcmd);
 
     if ( result != OWS_ERROR_NONE                       &&
          result != OWS_ERROR_RESET_DETECTED_AND_HANDLED &&

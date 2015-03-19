@@ -150,7 +150,7 @@ ows_init (uint8_t use_eeprom_id)
 // actual DS18B20 devices seem even the shortest blip as signaling the start
 // of a slot.  So this one-cycle time is sort of a joke, and in fact its best
 // to not wait at all so we don't have to worry about the actual timer delay.
-#define ST_REQUIRED_READ_SLOT_START_LENGTH (1.0 / 16)
+#define ST_REQUIRED_READ_SLOT_START_LENGTH (1000000.0 / F_CPU)
 
 // This is the time the DS18B20 diagram indicates that it typically waits
 // from the time the line is pulled low by the master to when it (the slave)
@@ -274,6 +274,24 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
   new_line_activity = TRUE;
 }
 
+// Convert microseconds (as an integer) to timer1 ticks (rounded down).
+#define US2T1T(us) \
+  (MICROSECONDS_TO_CLOCK_CYCLES(us) / TIMER1_STOPWATCH_PRESCALER_DIVIDER)
+
+//uint16_t ows_timeout_us = OWS_NO_TIMEOUT;
+
+// FIXME: I think OWS_NO_TIMEOUT should turn into OWS_TIMEOUT_NONE
+// Timout setting in timer1 ticks, or OWS_NO_TIMEOUT
+uint16_t ows_timeout_t1t = OWS_NO_TIMEOUT;
+
+void
+ows_set_timeout (uint16_t timeout_us)
+{
+  ows_timeout_t1t = US2T1T (timeout_us);
+}
+
+uint8_t got_read_rom = FALSE;   // FIXME: debug
+
 static uint16_t
 wait_for_pulse_end (void)
 {
@@ -286,16 +304,97 @@ wait_for_pulse_end (void)
 
   uint8_t gnp = FALSE;   // Got New Pulse
   uint16_t npl;          // New Pulse Length
+
+  uint16_t start_ticks;     // Timer1 ticks at time we start waiting
+  uint16_t current_ticks;   // Current timer1 ticks
+
+  ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
+  {
+    start_ticks = TIMER1_STOPWATCH_TICKS ();
+  }
+
   do {
+
+    // This block does two things, both of which must be done atomically.
     ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
     {
+      // Take not of any newly complete pulse length, and clear ISR-set flag
       gnp = new_pulse;
       npl = pulse_length;
       new_pulse = FALSE;
-    }
-  } while ( ! gnp );
 
-  return npl;
+      // FIXME: I think maybe timeouts should not happen if there has been
+      // any activity, or maybe even now if the line is low, not just when
+      // we're waiting for a pulse end.  It just makes the already-tight
+      // timing tighter to timeout while we have recent activity or are
+      // actually low.  The only downside to timing out low is we won't
+      // timeout if the bus ends up stuck low for some reason, so maybe the
+      // any-transition prevents timeout rule is best...
+
+      // Note that even reading timer1 must be dont atomically, since its
+      // a multi-stage operation involving an internal buffer.
+      current_ticks = TIMER1_STOPWATCH_TICKS ();
+    }
+
+    // We favor reporting new pulse ends over reporting timeouts, and
+    // report them as soon as possible, so this comes first.  Zero is used
+    // to indicate a timeout, so we round up to 1 :)
+    if ( gnp ) {
+      if ( UNLIKELY (npl == 0) ) {
+        return 1;
+      }
+      else {
+        return npl;
+      }
+    }
+
+    if ( ows_timeout_t1t != OWS_NO_TIMEOUT ) {
+
+      // Note that we have to work in 16 bit timer1 ticks here, originally
+      // I tries using int32_t but it seems it was too may instructions
+      // to work...
+
+      // FIXME: possibly we should always make the timer computation even if
+      // OWS_NO_TIMEOUT, in order that we take the same time all the time
+      // and are less likely to have cpu-not-fast-enough issues only when
+      // a timeout is in use.
+
+      uint16_t et;   // Elapsed (timer1) Ticks
+      if ( current_ticks >= start_ticks ) {
+        et = current_ticks - start_ticks;
+      }
+      else {
+        et = (UINT16_MAX - start_ticks) + current_ticks + 1;
+      }
+
+      // Compute the elapsed time in timer1 ticks, accounting for timer1
+      // wrap-around
+      /*
+      int32_t et = ((int32_t) current_ticks) - ((int32_t) start_ticks);
+      if ( et < 0 ) {
+        et = UINT16_MAX - start_ticks + current_ticks + 1;
+        assert (et > 0);
+      }
+      */
+
+      // FIXME: debug code to take a look at timeout value in ticks:
+      // PFP ("toit: %lu\n", (long unsigned) ows_timeout_t1t);
+
+      if ( et > ows_timeout_t1t ) {
+        ;
+        DBL_ON ();
+        //if ( got_read_rom ) { DBL_TRAP (); }  // FIXME: dbg
+        //return 0;
+        //printf_P (PSTR ("should be long unsigned: %lu\n"), 42);
+        //PFP ("wtfn: %lu\n", (long unsigned) 42);
+        //PFP ("toit1t: %lu\n", (long unsigned) US2T1T (ows_timeout_us));
+        // FIXME: WORK POINT: tiny delay here causes failures, why does the
+        // printing out US2T1T(blah) not seem to work?
+        //_delay_us (2.0);
+      }
+    }
+
+  } while ( TRUE );
 }
 
 // Transaction State Waiting For (Reset Pulse|ROM Command|Function Command).
@@ -304,7 +403,7 @@ wait_for_pulse_end (void)
 #define TSWFFC  2
 
 ows_error_t
-ows_wait_for_function_transaction (uint8_t *command_ptr, uint16_t timeout)
+ows_wait_for_function_transaction (uint8_t *command_ptr)
 {
   uint8_t ts = TSWFRP;                // Transaction State
   ows_error_t err = OWS_ERROR_NONE;   // Storage for most recent error
@@ -312,7 +411,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint16_t timeout)
   for ( ; ; ) {
     switch ( ts ) {
       case TSWFRP:
-        err = ows_wait_for_reset (timeout);
+        err = ows_wait_for_reset ();
         if ( err != OWS_ERROR_NONE ) {
           return err;
         }
@@ -325,8 +424,15 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint16_t timeout)
           break;
         }
         else if ( err != OWS_ERROR_NONE ) {
+          // FIXME: next 3 are debug
+          if ( err == OWS_ERROR_TIMEOUT ) {
+            // DBL_TRAP ();
+          }
           return err;
         }
+        // FIXME: next is debug:
+        //if ( *command_ptr == OWC_READ_ROM_COMMAND ) { DBL_TRAP (); }
+        got_read_rom = TRUE;   // FIXME: debug
         // ProbablyDontFIXXME: We might be able to just return this byte to
         // do what real DS18B20 does with respect to commands that don't
         // include any addressing (i.e. no Step 2 of the the "TRANSACTION
@@ -431,7 +537,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint16_t timeout)
 ows_error_t
 ows_wait_for_command (uint8_t *command_ptr)
 {
-  ows_wait_for_reset (0);
+  ows_wait_for_reset ();
 
   CPE (ows_read_byte (command_ptr));
 
@@ -463,13 +569,8 @@ ows_wait_for_command (uint8_t *command_ptr)
   } while ( wait_for_pulse_end ()                         \
             >= OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS );
 
-// Convert microseconds (as an integer) to timer1 ticks (rounded down).
-#define US2T1T(us) (                    \
-    MICROSECONDS_TO_CLOCK_CYCLES(us) /  \
-    TIMER1_STOPWATCH_PRESCALER_DIVIDER)
-
 ows_error_t
-ows_wait_for_reset (uint16_t timeout_us)
+ows_wait_for_reset (void)
 {
   // If a timeout has been requested and the line is high, start counting
   // time to see if we hit a timeout.  Once it goes low, wait for the end
@@ -482,75 +583,17 @@ ows_wait_for_reset (uint16_t timeout_us)
   // pulse ends that just happened.  FIXXME: perhaps it should be renamed
   // to wait_for_and_or_handle_pulse_end() or something :)
   do {
-
-    uint16_t start_ticks = 42;   // Initializer is just for the compiler
-    uint8_t sts = FALSE;   // start_ticks Set
-
-    if ( timeout_us != OWS_NO_TIMEOUT ) {
-
-      // We're going to count time to see if we should report a timeout.
-      for ( ; ; ) {
-
-        // Check for line activity
-        uint8_t nlac = FALSE;   // new_line_activity Copy
-        ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
-        {
-          nlac = new_line_activity;
-          new_line_activity = FALSE;
-        }
-        if ( nlac ) {
-          break;
-        }
-
-        // Since we have timer1 running anyway, we might as well use it to
-        // implement timeouts.
-        uint16_t current_ticks;
-        if ( UNLIKELY (! sts) ) {
-          // Note that due to the way AVRs do things we have to use an atomic
-          // block here, since timer1 is also accessed from the ISR.  Yes,
-          // even when reading this is required.
-          ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
-          {
-            // By setting current_ticks to start_ticks on the first time
-            // through, we effectively guarantee that the conditional part of
-            // the outer loop will be checked at least once, thereby running
-            // wait_for_pulse_end() and picking up any pending pulse end
-            // preferentially to reporting a timeout.
-            start_ticks = TIMER1_STOPWATCH_TICKS ();
-            current_ticks = start_ticks;
-          }
-          sts = TRUE;
-        } else {
-          // See above comment about why an atomic block is needed here.
-          ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
-          {
-            // Note that the period of these timer1 checks determines the
-            // margin required between the timeout in timer1 ticks and
-            // the timer1 maximum value (actually the number of disting
-            // possible timer1 values, since we handle overflow).  The actual
-            // OWS_MAX_TIMEOUT_US interface value is highly conservative
-            // (to allow for large ISRs, slow processor speeds etc.).
-            current_ticks = TIMER1_STOPWATCH_TICKS ();
-          }
-        }
-        // Compensate for timer overflow
-        int32_t et = ((int32_t) current_ticks) - ((int32_t) start_ticks);
-        if ( et < 0 ) {
-          et = UINT16_MAX - start_ticks + current_ticks + 1;
-          assert (et > 0);
-        }
-        if ( UNLIKELY (((uint32_t) et) > US2T1T (timeout_us)) ) {
-          return OWS_ERROR_TIMEOUT;
-        }
-      }
-      sts = FALSE;
+    uint16_t pl = wait_for_pulse_end ();   // Pulse Length (or 0 for timeout)
+    if ( pl == 0 ) {
+      return OWS_ERROR_TIMEOUT;
+    }
+    else if ( pl >= OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
+      // FIXME: Problem with repeated reset pulses here still
+      OWS_HANDLE_RESET_PULSE ();
+      return OWS_ERROR_NONE;
     }
   }
-  while ( wait_for_pulse_end () < OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS );
-
-  OWS_HANDLE_RESET_PULSE ();
-
-  return OWS_ERROR_NONE;
+  while ( TRUE );
 }
 
 // Drive the line low for the time required to indicate a value of zero
@@ -601,6 +644,9 @@ ows_write_bit (uint8_t data_bit)
   // lengh measurement strategy being used here is fine.
 
   uint16_t pl = wait_for_pulse_end ();
+  if ( pl == 0 ) {
+    return OWS_ERROR_TIMEOUT;
+  }
 
   if ( pl < ST_SLAVE_WRITE_SLOT_START_PULSE_MAX_LENGTH * T1TPUS ) {
     if ( ! data_bit ) {
@@ -624,6 +670,9 @@ ows_error_t
 ows_read_bit (uint8_t *data_bit_ptr)
 {
   uint16_t pl = wait_for_pulse_end ();
+  if ( pl == 0 ) {
+    return OWS_ERROR_TIMEOUT;
+  }
 
   if ( pl < ST_SLAVE_READ_SLOT_SAMPLE_TIME * T1TPUS ) {
     *data_bit_ptr = 1;
