@@ -47,18 +47,36 @@ int
 term_io_getline (char *linebuf);
 
 // FIXME: This is intended as a version of printf_P() that tries to check
-// the types of the variadic arguments as GCC normally does.  It could
-// then be used in TERM_IO_PFP() etc.  However, there are two problems:
-// the PSTR() macro which wraps the format argument to *_P functions seems
-// to prevent the attribute from triggering the warnings, and also for some
-// reason avr libc doesn't appear to provide vprintf() (though oddly is
-// *does* provide vsprintf()), so this wrapper can't be implemented yet.
-// If avr libc gets fixed somehow then this could just go away instead.
+// the types of the variadic arguments as GCC normally does.  It could then
+// be used in TERM_IO_PFP() etc.  However, there are some problems: one is
+// that PSTR() doesn't do what doxygen says it does: the actualy pgmspace.h
+// as of 1.8.0 explicitly does something different that what the doc version
+// says, so if PSTR() is used for the format argument the detection doesn't
+// happen.  Also, we haven't verified actual RAM savings with this wrapper.
+// And finally, avr libc weirdly doesn't provide vprintf_P, though it does
+// provide vfprintf_P and also vsprintf_P, which is theoretically not a
+// problem but just weird.
+//
+// FIXME: it might be possible to turn printf_P into a do while ( 0 )
+// type thing containing a declaration for the string to go in flash,
+// since it looks like the reason PSTR() does goofy secret stuff is that
+// progmem on a type isn't supported in GCC.  Or if that doesn't work or
+// doesn't really save RAM I guess we could have one set of functions for
+// (carefully checked) test program output and another for debug output,
+// but god that's ugly and then people using the test as prototype would
+// end up screwing themselves.
+//
+// FIXME: so the current situation is:
+// this detects errors:
+//   printf_P_safer ( ((const PROGMEM char *) "biggy: %lu\n"), 42);
+// but might not actually save RAM, and this doesn't detect type errors:
+//   printf_P_safer ( PSTR ("biggy: %lu\n"), 42);
+//
 //int
 //printf_P_safer (char const *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 
 // PrintF using Program memory.  This macro makes it easier to store the
-// format arguments to printf_P calls in program space.
+// format arguments to printf_P() calls in program space.
 #define TERM_IO_PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
 
 // Print Trace Point message.  Useful for debugging.

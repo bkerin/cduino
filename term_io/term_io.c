@@ -218,12 +218,14 @@ term_io_getline (char *linebuf)
 //int
 //printf_P_safer (char const *fmt, ...)
 //{
-//  assert (0);   // Can't implement yet because no vprintf_P
-//
 //  va_list ap;
 //  va_start (ap, fmt);
-//  int char_count = vprintf (racp, max_length + 1, format, ap);
-//  va_end (ap);
-//  g_assert (char_count <= max_length);
 //
+//  // FIXME: its weird that we have to use vfprintf_P() instead of
+//  // vprintf_P(), but for some reason avrlibc 1.8.0 at least doesn't seem
+//  // to provide the latter
+//  int char_count = vfprintf_P (stdout, fmt, ap);
+//  va_end (ap);
+//
+//  return char_count;
 //}
