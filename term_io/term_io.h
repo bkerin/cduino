@@ -49,7 +49,7 @@ term_io_getline (char *linebuf);
 // FIXME: This is intended as a version of printf_P() that tries to check
 // the types of the variadic arguments as GCC normally does.  It could then
 // be used in TERM_IO_PFP() etc.  However, there are some problems: one is
-// that PSTR() doesn't do what doxygen says it does: the actualy pgmspace.h
+// that PSTR() doesn't do what doxygen says it does: the actual pgmspace.h
 // as of 1.8.0 explicitly does something different that what the doc version
 // says, so if PSTR() is used for the format argument the detection doesn't
 // happen.  Also, we haven't verified actual RAM savings with this wrapper.
