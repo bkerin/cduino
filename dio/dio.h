@@ -103,7 +103,7 @@
 // {
 //   DIO_INIT (MY_FAVORITE_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
 //
-//   // This first ensure that the interrupt flag is clear, but *does not*
+//   // This first ensures that the interrupt flag is clear, but *does not*
 //   // enable interrupts globally.  Note that each group of pins "shares" an
 //   // interrupt, though that interrupt will only be generated if interrupt
 //   // generation is enabled for the particular pin experiencing the change.
