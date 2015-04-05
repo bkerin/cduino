@@ -182,24 +182,22 @@ main (void)
 
   PFP ("Ready to start master-slave tests, reset the master now\n");
 
-  for ( ; ; ) {
+  // We're going to perform the remaining tests using the minimum timeout
+  // setting, in order to exercise things: if everything works properly,
+  // the master should still be able to communicate with us despite
+  // regular timeouts and restarts of ows_wait_for_function_transaction().
+  // In practice OWS_NO_TIMEOUT could be used if the slave only needs to
+  // do things on demand (and doesn't want to sleep), or some value between
+  // the minimum (1) and OWS_MAX_TIMEOUT_US.  Of course, if the slave does
+  // anything time-consuming between ows_wait_for_function_transaction()
+  // calls, the delay might get to be to much for the master to tolerate
+  // without compensating code (it wouldn't get presence pulses in time).
+  //
+  // FIXME: just a note: should be 40000 us given current F_CPU and timer1
+  // prescaler
+  ows_set_timeout (20042);
 
-    // We're going to perform the remaining tests using the minimum timeout
-    // setting, in order to exercise things: if everything works properly,
-    // the master should still be able to communicate with us despite
-    // regular timeouts and restarts of ows_wait_for_function_transaction().
-    // In practice OWS_NO_TIMEOUT could be used if the slave only needs to
-    // do things on demand (and doesn't want to sleep), or some value between
-    // the minimum (1) and OWS_MAX_TIMEOUT_US.  Of course, if the slave does
-    // anything time-consuming between ows_wait_for_function_transaction()
-    // calls, the delay might get to be to much for the master to tolerate
-    // without compensating code (it wouldn't get presence pulses in time).
-    //
-    // FIXME: still do the above, but change to use the global timeout
-    // interface
-    //ows_timeout_us = 40042;
-    ows_set_timeout (20042);
-    //timeout = 1;
+  for ( ; ; ) {
 
     result = ows_wait_for_function_transaction (&fcmd);
 
@@ -210,7 +208,7 @@ main (void)
       // out at this point might take too much time that could otherwise be
       // spent eating the error and waiting for the line to sort itself out :)
       PFP ("\n");
-      PFP ("Unexpted ows_wait_for_function_transaction() result: ");
+      PFP ("Unexpected ows_wait_for_function_transaction() result: ");
       print_ows_error (result);
       PFP ("\n");
     }
