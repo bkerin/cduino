@@ -48,6 +48,10 @@
 
 char result_buf[OWM_RESULT_DESCRIPTION_MAX_LENGTH + 1];
 
+// FIXME: temporary, to see how things work without PFP hiesenburghs
+//#undef PFP
+//#define PFP(...) do { } while ( 0 )
+
 #define OWM_CHECK(result)                                        \
   PFP_ASSERT_SUCCESS (result, owm_result_as_string, result_buf);
 
@@ -121,11 +125,11 @@ ds18b20_get_scratchpad_contents (void)
 static void
 print_slave_id (uint64_t id)
 {
-   // Output the given slave id as a 64 bit hex number, using printf().
+   // Output the given slave id as a 64 bit hex number, using PFP().
 
-  printf ("0x");
+  PFP ("0x");
   for ( uint8_t ii = 0 ; ii < sizeof (id) ; ii++ ) {
-    printf ("%02" PRIx8, ((uint8_t *) (&id))[ii] );
+    PFP ("%02" PRIx8, ((uint8_t *) (&id))[ii] );
   }
 }
 
@@ -375,7 +379,8 @@ main (void)
   }
   */
 
-  _delay_ms (1);   // FIXME: debug: do it forever
+  //printf ("o");   // FIXME: iteraction measurement
+  _delay_ms (1);   // FIXME: debug: delay between forever iterations
   }
 
 #endif
