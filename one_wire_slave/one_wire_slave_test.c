@@ -199,7 +199,7 @@ main (void)
 
   for ( ; ; ) {
 
-    result = ows_wait_for_function_transaction (&fcmd);
+    result = ows_wait_for_function_transaction_2 (&fcmd);
 
     if ( result != OWS_ERROR_NONE                       &&
          result != OWS_ERROR_RESET_DETECTED_AND_HANDLED &&
@@ -208,7 +208,7 @@ main (void)
       // out at this point might take too much time that could otherwise be
       // spent eating the error and waiting for the line to sort itself out :)
       PFP ("\n");
-      PFP ("Unexpected ows_wait_for_function_transaction() result: ");
+      PFP ("Unexpected ows_wait_for_function_transaction_2() result: ");
       print_ows_error (result);
       PFP ("\n");
     }

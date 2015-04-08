@@ -184,6 +184,10 @@ extern uint16_t ows_timeout_us;
 ows_error_t
 ows_wait_for_function_transaction (uint8_t *command_ptr);
 
+// This is the flattened version that's under development.
+ows_error_t
+ows_wait_for_function_transaction_2 (uint8_t *command_ptr);
+
 // Wait for a reset pulse, and respond with a presence pulse, then try
 // to read a single byte from the master and return it.  An error is
 // generated if any unexpected line behavior is encountered (abnormal
