@@ -163,26 +163,32 @@ timer0_stopwatch_microseconds (void);
 // individual instructions.  The time between the completion of this code
 // and the evaluation of TIMER0_STOPWATCH_TCNT0 in an immediately following
 // statement should not be more than a couple of machine instructions.
-// About the only thing you can do to get tighter timing performance is to
-// disable the timer overflow interrupt, so that you don't have to worry about
-// clearing TOV0.  This interface doesn't support doing that, however.  FIXME:
-// this looks maybe wrong with respect to the order in which we clear TOV0,
-// because *regardless* of ATOMIC_BLOCK, the free-running timer could trip
-// TOV0 back on between the time we clear it and the time we reset TCNT0.
-// I guess then we might get an interrupt when we come out of the atomic
-// block, but it seems like it would be a confusing one since the counter
-// would have been reset at that point...  at least think this over.
-// Maybe everything should just be stopped with TSM bit of GTCCR, it seems
-// like the only safe way to get everything synced up and probably only
-// costs one instruction, but it would need tested.
+// About the only thing you can do to get tighter timing performance is
+// to disable the timer overflow interrupt, so that you don't have to
+// worry about clearing TOV0.  This interface doesn't support doing that,
+// however.  Note that the stopwatch only begins running at the end of
+// this sequence, when TSM is written to zero.  Note also that writing
+// a logic one to TOV1 actually *clears* it, and we don't have to use
+// a read-modify-write cycle to write the one (i.e. no "|=" required).
+// See http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_intbits.
+// FIXME: should test this guy again now we do it like in timer1_stopwatch,
+// and probably remove the atomic block from here and add comments about
+// when one is needed as in timer1_stopwatch.h.
+// FIXME: the two GTCCR bits we set could probably be done in one assign to
+// save an extra read-modify-write, but I'm not sure how I would test it.
+// Same thing in timer1.
+// FIXME: name should probably change to not have _TCNT0 postfix for symmetry
+// with timer1 module
 #define TIMER0_STOPWATCH_RESET_TCNT0() \
-  do { \
+  do {                                 \
     ATOMIC_BLOCK (ATOMIC_RESTORESTATE) \
-    { \
-      TIFR0 |= _BV (TOV0); \
-      GTCCR |= _BV (PSRSYNC); \
-      TCNT0 = 0; \
-    } \
+    {                                  \
+      GTCCR |= _BV (TSM);              \
+      GTCCR |= _BV (PSRSYNC);          \
+      TIFR0 = _BV (TOV0);              \
+      TCNT0 = 0;                       \
+      GTCCR &= ~(_BV (TSM));           \
+    }                                  \
   } while ( 0 )
 
 // This macro evaluates to the current value of the counter.  It should be
