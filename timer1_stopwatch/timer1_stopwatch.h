@@ -89,17 +89,19 @@ timer1_stopwatch_init (void);
 // means that the prescaler is stopped, which means that timer0 might lose
 // quite a bit of time if you have many interrupts or something.  You might
 // want to use an AVR libc ATOMIC_BLOCK(ATOMIC_RESTORESTATE) around this
-// macro in this situation.  If your program writes *or reads* TCNT1 from an
-// interrupt service routine you *must* use an atomic block around this macro
-// outside that routine; see the comments for TIMER1_STOPWATCH_TICKS() below.
-// Note that the stopwatch only begins running at the end of this sequence,
-// when TSM is written to zero.  Note also that writing a logic one to TOV1
-// actually *clears* it (weirdly).
+// macro in this situation.  If your program writes *or reads* TCNT1 from
+// an interrupt service routine you *must* use an atomic block around this
+// macro outside that routine; see the comments for TIMER1_STOPWATCH_TICKS()
+// below.  Note that the stopwatch only begins running at the end of
+// this sequence, when TSM is written to zero.  Note also that writing
+// a logic one to TOV1 actually *clears* it, and we don't have to use
+// a read-modify-write cycle to write the one (i.e. no "|=" required).
+// See http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_intbits.
 #define TIMER1_STOPWATCH_RESET() \
   do {                           \
     GTCCR |= _BV (TSM);          \
     GTCCR |= _BV (PSRSYNC);      \
-    TIFR1 |= _BV (TOV1);         \
+    TIFR1 = _BV (TOV1);          \
     TCNT1 = 0;                   \
     GTCCR &= ~(_BV (TSM));       \
   } while ( 0 )
