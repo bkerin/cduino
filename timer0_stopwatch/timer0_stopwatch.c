@@ -71,13 +71,9 @@ timer0_stopwatch_init (void)
 
   TIMSK0 |= _BV (TOIE0);   // Enable overflow interrupts for timer/counter0.
 
-  timer0_stopwatch_oc = 0;
+  timer0_stopwatch_reset ();
 
-  TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
-  GTCCR |= _BV (PSRSYNC);   // Reset the prescaler (affects timer1 also)
-  TCNT0 = 0;
-
-  sei ();   // Enable interrupts.
+  sei ();   // Ensure that interrupts are enabled.
 }
 
 void
@@ -88,14 +84,27 @@ timer0_stopwatch_reset (void)
   ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
   {
     timer0_stopwatch_oc = 0;
-    // Clear the overflow flag.  NOTE: it is my understanding that clearing
-    // this will prevent any deferred overflow interrupt that may have
-    // gone pending during this atomic block from executing: see document
-    // "AVR130: Setup and Use the AVR Timers", section "Example -- Timer0
-    // Overflow Interrupt".
-    TIFR0 |= _BV (TOV0);   // Overflow flag is "cleared" by writing one to it
-    GTCCR |= _BV (PSRSYNC);   // Reset the prescaler  (affects timer1 also)
+
+    // FIXME: this routine is now slightly longer than it was because of
+    // the TSM use, the tests might be broken.  I think they had stupidly
+    // tight timing guarantees anyway.
+    //
+    // FIXME: I think this common block of instructions should be factored
+    // with the ones in the reset macro, could go in macro with _NONATOMIC
+    // postfix or so.
+    GTCCR |= _BV (TSM);
+    GTCCR |= _BV (PSRSYNC);
+    // Clear the overflow flag.  NOTE: it is my understanding that
+    // clearing this will prevent any deferred overflow interrupt that
+    // may have gone pending during this atomic block from executing:
+    // see document "AVR130: Setup and Use the AVR Timers", section
+    // "Example -- Timer0 Overflow Interrupt".  Note also that writing a
+    // logic one to TOV1 actually *clears* it, and we don't have to use a
+    // read-modify-write cycle to write the one (i.e. no "|=" required).
+    // See http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_intbits.
+    TIFR0 = _BV (TOV0);
     TCNT0 = 0;
+    GTCCR &= ~(_BV (TSM));
   }
 }
 

@@ -55,29 +55,28 @@
 //
 //   * Ensure that the timer/counter0 hardware isn't shut down to save power.
 //
-//   * Initialize the time/counter0 hardware to normal mode.
+//   * Initialize the time/counter0 hardware to normal mode, with OC0A and
+//     OC0B disconnected.  This means TCCR0A dn TCCR0B are both set to all
+//     zeros except for the clock select bits (CS02:0).
 //
-//   * Enable the prescaler as per TIMER0_STOPWATCH_PRESCALER_DIVIDER.
+//   * Enable the prescaler as per TIMER0_STOPWATCH_PRESCALER_DIVIDER
+//     (set CS02:0).
 //
 //   * Enable the timer/counter0 overflow interrupt source.
 //
 //   * Set our count of interrupt events (timer0_stopwatch_oc) to 0.
 //
-//   * Clear the overflow timer/counter0 overflow flag.
-//
-//   * Set the counter to use a prescaler divider as per
-//     TIMER0_STOPWATCH_PRESCALER_DIVIDER, and reset the presacler.
-//
-//   * Set the elapsed time to 0, and start it running.
+//   * Reset the stopwatch and start it running using timer0_stopwatch_init().
 //
 //   * Ensure that interrupts are enabled globally.
+//
 void
 timer0_stopwatch_init (void);
 
-// WARNING: this function resets the prescaler and thereby affects the
-// counting of the timer1 hardware (which shares the prescaler with timer0).
-// Reset prescaler and timer/counter0 to 0.  All interrupts are deferred
-// during execution of this routine.
+// WARNING: this function stops and resets the prescaler and thereby
+// affects the counting of the timer1 hardware (which shares the prescaler
+// with timer0).  Reset prescaler and timer/counter0 to 0.  All interrupts
+// are deferred during execution of this routine.
 void
 timer0_stopwatch_reset (void);
 
@@ -171,14 +170,10 @@ timer0_stopwatch_microseconds (void);
 // a logic one to TOV1 actually *clears* it, and we don't have to use
 // a read-modify-write cycle to write the one (i.e. no "|=" required).
 // See http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_intbits.
-// FIXME: should test this guy again now we do it like in timer1_stopwatch,
-// and probably remove the atomic block from here and add comments about
-// when one is needed as in timer1_stopwatch.h.
+// FIXME: should test this guy again now we do it like in timer1_stopwatch.
 // FIXME: the two GTCCR bits we set could probably be done in one assign to
 // save an extra read-modify-write, but I'm not sure how I would test it.
 // Same thing in timer1.
-// FIXME: name should probably change to not have _TCNT0 postfix for symmetry
-// with timer1 module
 #define TIMER0_STOPWATCH_RESET_TCNT0() \
   do {                                 \
     ATOMIC_BLOCK (ATOMIC_RESTORESTATE) \
