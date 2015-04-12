@@ -2,15 +2,20 @@
 
 #include <avr/interrupt.h>
 #include <avr/power.h>
+#include <stdint.h>
 #include <util/atomic.h>
 
 #include "timer1_stopwatch.h"
 #include "util.h"
 
-// Default values of the timer/counter1 control registers (for the ATmega328P
-// at least), according to the datasheet.
-#define TCCR1A_DEFAULT_VALUE 0x00
-#define TCCR1B_DEFAULT_VALUE 0x00
+// Default values of the timer/counter1 control registers (for the
+// ATmega328P at least), according to the datasheet.  I don't think it's
+// really necessary to explictly declare these literals as 8 bit values,
+// but it should guarantee that the compiler does't produce a pointless
+// intermediate 16 bit integer literal.
+#define TCCR1A_DEFAULT_VALUE UINT8_C (0x00)
+#define TCCR1B_DEFAULT_VALUE UINT8_C (0x00)
+#define TCCR1C_DEFAULT_VALUE UINT8_C (0x00)
 
 void
 timer1_stopwatch_init (void)
@@ -22,6 +27,7 @@ timer1_stopwatch_init (void)
   // features disabled.
   TCCR1A = TCCR1A_DEFAULT_VALUE;
   TCCR1B = TCCR1B_DEFAULT_VALUE;
+  TCCR1C = TCCR1C_DEFAULT_VALUE;
 
   // Reset the timer, in case it currently has some strange value that might
   // cause it to overflow as soon as we start it running.  This modules

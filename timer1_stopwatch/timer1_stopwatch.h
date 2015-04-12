@@ -50,14 +50,13 @@
          dependencies on the problematic macro from that file.
 #endif
 
-// The number of values the underlying counter can assums (values
-// representable with eight bits).  Some interface macros need this, but
-// there should be no reason to use it directly.
-#define TIMER1_STOPWATCH_COUNTER_VALUES 65536
+// The number of values the underlying counter can assume.  Some interface
+// macros need this, but there should be no reason to use it directly.
+#define TIMER1_STOPWATCH_COUNTER_VALUES ((UINT32_C (UINT16_MAX)) + 1))
 
 // The number of microseconds per tick of the timer/counter1.
 #define TIMER1_STOPWATCH_MICROSECONDS_PER_TIMER_TICK \
-  CLOCK_CYCLES_TO_MICROSECONDS ((double) TIMER1_STOPWATCH_PRESCALER_DIVIDER)
+  CLOCK_CYCLES_TO_MICROSECONDS (((double) TIMER1_STOPWATCH_PRESCALER_DIVIDER))
 
 // The number of microseconds before timer/counter1 will overflow.
 #define TIMER1_STOPWATCH_OVERFLOW_MICROSECONDS \
@@ -69,14 +68,17 @@
 // WARNING: this function manipulates the prescaler and thereby affects
 // timer0 (which uses the same prescaler).
 //
-// Do everything required to prepare the timer for use as an interrupt-driven
-// stopwatch, in this order:
+// Do everything required to prepare the timer for use as a stopwatch,
+// in this order:
 //
 //   * Ensure that the timer/counter1 hardware isn't shut down to save power.
 //
-//   * Initialize the time/counter1 hardware to normal mode.
+//   * Initialize the time/counter1 hardware to normal mode, with OC1A and
+//     OC1B disconnected.  This means TCCR1A and TCCR1B both end upset to
+//     all zeros except for the clock select bits (CS12:0).
 //
-//   * Initialize the prescaler as per TIMER1_STOPWATCH_PRESCALER_DIVIDER.
+//   * Initialize the prescaler as per TIMER1_STOPWATCH_PRESCALER_DIVIDER
+//     (set CS12:0).
 //
 //   * Reset the stopwatch and start it running using TIMER1_STOPWATCH_RESET().
 //
