@@ -100,7 +100,7 @@ ds18b20_init_and_rom_command (void)
   // We should have gotten the fixed family code as the first byte of the ID.
   // FIXME: these three lines can be uncommented for debugging:
   //if (((uint8_t *) (&slave_rid))[0] != DS18B20_FAMILY_CODE) {
-  //  PFP ("slave_rid: %i\n", (int) ((uint8_t *) (&slave_rid))[0]);
+  //  PFP ("\nslave family code: %hhx\n", ((uint8_t *) (&slave_rid))[0]);
   //}
   PFP_ASSERT (((uint8_t *) (&slave_rid))[0] == DS18B20_FAMILY_CODE);
 
