@@ -17,10 +17,10 @@
 #include "timer1_stopwatch.h"
 
 // I haven't tried this module at frequencies lower than this.  Since there
-// are probably many code sections where we depend on the processor going fast
-// enough to get things done quicker that the (fairly speed) one-wire protocol
+// are many code sections where we depend on the processor going fast enough
+// to get things done quicker that the (fairly speedy) one-wire protocol
 // requires, there's a good chance it wouldn't work right at slower speeds.
-#if F_CPU < 4000000
+#if F_CPU < 8000000
 # error F_CPU too small
 #endif
 
@@ -28,12 +28,11 @@
 // pulses, we don't want to deal with a timer that can't even measure
 // them accurately.
 #define OWS_T1SFR 1000000
-
 #if F_CPU / TIMER1_STOPWATCH_PRESCALER_DIVIDER < OWS_T1SFR
 #  error F_CPU / TIMER1_STOPWATCH_PRESCALER_DIVIDER is too small
 #endif
 
-// FIXXME: There's probably no real reason we couldn't support F_CPU/timer1
+// There's probably no real reason we couldn't support F_CPU/timer1
 // prescaler combinations that result in non-integer timer1 ticks/us, but
 // the implementation doesn't currently do it and a little care would be
 // required to convert it to do so at least without using more floating
@@ -41,6 +40,15 @@
 #if CLOCK_CYCLES_PER_MICROSECOND () % TIMER1_STOPWATCH_PRESCALER_DIVIDER != 0
 #  error timer1 ticks per microsecond is not an integer
 #endif
+
+// Clients probably don't need to use this directly.
+#define OWS_TIMER_TICKS_PER_US \
+  (CLOCK_CYCLES_PER_MICROSECOND () / TIMER1_STOPWATCH_PRESCALER_DIVIDER)
+
+// Convert timer1 ticks value t1t to us.  This is only required for specifying
+// OWS_MIN_TIMEOUT_US, see the comments near that macro.
+#define OWS_TIMER1_TICKS_TO_US(t1t) \
+  ((((int) t1t) * TIMER1_STOPWATCH_PRESCALER_DIVIDER) / (F_CPU / US_PER_S))
 
 #ifndef OWS_PIN
 #  error OWS_PIN not defined (it must be explicitly set to one of \
@@ -105,26 +113,39 @@ typedef enum {
 void
 ows_init (uint8_t use_eeprom_id);
 
-// FIXME: document.
-// FIXME: Needs limits
-void
-ows_set_timeout (uint16_t timeout_us);
-
-// FIXME: doc: OWS_NO_TIMEOUT (0) or a value, from min (max combined low
-// pulse length) up to max (UINT16_MAX with standoff as old version)
-extern uint16_t ows_timeout_us;
-
-// See the description of the ows_wait_for_function_transaction routine
-// for an explanation of this.  Note that the magic number here is the
-// approximate margin (after possibly some truncation) in processor cycles.
-// This number is highly conservative, since there's no big cost to slightly
-// shorter timeouts, and still the possibility that you might want to do
-// something gross in one of your ISRs :)
-#define OWS_MAX_TIMEOUT_US \
-  ((uint16_t) CLOCK_CYCLES_TO_MICROSECONDS (UINT16_MAX - 14242))
-
-// Value to pass when timeouts should not be used.
+// Value to pass to ows_set_timeout() when timeouts are not to be used.
 #define OWS_NO_TIMEOUT 0
+
+// This is the minimum timout setting that can be passed to ows_set_timeout()
+// (besides OWS_NO_TIMEOUT, which disables timeouts).  Note that the
+// ows_set_timeout() funtion implements timeouts of *approximately*
+// this lengh.  At twice the length of time required for the slave to
+// get a presence pulse out, this value is hopefully pretty conservative;
+// a shorter value would probably work, but as you approach the lenghts
+// of the shorter pulses in the 1-wire protocol you're asking for trouble,
+// as the implementation could easily fail to keep up even if any code you
+// run after a timeout event is very short.
+#define OWS_MIN_TIMEOUT_US (OWC_TICK_DELAY_I * 2)
+
+// Analogous to OWS_MIN_TIMEOUT_US.
+#define OWS_MAX_TIMEOUT_US ((uint16_t) (UINT16_MAX / OWS_TIMER_TICKS_PER_US))
+
+// FIXME: change all uses of term one-wire to "1-wire" to match Maxim docs.
+
+// If time_us isn't OWS_NO_TIMEOUT, then any calls in this interface that
+// waits for 1-wire events (i.e. negative pulse ends) will timeout and return
+// OWS_ERROR_TIMEOUT after approximately this many microseconds without an
+// event (which in our case means a positive edge on the line).  Note that
+// events not addressed to this slave will still prevent a timeout from
+// occurring, so if your master continually talks to other slaves you'll
+// never get a timeout.  If it isn't OWS_NO_TIMEOUT, the timeout_t1t argument
+// must be in [OWS_MIN_TIMEOUT_US, OWS_MAX_TIMEOUT_US].  This isn't really
+// intended to support short timeouts, it just gives a simple way to do
+// other things from the main thread occasionally.  If you really need
+// microsecond response from the slave for other purposes than 1-wire,
+// give it its own slave processor :).
+void
+ows_set_timeout (uint16_t time_us);
 
 // Wait for the initiation of a function command transaction intended
 // for our ROM ID (and possibly others as well if a OWS_SKIP_ROM_COMMAND

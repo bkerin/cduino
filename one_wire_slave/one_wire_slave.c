@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <avr/eeprom.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <util/atomic.h>
@@ -115,12 +116,22 @@ set_rom_id (uint8_t use_eeprom_id)
   rom_id[ncb] = crc;
 }
 
+// FIXME: I'd like to NOT use UINT8_C everywhere actually.  Perhaps do
+// the compiler research to ensure that we don't need to.
+#define TCCR1A_DEFAULT_VALUE UINT8_C (0x00)
+
 void
 ows_init (uint8_t use_eeprom_id)
 {
   set_rom_id (use_eeprom_id);
 
   timer1_stopwatch_init ();
+  // In addition to the functionality implied by timer1_stopwatch_init(),
+  // we're going to use the output compare unit to generate timeout
+  // interrupts.  Here we verify that TCCR1A still has the default value
+  // specified for it in timer1_stopwatch.h, so we don't accidently twiddle
+  // any output pins.
+  assert (TCCR1A == TCCR1A_DEFAULT_VALUE);
 
   RELEASE_LINE ();   // Serves to initialize pin along the way
   DIO_ENABLE_PIN_CHANGE_INTERRUPT (OWS_PIN);
@@ -155,6 +166,11 @@ ows_init (uint8_t use_eeprom_id)
 // to not wait at all so we don't have to worry about the actual timer delay.
 #define ST_REQUIRED_READ_SLOT_START_LENGTH (1000000.0 / F_CPU)
 
+// More generally, any A-length pulse can probably be arbitrarily short,
+// though I haven't checked if it works for writing a 1 from the master
+// (FIXME: check that).
+#define ST_REQUIRED_A_PULSE_LENGTH (1000000.0 / F_CPU)
+
 // This is the time the DS18B20 diagram indicates that it typically waits
 // from the time the line is pulled low by the master to when it (the slave)
 // samples when reading a bit.
@@ -178,7 +194,8 @@ ows_init (uint8_t use_eeprom_id)
 // the disadvantage of pushing the total low time closer to the length of
 // a presence pulse, though its still 20+ ms short of the minimum required
 // time so it should be ok, and it gives the master more time to get around
-// to reading the line compared to the alternative below.
+// to reading the line compared to the alternative below.  This makes it
+// slightly harder for our code to distinguish the EVZP and EVC events.
 #define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME \
     (OWC_TICK_DELAY_E + OWC_TICK_DELAY_F / 2)
 // This also worked super dependably, which isn't too surprising: given the
@@ -186,7 +203,8 @@ ows_init (uint8_t use_eeprom_id)
 // sides of the anticipated sample point, which makes a lot of sense also
 // (compared to the F/2 that we use above).  This keeps the total zero pulse
 // length farther from that of a presense pulse, but gives the master less
-// time to get around to reading the zero pulse.
+// time to get around to reading the zero pulse.  It also makes the EVZP
+// event easier to distinguish from the EVC event.
 /*
 #define ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME \
   (OWC_TICK_DELAY_E * 2)
@@ -218,13 +236,11 @@ ows_init (uint8_t use_eeprom_id)
 #define LINE_IS_HIGH() (  SAMPLE_LINE ())
 #define LINE_IS_LOW()  (! SAMPLE_LINE ())
 
-#define SW0B  0   // State Writing 0 Bit
-#define SW1B  1   // State Writing 1 Bit
-#define SRB   2   // State Reading Bit
-#define SATRL 3   // State About To Release Line
-#define SWFR  4   // State Waiting For Reset
-
-
+#define SWFR 0   // State Waiting For Reset
+#define SSPP 1   // State Sent Presence Pulse
+#define SRRC 2   // State Reading ROM Command
+#define SWID 3   // State Writing ID
+#define SRFC 4   // State Reading Function Command
 volatile uint8_t state;
 
 #define ENY   0   // Event Nothing Yet
@@ -235,7 +251,22 @@ volatile uint8_t state;
 #define ELR   5   // Event Line Released
 #define EGR   6   // Event Got Reset
 #define EGUPL 7   // Event Got Unexpected Pulse Length
-volatile uint8_t event;
+
+// We grade (negative) pulses that we observe in the pin change ISR by lenght
+// and call them events.  This is convenient because it lets us test them
+// atomically, while the actualy 16-bit timer value would require atomic
+// blocks everywhere.
+#define EVNY 0   // Event Nothing Yet
+#define EVA  1   // Event A-length pulse
+#define EVC  2   // Event C-length pulse
+#define EVZP 3   // Event Zero Pulse-length pulse (probably we sent it)
+#define EVR  4   // Event Reset-length pulse (we don't require a full 480 us)
+#define EVPP 5   // Event Presence pulse-length pulse (probably we sent it)
+#define EVWP 6   // Event Weird-length pulse
+#define ETO  7   // Event TimeOut (this one is detected in a different ISR)
+volatile uint8_t event = EVNY;
+
+// FIXME: the globals should probably be re-initialized by the _init routine
 
 // When the pin change ISR observes any change, it sets new_line_activity.
 // When it observes a positive edge, it sets new_pulse and records the
@@ -246,86 +277,124 @@ volatile uint16_t pulse_length;
 
 volatile uint8_t zero_queued = FALSE;
 
-// This ISR keeps track of the length of low pulses.  When we see the end
-// of one we consider that we've seen a reset and set a client-visible flag.
+uint8_t wfec = 0;
+uint8_t eh[UINT8_MAX] = { 0 };
+
+static void
+peh (uint8_t mec)
+{
+  printf ("wfec: %lu\n", (unsigned long) wfec);
+  for ( uint8_t ii = 0 ; ii < (mec > 0 ? mec : wfec) ; ii++ ) {
+    printf ("eh[%lu]: %lu\n", (unsigned long) ii, (unsigned long) eh[ii]);
+  }
+}
+
+#define ARM_TIMEOUT_ISR()    do { TIMSK1 |= _BV (OCIE1A);    } while ( 0 )
+#define DISARM_TIMEOUT_ISR() do { TIMSK1 &= ~(_BV (OCIE1A)); } while ( 0 )
+
+// This ISR exists only to keep track of timeout events.  This ISR is
+// supposed to get armed immediately before we start waiting for something
+// to happen on the 1-wire bus.
+ISR (TIMER1_COMPA_vect)
+{
+  // We only want to queue a timeout event if we aren't already in the proc
+
+  // This ISR is disarmed and the corresponding interrupt flag cleared in
+  // the pulse-timing pin change ISR when it records a pulse end.  Therefore,
+  // ths ISR should only fire when no other even has been set yet.  Therefore,
+  // we don't need to test even before setting it.
+  event = ETO;
+
+  // This is a one-shot ISR that we reset when we start a new timeout counter,
+  // so we reset it here.  Note that we don't have to clear the output compare
+  // interrupt flag itself, since it will happen automagically because we're
+  // in the corresponding ISR.
+  DISARM_TIMEOUT_ISR ();
+}
+
+// This ISR keeps track of the length of low pulses.  When we see the end of
+// one we consider that we've seen something interesting, and if a timeout
+// event hasn't already occurred we record a pulse event.
 ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 {
   if ( LINE_IS_HIGH () ) {
 
+    // If we've already got an unhandled timeout event, we don't want to
+    // stomp on it here.
+    if ( event == ETO ) {
+      return;
+    }
 
     uint16_t pl;   // Pulse Length
     if ( ! TIMER1_STOPWATCH_OVERFLOWED () ) {
-      pl = TIMER1_STOPWATCH_TICKS ();   // Pulse Length
+      pl = TIMER1_STOPWATCH_TICKS ();
     }
     else {
       // If we've had overflow, its a really long pulse, so set to max.
       pl = UINT16_MAX;
     }
 
-    // Any pulse longer than the minimum required reset produces an EGR event.
-    if ( pl > OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
-      event = EGR;
+    // Now we grade the event by length.  We look for shorter pulses first,
+    // to ensure that they are handled as fast as possible.
+
+    // FIXME: probably we should just put the event size distinction points
+    // midway between the values given in Maxim AN126.  Thus we might not
+    // need the probed timings (ST_*) at all.  In fact the required reset
+    // pulse length we discovered might be explained by the maxim slaves
+    // using this policy.
+
+    // Event ZP Timing Margin (in us).  See comments for ectm_us below.
+    // The danger of a high margin here is that one of these could get
+    // mistaken for an A pulse event.
+    uint8_t const ezptm_us = 11;
+
+    // Event C Timing Margin (in us).  Pulses measured as this much shorter
+    // than OWC_TICK_DELAY_C will still be counted as C pulse events.
+    // This choice of margin puts us about 10 us from the length of our
+    // own zero pulse.  FIXME: in reality distinguishing C pulses and zero
+    // pulses is probably pointless and problematic and we should just not
+    // do it, but instead respond to an event that could be either in the
+    // appropriate way given our state.
+    uint8_t const ectm_us = 15;  // Timing Margin (in us)
+
+    if ( pl < (ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME - ezptm_us) * T1TPUS ) {
+      event = EVA;
       return;
     }
 
-    switch ( state ) {
-      case SW0B:
-        if ( pl < ST_SLAVE_WRITE_SLOT_START_PULSE_MAX_LENGTH * T1TPUS ) {
-          // Right here we have the tightest timing window in the 1-wire
-          // protocol.  For the slave to write a 0, we have to ensure
-          // that the line is low at most 9 us after the end of the pulse
-          // the master sends to direct us to write a bit.  See Fig. 1 of
-          // Maxim_Application_Note_AN126.pdf.  We therefore drive the line
-          // low here immediately, rather than letting the main thread do it.
-          // FIXME: this presumably triggers another interrupt after this
-          // one is returned for the new line change, but thats fine as all
-          // it will do is reset the timer, but verify this.
-          DRIVE_LINE_LOW ();
-          event = ESW0;
-        }
-        else {
-          event = EGUPL;
-        }
-        return;
-      case SW1B:
-        if ( pl < ST_SLAVE_WRITE_SLOT_START_PULSE_MAX_LENGTH * T1TPUS ) {
-          event = ESW1;
-        }
-        else {
-          event = EGUPL;
-        }
-        return;
-      case SRB:
-        if ( pl < ST_SLAVE_READ_SLOT_SAMPLE_TIME * T1TPUS ) {
-          event = ER1;
-        }
-        // Note that D is the margin since we expect the master to go high
-        // again after C.
-        else if ( pl < ( OWC_TICK_DELAY_C + OWC_TICK_DELAY_D ) * T1TPUS ) {
-          event = ER0;
-        }
-        else {
-          event = EGUPL;
-        }
-        return;
-      case SATRL:
-        // We don't try to mask off the interrupt that occurs when we releate
-        // the line ourselves, we just ignore it.  Note that if the master
-        // happens to be sending a reset pulse when we release the line,
-        // it won't go high until the end of that reset pulse, and we'll
-        // end up detecting the reset pulse above and not ending up here.
-        event = ELR;
-        return;
-      case SWFR:
-        // Pulses long enough to be resets were caught above, so if we're
-        // here it's an unexpected pulse length (which in this context
-        // probably just means another slave talking).
-        event = EGUPL;
-        return;
-      default:
-        PFP_ASSERT_NOT_REACHED ();   // FIXME: debug, do something different...
-        break;
+    else if ( pl < (OWC_TICK_DELAY_C - ectm_us) * T1TPUS ) {
+      event = EVZP;
+      return;
     }
+
+    else if ( pl < ST_PRESENCE_PULSE_LENGTH * T1TPUS ) {
+      // FIXME: we could put a check for weirdly long C pulses here, and use
+      // our EVWP event.  They probably mean something screwy is going on.
+      // but they would slow things down and the timing after the last bit
+      // in a mster write and before a following slave write is also tight
+      // and this contributes.
+      event = EVC;
+      return;
+    }
+
+    else if ( pl < OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
+      event = EVPP;
+      return;
+    }
+
+    else {
+      event = EVR;
+    }
+
+    eh[wfec++] = event;   // FIXME: this is debug
+    DISARM_TIMEOUT_ISR ();
+    // Clear any timeout interrupt that might have occurred during
+    // this ISR.  Note that writing a logic one to TOV1 actually
+    // *clears* it, and we don't have to use a read-modify-write
+    // cycle to write the one (i.e. no "|=" required).  See
+    // http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_intbits.
+    TIFR1 = _BV (OCF1A);
+    return;
 
   }
   else {
@@ -335,35 +404,21 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
   }
 }
 
-uint8_t wfec = 0;
-uint8_t eh[UINT8_MAX] = { 0 };
-
-static void
-peh (void)
-{
-  printf ("wfec: %lu\n", (unsigned long) wfec);
-  for ( uint8_t ii = 0 ; ii < wfec ; ii++ ) {
-    printf ("eh[%lu]: %lu\n", (unsigned long) ii, (unsigned long) eh[ii]);
-  }
-}
-
 static uint8_t
 wait_for_event (void)
 {
-  uint8_t ne = ENY;
-  while ( ne == ENY ) {
+  uint8_t ne = EVNY;
+  while ( ne == EVNY ) {
     ATOMIC_BLOCK (ATOMIC_RESTORESTATE)
     {
-      if ( event != ENY ) {
+      if ( event != EVNY ) {
         //printf ("event: %lu\n", (long unsigned) event);
         ne = event;
-        event = ENY;
+        event = EVNY;
         //printf ("ne: %lu\n", (long unsigned) ne);
       }
     }
   }
-
-  //DBL_TRAP ();
 
   eh[wfec++] = ne;
   if ( wfec > 66 ) {
@@ -377,21 +432,20 @@ wait_for_event (void)
   return ne;
 }
 
-// Convert microseconds (as an integer) to timer1 ticks (rounded down).
-#define US2T1T(us) \
-  (MICROSECONDS_TO_CLOCK_CYCLES(us) / TIMER1_STOPWATCH_PRESCALER_DIVIDER)
-
-//uint16_t ows_timeout_us = OWS_NO_TIMEOUT;
-
 // FIXME: I think OWS_NO_TIMEOUT should turn into OWS_TIMEOUT_NONE
-// Timout setting in timer1 ticks, or OWS_NO_TIMEOUT
-uint16_t ows_timeout_t1t = OWS_NO_TIMEOUT;
+
+
+// Timeout, in timer1 ticks.  FIXME: this should be reset in _init, and
+// not initialized here ( to save a little flash).
+uint16_t timeout_t1t = OWS_NO_TIMEOUT;
 
 void
-ows_set_timeout (uint16_t timeout_us)
+ows_set_timeout (uint16_t time_us)
 {
-  ows_timeout_t1t = US2T1T (timeout_us);
-  PFP ("ows_timeout_t1t: %lu\n", (long unsigned) ows_timeout_t1t);
+  PFP_ASSERT (time_us >= OWS_MIN_TIMEOUT_US);   // FIXME: de-PFP
+  PFP_ASSERT (time_us <= OWS_MAX_TIMEOUT_US);   // FIXME: de-PFP
+
+  timeout_t1t = time_us * OWS_TIMER_TICKS_PER_US;
 }
 
 // Transaction State Waiting For (Reset Pulse|ROM Command|Function Command).
@@ -399,126 +453,158 @@ ows_set_timeout (uint16_t timeout_us)
 #define TSWFRC  1
 #define TSWFFC  2
 
-#define WAIT_FOR_EVENT() do { ; } while ( event == ENY );
+// Wait for the next event (low-high transition on the line or timeout).
+// Note that event must be cleared by setting it to EVNY before this is used.
+// The correct time to clear event is as soon as possible, which means as soon
+// as the event type has been used to determine what we're going to do next.
+// Unfortunately this rule can be a little confusing to interpret thanks to
+// the goto and procedural macros we use, but with a little thought it's
+// not hard to figure out when we're done with the information in event.
+// The event variable effectively forms a queue of length one.  Events fill
+// it, and as soon as we're decided how to react to an even we can empty it.
+// There's no point in a longer queue, since we can't afford to fall behind
+// anyway: some 1-wire events require an almost immediate reaction from
+// the slave.
+#define WAIT_FOR_EVENT()                   \
+  do {                                     \
+    if ( timeout_t1t != OWS_NO_TIMEOUT ) { \
+      ATOMIC_BLOCK (ATOMIC_RESTORESTATE)   \
+      {                                    \
+        OCR1A = TCNT1 + timeout_t1t;       \
+        ARM_TIMEOUT_ISR ();                \
+      }                                    \
+    }                                      \
+    do {                                   \
+      ;                                    \
+    } while ( event == EVNY );             \
+  } while ( 0 )
 
 #define PRESENCE_PULSE_SEQUENCE()               \
   do {                                          \
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE); \
     DRIVE_LINE_LOW ();                          \
     _delay_us (ST_PRESENCE_PULSE_LENGTH);       \
+    RELEASE_LINE ();                            \
+    WAIT_FOR_EVENT ();                          \
+    if ( event != EVPP ) {                      \
+      goto unexpected_event;                    \
+    }                                           \
+    event = EVNY;                               \
   } while ( 0 )
 
-// FIXME: finish and use
-//#define COMPLETE_ZERO_PULSE() \
-
-uint8_t ns;   // Next State (one to go to after end of a sent zero pulse)
+// FIXME: review globals for use
 
 uint8_t cb;   // Current Byte
 
 uint8_t cri;   // Current ROM Byte Index
 uint8_t cbi;   // Current Bit Index
 
-// FIXME: WORK POINT: this is part of a new attempt to flatten everything to
-// use a single state machine and fewer function calls.  I think its got to be
-// all the function stack frame push-pop that's causing things to be too slow.
+#define READ_BYTE()                      \
+  do {                                   \
+    cb = 0;                              \
+    cbi = 0;                             \
+    while ( cbi < BITS_PER_BYTE ) {      \
+      WAIT_FOR_EVENT ();                 \
+      switch ( event ) {                 \
+        case EVA:                        \
+          event = EVNY;                  \
+          cb |= B00000001 << (cbi++);    \
+          break;                         \
+        case EVC:                        \
+          event = EVNY;                  \
+          cb &= ~(B00000001 << (cbi++)); \
+          break;                         \
+        default:                         \
+          goto unexpected_event;         \
+      }                                  \
+    }                                    \
+  } while ( 0 )
 
-#define SWFR 0   // State Waiting For Reset
-#define SSPP 1   // State Sent Presence Pulse
-#define SRRC 2   // State Reading ROM Command
-#define SWID 3   // State Writing ID
+#define WRITE_BYTE()                                    \
+  do {                                                  \
+    cbi = 0;                                            \
+    while ( cbi < BITS_PER_BYTE ) {                     \
+      WAIT_FOR_EVENT ();                                \
+      if ( event != EVA ) {                             \
+        goto unexpected_event;                          \
+      }                                                 \
+      event = EVNY;                                     \
+      if ( ! (cb & (B00000001 << (cbi++))) ) {          \
+        DRIVE_LINE_LOW ();                              \
+        _delay_us (ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME); \
+        RELEASE_LINE ();                                \
+        WAIT_FOR_EVENT ();                              \
+        if ( event != EVZP ) {                          \
+          goto unexpected_event;                        \
+        }                                               \
+        event = EVNY;                                   \
+      }                                                 \
+    }                                                   \
+  } while ( 0 )
+
+// WORK POINT: it seems workingish.  Next: junk code already translated
+// to new flattened loop system, maybe use timer0 to double-check actual
+// timeout timeing (kind of a pain but maybe worth it), or measure actual
+// time required for lots of timeouts to happen (much easier), or else just
+// go on implementing more of the timer1 features with the new flattened
+// stuff and see how big it gets, maybe functionalize some bits again
+// eventually and check if the timing still works ok
 
 ows_error_t
 ows_wait_for_function_transaction_2 (uint8_t *command_ptr)
 {
+  *command_ptr = 42;   // FIXME: for devel compiler silencing
+
+  // We start out with a clean slate event-wise.  Clearing this here means
+  // we might miss a reset pulse that occurs before this call, but it avoids
+  // possible problems with left-over events that might have occurred after
+  // a timeout in a previous call to this function.
+  event = EVNY;
+
   for ( ; ; ) {
-    WAIT_FOR_EVENT ();
-    // FIXME: could handle presence pulses up front, but it makes service
-    // of the tight-timing cases a tiny bit slower...
     switch ( state ) {
+      // FIXME: these cases could be re-ordered to put the ones that needed
+      // faster response following the event first.  Less readable but better
+      // on timing.
       case SWFR:
+        WAIT_FOR_EVENT ();
         // This is handled below, since it can occurr from any state.
         break;
-      case SSPP:
-        switch ( event ) {
-          case EPP:
-            state = SRRC;
-            break;
-          default:
-            assert (0);
-            break;
-        }
-        break;
       case SRRC:
-        switch ( event ) {
-          case ER0:
-            cb |= B00000001 << (cbi++);
-            break;
-          case ER1:
-            cb &= ~(B00000001 << (cbi++));
-            break;
-          default:
-            assert (0);
-            break;
-        }
-        if ( cbi >= BITS_PER_BYTE ) {
-          assert (cbi == BITS_PER_BYTE);   // FIXME: remove after debug
-          cri = 0;
-          cbi = 0;
-          // FIXME: need to not assume READ_ROM here
-          state = SWID;
-        }
+        READ_BYTE ();
+        state = SWID;
         break;
       case SWID:
-        if ( ! (rom_id[cri] & (0x01 << (cbi++))) ) {
-          _delay_us (ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME);
-          RELEASE_LINE ();
-          if ( cbi >= BITS_PER_BYTE ) {
-            assert (cbi == BITS_PER_BYTE);  // FIXME: remove after debug
-            cri++;
-          }
-          if ( cri >= OWC_ID_SIZE_BYTES ) {
-            assert (cri == OWC_ID_SIZE_BYTES);
-            ns = SRFC;
-            state = SSZP;
-          }
-          else {
-            ns = SWID;
-            state = SSZP;
-          }
-        }
-        else {
-          if ( cbi >= BITS_PER_BYTE ) {
-            assert (cbi == BITS_PER_BYTE);  // FIXME: remove after debug
-            cri++;
-          }
-          if ( cri >= OWC_ID_SIZE_BYTES ) {
-            assert (cri == OWC_ID_SIZE_BYTES);
-            state = SRFC;
-          }
-          else {
-            // We're still writing the ID, so the state doesn't change
-            ;
-          }
-        }
-        break;
-      case SSZP:
-        if ( EZP ) {
-          state = ns;
+        for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
+          cb = rom_id[ii];
+          WRITE_BYTE ();
         }
         break;
       case SRFC:
         PFP ("woo ha!\n");
-        assert (0);
-
+        PFP_ASSERT_NOT_REACHED ();   // FIXME im debug
+      default:
+        PFP_ASSERT_NOT_REACHED ();   // FIXME im debug
     }
 
-    if ( event == ERP ) {
-      PRESENCE_PULSE_SEQUENCE ();
-      state = SSPP;
-    }
+    unexpected_event:
 
+    switch ( event ) {
+      case EVR:
+        event = EVNY;
+        PRESENCE_PULSE_SEQUENCE ();
+        state = SRRC;
+        break;
+      case ETO:
+        return OWS_ERROR_TIMEOUT;
+        break;
+      default:
+        // FIXME unexpected events that aren't resets end up here.  At the
+        // moment we ignore them.  What should we do with them?
+        event = EVNY;
+        break;
+    }
   }
-
 }
 
 ows_error_t
@@ -567,7 +653,6 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
               err = OWS_ERROR_NONE;
               break;
             default:
-              //DBL_TRAP ();   // FIXME: debug
               assert (FALSE);  // Shouldn't be here
               break;
           }
@@ -684,7 +769,6 @@ ows_handle_reset_pulse (void)
     _delay_us (ST_DELAY_BEFORE_PRESENCE_PULSE);
     DRIVE_LINE_LOW ();
     _delay_us (ST_PRESENCE_PULSE_LENGTH);
-    SET_STATE (SATRL);
     RELEASE_LINE ();
 
     uint8_t ne = wait_for_event ();
@@ -735,6 +819,9 @@ ows_wait_for_reset (void)
 ows_error_t
 ows_write_bit (uint8_t data_bit)
 {
+  // FIXME: these are essentially gutted but here for reference and to maybe
+  // fill in later.
+
   // Figure 1 of Maxim Application Note AN 126 shows that the master should
   // start a read slot by pulling the line low for 6 us, then sample the
   // line after an addional 9 us.  The slave transmits a one by leaving the
@@ -768,7 +855,7 @@ ows_write_bit (uint8_t data_bit)
   // lengh measurement strategy being used here is fine.
 
   if ( event != ENY ) {
-    peh ();
+    peh (0);
     printf ("event: %hhu\n", event);
     assert (0);
   }
@@ -777,10 +864,10 @@ ows_write_bit (uint8_t data_bit)
   // SW0B and SW1B to have values 0 and 1 respectively, we could save some
   // branch here.
   if ( ! data_bit ) {
-    SET_STATE (SW0B);
+    ;
   }
   else {
-    SET_STATE (SW1B);
+    ;
   }
 
   PFP_ASSERT (event == ENY);
@@ -790,7 +877,6 @@ ows_write_bit (uint8_t data_bit)
   switch ( le ) {
     case ESW0:
       _delay_us (ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME);
-      SET_STATE (SATRL);
       RELEASE_LINE ();
       le = wait_for_event ();
       if ( le == EGR ) {
@@ -799,7 +885,6 @@ ows_write_bit (uint8_t data_bit)
           return OWS_ERROR_RESET_DETECTED_AND_HANDLED;
         }
       }
-      DBL_ASSERT (le == ELR);
       break;
     case ESW1:
       break;  // Nothing to do: the rest of the time slot is empty
@@ -818,7 +903,7 @@ ows_write_bit (uint8_t data_bit)
       return OWS_ERROR_UNEXPECTED_PULSE_LENGTH;
       break;
     default:
-      peh ();
+      peh (0);
       PFP_ASSERT_NOT_REACHED ();
       break;
   }
@@ -829,7 +914,7 @@ ows_write_bit (uint8_t data_bit)
 ows_error_t
 ows_read_bit (uint8_t *data_bit_ptr)
 {
-  SET_STATE (SRB);
+  // FIXME: maybe not in use now, maybe reactivate later
 
   uint8_t le = wait_for_event ();   // Latest Event
 
@@ -856,7 +941,7 @@ ows_read_bit (uint8_t *data_bit_ptr)
       return OWS_ERROR_UNEXPECTED_PULSE_LENGTH;
       break;
     default:
-      peh ();
+      peh (0);
       assert (FALSE);   // Shouldnt be here FIXME: correct?
       break;
   }

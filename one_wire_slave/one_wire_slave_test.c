@@ -195,7 +195,12 @@ main (void)
   //
   // FIXME: just a note: should be 40000 us given current F_CPU and timer1
   // prescaler
-  ows_set_timeout (20042);
+  ows_set_timeout (32767);
+
+  // FIXME: debug
+  printf ("uspt1t: %f\n", TIMER1_STOPWATCH_MICROSECONDS_PER_TIMER_TICK);
+
+  uint32_t lc = 0;   // FIXME: for testing timeout time correctness only
 
   for ( ; ; ) {
 
@@ -240,6 +245,9 @@ main (void)
         break;
 
     }
+
+    lc++;
+    if ( lc == 500 ) { printf ("got 1000 timeouts\n"); }  // FIXME: debug
 
   }
 
