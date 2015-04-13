@@ -89,6 +89,7 @@
 // multiple of 1MHz.  If you don't think you care you might just remove this.
 #  error F_CPU is not a multiple of 1MHz
 #endif
+// FIXME: its goofy to make this a functionesque macro (lose the parens)
 #if F_CPU >= 1000000UL
 #  define CLOCK_CYCLES_PER_MICROSECOND() (F_CPU / 1000000UL)
 #  define CLOCK_CYCLES_TO_MICROSECONDS(a) \
