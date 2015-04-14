@@ -469,9 +469,10 @@ wait_for_event (void)
 void
 ows_set_timeout (uint16_t time_us)
 {
+  // Insist on the interface requirements.
   if ( time_us != OWS_NO_TIMEOUT ) {
-    PFP_ASSERT (time_us >= OWS_MIN_TIMEOUT_US);   // FIXME: de-PFP
-    PFP_ASSERT (time_us <= OWS_MAX_TIMEOUT_US);   // FIXME: de-PFP
+    assert (time_us >= OWS_MIN_TIMEOUT_US);
+    assert (time_us <= OWS_MAX_TIMEOUT_US);
   }
 
   timeout_t1t = time_us * OWS_TIMER_TICKS_PER_US;
