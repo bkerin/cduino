@@ -264,6 +264,7 @@ volatile uint8_t state;
 #define EVPP 5   // Event Presence pulse-length pulse (probably we sent it)
 #define EVWP 6   // Event Weird-length pulse
 #define ETO  7   // Event TimeOut (this one is detected in a different ISR)
+// FIXME: initialize elsewhere if at all
 volatile uint8_t event = EVNY;
 
 // FIXME: the globals should probably be re-initialized by the _init routine
@@ -292,6 +293,23 @@ peh (uint8_t mec)
 #define ARM_TIMEOUT_ISR()    do { TIMSK1 |= _BV (OCIE1A);    } while ( 0 )
 #define DISARM_TIMEOUT_ISR() do { TIMSK1 &= ~(_BV (OCIE1A)); } while ( 0 )
 
+// FIXME: review globals for use
+uint8_t cb;   // Current Byte
+uint8_t cri;   // Current ROM Byte Index
+volatile uint8_t cbi;   // Current Bit Index  FIXME: only volatile for debug
+uint8_t hc = 0;   // FIXME: debug remove this var and refs
+
+uint16_t mrocr1a, mrtcnt1;   // FIXME for debug only
+
+// FIXME: well maybe we don't need an actual ISR for this.  We can just check
+// for the compare match flag while waiting for an event Would make waiting
+// for event a tiny bit slower every time, but shouldn't be any slower worst
+// case than when the timeout ISR fires, and we wouldn't have to twiddle
+// the ISR enable everywhere (no more ARM/DISARM).  We only needed OCR1A
+// to avoid missing the case where the timer ran past the exact value of
+// interest between checks, and since the flag records the fact I don't
+// see any need for the interrupt.  Flag would need manual clearing of course.
+
 // This ISR exists only to keep track of timeout events.  This ISR is
 // supposed to get armed immediately before we start waiting for something
 // to happen on the 1-wire bus.
@@ -303,7 +321,22 @@ ISR (TIMER1_COMPA_vect)
   // the pulse-timing pin change ISR when it records a pulse end.  Therefore,
   // ths ISR should only fire when no other even has been set yet.  Therefore,
   // we don't need to test even before setting it.
-  event = ETO;
+  // FIXME: therefore, remove these again after things are working and verify
+  // no breakage.
+  if ( event == EVNY ) {
+    event = ETO;
+  }
+
+  // For debugging purposes, we collapse sequences of many timeouts into
+  // just one event report.
+  if ( eh[wfec - 1] != ETO ) {
+    eh[wfec++] = event;   // FIXME: this is debug
+  }
+
+  // FIXME: for debug:
+  if ( cbi == 2 ) {
+    printf ("mrtcnt1: %u, mrocr1a: %u\n", mrtcnt1, mrocr1a); peh(15); PHP ();
+  }
 
   // This is a one-shot ISR that we reset when we start a new timeout counter,
   // so we reset it here.  Note that we don't have to clear the output compare
@@ -311,6 +344,13 @@ ISR (TIMER1_COMPA_vect)
   // in the corresponding ISR.
   DISARM_TIMEOUT_ISR ();
 }
+
+// FIXME: I think OWS_NO_TIMEOUT should turn into OWS_TIMEOUT_NONE
+
+// Timeout, in timer1 ticks.  FIXME: this should be reset in _init, and
+// not initialized here ( to save a little flash).
+uint16_t timeout_t1t = OWS_NO_TIMEOUT;
+
 
 // This ISR keeps track of the length of low pulses.  When we see the end of
 // one we consider that we've seen something interesting, and if a timeout
@@ -322,6 +362,8 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
     // If we've already got an unhandled timeout event, we don't want to
     // stomp on it here.
     if ( event == ETO ) {
+      PHP ();
+      DBL_TRAP ();
       return;
     }
 
@@ -359,12 +401,10 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 
     if ( pl < (ST_SLAVE_WRITE_ZERO_LINE_HOLD_TIME - ezptm_us) * T1TPUS ) {
       event = EVA;
-      return;
     }
 
     else if ( pl < (OWC_TICK_DELAY_C - ectm_us) * T1TPUS ) {
       event = EVZP;
-      return;
     }
 
     else if ( pl < ST_PRESENCE_PULSE_LENGTH * T1TPUS ) {
@@ -374,12 +414,10 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
       // in a mster write and before a following slave write is also tight
       // and this contributes.
       event = EVC;
-      return;
     }
 
     else if ( pl < OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS ) {
       event = EVPP;
-      return;
     }
 
     else {
@@ -399,6 +437,12 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
   }
   else {
 
+    // Note that this won't cause an immediate compare match even if
+    // timeout_t1t is OWS_NO_TIMEOUT (which is 0), because writing TCNT1
+    // (via TIMER1_STOPWATCH_RESET() blocks any compare match that occurs
+    // in the next timer clock cycle (see atmega datasheet section 15.7.2
+    // (FIXME: make this a ref and link the processor datasheet).
+    OCR1A = timeout_t1t;
     TIMER1_STOPWATCH_RESET ();
 
   }
@@ -432,18 +476,13 @@ wait_for_event (void)
   return ne;
 }
 
-// FIXME: I think OWS_NO_TIMEOUT should turn into OWS_TIMEOUT_NONE
-
-
-// Timeout, in timer1 ticks.  FIXME: this should be reset in _init, and
-// not initialized here ( to save a little flash).
-uint16_t timeout_t1t = OWS_NO_TIMEOUT;
-
 void
 ows_set_timeout (uint16_t time_us)
 {
-  PFP_ASSERT (time_us >= OWS_MIN_TIMEOUT_US);   // FIXME: de-PFP
-  PFP_ASSERT (time_us <= OWS_MAX_TIMEOUT_US);   // FIXME: de-PFP
+  if ( time_us != OWS_NO_TIMEOUT ) {
+    PFP_ASSERT (time_us >= OWS_MIN_TIMEOUT_US);   // FIXME: de-PFP
+    PFP_ASSERT (time_us <= OWS_MAX_TIMEOUT_US);   // FIXME: de-PFP
+  }
 
   timeout_t1t = time_us * OWS_TIMER_TICKS_PER_US;
 }
@@ -465,12 +504,20 @@ ows_set_timeout (uint16_t time_us)
 // There's no point in a longer queue, since we can't afford to fall behind
 // anyway: some 1-wire events require an almost immediate reaction from
 // the slave.
+//
+// FIXME: WORK POINT: verify that we don't head into this with ETO already set.
+// the situationis that enabling timeouts cause cbi in READ to only make it to
+// 2, even though the event history shows all expected event bits of READ_ROM happening, come to think of it why doesn't the event history show a timeout if that's what going on, how can having timeouts enabled be causing the problem if they aren't even going off?   note that peh() can record a bunch of additional events before it gets around to printing stuff, it doesn't accurately reflect swhat's happend at the call point.
 #define WAIT_FOR_EVENT()                   \
   do {                                     \
+    if ( event == ETO ) { DBL_TRAP (); } /* FIXME im debug */ \
     if ( timeout_t1t != OWS_NO_TIMEOUT ) { \
       ATOMIC_BLOCK (ATOMIC_RESTORESTATE)   \
       {                                    \
-        OCR1A = TCNT1 + timeout_t1t;       \
+        mrtcnt1 = TCNT1; \
+        mrocr1a = mrtcnt1 + timeout_t1t; \
+        OCR1A = mrocr1a; \
+        /*OCR1A = TCNT1 + timeout_t1t; */      \
         ARM_TIMEOUT_ISR ();                \
       }                                    \
     }                                      \
@@ -492,18 +539,13 @@ ows_set_timeout (uint16_t time_us)
     event = EVNY;                               \
   } while ( 0 )
 
-// FIXME: review globals for use
-
-uint8_t cb;   // Current Byte
-
-uint8_t cri;   // Current ROM Byte Index
-uint8_t cbi;   // Current Bit Index
-
 #define READ_BYTE()                      \
   do {                                   \
+    hc = 0;   \
     cb = 0;                              \
     cbi = 0;                             \
     while ( cbi < BITS_PER_BYTE ) {      \
+      hc++; \
       WAIT_FOR_EVENT ();                 \
       switch ( event ) {                 \
         case EVA:                        \
@@ -572,12 +614,14 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr)
         break;
       case SRRC:
         READ_BYTE ();
+        peh (15);  PFP_ASSERT_NOT_REACHED ();
         state = SWID;
         break;
       case SWID:
         for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
           cb = rom_id[ii];
           WRITE_BYTE ();
+          peh (0);  PFP_ASSERT_NOT_REACHED ();
         }
         break;
       case SRFC:
@@ -596,11 +640,13 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr)
         state = SRRC;
         break;
       case ETO:
+        event = EVNY;
         return OWS_ERROR_TIMEOUT;
         break;
       default:
         // FIXME unexpected events that aren't resets end up here.  At the
         // moment we ignore them.  What should we do with them?
+        PFP_ASSERT_NOT_REACHED ();
         event = EVNY;
         break;
     }

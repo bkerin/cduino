@@ -200,7 +200,8 @@ main (void)
   // FIXME: debug
   printf ("uspt1t: %f\n", TIMER1_STOPWATCH_MICROSECONDS_PER_TIMER_TICK);
 
-  uint32_t lc = 0;   // FIXME: for testing timeout time correctness only
+  // FIXME: debug
+  //uint32_t lc = 0;   // FIXME: for testing timeout time correctness only
 
   for ( ; ; ) {
 
@@ -246,8 +247,8 @@ main (void)
 
     }
 
-    lc++;
-    if ( lc == 500 ) { printf ("got 1000 timeouts\n"); }  // FIXME: debug
+    //lc++;  // FIXME: debug
+    //if ( lc == 1000 ) { printf ("got 1000 timeouts\n"); }  // FIXME: debug
 
   }
 
