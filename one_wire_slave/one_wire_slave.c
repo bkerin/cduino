@@ -297,9 +297,6 @@ peh (uint8_t mec)
 uint8_t cb;   // Current Byte
 uint8_t cri;   // Current ROM Byte Index
 volatile uint8_t cbi;   // Current Bit Index  FIXME: only volatile for debug
-uint8_t hc = 0;   // FIXME: debug remove this var and refs
-
-uint16_t mrocr1a, mrtcnt1;   // FIXME for debug only
 
 // FIXME: well maybe we don't need an actual ISR for this.  We can just check
 // for the compare match flag while waiting for an event Would make waiting
@@ -333,11 +330,6 @@ ISR (TIMER1_COMPA_vect)
     eh[wfec++] = event;   // FIXME: this is debug
   }
 
-  // FIXME: for debug:
-  if ( cbi == 2 ) {
-    printf ("mrtcnt1: %u, mrocr1a: %u\n", mrtcnt1, mrocr1a); peh(15); PHP ();
-  }
-
   // This is a one-shot ISR that we reset when we start a new timeout counter,
   // so we reset it here.  Note that we don't have to clear the output compare
   // interrupt flag itself, since it will happen automagically because we're
@@ -362,8 +354,6 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
     // If we've already got an unhandled timeout event, we don't want to
     // stomp on it here.
     if ( event == ETO ) {
-      PHP ();
-      DBL_TRAP ();
       return;
     }
 
@@ -504,20 +494,12 @@ ows_set_timeout (uint16_t time_us)
 // There's no point in a longer queue, since we can't afford to fall behind
 // anyway: some 1-wire events require an almost immediate reaction from
 // the slave.
-//
-// FIXME: WORK POINT: verify that we don't head into this with ETO already set.
-// the situationis that enabling timeouts cause cbi in READ to only make it to
-// 2, even though the event history shows all expected event bits of READ_ROM happening, come to think of it why doesn't the event history show a timeout if that's what going on, how can having timeouts enabled be causing the problem if they aren't even going off?   note that peh() can record a bunch of additional events before it gets around to printing stuff, it doesn't accurately reflect swhat's happend at the call point.
 #define WAIT_FOR_EVENT()                   \
   do {                                     \
-    if ( event == ETO ) { DBL_TRAP (); } /* FIXME im debug */ \
     if ( timeout_t1t != OWS_NO_TIMEOUT ) { \
       ATOMIC_BLOCK (ATOMIC_RESTORESTATE)   \
       {                                    \
-        mrtcnt1 = TCNT1; \
-        mrocr1a = mrtcnt1 + timeout_t1t; \
-        OCR1A = mrocr1a; \
-        /*OCR1A = TCNT1 + timeout_t1t; */      \
+        OCR1A = TCNT1 + timeout_t1t;       \
         ARM_TIMEOUT_ISR ();                \
       }                                    \
     }                                      \
@@ -541,11 +523,9 @@ ows_set_timeout (uint16_t time_us)
 
 #define READ_BYTE()                      \
   do {                                   \
-    hc = 0;   \
     cb = 0;                              \
     cbi = 0;                             \
     while ( cbi < BITS_PER_BYTE ) {      \
-      hc++; \
       WAIT_FOR_EVENT ();                 \
       switch ( event ) {                 \
         case EVA:                        \
