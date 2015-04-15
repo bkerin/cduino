@@ -380,7 +380,7 @@ NONCXXFLAGS = -std=gnu11 \
 CXXFLAGS += $(filter-out $(NONCXXFLAGS), $(CFLAGS))
 
 # WARNING: I don't think I've actually exercised the assembly parts of this
-# build system myself at all.
+# build system myself at all.  Not using assembly is sort of a project goal :)
 ASMFLAGS := -I. -mmcu=$(COMPILER_MCU)-x assembler-with-cpp \
             -Wa,-gstabs,-ahlms=$(firstword $(<:.S=.lst) $(<.s=.lst))
 
@@ -757,10 +757,17 @@ $(TRG): $(OBJS)
 	$(OBJCOPY) -j .eeprom --change-section-lma .eeprom=0 \
                    -O $(HEXFORMAT) $< $@
 
-# General build-too-much strategy.
-$(OBJS): $(HEADERS) Makefile generic.mk
+# We use a general build-too-much strategy in which targets are considered
+# out-of-date if any of these likely prerequisites have changed.
+POSSIBLE_PREREQUISITES = $(HEADERS) Makefile generic.mk
 
-# WARNING: I don't think I've ever exercised this target.
-%.s: %.c
+# General build-too-much strategy.
+$(OBJS): $(POSSIBLE_PREREQUISITES)
+
+# This can be used to get a look at the assembly that will be produced from
+# a given .c file.  It might sometimes be useful to add -fverbose-asm after
+# the -S switch as well, but I find its output noisy and it makes assembly
+# files harder to compare.
+%.s: %.c $(HEADERS) $(POSSIBLE_PREREQUISITES)
 	$(CC) -S $(CPPFLAGS) $(CFLAGS) $< -o $@
 
