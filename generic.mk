@@ -350,6 +350,15 @@ HEXFORMAT := ihex
 
 OPTLEVEL := s
 
+# Language-independent diagnostic GCC flags.  Clients can add their own.
+# Note that order sometimes matters for compiler flags, so it could matter
+# whether they do so before or after the include statement that includes
+# this file.
+#
+# FIXME: this needs GCC 4.9.  Enable it when that is common.  Also add it
+# to LDFLAGS or the command that invokes the linker if its supported there.
+#DIAGNOSTICS_FLAGS += -fdiagnostics-color=auto
+
 # Clients can add their own CPPFLAGS.  Note that order sometimes matters
 # for compiler flags, so it could matter whether they do so before or after
 # the include statement that includes this file.
@@ -360,18 +369,18 @@ CPPFLAGS += $(CPP_VERSION_CONTROL_COMMIT_DEFINE_FLAGS) \
 
 # See comments near CPPFLAGS, above.
 CFLAGS += -std=gnu11 -fshort-enums -mmcu=$(COMPILER_MCU) -O$(OPTLEVEL) \
-          -Werror -Wall -Wextra -Winline -Wmissing-prototypes \
+          -Werror -Wall -Wextra -Winline -Wmissing-prototypes          \
           -Wredundant-decls -Winit-self -Wstrict-prototypes
 
 # There are a number of C compiler flags that the C++ compiler doesn't like, or
 # that the standard arduino libs dont satisfy.
-NONCXXFLAGS = -std=gnu11 \
-              -Wimplicit-int \
-              -Winline \
-              -Wmissing-prototypes \
+NONCXXFLAGS = -std=gnu11              \
+              -Wimplicit-int          \
+              -Winline                \
+              -Wmissing-prototypes    \
               -Wold-style-declaration \
-              -Wredundant-decls \
-              -Wstrict-prototypes \
+              -Wredundant-decls       \
+              -Wstrict-prototypes     \
 
 # Support building C++ files.  Currently this has mainly been used to ease
 # the translation of Arduino modules away from C++, but maybe some people
@@ -381,7 +390,7 @@ CXXFLAGS += $(filter-out $(NONCXXFLAGS), $(CFLAGS))
 
 # WARNING: I don't think I've actually exercised the assembly parts of this
 # build system myself at all.  Not using assembly is sort of a project goal :)
-ASMFLAGS := -I. -mmcu=$(COMPILER_MCU)-x assembler-with-cpp \
+ASMFLAGS := -I. -mmcu=$(COMPILER_MCU)-x assembler-with-cpp           \
             -Wa,-gstabs,-ahlms=$(firstword $(<:.S=.lst) $(<.s=.lst))
 
 LDFLAGS := -mmcu=$(COMPILER_MCU) $(AVRLIBC_PRINTF_LDFLAGS) -lm \
@@ -407,50 +416,50 @@ endif
 # These are targets that users are likely to want to invoke directly (as
 # arguments to make).
 
-PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING := \
-  echo "" ; \
-  echo "Couldn't pulse DTR or upload failed.  Some possible reasons:" ; \
-  echo "" ; \
-  echo "  * The Device::SerialPort perl module isn't installed, see the " ; \
-  echo "    diagnostic output above for more details." ; \
-  echo "" ; \
-  echo "  * You don't have write permission for the Arduino device file." ; \
+PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING :=                                 \
+  echo "" ;                                                                   \
+  echo "Couldn't pulse DTR or upload failed.  Some possible reasons:" ;       \
+  echo "" ;                                                                   \
+  echo "  * The Device::SerialPort perl module isn't installed, see the " ;   \
+  echo "    diagnostic output above for more details." ;                      \
+  echo "" ;                                                                   \
+  echo "  * You don't have write permission for the Arduino device file." ;   \
   echo "    If you have a 'Permission denied' message above that refers to" ; \
   echo "    a file in /dev (perhaps /dev/ACM0 or /dev/USB0) this is likely" ; \
-  echo "    the problem.  Make sure the Arduino is plugged in, and then" ; \
-  echo "    take a look at the mentioned file with 'ls -l' and see if" ; \
-  echo "    there is a group you can add yourself to to get write" ; \
-  echo "    permission (on debian I had to add myself to the 'dialout'" ; \
+  echo "    the problem.  Make sure the Arduino is plugged in, and then" ;    \
+  echo "    take a look at the mentioned file with 'ls -l' and see if" ;      \
+  echo "    there is a group you can add yourself to to get write" ;          \
+  echo "    permission (on debian I had to add myself to the 'dialout'" ;     \
   echo "    group).  Note that for group membership to take effect for you" ; \
-  echo "    you may need to restart your system (or restart the Gnome" ; \
-  echo "    Display Manager or somethimg) and login again.  You can see" ; \
-  echo "    what groups you're in with the 'groups' command." ; \
-  echo "" ; \
-  echo "  * Your Arduino program is itself using the serial port, which" ; \
-  echo "    prevents the programmer from working on my Arduino Uno rev. 3" ; \
-  echo "    at least.  Make sure that you do not have a screen session" ; \
-  echo "    connected to the arduino, for example.  If you get a message" ; \
-  echo "    like \"Couldn't open /dev/ttyACM0: Device or resource busy\"" ; \
-  echo "    this is a particularly likely explanation." ; \
-  echo "" ; \
+  echo "    you may need to restart your system (or restart the Gnome" ;      \
+  echo "    Display Manager or somethimg) and login again.  You can see" ;    \
+  echo "    what groups you're in with the 'groups' command." ;               \
+  echo "" ;                                                                   \
+  echo "  * Your Arduino program is itself using the serial port, which" ;    \
+  echo "    prevents the programmer from working on my Arduino Uno rev. 3" ;  \
+  echo "    at least.  Make sure that you do not have a screen session" ;     \
+  echo "    connected to the arduino, for example.  If you get a message" ;   \
+  echo "    like \"Couldn't open /dev/ttyACM0: Device or resource busy\"" ;   \
+  echo "    this is a particularly likely explanation." ;                     \
+  echo "" ;                                                                   \
   echo "  * You might need to press reset immediately after avrdude starts" ; \
-  echo "    as required (with my Duemilanove anyway) if the above serial" ; \
+  echo "    as required (with my Duemilanove anyway) if the above serial" ;   \
   echo "    DTR pulse is not doing it (the DTR pulse does not seem to work" ; \
-  echo "    if the arduino has been running for a while without being" ; \
-  echo "    programmed, or if the program running on the arduino is using" ; \
-  echo "    the serial line itself)." ; \
-  echo "" ; \
-  echo "  * The bootloader has been nuked (by programming with the" ; \
+  echo "    if the arduino has been running for a while without being" ;      \
+  echo "    programmed, or if the program running on the arduino is using" ;  \
+  echo "    the serial line itself)." ;                                       \
+  echo "" ;                                                                   \
+  echo "  * The bootloader has been nuked (by programming with the" ;         \
   echo "    AVRISPmkII for example).  See the replace_bootloader target in" ; \
-  echo "    generic.mk." ; \
+  echo "    generic.mk." ;                                                    \
   echo ""
 
-PRINT_AVRISPMKII_PROGRAMMING_FAILED_MESSAGE := \
-  echo ; \
+PRINT_AVRISPMKII_PROGRAMMING_FAILED_MESSAGE :=                               \
+  echo ;                                                                     \
   echo Programming failed.  Is the AVRISPmkII hooked up?  Does the Arduino ; \
   echo have power?  The AVRISPmkII does not power the Arduino, but you can ; \
   echo just plug in the USB cable to power it and still use the AVRISPmkII ; \
-  echo for programming. ; \
+  echo for programming. ;                                                    \
   echo
 
 .PHONY: writeflash
@@ -632,7 +641,7 @@ replace_bootloader: $(ACTUAL_ARDUINO_BOOTLOADER)  binaries_suid_root_stamp
                       $(PROGRAMMER_MCU) \
                       BLB12=0 BLB11=0 BLB02=1 BLB01=1 LB2=1 LB1=1`
 
-COMPILE_C = $(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+COMPILE_C = $(CC) $(DIAGNOSTICS_FLAGS) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 # FIXME: would we rather use a static pattern rule here?  They are generally
 # cleaner and result in much better error messages in some circumstances,
@@ -642,7 +651,7 @@ COMPILE_C = $(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 %.o: %.c
 	$(COMPILE_C)
 
-COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+COMPILE_CXX = $(CXX) $(DIAGNOSTICS_FLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 # FIXME: see above fixme about static pattern rules.
 %.o: %.cpp
