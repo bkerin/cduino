@@ -2,11 +2,11 @@
 //
 // Test driver: debug_led_test.c    Implementation: debug_led.c
 //
-// Debugging with a LED can drive you mad.  But this approach it can be
-// effective in simple cases, and unlike approaches using other communication
-// interfaces, it uses no other resources and it's super-fast and therefore
-// much less prone to create heisenbergs.  But consider the debugging
-// features available in term_io.h and wireless_xbee.h first.
+// Debugging with a LED can drive you mad.  But it can be effective in simple
+// cases, and unlike approaches using other communication interfaces, it uses
+// no other resources and it's super-fast and therefore much less prone to
+// create heisenbergs.  But consider the debugging features available in
+// term_io.h and wireless_xbee.h first.
 //
 // Bugs in debugging code can be particularly confusing.  You can trip
 // yourself up by:
@@ -20,6 +20,8 @@
 //
 //   * Running out of RAM, especially inside a debugging routine itself.  The
 //     results are undefined.
+//
+//   * Probably lots of other ways.  Verify the debugging routing itself.
 //
 
 #ifndef DEBUG_LED_H
@@ -70,7 +72,7 @@ dbl_multiblink (uint16_t time_per_cycle, uint8_t count);
   do { dbl_multiblink (DBL_TRAP_POINT_BLINK_TIME, 1); } while ( TRUE )
 
 // This routine is like assert(), but when condition is true we blink rapidly
-// forever.  See DBL_ASSERT_SHOW_POINT() for a routine that actually give
+// forever.  See DBL_ASSERT_SHOW_POINT() for a routine that actually gives
 // code position feedback like assert().
 #define DBL_ASSERT(condition) \
   do { if ( UNLIKELY (! (condition)) ) { DBL_TRAP (); } } while ( 0 )
@@ -93,7 +95,7 @@ dbl_multiblink (uint16_t time_per_cycle, uint8_t count);
 //
 // This routine uses the definedness DBL_FEED_WDT to decide whether to
 // feed the WDT or not, and won't get a chance to show much if a short WDT
-// timeout is enabled and feeding isn't enabled.
+// timeout is enabled and feeding isn't.
 //
 void
 dbl_display_uint32 (uint32_t vtd);
@@ -104,7 +106,7 @@ dbl_display_uint32 (uint32_t vtd);
 //
 // This routine uses the definedness DBL_FEED_WDT to decide whether to
 // feed the WDT or not, and won't get a chance to show much if a short WDT
-// timeout is enabled and feeding isn't enabled.
+// timeout is enabled and feeding isn't.
 #define DBL_ASSERT_SHOW_POINT(condition)        \
   do {                                          \
     if ( UNLIKELY (! (condition)) ) {           \
