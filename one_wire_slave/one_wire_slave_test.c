@@ -192,13 +192,8 @@ main (void)
   // anything time-consuming between ows_wait_for_function_transaction()
   // calls, the delay might get to be to much for the master to tolerate
   // without compensating code (it wouldn't get presence pulses in time).
-  //
-  // FIXME: just a note: should be 40000 us given current F_CPU and timer1
-  // prescaler
+  // FIXME: so maybe actually set it to the minimum.
   ows_set_timeout (32767);
-
-  // FIXME: debug
-  printf ("uspt1t: %f\n", TIMER1_STOPWATCH_MICROSECONDS_PER_TIMER_TICK);
 
   // FIXME: debug
   //uint32_t lc = 0;   // FIXME: for testing timeout time correctness only

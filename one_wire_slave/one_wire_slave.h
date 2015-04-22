@@ -119,13 +119,11 @@ ows_init (uint8_t use_eeprom_id);
 // This is the minimum timout setting that can be passed to ows_set_timeout()
 // (besides OWS_NO_TIMEOUT, which disables timeouts).  Note that the
 // ows_set_timeout() funtion implements timeouts of *approximately*
-// this lengh.  At twice the length of time required for the slave to
-// get a presence pulse out, this value is hopefully pretty conservative;
-// a shorter value would probably work, but as you approach the lenghts
-// of the shorter pulses in the 1-wire protocol you're asking for trouble,
-// as the implementation could easily fail to keep up even if any code you
-// run after a timeout event is very short.
-#define OWS_MIN_TIMEOUT_US (OWC_TICK_DELAY_I * 2)
+// this lengh.  At twice the length of a reset pulse (the longest pulse
+// in the 1-wire protocol), this value is hopefully pretty conservative.
+// A shorter value would probably work, but as you approach the defined
+// lengths of pulses in the 1-wire protocol you're asking for trouble.
+#define OWS_MIN_TIMEOUT_US (OWC_TICK_DELAY_H * 2)
 
 // Analogous to OWS_MIN_TIMEOUT_US.
 #define OWS_MAX_TIMEOUT_US ((uint16_t) (UINT16_MAX / OWS_TIMER_TICKS_PER_US))
@@ -139,10 +137,10 @@ ows_init (uint8_t use_eeprom_id);
 // timeout from occurring, so if your master continually talks to other
 // slaves you'll never get a timeout.  If it isn't OWS_NO_TIMEOUT, the
 // timeout_t1t argument must be in [OWS_MIN_TIMEOUT_US, OWS_MAX_TIMEOUT_US].
-// This isn't really intended to support short timeouts, it just gives a
-// simple way to do other things from the main thread occasionally.  If you
-// really need microsecond response from the slave for other purposes than
-// 1-wire, give it its own slave processor :).
+// This isn't intended to support short timeouts, it just gives a simple
+// way to do other things from the main thread occasionally.  If you really
+// need microsecond response from the slave for other purposes than 1-wire,
+// give it its own slave processor :).
 void
 ows_set_timeout (uint16_t time_us);
 
