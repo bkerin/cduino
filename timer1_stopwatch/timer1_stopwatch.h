@@ -108,6 +108,16 @@ timer1_stopwatch_init (void);
     GTCCR &= ~(_BV (TSM));       \
   } while ( 0 )
 
+// This does a quick but sloppy reset.  The timer is not stopped
+// or synchronized with the presaler, so for larger presaler settings
+// considerable inaccuracy may be involved in the subsequent time measurement.
+// The overflow flag bit TOV1 of the Timer/Counter1 Interrupt Flag Register
+// TIFR1 is not cleared.
+#define TIMER1_STOPWATCH_FAST_RESET() \
+  do {                                \
+    TCNT1 = 0;                        \
+  }
+
 // Number of ticks since timer/counter1 was last reset or overflowed.  NOTE:
 // if this macro (or TCNT1 via any other mechanism) will ever be written *or
 // read* from an interrupt service routine, then an AVR libc ATOMIC_BLOCK
