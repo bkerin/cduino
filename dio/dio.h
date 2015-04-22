@@ -777,36 +777,36 @@
 // for *all* the pins in the pin group.  Finally, ensure that the interrupt
 // flag for the pin group is clear.  This macro is intended to take one of
 // the DIO_PIN_* tuples as its argument.
-#define DIO_DISABLE_PIN_CHANGE_INTERRUPT(...) \
+#define DIO_DISABLE_PIN_CHANGE_INTERRUPT(...)      \
   DIO_DISABLE_PIN_CHANGE_INTERRUPT_NA(__VA_ARGS__) \
 
 // Underlying named-argument macro implementing the
 // DIO_DISABLE_PIN_CHANGE_INTERRUPT() macro.  Note that pcif_bit is actually
 // *cleared* by writing a logical one to it.
-#define DIO_DISABLE_PIN_CHANGE_INTERRUPT_NA( \
+#define DIO_DISABLE_PIN_CHANGE_INTERRUPT_NA(                \
     dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
-    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ) \
-  do { \
-    pcmsk_reg &= ~(_BV (pcint_bit)); \
-    loop_until_bit_is_clear (pcmsk_reg, pcint_bit); \
-    PCICR &= ~(_BV (pcie_bit)); \
-    loop_until_bit_is_clear (PCICR, pcie_bit); \
-    PCIFR |= _BV (pcif_bit); \
-    loop_until_bit_is_clear (PCIFR, pcif_bit); \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect )  \
+  do {                                                      \
+    pcmsk_reg &= ~(_BV (pcint_bit));                        \
+    loop_until_bit_is_clear (pcmsk_reg, pcint_bit);         \
+    PCICR &= ~(_BV (pcie_bit));                             \
+    loop_until_bit_is_clear (PCICR, pcie_bit);              \
+    PCIFR |= _BV (pcif_bit);                                \
+    loop_until_bit_is_clear (PCIFR, pcif_bit);              \
   } while ( 0 )
 
 // The name of the interrupt vector as AVR libc knows it.  The expansion
 // of this macro is acceptable as an argument to AVR libc's ISR(),
 // EMPTY_INTERRUPT(), or ISR_ALIAS() macros.  This macro is intended to
 // take one of the DIO_PIN_* tuples as its argument.
-#define DIO_PIN_CHANGE_INTERRUPT_VECTOR(...) \
+#define DIO_PIN_CHANGE_INTERRUPT_VECTOR(...)      \
   DIO_PIN_CHANGE_INTERRUPT_VECTOR_NA(__VA_ARGS__)
 
 // Underlying named-argument macro implementing the DIO_PIN_CHANGE_VECTOR()
 // macro.
-#define DIO_PIN_CHANGE_INTERRUPT_VECTOR_NA( \
+#define DIO_PIN_CHANGE_INTERRUPT_VECTOR_NA(                 \
     dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
-    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ) \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect )  \
   pcint_vect
 
 // FIXME: maybe we want per-pin mask control macros?
