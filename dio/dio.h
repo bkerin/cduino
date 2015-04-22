@@ -73,44 +73,68 @@
 // them wrong.  However, they are convenient for clients that want to allow
 // compile-time pin choices.  See the sd_card module for an example.
 //
-// Finally, macros are also provided to enable pin change interrupts using
-// the tuple macros.  For example:
+// Macros are also provided to enable pin change interrupts using the
+// tuple macros.  For example:
 //
-// #include <avr/interrupt.h>
-// FIXME: I guess according to our principle of direct inclusion we should be
-// including stdint.h everywhere, ug.  Or else define byte in util.h :)
-// #include <stdint.h>
-// #include "dio.h"
+//   #include <avr/interrupt.h>
+//   FIXME: I guess according to our principle of direct inclusion we should be
+//   including stdint.h everywhere, ug.  Or else define byte in util.h :)
+//   #include <stdint.h>
+//   #include "dio.h"
 //
-// FIXME: make sure this sample code actually works
+//   FIXME: make sure this sample code actually works
 //
-// #define MY_FAVORITE_PIN DIO_PIN_PB0
+//   #define MY_FAVORITE_PIN DIO_PIN_PB0
 //
-// volatile uint8_t some_flag = 0;
+//   volatile uint8_t some_flag = 0;
 //
-// // Note that each pin group "shares" an interrupt (see comment below).
-// // DIO_PIN_CHANGE_VECTOR(PIN) expands to the AVR libc interrupt vector name
-// // associated with the pin, so it can be used wherever that vector would be
-// // used (i.e. together with AVR libc ISR attributes, EMPTY_INTERRUPT(),
-// // etc.).
-// ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (MY_FAVORITE_PIN), ISR_NONBLOCK)
-// {
-//   some_flag = 1;
-// }
+//   // Note that each pin group "shares" an interrupt (see comment below).
+//   // DIO_PIN_CHANGE_VECTOR(PIN) expands to the AVR libc interrupt vector
+//   // name associated with the pin, so it can be used wherever that
+//   // vector would be used (i.e. together with AVR libc ISR attributes,
+//   // EMPTY_INTERRUPT(), etc.).
 //
-// int
-// main (void)
-// {
-//   DIO_INIT (MY_FAVORITE_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
+//   ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (MY_FAVORITE_PIN), ISR_BLOCK)
+//   {
+//     some_flag = 1;
+//   }
 //
-//   // This first ensures that the interrupt flag is clear, but *does not*
-//   // enable interrupts globally.  Note that each group of pins "shares" an
-//   // interrupt, though that interrupt will only be generated if interrupt
-//   // generation is enabled for the particular pin experiencing the change.
-//   DIO_ENABLE_PIN_CHANGE_INTERRUPT (MY_FAVORITE_PIN);
+//   int
+//   main (void)
+//   {
+//     DIO_INIT (MY_FAVORITE_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE);
 //
-//   sei ();   // Enable interrupts
-// }
+//     // This first ensures that the interrupt flag is clear, but *does not*
+//     // enable interrupts globally.  Note that each group of pins "shares" an
+//     // interrupt, though that interrupt will only be generated if interrupt
+//     // generation is enabled for the particular pin experiencing the change.
+//     DIO_ENABLE_PIN_CHANGE_INTERRUPT (MY_FAVORITE_PIN);
+//
+//     sei ();   // Enable interrupts
+//   }
+//
+// If you don't want an actual ISR to run but still want the hardware to
+// notice pin changes, you can do something like this:
+//
+//   DIO_ENABLE_PIN_CHANGE_INTERRUPT_FLAG_ONLY (MY_FAVORITE_PIN);
+//
+//   // Time passes...
+//
+//   if ( DIO_PIN_CHANGE_INTERRUPT_FLAG (MY_FAVORITE_PIN) ) {
+//     do_something ();
+//     DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (MY_FAVORITE_PIN);
+//   }
+//
+//   // Or if you need maximum speed and know where the interrupt must have
+//   // come from:
+//   if ( DIO_SOME_PIN_CHANGE_INTERRUPT_FLAG_SET () ) {
+//     do_something ();
+//     DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (MY_FAVORITE_PIN)
+//   }
+//
+// Interrupts (with or without actual ISRs) can be disabled again using:
+//
+//   // DIO_DISABLE_PIN_CHANGE_INTERRUPT(MY_FAVORITE_PIN);
 //
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -294,7 +318,7 @@
   } while ( 0 )
 
 // Set a pin (which must have been initialized for output) high.  This macro
-// is intended to take one of the DIO_PIN_P* tuples as its argument.
+// is intended to take one of the DIO_PIN_* tuples as its argument.
 #define DIO_SET_HIGH(...) DIO_SET_HIGH_NA (__VA_ARGS__)
 
 // Underlying named-argument macro implementing the DIO_SET_HIGH() macro.
@@ -602,7 +626,7 @@
 // Pin Reading {{{1
 
 // Read a pin (which must have been initialized for input).  This macro is
-// intended to take one of the DIO_PIN_P* tuples as its argument.
+// intended to take one of the DIO_PIN_* tuples as its argument.
 #define DIO_READ(...) DIO_READ_NA(__VA_ARGS__)
 
 // Underlying named-argument macro implementing the DIO_READ() macro.  NOTE:
@@ -611,9 +635,9 @@
 // We probably waste an instruction doing this, but the Arduino libraries
 // define HIGH this way and it's kind of nice to keep everything symbolic,
 // so we do the same.
-#define DIO_READ_NA( \
+#define DIO_READ_NA(                                        \
     dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
-    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ) \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect )  \
   ((pin_reg & _BV (pin_bit)) >> pin_bit)
 
 #define DIO_READ_PB0() DIO_READ (DIO_PIN_PB0)
@@ -654,34 +678,105 @@
 
 // Pin Change Interrupt Control {{{1
 
-// Clear the interrupt flag, enable the interrupt for the pin group containing
-// the pin, and set the mask bit for the pin such that interrupts will be
-// generated when it changes.  Note that this enables interrupts for *all*
-// the pins in the pin group that have their mask bits set.  This macro is
-// intended to take one of the DIO_PIN_P* tuples as its argument.
-#define DIO_ENABLE_PIN_CHANGE_INTERRUPT(...) \
+// Clear the interrupt flag and enable the interrupt for the pin group
+// containing the pin, and set the mask bit for the pin such that interrupts
+// will be generated when it changes.  Note that this enables interrupts for
+// *all* the pins in the pin group that have their mask bits set.  This macro
+// is intended to take one of the DIO_PIN_* tuples as its argument.
+#define DIO_ENABLE_PIN_CHANGE_INTERRUPT(...)       \
   DIO_ENABLE_PIN_CHANGE_INTERRUPT_NA (__VA_ARGS__)
 
 // Underlying named-argument macro implementing the
-// DIO_ENABLE_PIN_CHANGE_INTERRUPT() macro.  Note that pcif_bit is actually
-// *cleared* by writing a logical one to it.
-#define DIO_ENABLE_PIN_CHANGE_INTERRUPT_NA( \
+// DIO_ENABLE_PIN_CHANGE_INTERRUPT() macro.  Note that pcif_bit is
+// actually *cleared* by writing a logical one to it, and it's not
+// necessary to use a read-modify-write cycle (i.e. no "|=" required).
+// See http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_intbits.
+#define DIO_ENABLE_PIN_CHANGE_INTERRUPT_NA(                 \
     dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
-    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect ) \
-  do { \
-    PCIFR |= _BV (pcif_bit); \
-    loop_until_bit_is_clear (PCIFR, pcif_bit); \
-    PCICR |= _BV (pcie_bit); \
-    loop_until_bit_is_set (PCICR, pcie_bit); \
-    pcmsk_reg |= _BV (pcint_bit); \
-    loop_until_bit_is_set (pcmsk_reg, pcint_bit); \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect )  \
+  do {                                                      \
+    PCIFR = _BV (pcif_bit);                                 \
+    loop_until_bit_is_clear (PCIFR, pcif_bit);              \
+    PCICR |= _BV (pcie_bit);                                \
+    loop_until_bit_is_set (PCICR, pcie_bit);                \
+    pcmsk_reg |= _BV (pcint_bit);                           \
+    loop_until_bit_is_set (pcmsk_reg, pcint_bit);           \
+  } while ( 0 )
+
+// This is like DIO_ENABLE_PIN_CHANGE_INTERRUPT(), but the actual ISR will
+// not be called.  The appropriate bit of the appropriate PCMSK register
+// is still set, so one of the three non-reserved bits of PCIFR will be
+// set by hardware when a pin change occurs.  It can be cleared manually
+// using DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG() (which normally happens
+// automatically after the ISR executes, probably even when the ISR_NAKED
+// attribute is used).  This macro is intended to take one of the DIO_PIN_*
+// tuples as its argument.
+#define DIO_ENABLE_PIN_CHANGE_INTERRUPT_FLAG_ONLY(...)       \
+  DIO_ENABLE_PIN_CHANGE_INTERRUPT_FLAG_ONLY_NA (__VA_ARGS__)
+
+// Underlying named-argument macro implementing the
+// DIO_ENABLE_PIN_CHANGE_INTERRUPT_FLAG_ONLY() macro.  Note that pcif_bit
+// is actually *cleared* by writing a logical one to it, and it's not
+// necessary to use a read-modify-write cycle (i.e. no "|=" required).
+// See http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_intbits.
+#define DIO_ENABLE_PIN_CHANGE_INTERRUPT_FLAG_ONLY_NA(       \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect )  \
+  do {                                                      \
+    PCIFR = _BV (pcif_bit);                                 \
+    loop_until_bit_is_clear (PCIFR, pcif_bit);              \
+    pcmsk_reg |= _BV (pcint_bit);                           \
+    loop_until_bit_is_set (pcmsk_reg, pcint_bit);           \
+  } while ( 0 )
+
+// Evalute to TRUE iff the pin change interrupt flag bit of PCIFR for the
+// pin group containing the given pin is set.  This macro is intended to
+// take one of the DIO_PIN_* tuples as its argument.
+#define DIO_PIN_CHANGE_INTERRUPT_FLAG(...)       \
+  DIO_PIN_CHANGE_INTERRUPT_FLAG_NA (__VA_ARGS__)
+
+// NOTE: The bit shifts are only included so that the results will work in
+// case the user actually compares the result to the value of the 'HIGH'
+// macro.  We probably waste an instruction doing this, but the Arduino
+// libraries define HIGH this way and it's kind of nice to keep everything
+// symbolic, so we do the same.
+#define DIO_PIN_CHANGE_INTERRUPT_FLAG_NA(                   \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect )  \
+  ((PCIFR & _BV (pcif_bit)) >> pcif_bit)
+
+// This is the fastest possible way to test if a pin change interrupt has
+// occurred.  Note that simply evaluating the trueness of PCIFR doesn't give
+// any information about which pin group the pin that generated the interrupt
+// comes from (though there may be only one possibility :).  Note also that
+// if you're using actual ISRs they will clear the appropriate bit in this
+// register automagically, so this macro is probably only useful if you're
+// using DIO_ENABLE_PIN_CHANGE_INTERRUPT_FLAG_ONLY() or the like.
+#define DIO_SOME_PIN_CHANGE_INTERRUPT_FLAG_SET() (PCIFR)
+
+// Clear the interrupt flag for the pin group for the given pin.  This macro
+// is intended to take one of the DIO_PIN_* tuples as its argument.
+#define DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG(...)       \
+  DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG_NA (__VA_ARGS__)
+
+// Underlying named-argument macro implementing the
+// DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG() macro.  Note that the pcif_bit
+// is actually *cleared* by writing a logical one to it, and it's not
+// necessary to use a read-modify-write cycle (i.e. no "|=" required).
+// See http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_intbits.
+
+#define DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG_NA(             \
+    dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
+    pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect )  \
+  do {                                                      \
+    PCIFR = _BV (picif_bit);                                \
   } while ( 0 )
 
 // Clear the mask bit the the pin and disable the interrupt for the pin
 // group containing the pin.  Note that this disables the shared interrupt
 // for *all* the pins in the pin group.  Finally, ensure that the interrupt
 // flag for the pin group is clear.  This macro is intended to take one of
-// the DIO_PIN_P* tuples as its argument.
+// the DIO_PIN_* tuples as its argument.
 #define DIO_DISABLE_PIN_CHANGE_INTERRUPT(...) \
   DIO_DISABLE_PIN_CHANGE_INTERRUPT_NA(__VA_ARGS__) \
 
@@ -703,7 +798,7 @@
 // The name of the interrupt vector as AVR libc knows it.  The expansion
 // of this macro is acceptable as an argument to AVR libc's ISR(),
 // EMPTY_INTERRUPT(), or ISR_ALIAS() macros.  This macro is intended to
-// take one of the DIO_PIN_P* tuples as its argument.
+// take one of the DIO_PIN_* tuples as its argument.
 #define DIO_PIN_CHANGE_INTERRUPT_VECTOR(...) \
   DIO_PIN_CHANGE_INTERRUPT_VECTOR_NA(__VA_ARGS__)
 
