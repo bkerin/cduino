@@ -1,3 +1,5 @@
+# vim:foldmethod=marker
+
 include run_screen.mk
 
 # It's convenient to have both a master and a slave connected at the
@@ -12,14 +14,55 @@ ARDUINO_PORT = /dev/ttyACM1
 ARDUINO_BAUD = 115200
 ARDUINO_BOOTLOADER=optiboot_atmega328.hex
 
+# Uncomment for testing with my particular non-arduino slave breadboard build
+ENABLE_NON_ARDUINO_OVERRIDES = defined
+
+##### Orverrides for Non-Arduino Slave {{{1
+
+# Some of the setting in this section are tailored to my specific non-arduino
+# test breadboard setup (e.g. DBL_PIN).
+
+ifdef ENABLE_NON_ARDUINO_OVERRIDES
+
+  #CPU_FREQ_DEFINE = -DF_CPU=16000000
+  CPU_FREQ_DEFINE = -DF_CPU=8000000
+
+  # No clock divider, external 0.4-20MHz MHz ceramic resonator clock, and
+  # most conservative suggested power rise assumptions to be used without
+  # brown-out detection enable.  Note that for ceramic resonators, we use
+  # CKSEL3:1 settings that in one datasheet table are described as being for
+  # low-power crystal oscillators.  But explanatory text elsewhere indicates
+  # that this setting is to be used for resonators as well.
+  LOCK_AND_FUSE_SETTINGS = \
+     CKDIV8=1 CKSEL3=0 CKSEL2=1 CKSEL1=1 CKSEL0=1 SUT1=0 SUT0=0
+
+  UPLOAD_METHOD = AVRISPmkII
+
+  #AVRISPMKII_PORT = usb:000200198321
+
+  # Let the build system know that it doesn't need to look out for us by
+  # insisting on finding a USB connection to something (FTDI or Uno Rev.3
+  # or whatever).
+  NO_USB_ARDUINO_CONNECTION = defined_nonempty
+
+endif
+
+# }}}1
+
+
 AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
 include generic.mk
 
-# Pin to use for debug LED output.  FIXME: this will be the default probably
-# once blinky debug has its own module.  Assuming it seems smart to have
-# it have a default.
-CPPFLAGS += -DDBL_PIN=DIO_PIN_PB5
+# Pin to use for debug LED output.
+ifndef ENABLE_NON_ARDUINO_OVERRIDES
+  # FIXME: this will be the default probably once blinky debug has its
+  # own module.  Assuming it seems smart to have it have a default.
+  CPPFLAGS += -DDBL_PIN=DIO_PIN_PB5
+else
+  CPPFLAGS += -DDBL_PIN=DIO_PIN_PD4
+endif
+
 
 # FIXME: USE OWS_ prefix for test conditions?  dio doesn't do it...
 
