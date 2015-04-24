@@ -9,7 +9,11 @@
 
 # The screen session lets you assign names to sessions, which is useful to
 # us since we need to kill them later before programming with the bootloader.
-SCREEN_SESSION_NAME = cduino_run_screen_mk
+# We embed the directory from which the recipes that evaluates this variable
+# are run to support the use case where multiple Arduinos are connected
+# simultaneously: they're hopefully being edit-compile-debugged from
+# different directories so we'll get a unique screen session name for each.
+SCREEN_SESSION_NAME = cduino_run_screen_from_$(subst /,_,$(shell pwd))
 
 # FIXME: might be nice to do something clever if the Arduino isn't hooked
 # up over USB.
