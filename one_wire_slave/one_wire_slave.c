@@ -662,6 +662,9 @@ volatile uint16_t tr;       // Timer Reading (most recent)
 // given that we ignore parts of pulses during certain operations.
 #define CFR() (tr >= OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS)
 
+// For tracking sample history
+// FIXME: remove all the shist stuff sometime
+/*
 uint8_t shist[250] = {0};   // FIXME: im debug
 uint8_t shp = 0;   // FIXME: im debug
 static void
@@ -671,6 +674,7 @@ psh (void)
     printf ("shist[%hhu]: %hhu\n", ii, shist[ii]);
   }
 }
+*/
 
 static ows_error_t
 wfpcoto (void)
@@ -679,7 +683,7 @@ wfpcoto (void)
     if ( DIO_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN) ) {
       TCNT0 = 0;   // FIXME: devel: measure time to second edge
       ls = SAMPLE_LINE ();
-      shist[shp++] = ls;
+      //shist[shp++] = ls;
       // FIXME: perhaps we should detect resets right here, since clients
       // always have to do it I think.  Fctn name have to change again :)
       DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN);
@@ -691,16 +695,12 @@ wfpcoto (void)
     }
     else if ( UNLIKELY (TCNT1 >= timeout_t1t) ) {
       if ( timeout_t1t != OWS_NO_TIMEOUT ) {
-        printf ("timeout_t1t: %hu", timeout_t1t);
-        PFP_ASSERT_NOT_REACHED ();   // FIXME: debug
         return OWS_ERROR_TIMEOUT;
       }
     }
   }
 }
 
-uint8_t oogly = FALSE;  // FIXME: im debug
-uint8_t rbc = 0;   // FIXME: im debug
 uint8_t t0r;   // timer0 reading // FIXME: for debug
 
 
@@ -710,7 +710,6 @@ read_bit (void)
   while ( TRUE ) {
     ows_error_t err = wfpcoto ();
     if ( UNLIKELY (err == OWS_ERROR_TIMEOUT) ) {
-      PFP_ASSERT_NOT_REACHED ();   // FIXME: im debug
       return OWS_ERROR_TIMEOUT;
     }
     if ( ls ) {
@@ -721,13 +720,15 @@ read_bit (void)
     else {
       t0r = TCNT0;  // FIXME: im debug
       //printf ("t0r: %hhu\n", t0r); PHP ();
-      // FIXME: WORK POINT: well, going from 3 to 4 us here changes the value
-      // of this sample from a 0 (expected given current master rig) to 1, ug
+      // FIXME: WORK POINT: well, going from 3 to 4 us here changes the
+      // value of this sample from a 0 (expected given current master rig)
+      // to 1, ug FIXME: these fixed delays are sub-optimal.  They decrease
+      // resistance to delays from client ISR or low F_CPU.  Could probably
+      // be using OCR1B and polling instead.
       _delay_us (RBST_US);
       cbitv = SAMPLE_LINE ();
-      shist[shp++] = cbitv;
+      //shist[shp++] = cbitv;
       CPCFRT1 ();
-      rbc++;
       return OWS_ERROR_NONE;
     }
   }
@@ -833,9 +834,11 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
   TCNT0 = 0;
   _delay_us (RBST_US);
 
+  /*
   for ( uint8_t ii = 0 ; ii < 20 ; ii++ ) {
     shist[ii] = 42;
   }
+  */
 
   uint8_t state = (jgur ? SPPP : SWFR);
   //uint8_t state = SWFR; jgur = jgur;  // FIXME:  unused debug
@@ -877,14 +880,13 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
         break;
       case SRFC:
         {
-          oogly = TRUE;
           CPE (read_byte ());
           // FIXME: well, we don't seem to read the right value here.
           // There's a extra owm_write_byte() thrown in on the master side
           // to test if this is right and it doesn't.  It seems that perhaps
           // read_byte() doesn't work after write_byte() has been done?
           printf ("cbytev: %hhx\n", cbytev);
-          psh ();
+          //psh ();  FIXME: im debug
           *command_ptr = cbytev;
           return OWS_ERROR_NONE;
           break;

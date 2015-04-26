@@ -201,8 +201,8 @@ main (void)
   // without compensating code (it wouldn't get presence pulses in time).
   // FIXME: so maybe actually set it to the minimum.
   // FIXME: do the min and max timeout values still make sense?
-  //ows_set_timeout (32767);
-  ows_set_timeout (OWS_NO_TIMEOUT);
+  ows_set_timeout (32767);
+  //ows_set_timeout (OWS_NO_TIMEOUT);
 
   // FIXME: debug
   uint32_t lc = 0;   // FIXME: for testing timeout time correctness only
