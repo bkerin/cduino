@@ -85,6 +85,9 @@ term_io_getline (char *linebuf);
       "trace point: file %s, line %d, function %s()\n", \
       __FILE__, __LINE__, __func__ )
 
+// FIXME: turns out a print-and-halt routine would be useful or at least
+// comforting
+
 // Print Halt Point message and call exit(1).  Note that exit will disable
 // all interrupts before entering an infinite loop.
 #define TERM_IO_PHP()                                    \
