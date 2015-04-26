@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <avr/eeprom.h>
+#include <avr/power.h>   // FIXME: only needed for devel with timer0
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -134,7 +135,7 @@ ows_init (uint8_t use_eeprom_id)
   assert (TCCR1A == TCCR1A_DEFAULT_VALUE);
 
   RELEASE_LINE ();   // Serves to initialize pin along the way
-  DIO_ENABLE_PIN_CHANGE_INTERRUPT (OWS_PIN);
+  DIO_ENABLE_PIN_CHANGE_INTERRUPT_FLAG_ONLY (OWS_PIN);
 
   sei ();
 }
@@ -312,6 +313,8 @@ uint8_t cbi;     // Current Bit Index (bit offset in cbyte)
 // to happen on the 1-wire bus.
 ISR (TIMER1_COMPA_vect)
 {
+  PFP_ASSERT_NOT_REACHED ();   // ISRs are out
+
   // We only want to queue a timeout event if we aren't already in the proc
 
   // This ISR is disarmed and the corresponding interrupt flag cleared in
@@ -348,6 +351,8 @@ uint16_t timeout_t1t = OWS_NO_TIMEOUT;
 // event hasn't already occurred we record a pulse event.
 ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
 {
+  PFP_ASSERT_NOT_REACHED ();   // ISRs are out
+
   if ( LINE_IS_HIGH () ) {
 
     // If we've already got an unhandled timeout event, we don't want to
@@ -413,7 +418,7 @@ ISR (DIO_PIN_CHANGE_INTERRUPT_VECTOR (OWS_PIN))
       event = EVR;
     }
 
-    // FIXME: WORK POINT: well, if this next line is in, we get wrong answers
+    // FIXME: : well, if this next line is in, we get wrong answers
     // at 16MHz even.  At 8 MHz, even if it isn't, we see all f's on the
     // master, indicating that we're never fast enough to send a zero.
     // I think the thing to do is rig the test slave up for feedback via
@@ -481,10 +486,6 @@ ows_set_timeout (uint16_t time_us)
   timeout_t1t = time_us * OWS_TIMER_TICKS_PER_US;
 }
 
-// Transaction State Waiting For (Reset Pulse|ROM Command|Function Command).
-#define TSWFRP  0
-#define TSWFRC  1
-#define TSWFFC  2
 
 // Wait for the next event (low-high transition on the line or timeout).
 // Note that event must be cleared by setting it to EVNY before this is used.
@@ -522,11 +523,6 @@ ows_set_timeout (uint16_t time_us)
     DRIVE_LINE_LOW ();                          \
     _delay_us (ST_PRESENCE_PULSE_LENGTH);       \
     RELEASE_LINE ();                            \
-    WAIT_FOR_EVENT ();                          \
-    if ( event != EVPP ) {                      \
-      goto unexpected_event;                    \
-    }                                           \
-    event = EVNY;                               \
   } while ( 0 )
 
 // Read a single bit into cbit.
@@ -622,6 +618,201 @@ ows_set_timeout (uint16_t time_us)
   } while ( 0 )
   */
 
+
+
+// Transaction State Waiting For (Reset Pulse|ROM Command|Function Command).
+#define TSWFRP  0
+#define TSWFRC  1
+#define TSWFFC  2
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Latest Version that doesn't use actual ISRs
+//
+
+volatile uint8_t  ls;       // Line State as of last reading, 1 or 0
+volatile uint8_t  cbitv;    // Current Bit Value
+volatile uint8_t  cbytev;   // Current Byte Value
+volatile uint16_t tr;       // Timer Reading (most recent)
+
+// Read Bit Sample Time.  Time from negative edge to slave sample point
+// when reading a bit, in microseconds.  We do like the master and give
+// OWC_TICK_DELAY_E from the time when the master is supposed to have the
+// line set.
+#define RBST_US (OWC_TICK_DELAY_A + OWC_TICK_DELAY_E)
+
+// Zero Pulse Time.  Here we do what Figure 1 of
+// Maxim_Application_Note_AN126.pdf proscribes, even though it seems stupid.
+// We might as well do it, since we can't change the fact that the master
+// holds the line low almost to the end of the time slot when writing a
+// zero anyway, giving us the same tight timing issue when transitioning
+// between a master-write-0 and a master-read-0 that we get here between
+// master-read-0 operations.
+#define ZPT_US \
+  (OWC_TICK_DELAY_A + OWC_TICK_DELAY_E + OWC_TICK_DELAY_F - OWC_TICK_DELAY_D)
+
+// Clear Pin Change Flag and Reset Timer1
+#define CPCFRT1()                                                             \
+  do {                                                                       \
+    DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN);                           \
+    TIMER1_STOPWATCH_FAST_RESET ();   /* do we want fast reset or normal? */ \
+  } while ( 0 )
+
+// FIXME: update for whatever value we settle on for timeout requirements,
+// given that we ignore parts of pulses during certain operations.
+#define CFR() (tr >= OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS)
+
+uint8_t shist[250] = {0};   // FIXME: im debug
+uint8_t shp = 0;   // FIXME: im debug
+static void
+psh (void)
+{
+  for ( uint8_t ii = 0 ; ii < shp ; ii++ ) {
+    printf ("shist[%hhu]: %hhu\n", ii, shist[ii]);
+  }
+}
+
+static ows_error_t
+wfpcoto (void)
+{
+  while ( TRUE ) {
+    if ( DIO_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN) ) {
+      TCNT0 = 0;   // FIXME: devel: measure time to second edge
+      ls = SAMPLE_LINE ();
+      shist[shp++] = ls;
+      // FIXME: perhaps we should detect resets right here, since clients
+      // always have to do it I think.  Fctn name have to change again :)
+      DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN);
+      tr = TIMER1_STOPWATCH_TICKS ();
+      // FIXME: do we want fast reset or normal?  if fast we can't honor TOV1,
+      // FIXME: currently we don't honor TOV1 anyway.
+      TIMER1_STOPWATCH_FAST_RESET ();   // do we want fast reset or normal?
+      return OWS_ERROR_NONE;
+    }
+    else if ( UNLIKELY (TCNT1 >= timeout_t1t) ) {
+      if ( timeout_t1t != OWS_NO_TIMEOUT ) {
+        printf ("timeout_t1t: %hu", timeout_t1t);
+        PFP_ASSERT_NOT_REACHED ();   // FIXME: debug
+        return OWS_ERROR_TIMEOUT;
+      }
+    }
+  }
+}
+
+uint8_t oogly = FALSE;  // FIXME: im debug
+uint8_t rbc = 0;   // FIXME: im debug
+uint8_t t0r;   // timer0 reading // FIXME: for debug
+
+
+static ows_error_t
+read_bit (void)
+{
+  while ( TRUE ) {
+    ows_error_t err = wfpcoto ();
+    if ( UNLIKELY (err == OWS_ERROR_TIMEOUT) ) {
+      PFP_ASSERT_NOT_REACHED ();   // FIXME: im debug
+      return OWS_ERROR_TIMEOUT;
+    }
+    if ( ls ) {
+      if ( UNLIKELY (CFR ()) ) {
+        return OWS_ERROR_GOT_RESET;
+      }
+    }
+    else {
+      t0r = TCNT0;  // FIXME: im debug
+      //printf ("t0r: %hhu\n", t0r); PHP ();
+      // FIXME: WORK POINT: well, going from 3 to 4 us here changes the value
+      // of this sample from a 0 (expected given current master rig) to 1, ug
+      _delay_us (RBST_US);
+      cbitv = SAMPLE_LINE ();
+      shist[shp++] = cbitv;
+      CPCFRT1 ();
+      rbc++;
+      return OWS_ERROR_NONE;
+    }
+  }
+}
+
+static ows_error_t
+write_bit (void)
+{
+  while ( TRUE ) {
+    ows_error_t err = wfpcoto ();
+    if ( UNLIKELY (err == OWS_ERROR_TIMEOUT) ) {
+      return OWS_ERROR_TIMEOUT;
+    }
+    if ( ls ) {
+      if ( UNLIKELY (CFR ()) ) {
+        return OWS_ERROR_GOT_RESET;
+      }
+    }
+    else {
+      if ( ! cbitv ) {
+        DRIVE_LINE_LOW ();
+        _delay_us (ZPT_US);
+        RELEASE_LINE ();
+        CPCFRT1 ();
+      }
+      return OWS_ERROR_NONE;
+    }
+  }
+}
+
+static ows_error_t
+read_byte (void)
+{
+  cbytev = 0;
+  for ( uint8_t ii = 0 ; ii < BITS_PER_BYTE ; ii++ ) {
+    ows_error_t err = read_bit ();
+    if ( err ) {
+      return err;
+    }
+    cbytev |= (cbitv << ii);
+  }
+
+  return OWS_ERROR_NONE;
+}
+
+static ows_error_t
+write_byte (void)
+{
+  for ( uint8_t ii = 0 ; ii < BITS_PER_BYTE ; ii++ ) {
+    cbitv = cbytev & (B00000001 << ii);
+    ows_error_t err = write_bit ();
+    if ( err ) {
+      return err;
+    }
+  }
+
+  return OWS_ERROR_NONE;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void
+setup_timer0 (void)
+{
+  // FIXME: im a debugging function
+
+  power_timer0_enable ();   // Ensure timer0 not shut down to save power
+  TCCR0A = 0;
+  TCCR0B = 0;
+
+  // Clock / 8 for prescaler setting, giving two ticks per us at 16 MHz.
+  TCCR0B &= ~(_BV (CS02) | _BV (CS00));
+  TCCR0B |= _BV (CS01);
+}
+
+// Call call, Propagating Errors.  The call argument must be a call to a
+// function returning ows_error_t.
+#define CPE(call)                      \
+  do {                                 \
+    ows_error_t XxX_err = call;        \
+    if ( XxX_err != OWS_ERROR_NONE ) { \
+      return XxX_err;                  \
+    }                                  \
+  } while ( 0 )
+
 // FIXME: I think should add a compile-time option OWS_FILTER_LENGH or
 // something that would treat sufficiently short pulses (less than, say,
 // 1 us) as noise instead of registering them.  Or maybe just an option.
@@ -633,84 +824,73 @@ ows_set_timeout (uint16_t time_us)
 // safe and filter them.
 
 ows_error_t
-ows_wait_for_function_transaction_2 (uint8_t *command_ptr)
+ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
 {
   *command_ptr = 42;   // FIXME: for devel compiler silencing
 
-  // We start out with a clean slate event-wise.  Clearing this here means
-  // we might miss a reset pulse that occurs before this call, but it avoids
-  // possible problems with left-over events that might have occurred after
-  // a timeout in a previous call to this function.
-  event = EVNY;
+  // FIXME: devel block.  Verifies that timer0 measure time well
+  setup_timer0 ();
+  TCNT0 = 0;
+  _delay_us (RBST_US);
 
-  for ( ; ; ) {
-    for ( ; ; ) {
-      switch ( state ) {
-        // FIXME: these cases could be re-ordered to put the ones that needed
-        // faster response following the event first.  Less readable but better
-        // on timing.
-        case SWFR:
-          WAIT_FOR_EVENT ();
-          switch ( event ) {
-            // We might end up with less time in the case of a timeout, since
-            // client code is going to run, so we handle that event first.
-            case ETO:
-              event = EVNY;
-              return OWS_ERROR_TIMEOUT;
-            case EVR:
-              event = EVNY;
+  for ( uint8_t ii = 0 ; ii < 20 ; ii++ ) {
+    shist[ii] = 42;
+  }
+
+  uint8_t state = (jgur ? SPPP : SWFR);
+  //uint8_t state = SWFR; jgur = jgur;  // FIXME:  unused debug
+
+  CPCFRT1 ();
+
+  while ( TRUE ) {
+    switch ( state ) {
+      case SWFR:
+        {
+          CPE (wfpcoto ());
+          if ( ls ) {
+            if ( CFR () ) {
               state = SPPP;
-              break;
-            default:
-              // Note that at at this point we choose to ignore any other
-              // types of events and just keep on waiting for a reset.
-              // Weird-length events that occur from this state aren't our
-              // business, since the master isn't talking to us.
-              break;
+            }
           }
           break;
-        case SPPP:
-          PRESENCE_PULSE_SEQUENCE ();
-          state = SRRC;
-          break;
-        case SRRC:
-          READ_BYTE ();
+        }
+      case SPPP:
+        PRESENCE_PULSE_SEQUENCE ();
+        CPCFRT1 ();
+        state = SRRC;
+        break;
+      case SRRC:
+        {
+          CPE (read_byte ());
+          // FIXME: here we should actually go to the correct state for the
+          // given rom command.
           state = SWID;
           break;
-        case SWID:
-          for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
-            cbyte = rom_id[ii];
-            WRITE_BYTE ();
-            peh (70);
-            printf ("cbyte: %#hhx\n", cbyte);  PHP ();
-          }
-          state = SRFC;
+        }
+      case SWID:
+        // FIXME: use global for ii
+        for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
+          cbytev = rom_id[ii];
+          CPE (write_byte ());
+        }
+        state = SRFC;
+        break;
+      case SRFC:
+        {
+          oogly = TRUE;
+          CPE (read_byte ());
+          // FIXME: well, we don't seem to read the right value here.
+          // There's a extra owm_write_byte() thrown in on the master side
+          // to test if this is right and it doesn't.  It seems that perhaps
+          // read_byte() doesn't work after write_byte() has been done?
+          printf ("cbytev: %hhx\n", cbytev);
+          psh ();
+          *command_ptr = cbytev;
+          return OWS_ERROR_NONE;
           break;
-        case SRFC:
-          PFP ("woo ha!\n");
-          PFP_ASSERT_NOT_REACHED ();   // FIXME im debug
-        default:
-          PFP_ASSERT_NOT_REACHED ();   // FIXME im debug
-      }
-    }
-
-    unexpected_event:
-
-    switch ( event ) {
-      case EVR:
-        event = EVNY;
-        state = SPPP;
-        break;
-      case ETO:
-        event = EVNY;
-        return OWS_ERROR_TIMEOUT;
-        break;
+        }
       default:
-        // FIXME unexpected events that aren't resets end up here.  At the
-        // moment we ignore them.  What should we do with them?
-        peh(25); PFP_ASSERT_NOT_REACHED ();
-        event = EVNY;
-        break;
+        PFP_ASSERT_NOT_REACHED ();   // FIXME im debug
     }
   }
 }
@@ -797,7 +977,6 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
               }
               break;
             default:
-              //DBL_TRAP ();   // FIXME: debug
               assert (FALSE);  // Shouldn't be here
               break;
           }
@@ -830,16 +1009,6 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
   }
 
 }
-
-// Call call, Propagating Errors.  The call argument must be a call to a
-// function returning ows_error_t.
-#define CPE(call)                      \
-  do {                                 \
-    ows_error_t XxX_err = call;        \
-    if ( XxX_err != OWS_ERROR_NONE ) { \
-      return XxX_err;                  \
-    }                                  \
-  } while ( 0 )
 
 // Handle a (presumably just received) reset pulse, by delaying a short time,
 // then sending a presence pulse, swallowing the pulse end that results

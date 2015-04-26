@@ -116,7 +116,7 @@ timer1_stopwatch_init (void);
 #define TIMER1_STOPWATCH_FAST_RESET() \
   do {                                \
     TCNT1 = 0;                        \
-  }
+  } while ( 0 )
 
 // Number of ticks since timer/counter1 was last reset or overflowed.  NOTE:
 // if this macro (or TCNT1 via any other mechanism) will ever be written *or

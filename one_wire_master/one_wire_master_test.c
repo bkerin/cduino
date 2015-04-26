@@ -104,6 +104,8 @@ ds18b20_init_and_rom_command (void)
   }
   PFP_ASSERT (((uint8_t *) (&slave_rid))[0] == DS18B20_FAMILY_CODE);
 
+  owm_write_byte (0x42);   // FIXME im debug
+
   return slave_rid;
 }
 

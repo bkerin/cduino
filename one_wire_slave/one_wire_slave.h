@@ -91,6 +91,7 @@
 typedef enum {
   OWS_ERROR_NONE = 0,
   OWS_ERROR_TIMEOUT,
+  OWS_ERROR_GOT_RESET,
   OWS_ERROR_UNEXPECTED_PULSE_LENGTH,
   OWS_ERROR_DID_NOT_GET_ROM_COMMAND,
   OWS_ERROR_RESET_DETECTED_AND_HANDLED,
@@ -204,7 +205,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr);
 
 // This is the flattened version that's under development.
 ows_error_t
-ows_wait_for_function_transaction_2 (uint8_t *command_ptr);
+ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur);
 
 // Wait for a reset pulse, and respond with a presence pulse, then try
 // to read a single byte from the master and return it.  An error is

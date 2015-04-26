@@ -37,18 +37,23 @@
 // there should be no reason to use it directly.
 #define TIMER0_STOPWATCH_COUNTER_VALUES 256
 
-// This interface ensures that the prescaler divider is set as per this macro.
-// It should be possible to use a different prescaler setting, but many of
-// the macros in this header which specify overflow and overhead performance
-// will be incorrect.
+// This interface ensures that the prescaler divider is set as per this
+// macro.  It should be possible to use a different prescaler setting, but
+// many of the macros in this header which specify overflow and overhead
+// performance will be incorrect.  FIXME: the latency "guarantees" might
+// be too compiler dependent anyway, and should be relaxed in favor of a
+// compile-time-settable prescaler.
 #define TIMER0_STOPWATCH_PRESCALER_DIVIDER 64
 
 // The number of microseconds per tick of the timer/counter0.
 #define TIMER0_STOPWATCH_MICROSECONDS_PER_TIMER_TICK \
   CLOCK_CYCLES_TO_MICROSECONDS (TIMER0_STOPWATCH_PRESCALER_DIVIDER)
 
-// WARNING: this function manipulates the prescaler and thereby affects
-// timer1 (which uses the same prescaler).
+// WARNING: this function manipulates the prescaler and thereby affects timer1
+// (which uses the same prescaler).  FIXME: actually, all this function
+// does that involves the prescaler is to set the prescaler tap to be used
+// by this timer, which probably doesn't actually affect timer1 at all.
+// But I haven't verified this for certain.
 //
 // Do everything required to prepare the timer for use as an interrupt-driven
 // stopwatch, in this order:

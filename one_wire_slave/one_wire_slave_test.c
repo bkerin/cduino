@@ -55,6 +55,10 @@ print_ows_error (ows_error_t result)
     case OWS_ERROR_TIMEOUT:
       PFP ("OWS_ERROR_TIMEOUT");
       break;
+    case OWS_ERROR_GOT_RESET:
+      // FIXME: ERROR_GOT_UNEXPECTED_RESET would be better
+      PFP ("OWS_ERROR_GOT_RESET");
+      break;
     case OWS_ERROR_UNEXPECTED_PULSE_LENGTH:
       PFP ("OWS_ERROR_UNEXPECTED_PULSE_LENGTH");
       break;
@@ -69,6 +73,9 @@ print_ows_error (ows_error_t result)
       break;
     case OWS_ERROR_NOT_ALARMED:
       PFP ("OWS_ERROR_NOT_ALARMED");
+      break;
+    default:
+      assert (FALSE);   // Shouldn't be here
       break;
   }
 }
@@ -193,18 +200,23 @@ main (void)
   // calls, the delay might get to be to much for the master to tolerate
   // without compensating code (it wouldn't get presence pulses in time).
   // FIXME: so maybe actually set it to the minimum.
-  ows_set_timeout (32767);
+  // FIXME: do the min and max timeout values still make sense?
+  //ows_set_timeout (32767);
+  ows_set_timeout (OWS_NO_TIMEOUT);
 
   // FIXME: debug
-  //uint32_t lc = 0;   // FIXME: for testing timeout time correctness only
+  uint32_t lc = 0;   // FIXME: for testing timeout time correctness only
+
+  uint8_t jgur = FALSE;
 
   for ( ; ; ) {
 
-    result = ows_wait_for_function_transaction_2 (&fcmd);
+    result = ows_wait_for_function_transaction_2 (&fcmd, jgur);
 
     if ( result != OWS_ERROR_NONE                       &&
          result != OWS_ERROR_RESET_DETECTED_AND_HANDLED &&
-         result != OWS_ERROR_TIMEOUT ) {
+         result != OWS_ERROR_TIMEOUT &&
+         result != OWS_ERROR_GOT_RESET ) {
       // For diagnostic purposes we do this.  Normally printing something
       // out at this point might take too much time that could otherwise be
       // spent eating the error and waiting for the line to sort itself out :)
@@ -212,7 +224,23 @@ main (void)
       PFP ("Unexpected ows_wait_for_function_transaction_2() result: ");
       print_ows_error (result);
       PFP ("\n");
+      continue;
     }
+
+    if ( result == OWS_ERROR_GOT_RESET ) {
+      // FIXME: because of the text that the slave outputs between things,
+      // this path isn't really tested.
+      jgur = TRUE;
+      continue;
+    }
+
+    jgur = FALSE;
+
+    if ( result != OWS_ERROR_NONE ) {
+      continue;
+    }
+
+    printf ("got function command %hhx\n", fcmd);
 
     switch ( fcmd ) {
 
@@ -242,8 +270,8 @@ main (void)
 
     }
 
-    //lc++;  // FIXME: debug
-    //if ( lc == 1000 ) { printf ("got 1000 timeouts\n"); }  // FIXME: debug
+    lc++;  // FIXME: debug
+    if ( lc == 1000 ) { printf ("got 1000 timeouts\n"); }  // FIXME: debug
 
   }
 

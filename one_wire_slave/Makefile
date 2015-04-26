@@ -15,7 +15,7 @@ ARDUINO_BAUD = 115200
 ARDUINO_BOOTLOADER=optiboot_atmega328.hex
 
 # Uncomment for testing with my particular non-arduino slave breadboard build
-ENABLE_NON_ARDUINO_OVERRIDES = defined
+#ENABLE_NON_ARDUINO_OVERRIDES = defined
 
 ##### Orverrides for Non-Arduino Slave {{{1
 
@@ -48,7 +48,6 @@ ifdef ENABLE_NON_ARDUINO_OVERRIDES
 endif
 
 # }}}1
-
 
 AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
