@@ -19,8 +19,6 @@
 # two different dirs...
 SCREEN_SESSION_NAME = cduino_run_screen_from_$(subst /,_,$(shell pwd))
 
-# FIXME: might be nice to do something clever if the Arduino isn't hooked
-# up over USB.
 .PHONY: run_screen
 run_screen: have_screen not_no_usb_arduino_connection
 	@echo
