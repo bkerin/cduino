@@ -769,7 +769,7 @@
     dir_reg, dir_bit, port_reg, port_bit, pin_reg, pin_bit, \
     pcie_bit, pcif_bit, pcmsk_reg, pcint_bit, pcint_vect )  \
   do {                                                      \
-    PCIFR = _BV (picif_bit);                                \
+    PCIFR = _BV (pcif_bit);                                \
   } while ( 0 )
 
 // Clear the mask bit the the pin and disable the interrupt for the pin
