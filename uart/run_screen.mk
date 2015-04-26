@@ -13,6 +13,10 @@
 # are run to support the use case where multiple Arduinos are connected
 # simultaneously: they're hopefully being edit-compile-debugged from
 # different directories so we'll get a unique screen session name for each.
+#
+# FIXME: perhaps there should be an option to choose between this and the
+# old fixed way, since this would break delta testing of one arduino from
+# two different dirs...
 SCREEN_SESSION_NAME = cduino_run_screen_from_$(subst /,_,$(shell pwd))
 
 # FIXME: might be nice to do something clever if the Arduino isn't hooked
