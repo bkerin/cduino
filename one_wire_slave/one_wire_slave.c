@@ -734,21 +734,29 @@ read_bit (void)
   }
 }
 
+// Call call, Propagating Errors.  The call argument must be a call to a
+// function returning ows_error_t.
+#define CPE(call)                                 \
+  do {                                            \
+    ows_error_t XxX_err = call;                   \
+    if ( UNLIKELY (XxX_err != OWS_ERROR_NONE) ) { \
+      return XxX_err;                             \
+    }                                             \
+  } while ( 0 )
+
+
 static ows_error_t
 write_bit (void)
 {
   while ( TRUE ) {
-    ows_error_t err = wfpcoto ();
-    if ( UNLIKELY (err == OWS_ERROR_TIMEOUT) ) {
-      return OWS_ERROR_TIMEOUT;
-    }
-    if ( ls ) {
+    CPE (wfpcoto ());
+    if ( UNLIKELY (ls) ) {
       if ( UNLIKELY (CFR ()) ) {
         return OWS_ERROR_GOT_RESET;
       }
     }
     else {
-      if ( ! cbitv ) {
+      if ( LIKELY (! cbitv) ) {
         DRIVE_LINE_LOW ();
         _delay_us (ZPT_US);
         RELEASE_LINE ();
@@ -764,10 +772,7 @@ read_byte (void)
 {
   cbytev = 0;
   for ( uint8_t ii = 0 ; ii < BITS_PER_BYTE ; ii++ ) {
-    ows_error_t err = read_bit ();
-    if ( err ) {
-      return err;
-    }
+    CPE (read_bit ());
     cbytev |= (cbitv << ii);
   }
 
@@ -779,10 +784,7 @@ write_byte (void)
 {
   for ( uint8_t ii = 0 ; ii < BITS_PER_BYTE ; ii++ ) {
     cbitv = cbytev & (B00000001 << ii);
-    ows_error_t err = write_bit ();
-    if ( err ) {
-      return err;
-    }
+    CPE (write_bit ());
   }
 
   return OWS_ERROR_NONE;
@@ -803,16 +805,6 @@ setup_timer0 (void)
   TCCR0B &= ~(_BV (CS02) | _BV (CS00));
   TCCR0B |= _BV (CS01);
 }
-
-// Call call, Propagating Errors.  The call argument must be a call to a
-// function returning ows_error_t.
-#define CPE(call)                      \
-  do {                                 \
-    ows_error_t XxX_err = call;        \
-    if ( XxX_err != OWS_ERROR_NONE ) { \
-      return XxX_err;                  \
-    }                                  \
-  } while ( 0 )
 
 // FIXME: I think should add a compile-time option OWS_FILTER_LENGH or
 // something that would treat sufficiently short pulses (less than, say,
