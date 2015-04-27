@@ -27,6 +27,13 @@ ifdef ENABLE_NON_ARDUINO_OVERRIDES
   #CPU_FREQ_DEFINE = -DF_CPU=16000000
   CPU_FREQ_DEFINE = -DF_CPU=8000000
 
+  # This must be uncommented by clients that want to use this module at
+  # F_CPU settings below 16MHz, in order to guarantee that they understand
+  # that some variables are locked in particular registers.
+  # FIXME: comment this next line back out for public release so the
+  # acknowledgement ends up required.
+  CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
+
   # No clock divider, external 0.4-20MHz MHz ceramic resonator clock, and
   # most conservative suggested power rise assumptions to be used without
   # brown-out detection enable.  Note that for ceramic resonators, we use

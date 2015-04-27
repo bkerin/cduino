@@ -630,10 +630,23 @@ ows_set_timeout (uint16_t time_us)
 // Latest Version that doesn't use actual ISRs
 //
 
+// To get things to work at 8MHz I had to lock these variables into registers
+// (see http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_regbind).
+// It works without this trick at 16MHz, so I don't do it there, because
+// it's assemblyish and weird, but it would probably make for (perhaps just
+// slightly) better interrupt resistance at 16 MHz also.
+#if F_CPU >= 16000000
+uint8_t ls;       // Line State as of last reading, 1 or 0
+uint8_t cbitv;    // Current Bit Value
+uint8_t cbytev;   // Current Byte Value
+uint8_t cbiti;    // Curren Bit Index (of cbytev)
+#else
 register uint8_t ls     asm("r2");   // Line State as of last reading, 1 or 0
 register uint8_t cbitv  asm("r3");   // Current Bit Value
 register uint8_t cbytev asm("r4");   // Current Byte Value
 register uint8_t cbiti  asm("r5");   // Curren Bit Index (of cbytev)
+#endif
+
 
 uint16_t tr;       // Timer Reading (most recent)
 
@@ -869,11 +882,16 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
           CPE (read_byte ());
           // FIXME: here we should actually go to the correct state for the
           // given rom command.
-          state = SWID;
+          switch ( cbytev ) {
+            case OWC_READ_ROM_COMMAND:
+              state = SWID;
+              break;
+            default:
+              PHP ();   // FIXME: im debug do something different eventually
+          }
           break;
         }
       case SWID:
-        // FIXME: use global for ii
         for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
           cbytev = rom_id[ii];
           CPE (write_byte ());
@@ -883,12 +901,6 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
       case SRFC:
         {
           CPE (read_byte ());
-          // FIXME: well, we don't seem to read the right value here.
-          // There's a extra owm_write_byte() thrown in on the master side
-          // to test if this is right and it doesn't.  It seems that perhaps
-          // read_byte() doesn't work after write_byte() has been done?
-          printf ("cbytev: %hhx\n", cbytev);
-          //psh ();  FIXME: im debug
           *command_ptr = cbytev;
           return OWS_ERROR_NONE;
           break;

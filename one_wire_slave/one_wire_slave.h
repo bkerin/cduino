@@ -16,6 +16,18 @@
 #include "one_wire_common.h"
 #include "timer1_stopwatch.h"
 
+// To make slaves work at 8MHz, I had to explicitly lock some variables
+// into registers r2, r3, r4, and r5.  For 16MHz things work without this,
+// so I don't do it (because its assembly-ish, though admittedly it might
+// give better resistance to compiler changes or client ISR use).  This trap
+// is designed to ensure that clients realize that this is happening in the
+// implementation, since they can't use these registers for other purposes.
+#if F_CPU < 16000000
+#  ifndef OWS_REGISTER_USE_ACKNOWLEDGED
+#    error Because F_CPU < 16000000, OWS_REGISTER_LOCKING_ACKNOWLEDGED required
+#  endif
+#endif
+
 // I haven't tried this module at frequencies lower than this.  Since there
 // are many code sections where we depend on the processor going fast enough
 // to get things done quicker that the (fairly speedy) one-wire protocol
