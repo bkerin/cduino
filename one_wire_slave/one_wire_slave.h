@@ -57,11 +57,6 @@
 #define OWS_TIMER_TICKS_PER_US \
   (CLOCK_CYCLES_PER_MICROSECOND () / TIMER1_STOPWATCH_PRESCALER_DIVIDER)
 
-// Convert timer1 ticks value t1t to us.  This is only required for specifying
-// OWS_MIN_TIMEOUT_US, see the comments near that macro.
-#define OWS_TIMER1_TICKS_TO_US(t1t) \
-  ((((int) t1t) * TIMER1_STOPWATCH_PRESCALER_DIVIDER) / (F_CPU / US_PER_S))
-
 #ifndef OWS_PIN
 #  error OWS_PIN not defined (it must be explicitly set to one of \
          the DIO_PIN_* tuple macros before this header is included)
