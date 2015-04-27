@@ -246,11 +246,12 @@ ows_init (uint8_t use_eeprom_id)
 #define LINE_IS_HIGH() (  SAMPLE_LINE ())
 #define LINE_IS_LOW()  (! SAMPLE_LINE ())
 
-#define SWFR 0   // State Waiting For Reset
-#define SPPP 1   // State Pre-Presense Pulse
-#define SRRC 2   // State Reading ROM Command
-#define SWID 3   // State Writing ID
-#define SRFC 4   // State Reading Function Command
+#define SWFR  0   // State Waiting For Reset
+#define SPPP  1   // State Pre-Presense Pulse
+#define SRRC  2   // State Reading ROM Command
+#define SDSRC 3   // State Doing Search ROM Command
+#define SDRRC 4   // State Doing Read ROM Command
+#define SRFC  5   // State Reading Function Command
 volatile uint8_t state;
 
 #define ENY   0   // Event Nothing Yet
@@ -883,15 +884,20 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
           // FIXME: here we should actually go to the correct state for the
           // given rom command.
           switch ( cbytev ) {
+            case OWC_SEARCH_ROM_COMMAND:
+              state = SDSRC;
+              break;
             case OWC_READ_ROM_COMMAND:
-              state = SWID;
+              state = SDRRC;
               break;
             default:
               PHP ();   // FIXME: im debug do something different eventually
           }
           break;
         }
-      case SWID:
+      case SDSRC:
+        break;
+      case SDRRC:
         for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
           cbytev = rom_id[ii];
           CPE (write_byte ());
