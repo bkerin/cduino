@@ -840,6 +840,11 @@ setup_timer0 (void)
 // never produce 1 us pulses anyway, I don't see why we shouldn't play it
 // safe and filter them.
 
+// Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
+#define ROM_ID_BIT(bn) \
+  (((rom_id[bn / BITS_PER_BYTE]) >> (bn % BITS_PER_BYTE)) & B00000001)
+
+
 ows_error_t
 ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
 {
@@ -891,12 +896,35 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
               state = SDRRC;
               break;
             default:
-              PHP ();   // FIXME: im debug do something different eventually
+              return OWS_ERROR_GOT_INVALID_ROM_COMMAND;
           }
           break;
         }
       case SDSRC:
-        break;
+        {
+          // FIXME: WORK POINT: test this
+          // ROM ID Size, in bits
+          uint8_t const rids_bits = OWC_ID_SIZE_BYTES * BITS_PER_BYTE;
+          for ( uint8_t ii = 0 ; ii < rids_bits ; ii++ ) {
+            uint8_t cridbv = ROM_ID_BIT (ii);   // Current ROM ID Bit Value
+            cbitv = cridbv;
+            write_bit ();
+            cbitv = ! cbitv;
+            write_bit ();
+            read_bit ();
+            if ( UNLIKELY (cbitv != cridbv) ) {
+              // The master isn't talking to us, so don't need to listen
+              // to the rest of the bits and can go back to waiting for the
+              // reset pulse the indicated the start of a new transaction.
+              break;
+            }
+          }
+          // We actually matched the search, but we're still done (the master
+          // was just gathering information).  So we go back to wating for
+          // a reset pulse.
+          state = SWFR;
+          break;
+        }
       case SDRRC:
         for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
           cbytev = rom_id[ii];
@@ -949,7 +977,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr)
         // we return an error in this case.
         if ( ! OWC_IS_ROM_COMMAND (*command_ptr) ) {
           SMT ();
-          return OWS_ERROR_DID_NOT_GET_ROM_COMMAND;
+          return OWS_ERROR_GOT_INVALID_ROM_COMMAND;
         }
         if ( OWC_IS_TRANSACTION_INITIATING_ROM_COMMAND (*command_ptr) ) {
           switch ( *command_ptr ) {
@@ -1294,10 +1322,6 @@ ows_write_id (void)
 
   return OWS_ERROR_NONE;
 }
-
-// Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
-#define ROM_ID_BIT(bn) \
-  (((rom_id[bn / BITS_PER_BYTE]) >> (bn % BITS_PER_BYTE)) & B00000001)
 
 ows_error_t
 ows_answer_search (void)
