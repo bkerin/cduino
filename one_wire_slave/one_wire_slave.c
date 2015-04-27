@@ -630,10 +630,12 @@ ows_set_timeout (uint16_t time_us)
 // Latest Version that doesn't use actual ISRs
 //
 
-volatile uint8_t  ls;       // Line State as of last reading, 1 or 0
-volatile uint8_t  cbitv;    // Current Bit Value
-volatile uint8_t  cbytev;   // Current Byte Value
-volatile uint16_t tr;       // Timer Reading (most recent)
+register uint8_t ls     asm("r2");   // Line State as of last reading, 1 or 0
+register uint8_t cbitv  asm("r3");   // Current Bit Value
+register uint8_t cbytev asm("r4");   // Current Byte Value
+register uint8_t cbiti  asm("r5");   // Curren Bit Index (of cbytev)
+
+uint16_t tr;       // Timer Reading (most recent)
 
 // Read Bit Sample Time.  Time from negative edge to slave sample point
 // when reading a bit, in microseconds.  We do like the master and give
@@ -676,11 +678,13 @@ psh (void)
 }
 */
 
+// FIXME: maybe this should just be a macro, the assembler does generate
+// actual calls for it...
 static ows_error_t
 wfpcoto (void)
 {
   while ( TRUE ) {
-    if ( DIO_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN) ) {
+    if ( LIKELY (DIO_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN)) ) {
       TCNT0 = 0;   // FIXME: devel: measure time to second edge
       ls = SAMPLE_LINE ();
       //shist[shp++] = ls;
@@ -718,16 +722,22 @@ read_bit (void)
       }
     }
     else {
-      t0r = TCNT0;  // FIXME: im debug
+      //t0r = TCNT0;  // FIXME: im debug
       //printf ("t0r: %hhu\n", t0r); PHP ();
-      // FIXME: WORK POINT: well, going from 3 to 4 us here changes the
-      // value of this sample from a 0 (expected given current master rig)
-      // to 1, ug FIXME: these fixed delays are sub-optimal.  They decrease
-      // resistance to delays from client ISR or low F_CPU.  Could probably
-      // be using OCR1B and polling instead.
+
+      // According to measurements made with timer0, even at 16MHz
+      // F_CPU, it takes about 4 us to get from the point where wfpcoto()
+      // first detects a change to here.  In this case it doesn't matter
+      // since the low pulses sent by the master are a full 60 us, but
+      // it's a nice illustration of how tight the timing ends up being.
+      // Its the time between the end of a master-write-0 and subsequent
+      // master-read-0, or a between the end of one master-read-0 and
+      // a subsequent master-read-0 where the timing crunch really hits.
+      // I haven't measure that directly, but presumably its similarly tight,
+      // hence the sensitivity to register variable use.
       _delay_us (RBST_US);
       cbitv = SAMPLE_LINE ();
-      //shist[shp++] = cbitv;
+      //shist[shp++] = cbitv;  // FIXME: im debug
       CPCFRT1 ();
       return OWS_ERROR_NONE;
     }
@@ -743,7 +753,6 @@ read_bit (void)
       return XxX_err;                             \
     }                                             \
   } while ( 0 )
-
 
 static ows_error_t
 write_bit (void)
@@ -767,13 +776,14 @@ write_bit (void)
   }
 }
 
+
 static ows_error_t
 read_byte (void)
 {
   cbytev = 0;
-  for ( uint8_t ii = 0 ; ii < BITS_PER_BYTE ; ii++ ) {
+  for ( cbiti = 0 ; cbiti < BITS_PER_BYTE ; cbiti++ ) {
     CPE (read_bit ());
-    cbytev |= (cbitv << ii);
+    cbytev |= (cbitv << cbiti);
   }
 
   return OWS_ERROR_NONE;
@@ -782,8 +792,8 @@ read_byte (void)
 static ows_error_t
 write_byte (void)
 {
-  for ( uint8_t ii = 0 ; ii < BITS_PER_BYTE ; ii++ ) {
-    cbitv = cbytev & (B00000001 << ii);
+  for ( cbiti = 0 ; cbiti < BITS_PER_BYTE ; cbiti++ ) {
+    cbitv = cbytev & (B00000001 << cbiti);
     CPE (write_bit ());
   }
 

@@ -24,8 +24,8 @@ ENABLE_NON_ARDUINO_OVERRIDES = defined
 
 ifdef ENABLE_NON_ARDUINO_OVERRIDES
 
-  CPU_FREQ_DEFINE = -DF_CPU=16000000
-  #CPU_FREQ_DEFINE = -DF_CPU=8000000
+  #CPU_FREQ_DEFINE = -DF_CPU=16000000
+  CPU_FREQ_DEFINE = -DF_CPU=8000000
 
   # No clock divider, external 0.4-20MHz MHz ceramic resonator clock, and
   # most conservative suggested power rise assumptions to be used without
