@@ -121,9 +121,9 @@ send_fake_ds18b20_scratchpad_contents (void)
   uint8_t const t_lsb = B10100000;
   uint8_t const t_msb = B00000010;
 
-  err = ows_write_byte (t_lsb);
+  err = ows_new_write_byte (t_lsb);
   BASSERT_SPE (err == OWS_ERROR_NONE);
-  err = ows_write_byte (t_msb);
+  err = ows_new_write_byte (t_msb);
   BASSERT_SPE (err == OWS_ERROR_NONE);
 
   // Remaining Scratchpad Size (after temp. bytes).  This is a property of
@@ -134,7 +134,7 @@ send_fake_ds18b20_scratchpad_contents (void)
   // about anything except the temperature bytes, so we just send 0 for the
   // remaining bytes.
   for ( uint8_t ii = 0 ; ii < rss ; ii++ ) {
-    err = ows_write_byte (0);
+    err = ows_new_write_byte (0);
     BASSERT_SPE (err == OWS_ERROR_NONE);
   }
 }
@@ -240,7 +240,7 @@ main (void)
       continue;
     }
 
-    printf ("got function command %hhx\n", fcmd);
+    //printf ("got function command %hhx\n", fcmd);
 
     switch ( fcmd ) {
 
@@ -249,7 +249,7 @@ main (void)
         // can immediately send the one that the DS18B20 sends when it's done
         // converting :) See the comment below near the next reference to the
         // DS18B20_CONVERT_T_COMMAND below for a longer discussion about this.
-        ows_write_bit (1);
+        ows_new_write_bit (1);
         break;
 
       case DS18B20_COMMANDS_READ_SCRATCHPAD_COMMAND:

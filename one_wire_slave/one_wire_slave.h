@@ -243,6 +243,19 @@ ows_write_bit (uint8_t data_bit);
 ows_error_t
 ows_read_bit (uint8_t *data_bit_ptr);
 
+// FIXME: replace everyting with these new forms
+
+ows_error_t
+ows_new_write_bit (uint8_t bit_value);
+
+ows_error_t
+ows_new_read_bit (uint8_t *bit_value_ptr);
+
+ows_error_t
+ows_new_write_byte (uint8_t byte_value);
+
+ows_error_t
+ows_new_read_byte (uint8_t *byte_value_ptr);
 
 ///////////////////////////////////////////////////////////////////////////////
 //

@@ -246,12 +246,19 @@ ows_init (uint8_t use_eeprom_id)
 #define LINE_IS_HIGH() (  SAMPLE_LINE ())
 #define LINE_IS_LOW()  (! SAMPLE_LINE ())
 
+// The exact factoring used here could be a bit different.  For example
+// we don't necessarily need a different state for each of the commands,
+// they could just be done directly following the read.  Note that there
+// is no Doing Skip ROM Command becaus ein that case there' snothing at
+// all to do, so we go straight to SRFC.
 #define SWFR  0   // State Waiting For Reset
 #define SPPP  1   // State Pre-Presense Pulse
 #define SRRC  2   // State Reading ROM Command
 #define SDSRC 3   // State Doing Search ROM Command
 #define SDRRC 4   // State Doing Read ROM Command
-#define SRFC  5   // State Reading Function Command
+#define SDMRC 5   // State Doing Match ROM Command
+#define SDASC 6   // State Doing Alarm Search (ROM) Command
+#define SRFC  7   // State Reading Function Command
 volatile uint8_t state;
 
 #define ENY   0   // Event Nothing Yet
@@ -721,15 +728,21 @@ wfpcoto (void)
 
 uint8_t t0r;   // timer0 reading // FIXME: for debug
 
+// Call call, Propagating Errors.  The call argument must be a call to a
+// function returning ows_error_t.
+#define CPE(call)                                 \
+  do {                                            \
+    ows_error_t XxX_err = call;                   \
+    if ( UNLIKELY (XxX_err != OWS_ERROR_NONE) ) { \
+      return XxX_err;                             \
+    }                                             \
+  } while ( 0 )
 
 static ows_error_t
 read_bit (void)
 {
   while ( TRUE ) {
-    ows_error_t err = wfpcoto ();
-    if ( UNLIKELY (err == OWS_ERROR_TIMEOUT) ) {
-      return OWS_ERROR_TIMEOUT;
-    }
+    CPE (wfpcoto ());
     if ( ls ) {
       if ( UNLIKELY (CFR ()) ) {
         return OWS_ERROR_GOT_RESET;
@@ -757,16 +770,6 @@ read_bit (void)
     }
   }
 }
-
-// Call call, Propagating Errors.  The call argument must be a call to a
-// function returning ows_error_t.
-#define CPE(call)                                 \
-  do {                                            \
-    ows_error_t XxX_err = call;                   \
-    if ( UNLIKELY (XxX_err != OWS_ERROR_NONE) ) { \
-      return XxX_err;                             \
-    }                                             \
-  } while ( 0 )
 
 static ows_error_t
 write_bit (void)
@@ -814,7 +817,90 @@ write_byte (void)
   return OWS_ERROR_NONE;
 }
 
+// FIXME: this might be faster if it didn't take an arg and instead used
+// the global, then it becomes a can of worms if we want to expose this
+// function and require user to use the global, or make it a macro that
+// does that implicitly, who knows.
+ows_error_t
+ows_new_write_bit (uint8_t bit_value)
+{
+  cbitv = bit_value;
+  CPE (write_bit ());
+
+  return OWS_ERROR_NONE;
+}
+
+ows_error_t
+ows_new_read_bit (uint8_t *bit_value_ptr)
+{
+  CPE (read_bit ());
+  *bit_value_ptr = cbitv;
+
+  return OWS_ERROR_NONE;
+}
+
+ows_error_t
+ows_new_write_byte (uint8_t byte_value)
+{
+  cbytev = byte_value;
+  CPE (write_byte ());
+
+  return OWS_ERROR_NONE;
+}
+
+ows_error_t
+ows_new_read_byte (uint8_t *byte_value_ptr)
+{
+  CPE (read_byte ());
+  *byte_value_ptr = cbytev;
+
+  return OWS_ERROR_NONE;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
+
+static ows_error_t
+read_and_match_rom_id (void)
+{
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
+    for ( cbiti = 0 ; cbiti < BITS_PER_BYTE ; cbiti++ ) {
+      CPE (read_bit ());
+      if ( cbitv != ((rom_id[ii]) >> cbiti) ) {
+        return OWS_ERROR_ROM_ID_MISMATCH;
+      }
+    }
+  }
+
+  return OWS_ERROR_NONE;
+}
+
+// Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
+#define ROM_ID_BIT(bn) \
+  (((rom_id[bn / BITS_PER_BYTE]) >> (bn % BITS_PER_BYTE)) & B00000001)
+
+static ows_error_t
+answer_search (void)
+{
+  // ROM ID Size, in bits
+  uint8_t const rids_bits = OWC_ID_SIZE_BYTES * BITS_PER_BYTE;
+  // FIXME: use inner loop var
+  for ( uint8_t ii = 0 ; ii < rids_bits ; ii++ ) {
+    uint8_t cridbv = ROM_ID_BIT (ii);   // Current ROM ID Bit Value
+    cbitv = cridbv;
+    CPE (write_bit ());
+    cbitv = ! cbitv;
+    CPE (write_bit ());
+    CPE (read_bit ());
+    if ( UNLIKELY (cbitv != cridbv) ) {
+      // Mismatches aren't error -- see comment above in this function..
+      return OWS_ERROR_NONE;
+    }
+  }
+
+  return OWS_ERROR_NONE;
+}
+
 
 static void
 setup_timer0 (void)
@@ -839,11 +925,6 @@ setup_timer0 (void)
 // accomplishing something similar, but since well-behaved masters should
 // never produce 1 us pulses anyway, I don't see why we shouldn't play it
 // safe and filter them.
-
-// Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
-#define ROM_ID_BIT(bn) \
-  (((rom_id[bn / BITS_PER_BYTE]) >> (bn % BITS_PER_BYTE)) & B00000001)
-
 
 ows_error_t
 ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
@@ -886,8 +967,6 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
       case SRRC:
         {
           CPE (read_byte ());
-          // FIXME: here we should actually go to the correct state for the
-          // given rom command.
           switch ( cbytev ) {
             case OWC_SEARCH_ROM_COMMAND:
               state = SDSRC;
@@ -895,42 +974,50 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
             case OWC_READ_ROM_COMMAND:
               state = SDRRC;
               break;
+            case OWC_MATCH_ROM_COMMAND:
+              state = SDMRC;
+              break;
+            case OWC_SKIP_ROM_COMMAND:
+              state = SRFC;
+              break;
+            case OWC_ALARM_SEARCH_COMMAND:
+              state = SDASC;
+              break;
             default:
               return OWS_ERROR_GOT_INVALID_ROM_COMMAND;
+              break;
           }
           break;
         }
       case SDSRC:
-        {
-          // FIXME: WORK POINT: test this
-          // ROM ID Size, in bits
-          uint8_t const rids_bits = OWC_ID_SIZE_BYTES * BITS_PER_BYTE;
-          for ( uint8_t ii = 0 ; ii < rids_bits ; ii++ ) {
-            uint8_t cridbv = ROM_ID_BIT (ii);   // Current ROM ID Bit Value
-            cbitv = cridbv;
-            write_bit ();
-            cbitv = ! cbitv;
-            write_bit ();
-            read_bit ();
-            if ( UNLIKELY (cbitv != cridbv) ) {
-              // The master isn't talking to us, so don't need to listen
-              // to the rest of the bits and can go back to waiting for the
-              // reset pulse the indicated the start of a new transaction.
-              break;
-            }
-          }
-          // We actually matched the search, but we're still done (the master
-          // was just gathering information).  So we go back to wating for
-          // a reset pulse.
-          state = SWFR;
-          break;
-        }
+        CPE (answer_search ());
+        state = SWFR;
+        break;
       case SDRRC:
         for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
           cbytev = rom_id[ii];
           CPE (write_byte ());
         }
         state = SRFC;
+        break;
+      case SDMRC:
+        {
+          ows_error_t error = read_and_match_rom_id ();
+          if ( error == OWS_ERROR_ROM_ID_MISMATCH ) {
+            state = SWFR;
+          }
+          else {
+            // Note that bother success and non-mismatch results end up here.
+            return error;
+          }
+          break;
+        }
+      case SDASC:
+        if ( UNLIKELY (! ows_alarm) ) {
+          return OWS_ERROR_NONE;
+        }
+        CPE (answer_search ());
+        state = SWFR;
         break;
       case SRFC:
         {
@@ -940,7 +1027,7 @@ ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur)
           break;
         }
       default:
-        PFP_ASSERT_NOT_REACHED ();   // FIXME im debug
+        PFP_ASSERT_NOT_REACHED ();   // FIXME im debug change probly to assert0
     }
   }
 }
@@ -1326,6 +1413,7 @@ ows_write_id (void)
 ows_error_t
 ows_answer_search (void)
 {
+  // FIXME: use cbiti instead of ii
   for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES * BITS_PER_BYTE ; ii++ ) {
     uint8_t bv = ROM_ID_BIT (ii);   // Bit Value
     CPE (ows_write_bit (bv));
@@ -1367,3 +1455,4 @@ ows_read_and_match_id (void)
 
   return OWS_ERROR_NONE;
 }
+
