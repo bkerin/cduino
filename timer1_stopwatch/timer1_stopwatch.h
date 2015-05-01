@@ -52,7 +52,7 @@
 
 // The number of values the underlying counter can assume.  Some interface
 // macros need this, but there should be no reason to use it directly.
-#define TIMER1_STOPWATCH_COUNTER_VALUES ((UINT32_C (UINT16_MAX)) + 1))
+#define TIMER1_STOPWATCH_COUNTER_VALUES (((uint32_t) UINT16_MAX) + 1)
 
 // The number of microseconds per tick of the timer/counter1.
 #define TIMER1_STOPWATCH_MICROSECONDS_PER_TIMER_TICK \
