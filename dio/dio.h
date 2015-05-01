@@ -1,5 +1,5 @@
 // Simple digital IO macros to hide some of the ugliness of port bit value
-// manipulation.
+// manipulation and allow pins to be specified with a single name.
 
 // Test driver: dio_test.c    Implementation: This file
 
@@ -73,8 +73,9 @@
 // them wrong.  However, they are convenient for clients that want to allow
 // compile-time pin choices.  See the sd_card module for an example.
 //
-// Macros are also provided to enable pin change interrupts using the
-// tuple macros.  For example:
+// Macros are also provided to enable pin change interrupts (or just pin
+// change interrupt flag use, which doesn't necessarily require an actual
+// ISR) using the tuple macros.  For example:
 //
 //   #include <avr/interrupt.h>
 //   FIXME: I guess according to our principle of direct inclusion we should be
@@ -676,7 +677,7 @@
 
 // }}}1
 
-// Pin Change Interrupt Control {{{1
+// Pin Change Interrupt or Interrupt Flag Control {{{1
 
 // Clear the interrupt flag and enable the interrupt for the pin group
 // containing the pin, and set the mask bit for the pin such that interrupts
