@@ -10,17 +10,15 @@
 #ifndef __AVR_ATmega328P__
 #  error Processor macro __AVR_ATmega328P__ is not defined. This code has \
          only been tested with the ATMega328p at 16 MHz on an Arduino Uno \
-         board, though it should work with other ATMega or ATTiny chips \
+         board, though it should work with other ATMega or ATTiny chips   \
          Use the source and relax this error trap :)
 #endif
 
 #if F_CPU != 16000000
-#  error F_CPU is not defined to be 16000000. This code has only been tested \
-         with the ATMega328p at 16 MHz on an Arduino Uno board, though it \
-         should work with other ATMega or ATTiny chips.  It should also work \
-         at other clock frequencies, though some of the performance macros \
-         (overhead guarantees and the like) and tests might need to be \
-         changed.  Use the source and relax this error trap :)
+#  error F_CPU is not defined to be 16000000.  This code should work fine at \
+         other frequencies (I have used it at 4 MHz), but the measured       \
+         overhead values (*_OVERHEAD_* macros) will be wrong.  Just remove   \
+         this error trap and enjoy :)
 #endif
 
 volatile uint32_t timer0_stopwatch_oc;
