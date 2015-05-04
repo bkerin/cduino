@@ -49,9 +49,12 @@
 // the implementation doesn't currently do it and a little care would be
 // required to convert it to do so at least without using more floating
 // point math, and I haven't had the need.
+// FIXME: relaxed to see if 12 MHz works, maybe uncomment, maybe remove
+/*
 #if CLOCK_CYCLES_PER_MICROSECOND () % TIMER1_STOPWATCH_PRESCALER_DIVIDER != 0
 #  error timer1 ticks per microsecond is not an integer
 #endif
+*/
 
 // Clients probably don't need to use this directly.
 #define OWS_TIMER_TICKS_PER_US \

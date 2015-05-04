@@ -75,8 +75,15 @@
 #define TICK_DELAY(ticks) OWC_TICK_DELAY (ticks)
 
 // Timer1 Ticks Per microsecond.
+// FIXME: thi sisn't used anywhere in the new code, I think
 #define T1TPUS \
   (CLOCK_CYCLES_PER_MICROSECOND () / TIMER1_STOPWATCH_PRESCALER_DIVIDER)
+
+// Convert an integer number of microseconds to timer1 ticks for the F_CPU and
+// timer1 prescaler divider settings in use.  Integer math is used throughout,
+// so if the us argument is small significant truncation error may result.
+#define US2T1T(us) \
+  (us * CLOCK_CYCLES_PER_MICROSECOND () / TIMER1_STOPWATCH_PRESCALER_DIVIDER)
 
 static uint8_t rom_id[OWC_ID_SIZE_BYTES];
 
@@ -683,7 +690,7 @@ uint16_t tr;       // Timer Reading (most recent)
 
 // FIXME: update for whatever value we settle on for timeout requirements,
 // given that we ignore parts of pulses during certain operations.
-#define CFR() (tr >= OUR_RESET_PULSE_LENGTH_REQUIRED * T1TPUS)
+#define CFR() (tr >= US2T1T (OUR_RESET_PULSE_LENGTH_REQUIRED))
 
 // For tracking sample history
 // FIXME: remove all the shist stuff sometime

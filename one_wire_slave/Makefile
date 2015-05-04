@@ -15,7 +15,7 @@ ARDUINO_BAUD = 115200
 ARDUINO_BOOTLOADER=optiboot_atmega328.hex
 
 # Uncomment for testing with my particular non-arduino slave breadboard build
-#ENABLE_NON_ARDUINO_OVERRIDES = defined
+ENABLE_NON_ARDUINO_OVERRIDES = defined
 
 ##### Orverrides for Non-Arduino Slave {{{1
 
@@ -25,7 +25,9 @@ ARDUINO_BOOTLOADER=optiboot_atmega328.hex
 ifdef ENABLE_NON_ARDUINO_OVERRIDES
 
   #CPU_FREQ_DEFINE = -DF_CPU=16000000
-  CPU_FREQ_DEFINE = -DF_CPU=8000000
+  #CPU_FREQ_DEFINE = -DF_CPU=12000000
+  CPU_FREQ_DEFINE = -DF_CPU=10000000
+  #CPU_FREQ_DEFINE = -DF_CPU=8000000
 
   # This must be uncommented by clients that want to use this module at
   # F_CPU settings below 16MHz, in order to guarantee that they understand
