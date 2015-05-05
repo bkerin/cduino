@@ -2,12 +2,81 @@
 //
 // Test driver: one_wire_slave_test.c    Implementation: one_wire_slave.c
 //
+// WARNING: READ THIS ENTIRE INTRODUCTION.
+//
 // This interface provides a framework for creating slave devices compatible
 // with the Maxim one-wire slave protocol, or close (IMO its often more
 // convenient to create almost-compatible devices which aren't quite so
 // worried about timing or honoring every request).  Maxim isn't helping
 // us create 1-wire slaves, its all based on Maxim Application note AN126
 // and mimicking the behavior of the Maxim DS18B20.
+//
+// If you're new to one-wire you should first read the entire
+// Maxim_DS18B20_datasheet.pdf.  Its hard to use one-wire without at
+// least a rough understanding of how the line signalling and transaction
+// schemes work.
+//
+// This interface provides two different types of things:
+//
+//   * The fairly magical ows_wait_for_function_transaction(), which
+//     automatically handles all reset and presence pulse sequences, and
+//     ROM commands (steps 1 and 2 of the transaction sequence describe in
+//     Maxim_DS18B20_datasheet.pdf, page 10).
+//
+//   * Bit- and byte-at-a-time functions that you can use to implement your own
+//     slave-specific protocol (step 3 of the transaction sequence describe in
+//     Maxim_DS18B20_datasheet.pdf, page 10).
+//
+// Note that ff you only have exactly one slave on the network, you can
+// probably dispense with ows_wait_for_function_transaction().
+//
+// The one-wire protocol requires fast responses from the slave.  The time
+// between a master-request-send edge and the point at which the slave must
+// have the line pulled low to send a zero is only 15 us.  The turnaround time
+// between a master-write and a subsequent master-read is similarly tight.
+// This implementation works down to 10 MHz for me, but not for 8 MHz.
+// If you have ISRs that can fire while this code runs, you might find they
+// slow things down enough to cause occasional failures.
+//
+// The implementation has been written faily carefully for speed.  Your code
+// that calls into it might not be.  Therefore, it is recommended that you
+// arrange for the master to provide some recovery time between reads and
+// writes when communicating with slaves implemented using this framework.
+// Note that once ows_wait_for_function_transaction() returns (successfully),
+// the details of the subsequent transaction protocol are slave-dependent:
+// it's prefectly legitimate to require the master to pause for, say,
+// 10 us between read/write-bit/byte calls.
+//
+// According to section 28.3 of the ATMega328P datasheet, 10 MHz will support
+// operation down do 2.7 V Vcc.  12 MHz is safer and supports operation down
+// to 3.06 V Vcc.  If you have a choice I'd recommend using 5V and running
+// at 16 MHz.  You'll get better resistance to line noise that way as well.
+//
+// This module used timer/counter1 to time events on the wire.  If you want
+// to use this timer for other things as well it should work, but you'll
+// need to reinitialized the timer yourself after using this interface,
+// andcall ows_init() again before using this interface again.  In the
+// meantime, you're slave won't be able to respond to one-wire events.
+//
+// This module uses the pin change interrupt flag for the chosen OWS_PIN
+// to detect changes on the wire.  Therefore, you can't (easily) use the
+// pin change interrupt associated with that pin while using this module,
+// since non-naked ISR routines will unexpectedly clear that hardware flag.
+// This module doesn't actually run any ISR routines, and therefore never
+// enables interrupts (i.e. sei() is never called) itself.
+//
+// FIXME: revisit this advice once we've actually tested wake-up: it might
+// for example be required to actually have ISRs enabled, in which case an
+// interface function (or maybe two, with one being for clean-up after the
+// wake-up) will be required
+// If you're on batteries, you'll probably want to put the slave to
+// sleep when nothing is happening.  If brown-out detection is enabled,
+// the wake-up time will probably be fast enough that the slave will have
+// time to respond correctly to a reset pulse from the master.  If not,
+// it probably won't, since wake-up times in that situation tend to be 4 ms
+// or longer.  The BOD costs some power to operate.  If you want to avoid
+// that, I suggest simple declaring that your slave in slightly disobedient
+//
 
 #ifndef ONE_WIRE_SLAVE_H
 #define ONE_WIRE_SLAVE_H
@@ -15,6 +84,11 @@
 #include "dio.h"
 #include "one_wire_common.h"
 #include "timer1_stopwatch.h"
+
+#ifndef OWS_PIN
+#  error OWS_PIN not defined (it must be explicitly set to one of \
+         the DIO_PIN_* tuple macros before this header is included)
+#endif
 
 // To make slaves work at 8MHz, I had to explicitly lock some variables
 // into registers r2, r3, r4, and r5.  For 16MHz things work without this,
@@ -29,10 +103,16 @@
 #endif
 
 // I haven't tried this module at frequencies lower than this.  Since there
-// are many code sections where we depend on the processor going fast enough
+// are code sections where we depend on the processor going fast enough
 // to get things done quicker that the (fairly speedy) one-wire protocol
 // requires, there's a good chance it wouldn't work right at slower speeds.
-#if F_CPU < 8000000
+
+// This is the lowest frequency at which I've gotten this module to work.
+// It didn't work for me at 8 MHz, and the symptoms looked very much like
+// the code wasn't getting the line pulled low fast enough to send a zero
+// after the master requested a slave write.  See the comments at the top
+// of this file.
+#if F_CPU < 10000000
 # error F_CPU too small
 #endif
 
@@ -44,26 +124,9 @@
 #  error F_CPU / TIMER1_STOPWATCH_PRESCALER_DIVIDER is too small
 #endif
 
-// There's probably no real reason we couldn't support F_CPU/timer1
-// prescaler combinations that result in non-integer timer1 ticks/us, but
-// the implementation doesn't currently do it and a little care would be
-// required to convert it to do so at least without using more floating
-// point math, and I haven't had the need.
-// FIXME: relaxed to see if 12 MHz works, maybe uncomment, maybe remove
-/*
-#if CLOCK_CYCLES_PER_MICROSECOND () % TIMER1_STOPWATCH_PRESCALER_DIVIDER != 0
-#  error timer1 ticks per microsecond is not an integer
-#endif
-*/
-
 // Clients probably don't need to use this directly.
 #define OWS_TIMER_TICKS_PER_US \
   (CLOCK_CYCLES_PER_MICROSECOND () / TIMER1_STOPWATCH_PRESCALER_DIVIDER)
-
-#ifndef OWS_PIN
-#  error OWS_PIN not defined (it must be explicitly set to one of \
-         the DIO_PIN_* tuple macros before this header is included)
-#endif
 
 // The first byte of the ROM ID is supposed to be a family code that is
 // constant for all devices in a given "family".  If it hasn't been defined
@@ -155,6 +218,8 @@ ows_init (uint8_t use_eeprom_id);
 void
 ows_set_timeout (uint16_t time_us);
 
+
+// FIXME: update all this text to correspond to the new _2 version behavior
 // Wait for the initiation of a function command transaction intended
 // for our ROM ID (and possibly others as well if a OWS_SKIP_ROM_COMMAND
 // was sent), and return the function command itself in *command_ptr.
@@ -211,43 +276,9 @@ ows_set_timeout (uint16_t time_us);
 // the single processor, or run an RTOS instead.
 // FIXME: update docs now timeout is a global setting
 ows_error_t
-ows_wait_for_function_transaction (uint8_t *command_ptr);
-
-// This is the flattened version that's under development.
-ows_error_t
-ows_wait_for_function_transaction_2 (uint8_t *command_ptr, uint8_t jgur);
-
-// Wait for a reset pulse, and respond with a presence pulse, then try
-// to read a single byte from the master and return it.  An error is
-// generated if any unexpected line behavior is encountered (abnormal
-// pulse lengths, unexpected mid-byte resets, etc.  Any additional reset
-// pulses that occur during this read attempt are also responded to with
-// presence pulses (and OWS_ERROR_RESET_DETECTED_AND_HANDLED is returned).
-// Any errors that occur while trying to read the byte effectively cause
-// a new wait for a reset pulse to begin.  You should probably just use
-// ows_wait_for_function_transaction() instead of this.
-ows_error_t
-ows_wait_for_command (uint8_t *command_ptr);
-
-// Block until a reset pulse from the master is seen, then produce a
-// corresponding presence pulse and return.  If timeout_us is not zero,
-// this routine will return OWS_ERROR_TIMEOUT if the line stays high for
-// at least timeout_us microseconds.  Pulses short of the length required
-// for a reset pulse are silently ignored.
-// FIXME: fix docs now that timeout time is a global
-ows_error_t
-ows_wait_for_reset (void);
-
-// Write bit (which should be 0 or 1).
-ows_error_t
-ows_write_bit (uint8_t data_bit);
-
-// Read bit, setting data_bit_ptr to 0 or 1.
-ows_error_t
-ows_read_bit (uint8_t *data_bit_ptr);
+ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur);
 
 // FIXME: replace everyting with these new forms
-
 ows_error_t
 ows_new_write_bit (uint8_t bit_value);
 
@@ -260,63 +291,11 @@ ows_new_write_byte (uint8_t byte_value);
 ows_error_t
 ows_new_read_byte (uint8_t *byte_value_ptr);
 
-///////////////////////////////////////////////////////////////////////////////
-//
-// Byte Write/Read
-//
-
-// Write up to eight bits in a row.  The least significant bit is written
-// first.  Any error that can occur in the underlying ows_write_bit()
-// routine is immediately propagated and returned by this routine.
-ows_error_t
-ows_write_byte (uint8_t data_byte);
-
-// Read up to eight bits in a row.  The least significant bit is read first.
-// Any error that can occur in the underlying ows_read_bit() routine is
-// immediately propagated and returned by this routine.
-ows_error_t
-ows_read_byte (uint8_t *data_byte_ptr);
-
-#endif // ONE_WIRE_SLAVE_H
-
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// Device Presense Confirmation/Discovery Support
-//
-// These routines support slave participation in master-initiated device
-// discovery.  Note that ows_wait_for_function_transaction() can handle
-// this stuff automagically.
-//
-
-// This is the appropriate response to a OWC_READ_ROM_COMMAND.
-ows_error_t
-ows_write_id (void);
-
-// Answer a (just received) OWC_SEARCH_ROM_COMMAND by engaging in the search
-// process described in Maxim_Application_Note_AN187.pdf.
-ows_error_t
-ows_answer_search (void);
-
 // If set to a non-zero value, this flag indicates an alarm condition.
 // Clients of this interface can ascribe particular meanings to particular
-// non-zero values if desired.  Slaves with an alarm condition should respond
+// non-zero values if desired.  Slaves with an alarm condition will respond
 // to any OWC_ALARM_SEARCH_COMMAND issued by thier master (and will do so
 // automagically in ows_wait_for_function_command()).
 extern uint8_t ows_alarm;
 
-// Like ows_answer_search(), but only participates if ows_alarm is non-zero.
-// This is the correct reaction to an OWC_ALARM_SEARCH_COMMAND.  If ows_alarm
-// is zero, this macro evaluates to OWS_ERROR_NOT_ALARMED.
-#define OWS_MAYBE_ANSWER_ALARM_SEARCH() \
-  (ows_alarm ? ows_answer_search () : OWS_ERROR_NOT_ALARMED)
-
-// Respond to a (just received) OWC_MATCH_ROM_COMMAND by reading up to
-// OWC_ID_SIZE_BYTES bytes, one bit at a time, and matching the bits to our
-// ROM ID.  Return OWS_ERROR_ROM_ID_MISMATCH as soon as we see a non-matching
-// bit, or OWS_ERROR_NONE if all bits match (i.e. the master is talking
-// to us).  Note that it isn't really an error if the ROM doesn't match,
-// it just means the master doesn't want to talk to us.  This routine can
-// also return other errors propagated from ows_read_bit().
-ows_error_t
-ows_read_and_match_id (void);
+#endif // ONE_WIRE_SLAVE_H
