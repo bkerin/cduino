@@ -14,6 +14,9 @@
          Use the source and relax this error trap :)
 #endif
 
+// FIXME: Make an "acknowledge" var or something for this (or just get rid
+// of all the probably siller overhead guarantees).  The one_wire_slave module
+// has a good example of an acknowledge setup for register-locked var use
 #if F_CPU != 16000000
 #  error F_CPU is not defined to be 16000000.  This code should work fine at \
          other frequencies (I have used it at 4 MHz), but the measured       \
