@@ -500,17 +500,18 @@ else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
 endif
 
-# Support for writing a random 8 byte signature from /dev/random to the
-# start of the EEPROM memory using an AVRISPmkII.  This lets you easily
+# Support for writing an 8 byte signature to the start of the EEPROM memory
+# using an AVRISPmkII.  Either a random ID (from /dev/random) or a specific
+# one (by setting Make variable NRID) can be set.  This lets you easily
 # donate some entropy from your linux box to your ATMega chip to give it a
 # (hopefully unique) ID.
 #
-# The write_random_id_to_eeprom target requires UPLOAD_METHOD to
-# be AVRISPmkII, because I don't know how to program the EEPROM using
-# the arduino bootloader upload method, assuming it's even supported.
-# Note that it's fine to use bootloader programming for the program upload
-# (writeflash target) while using the AVRISPmkII upload method for the
-# write_random_id_to_eeprom target (see below).
+# The targets that write IDs require UPLOAD_METHOD to be AVRISPmkII, because
+# I don't know how to program the EEPROM using the arduino bootloader
+# upload method, assuming it's even supported.  Note that it's fine to
+# use bootloader programming for the program upload (writeflash target)
+# while using the AVRISPmkII upload method for the targets that write IDs
+# (see below).
 #
 # Unfortunately the UPLOAD_METHOD options used to upload the program code
 # with the writeflash target differ in behavior with respect to the EEPROM:
@@ -529,9 +530,8 @@ endif
 #
 # This problem doesn't apply in reverse: you can write the EEPROM using
 # the AVRISPmkII without disturbing the other memory types (program flash,
-# lock and fuse bits, etc.)  So you can use the write_random_id_to_eeprom
-# target to change the ID after uploading the main program (or to reset it
-# to its previous value using the REUSE_EXISTING_RANDOM_ID functionality).
+# lock and fuse bits, etc.)  So you can write the ID after uploading the
+# main program.
 #
 # See the cduino/random_id module for an example of how to read your random
 # ID back out of the EEPROM from the ATMega side.  Note in particular the
@@ -549,6 +549,8 @@ DUMP_RANDOM_ID = \
   od --format=x1 $(1) | cut -f 2-9 -d' ' | head -n 1 | perl -p -e 's/ //g'
 .PHONY: new_random_id
 new_random_id:
+# Now that the write_non_random_id_to_eeprom target exists, this
+# REUSE_EXISTING_RANDOM_ID functionality is probably not too useful.
 # Because it's sometimes nice to be able to hard-wire things to use a
 # particular id, we have this variable that can be defined non-empty to
 # reuse an existing random id file.  This is useful for example during
@@ -579,11 +581,12 @@ else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
   write_random_id_to_eeprom: binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII \
                    -p $(PROGRAMMER_MCU) -P $(AVRISPMKII_PORT) \
-                   -U eeprom:w:$(RIF)
+                   -U eeprom:w:$(RIF):r
 	@echo $(IRS)
 else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
 endif
+
 # This target gives a way of reading the ID back out of a device
 .PHONY: read_id_from_eeprom
 read_id_from_eeprom: IDF = /tmp/generic.mk.id_dump_file
@@ -609,6 +612,33 @@ else
   $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
 endif
 
+# This is the non-random ID value to be uploaded by the
+# write_non_random_id_to_eeprom target.
+NRID ?= 0x4242424242424242
+NRIF = /tmp/generic.mk.non_random_id_file
+.PHONY: write_non_random_id_to_eeprom
+# ID Written String
+write_non_random_id_to_eeprom: IWS = \
+  "Wrote 8 byte ID 0x$(NRID) to start of chip EEPROM"
+ifeq ($(UPLOAD_METHOD), arduino_bl)
+  write_non_random_id_to_eeprom:
+	# I think most likely the bootloader just doesn't support this
+	@echo EEPROM writing using the $(UPLOAD_METHOD) upload method is not \
+              supported.  If it can be done somehow please let me know! \
+              1>&2 && false
+else ifeq ($(UPLOAD_METHOD), AVRISPmkII)
+  write_non_random_id_to_eeprom: binaries_suid_root_stamp
+	printf \
+          `echo $(NRID) | \
+           perl -pe 's/^0x//; s/([0-9A-Fa-f]{2})/\\\\x$$1/g;'` | \
+        dd of=$(NRIF) bs=1 count=8
+	$(AVRDUDE) -c avrispmkII \
+                   -p $(PROGRAMMER_MCU) -P $(AVRISPMKII_PORT) \
+                   -U eeprom:w:$(NRIF):r
+	@echo $(IWS)
+else
+  $(error invalid UPLOAD_METHOD value '$(UPLOAD_METHOD)')
+endif
 
 # This target is special: it uses an AVR ISPmkII and the bootloaded image
 # that comes in the arduino download package and some magic goop copied here
