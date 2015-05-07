@@ -118,6 +118,13 @@ timer1_stopwatch_init (void);
     TCNT1 = 0;                        \
   } while ( 0 )
 
+// Clear the overflow flag.  See the comments for TIMER1_STOPWATCH_RESET()
+// for details about how the assignment that does this works.
+#define TIMER1_STOPWATCH_CLEAR_OVERFLOW_FLAG() \
+  do {                                         \
+    TIFR1 = _BV (TOV1);                        \
+  } while ( 0 )
+
 // Number of ticks since timer/counter1 was last reset or overflowed.  NOTE:
 // if this macro (or TCNT1 via any other mechanism) will ever be written *or
 // read* from an interrupt service routine, then an AVR libc ATOMIC_BLOCK
