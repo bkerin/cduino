@@ -78,8 +78,12 @@
 // that, I suggest simple declaring that your slave in slightly disobedient
 //
 
+// FIXME: WORK POINT: next get rid of the timer0 stuff, I think
+
 #ifndef ONE_WIRE_SLAVE_H
 #define ONE_WIRE_SLAVE_H
+
+#include <stdint.h>
 
 #include "dio.h"
 #include "one_wire_common.h"
@@ -217,7 +221,6 @@ ows_init (uint8_t use_eeprom_id);
 // give it its own slave processor :).
 void
 ows_set_timeout (uint16_t time_us);
-
 
 // FIXME: update all this text to correspond to the new _2 version behavior
 // Wait for the initiation of a function command transaction intended

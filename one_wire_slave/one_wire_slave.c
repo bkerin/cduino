@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <avr/eeprom.h>
-#include <avr/power.h>   // FIXME: only needed for devel with timer0
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -281,7 +280,6 @@ wfpcoto (void)
 {
   while ( TRUE ) {
     if ( LIKELY (DIO_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN)) ) {
-      TCNT0 = 0;   // FIXME: devel: measure time to second edge
       ls = SAMPLE_LINE ();
       // FIXME: perhaps we should detect resets right here, since clients
       // always have to do it I think.  Fctn name have to change again :)
@@ -292,15 +290,13 @@ wfpcoto (void)
       TIMER1_STOPWATCH_FAST_RESET ();   // do we want fast reset or normal?
       return OWS_ERROR_NONE;
     }
-    else if ( UNLIKELY (TCNT1 >= timeout_t1t) ) {
+    else if ( UNLIKELY (TIMER1_STOPWATCH_TICKS () >= timeout_t1t) ) {
       if ( timeout_t1t != OWS_NO_TIMEOUT ) {
         return OWS_ERROR_TIMEOUT;
       }
     }
   }
 }
-
-uint8_t t0r;   // timer0 reading // FIXME: for debug
 
 // Call call, Propagating Errors.  The call argument must be a call to a
 // function returning ows_error_t.
@@ -323,9 +319,6 @@ read_bit (void)
       }
     }
     else {
-      //t0r = TCNT0;  // FIXME: im debug
-      //printf ("t0r: %hhu\n", t0r); PHP ();
-
       // According to measurements made with timer0, even at 16MHz
       // F_CPU, it takes about 4 us to get from the point where wfpcoto()
       // first detects a change to here.  In this case it doesn't matter
@@ -336,6 +329,9 @@ read_bit (void)
       // a subsequent master-read-0 where the timing crunch really hits.
       // I haven't measure that directly, but presumably its similarly tight,
       // hence the sensitivity to register variable use.
+      // FIXME: maybe should use TICK_DELAY here,
+      // since RBST_US is ultimately derived from values in ticks (which
+      // only happen to be 1 us each now) same for other _delay_us uses
       _delay_us (RBST_US);
       cbitv = SAMPLE_LINE ();
       CPCFRT1 ();
@@ -402,6 +398,7 @@ ows_new_write_bit (uint8_t bit_value)
   return OWS_ERROR_NONE;
 }
 
+// FIXME: needs tested, though its trivially diff from its inner fctn
 ows_error_t
 ows_new_read_bit (uint8_t *bit_value_ptr)
 {
@@ -420,6 +417,7 @@ ows_new_write_byte (uint8_t byte_value)
   return OWS_ERROR_NONE;
 }
 
+// FIXME: needs tested, though its trivially diff from its inner fctn
 ows_error_t
 ows_new_read_byte (uint8_t *byte_value_ptr)
 {
@@ -477,21 +475,6 @@ answer_search (void)
   return OWS_ERROR_NONE;
 }
 
-
-static void
-setup_timer0 (void)
-{
-  // FIXME: im a debugging function
-
-  power_timer0_enable ();   // Ensure timer0 not shut down to save power
-  TCCR0A = 0;
-  TCCR0B = 0;
-
-  // Clock / 8 for prescaler setting, giving two ticks per us at 16 MHz.
-  TCCR0B &= ~(_BV (CS02) | _BV (CS00));
-  TCCR0B |= _BV (CS01);
-}
-
 // This is the proper response to a reset pulse.  It includes the delay and
 // the presence pulse, and consumer the resulting presence pulse event,
 // or else goes to unexpected_event if something other that presence
@@ -517,11 +500,6 @@ setup_timer0 (void)
 ows_error_t
 ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
 {
-  // FIXME: devel block.  Verifies that timer0 measure time well
-  setup_timer0 ();
-  TCNT0 = 0;
-  _delay_us (RBST_US);
-
   uint8_t state = (jgur ? SPPP : SWFR);
 
   CPCFRT1 ();
