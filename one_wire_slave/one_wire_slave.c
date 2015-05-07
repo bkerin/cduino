@@ -96,10 +96,10 @@ ows_init (uint8_t use_eeprom_id)
 // The following ST_* (Slave Timing) macros contain timing values that
 // actual Maxim DS18B20 devices have been found to use, or values that
 // we have derived logically from our understanding of the protocol; see
-// one_wire_master.c.probe from the one_wire_master module for the source
-// of the experimental values.  Some of these got tweaked a tiny bit at
-// some point from the pure experimental values to divide evenly by two or
-// something, but it shouldn't have been enough to matter.
+// one_wire_master.c.probe from the one_wire_master module for the (probably
+// out-of-date) source of the experimental values.  Some of these got tweaked
+// a tiny bit at some point from the pure experimental values to divide
+// evenly by two or something, but it shouldn't have been enough to matter.
 
 // The DS18B20 datasheet and AN126 both say masters are supposed to send
 // 480 us pulse minimum.
@@ -113,65 +113,6 @@ ows_init (uint8_t use_eeprom_id)
 // for reset pulses, so we wouldn't be able to distinguish our own presence
 // pulse from a new reset pulse.
 #define ST_PRESENCE_PULSE_LENGTH 116
-
-// The DS18B20 datasheet says at least 1 us required from master, but the
-// actual DS18B20 devices seem even the shortest blip as signaling the start
-// of a slot.  So this one-cycle time is sort of a joke, and in fact its best
-// to not wait at all so we don't have to worry about the actual timer delay.
-#define ST_REQUIRED_READ_SLOT_START_LENGTH (1000000.0 / F_CPU)
-
-// More generally, any A-length pulse can probably be arbitrarily short,
-// though I haven't checked if it works for writing a 1 from the master
-// (FIXME: check that).
-#define ST_REQUIRED_A_PULSE_LENGTH (1000000.0 / F_CPU)
-
-// This is the time the DS18B20 diagram indicates that it typically waits
-// from the time the line is pulled low by the master to when it (the slave)
-// samples when reading a bit.
-#define ST_SLAVE_READ_SLOT_SAMPLE_TIME 32
-
-// This is the maximum pulse lengh we will tolerate when looking for the
-// pulse the master is supposed to send to start a slave write slot.  We go
-// with OWC_TICK_DELAY_E / 2 here because its half whay between what the
-// master is supposed to send and the point at which the master is supposed
-// to sample the line, and also because the grace time is small enough that
-// it won't cause the ST_SLAVE_WRITE_ZERO_TIME-length pulse we might send
-// in response to crowd the end of the time slot at all.
-#define ST_SLAVE_WRITE_SLOT_START_PULSE_MAX_LENGTH \
-  (OWC_TICK_DELAY_A + OWC_TICK_DELAY_E / 2)
-
-// This is the time to hold the line low when sending a 0 to the master.
-// See Figure 1 of Maxim_Application_Note_AN126.pdf, page 2.  We subtrack
-// E as well as D from F because for all we know we didn't actually get
-// arount to taking the line low until E was mostly over.  FIXME: well,
-// I guess what we should really be doing is starting to hold the line
-// low as soon as we get the initial negative pulse edge when the master
-// is goint to read.  But that will require yet another redo of our event
-// system *sigh*, it might be fast enough without it.
-#define ST_SLAVE_WRITE_ZERO_TIME \
-  (OWC_TICK_DELAY_F - OWC_TICK_DELAY_E - OWC_TICK_DELAY_D)
-
-// Thiis an old logic for this number, slightly wrong the fact that F
-// overlapped D in the diagram but it worked.  We go with OWC_TICK_DELAY_F /
-// 2 here because it's, well, half way between when we must have the line
-// held low and when we must release it.  We could probably measure what
-// actual slaves do if necessary.  Waiting F/2 has the disadvantage of
-// pushing the total low time closer to the length of a presence pulse,
-// though its still 20+ ms short of the minimum required time so it should
-// be ok, and it gives the master more time to get around to reading the
-// line compared to the alternative below.  This makes it slightly harder
-// for our code to distinguish the EVZP and EVC events.  FIXME: actually,
-// the diagram in AN126 sugggest we
-//#define ST_SLAVE_WRITE_ZERO_TIME (OWC_TICK_DELAY_E + OWC_TICK_DELAY_F / 2)
-
-// This also worked super dependably, which isn't too surprising: given the
-// timing they both should be fine.  This one gives a margin of E on both
-// sides of the anticipated sample point, which makes a lot of sense also
-// (compared to the F/2 that we use above).  This keeps the total zero pulse
-// length farther from that of a presense pulse, but gives the master less
-// time to get around to reading the zero pulse.  It also makes the EVZP
-// event easier to distinguish from the EVC event.
-//#define ST_SLAVE_WRITE_ZERO_TIME (OWC_TICK_DELAY_E * 2)
 
 // This is the longest that this slave implementation ever holds the line
 // low itself.  This is relevant because we want to let our interrupt handler
@@ -265,10 +206,10 @@ uint16_t tr;       // Timer Reading (most recent)
   (OWC_TICK_DELAY_A + OWC_TICK_DELAY_E + OWC_TICK_DELAY_F - OWC_TICK_DELAY_D)
 
 // Clear Pin Change Flag and Reset Timer1
-#define CPCFRT1()                                                             \
-  do {                                                                       \
-    DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN);                           \
-    TIMER1_STOPWATCH_FAST_RESET ();   /* do we want fast reset or normal? */ \
+#define CPCFRT1()                                  \
+  do {                                             \
+    DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN); \
+    TIMER1_STOPWATCH_FAST_RESET ();                \
   } while ( 0 )
 
 // FIXME: update for whatever value we settle on for timeout requirements,
@@ -281,8 +222,10 @@ wfpcoto (void)
   while ( TRUE ) {
     if ( LIKELY (DIO_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN)) ) {
       ls = SAMPLE_LINE ();
-      // FIXME: perhaps we should detect resets right here, since clients
-      // always have to do it I think.  Fctn name have to change again :)
+      // Note: we could in in theory check for resets right here since callers
+      // of this routine always have to do it.  The we could dispense with tr.
+      // But there aren't any real savings and I don't want to risk making
+      // the optimizer do something different.
       DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN);
       tr = TIMER1_STOPWATCH_TICKS ();
       // FIXME: do we want fast reset or normal?  if fast we can't honor TOV1,
