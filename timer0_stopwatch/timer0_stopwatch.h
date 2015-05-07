@@ -110,21 +110,21 @@ extern volatile uint32_t timer0_stopwatch_oc;
 // (at least when the compiler is set to optimize for small code size).
 // For explanations of how this macro works, see the implementation of
 // that function in timer0_stopwatch.c.
-#define TIMER0_STOPWATCH_TICKS(OUTVAR) \
-  do { \
-    ATOMIC_BLOCK (ATOMIC_RESTORESTATE) \
-    { \
-      register uint8_t XxX_tcv = TCNT0; \
-      \
-      if ( TIFR0 & _BV (TOV0) ) { \
-        OUTVAR \
-          = (timer0_stopwatch_oc + 1) * TIMER0_STOPWATCH_COUNTER_VALUES; \
-      } \
-      else { \
-        OUTVAR \
+#define TIMER0_STOPWATCH_TICKS(OUTVAR)                                       \
+  do {                                                                       \
+    ATOMIC_BLOCK (ATOMIC_RESTORESTATE)                                       \
+    {                                                                        \
+      register uint8_t XxX_tcv = TCNT0;                                      \
+                                                                             \
+      if ( TIFR0 & _BV (TOV0) ) {                                            \
+        OUTVAR                                                               \
+          = (timer0_stopwatch_oc + 1) * TIMER0_STOPWATCH_COUNTER_VALUES;     \
+      }                                                                      \
+      else {                                                                 \
+        OUTVAR                                                               \
           = timer0_stopwatch_oc * TIMER0_STOPWATCH_COUNTER_VALUES + XxX_tcv; \
-      } \
-    } \
+      }                                                                      \
+    }                                                                        \
   } while ( 0 )
 
 // This is the maximum per-use overhead associate with the
@@ -157,15 +157,15 @@ timer0_stopwatch_ticks (void);
 uint32_t
 timer0_stopwatch_microseconds (void);
 
-// WARNING: this macro resets the prescaler and thereby affects the counting
-// of the timer1 hardware (which shares the prescaler with timer0).
-// This macro can be used together with TIMER0_STOPWATCH_TCNT0 to time
+// WARNING: this macro resets the prescaler and thereby affects the
+// counting of the timer1 hardware (which shares the prescaler with timer0).
+// This macro can be used together with TIMER0_STOPWATCH_TCNT0() to time
 // very short intervals of time with minimal overhead.  It doesn't reset
-// the overflow counter and isn't appropriate for timing intervals
-// of time long enough for overflow of the eight bit TCNT0 to occur.
-// See the timer0_stopwatch_reset implementation for explanation of the
-// individual instructions.  The time between the completion of this code
-// and the evaluation of TIMER0_STOPWATCH_TCNT0 in an immediately following
+// the overflow counter and isn't appropriate for timing intervals of
+// time long enough for overflow of the eight bit TCNT0 to occur.  See the
+// timer0_stopwatch_reset implementation for explanation of the individual
+// instructions.  The time between the completion of this code and the
+// evaluation of TIMER0_STOPWATCH_TCNT0() in an immediately following
 // statement should not be more than a couple of machine instructions.
 // About the only thing you can do to get tighter timing performance is
 // to disable the timer overflow interrupt, so that you don't have to
@@ -189,6 +189,16 @@ timer0_stopwatch_microseconds (void);
       TCNT0 = 0;                       \
       GTCCR &= ~(_BV (TSM));           \
     }                                  \
+  } while ( 0 )
+
+// This does a quick but sloppy reset of TCNT0.  The timer is not stopped
+// or synchronized with the presaler, so for larger presaler settings
+// considerable inaccuracy may be involved in the subsequent time measurement.
+// This macro can be used together with TIMER0_STOPWATCH_TCNT0() to time
+// very short intervals of time with minimal overhead.
+#define TIMER0_STOPWATCH_FAST_RESET_TCNT0() \
+  do {                                      \
+    TCNT0 = 0;                              \
   } while ( 0 )
 
 // This macro evaluates to the current value of the counter.  It should be
