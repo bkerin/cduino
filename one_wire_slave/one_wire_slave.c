@@ -209,6 +209,7 @@ uint16_t tr;       // Timer Reading (most recent)
 #define CPCFRT1()                                  \
   do {                                             \
     DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN); \
+    TIMER1_STOPWATCH_CLEAR_OVERFLOW_FLAG ();       \
     TIMER1_STOPWATCH_FAST_RESET ();                \
   } while ( 0 )
 
@@ -228,8 +229,11 @@ wfpcoto (void)
       // the optimizer do something different.
       DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN);
       tr = TIMER1_STOPWATCH_TICKS ();
-      // FIXME: do we want fast reset or normal?  if fast we can't honor TOV1,
-      // FIXME: currently we don't honor TOV1 anyway.
+      // If we've had timer overflow, treat it as a really long pulse.
+      if ( UNLIKELY (TIMER1_STOPWATCH_OVERFLOWED ()) ) {
+        tr = UINT16_MAX;
+      }
+      TIMER1_STOPWATCH_CLEAR_OVERFLOW_FLAG ();
       TIMER1_STOPWATCH_FAST_RESET ();   // do we want fast reset or normal?
       return OWS_ERROR_NONE;
     }
