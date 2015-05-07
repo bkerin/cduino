@@ -47,8 +47,6 @@ ifdef ENABLE_NON_ARDUINO_OVERRIDES
 
   UPLOAD_METHOD = AVRISPmkII
 
-  #AVRISPMKII_PORT = usb:000200198321
-
   # Let the build system know that it doesn't need to look out for us by
   # insisting on finding a USB connection to something (FTDI or Uno Rev.3
   # or whatever).
