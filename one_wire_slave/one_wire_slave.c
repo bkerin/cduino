@@ -168,23 +168,15 @@ ows_set_timeout (uint16_t time_us)
   timeout_t1t = time_us * OWS_TIMER_TICKS_PER_US;
 }
 
-// FIXME: what frequency actually starts to need the register-locked vars?
 // To get things to work at 10MHz I had to lock these variables into registers
 // (see http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_regbind).
-// It works without this trick at 16MHz, so I don't do it there, because
-// it's assemblyish and weird, but it would probably make for (perhaps just
-// slightly) better interrupt resistance at 16 MHz also.
-#if F_CPU >= 16000000
-uint8_t ls;       // Line State as of last reading, 1 or 0
-uint8_t cbitv;    // Current Bit Value
-uint8_t cbytev;   // Current Byte Value
-uint8_t cbiti;    // Curren Bit Index (of cbytev)
-#else
+
+// See the comments above the reference to OWS_REGISTER_USE_ACKNOWLEDGED
+// in one_wire_slave.h for details about the register locking being used here.
 register uint8_t ls     asm("r2");   // Line State as of last reading, 1 or 0
 register uint8_t cbitv  asm("r3");   // Current Bit Value
 register uint8_t cbytev asm("r4");   // Current Byte Value
 register uint8_t cbiti  asm("r5");   // Curren Bit Index (of cbytev)
-#endif
 
 uint16_t tr;       // Timer Reading (most recent)
 

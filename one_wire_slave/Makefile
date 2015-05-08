@@ -14,6 +14,12 @@ ARDUINO_PORT = /dev/ttyACM1
 ARDUINO_BAUD = 115200
 ARDUINO_BOOTLOADER=optiboot_atmega328.hex
 
+# This line must be uncommented to ensure that people using this module
+# know that some variables are being locked into user registers.  See the
+# reference to OWS_REGISTER_USE_ACKNOWLEDGED in one_wire_slave.h for details.
+# FIXME: comment this out again for the public release:
+CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
+
 # Uncomment for testing with my particular non-arduino slave breadboard build
 ENABLE_NON_ARDUINO_OVERRIDES = defined
 
@@ -28,13 +34,6 @@ ifdef ENABLE_NON_ARDUINO_OVERRIDES
   #CPU_FREQ_DEFINE = -DF_CPU=12000000
   CPU_FREQ_DEFINE = -DF_CPU=10000000
   #CPU_FREQ_DEFINE = -DF_CPU=8000000
-
-  # This must be uncommented by clients that want to use this module at
-  # F_CPU settings below 16MHz, in order to guarantee that they understand
-  # that some variables are locked in particular registers.
-  # FIXME: comment this next line back out for public release so the
-  # acknowledgement ends up required.
-  CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
 
   # No clock divider, external 0.4-20MHz MHz ceramic resonator clock, and
   # most conservative suggested power rise assumptions to be used without
