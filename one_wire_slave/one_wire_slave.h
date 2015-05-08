@@ -16,7 +16,11 @@
 // least a rough understanding of how the line signalling and transaction
 // schemes work.
 //
-// This interface provides two different types of things:
+// This interface provides three types of things:
+//
+//   * The ows_init() and ows_set_timeout() routines, which set up the
+//     hardware and specify the timeout period to use when waiting for
+//     1-wire activity (if any).
 //
 //   * The fairly magical ows_wait_for_function_transaction(), which
 //     automatically handles all reset and presence pulse sequences, and
@@ -27,8 +31,9 @@
 //     slave-specific protocol (step 3 of the transaction sequence describe in
 //     Maxim_DS18B20_datasheet.pdf, page 10).
 //
-// Note that ff you only have exactly one slave on the network, you can
-// probably dispense with ows_wait_for_function_transaction().
+// Note that ff you only have a network with exactly one slave and
+// you control the master as well, you can probably dispense with
+// ows_wait_for_function_transaction().
 //
 // The one-wire protocol requires fast responses from the slave.  The time
 // between a master-request-send edge and the point at which the slave must
@@ -47,23 +52,24 @@
 // it's prefectly legitimate to require the master to pause for, say,
 // 10 us between read/write-bit/byte calls.
 //
-// According to section 28.3 of the ATMega328P datasheet, 10 MHz will support
-// operation down do 2.7 V Vcc.  12 MHz is safer and supports operation down
-// to 3.06 V Vcc.  If you have a choice I'd recommend using 5V and running
-// at 16 MHz.  You'll get better resistance to line noise that way as well.
+// According to section 28.3 of the ATMega328P datasheet, 10 MHz operation
+// is guaranteed down do 2.7 V Vcc.  12 MHz is safer timing-wise, and
+// is guaranteed operation down to 3.06 V Vcc.  If you have a choice I'd
+// recommend using 5V and running at 16 MHz.  You'll get better resistance
+// to line noise that way as well.
 //
-// This module used timer/counter1 to time events on the wire.  If you want
+// This module uses timer/counter1 to time events on the wire.  If you want
 // to use this timer for other things as well it should work, but you'll
 // need to reinitialized the timer yourself after using this interface,
-// andcall ows_init() again before using this interface again.  In the
-// meantime, you're slave won't be able to respond to one-wire events.
+// and call ows_init() again before using this interface again.  Of course
+// in the meantime, you're slave won't be able to respond to 1-wire events.
 //
 // This module uses the pin change interrupt flag for the chosen OWS_PIN
 // to detect changes on the wire.  Therefore, you can't (easily) use the
 // pin change interrupt associated with that pin while using this module,
 // since non-naked ISR routines will unexpectedly clear that hardware flag.
 // This module doesn't actually run any ISR routines, and therefore never
-// enables interrupts (i.e. sei() is never called) itself.
+// enables interrupts itself (so sei() is never called).
 //
 // FIXME: revisit this advice once we've actually tested wake-up: it might
 // for example be required to actually have ISRs enabled, in which case an
@@ -159,12 +165,14 @@
 // declaration below).
 #define OWS_PART_ID_EEPROM_ADDRESS 0
 
-// Return type for functions in this interface which report errors.
+// Return type for functions in this interface which report errors.  FIXME:
+// should use x-macro here as in one_wire_master, and these should be results,
+// only some of which are errors (probably only GOT_INVALID_ROM_COMMAND,
+// or maybe GOT_RESET as well (which should maybe be GOT_UNEXPECTED_RESET)).
 typedef enum {
   OWS_ERROR_NONE = 0,
   OWS_ERROR_TIMEOUT,
   OWS_ERROR_GOT_RESET,
-  OWS_ERROR_UNEXPECTED_PULSE_LENGTH,
   OWS_ERROR_GOT_INVALID_ROM_COMMAND,
   OWS_ERROR_ROM_ID_MISMATCH,
 } ows_error_t;
@@ -276,24 +284,37 @@ ows_set_timeout (uint16_t time_us);
 ows_error_t
 ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur);
 
-// FIXME: replace everyting with these new forms
+// Write a single bit with value bit_value (when the master requests it).
+// Use ows_write_byte() instead for byte-at-a-time messages.  Returns
+// OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_RESET on error, or OWS_ERROR_NONE
+// otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
 ows_error_t
-ows_new_write_bit (uint8_t bit_value);
+ows_write_bit (uint8_t bit_value);
 
+// Read a single bit into *bit_value_ptr (when the master sends it).
+// Use ows_read_byte() instead for byte-at-a-time messages.  Returns
+// OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_RESET on error, or OWS_ERROR_NONE
+// otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
 ows_error_t
-ows_new_read_bit (uint8_t *bit_value_ptr);
+ows_read_bit (uint8_t *bit_value_ptr);
 
+// Write a byte with value byte_value (when the master requests it).
+// Returns OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_RESET on error, or
+// OWS_ERROR_NONE otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
 ows_error_t
-ows_new_write_byte (uint8_t byte_value);
+ows_write_byte (uint8_t byte_value);
 
+// Reads a byte into *byte_value_ptr (when the master requests it).  Returns
+// OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_RESET on error, or OWS_ERROR_NONE
+// otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
 ows_error_t
-ows_new_read_byte (uint8_t *byte_value_ptr);
+ows_read_byte (uint8_t *byte_value_ptr);
 
 // If set to a non-zero value, this flag indicates an alarm condition.
 // Clients of this interface can ascribe particular meanings to particular
 // non-zero values if desired.  Slaves with an alarm condition will respond
-// to any OWC_ALARM_SEARCH_COMMAND issued by thier master (and will do so
-// automagically in ows_wait_for_function_command()).
+// to any OWC_ALARM_SEARCH_COMMAND issued by thier master (this process is
+// started automagically in ows_wait_for_function_command()).
 extern uint8_t ows_alarm;
 
 #endif // ONE_WIRE_SLAVE_H

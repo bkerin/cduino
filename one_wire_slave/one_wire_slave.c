@@ -204,8 +204,8 @@ uint16_t tr;       // Timer Reading (most recent)
     TIMER1_STOPWATCH_FAST_RESET ();                \
   } while ( 0 )
 
-// FIXME: update for whatever value we settle on for timeout requirements,
-// given that we ignore parts of pulses during certain operations.
+// Check For Reset, in other words check if timer reading taken at the end
+// of the last negative pulse was large enough that it was a reset.
 #define CFR() (tr >= US2T1T (OUR_RESET_PULSE_LENGTH_REQUIRED))
 
 static ows_error_t
@@ -328,7 +328,7 @@ write_byte (void)
 // function and require user to use the global, or make it a macro that
 // does that implicitly, who knows.
 ows_error_t
-ows_new_write_bit (uint8_t bit_value)
+ows_write_bit (uint8_t bit_value)
 {
   cbitv = bit_value;
   CPE (write_bit ());
@@ -338,7 +338,7 @@ ows_new_write_bit (uint8_t bit_value)
 
 // FIXME: needs tested, though its trivially diff from its inner fctn
 ows_error_t
-ows_new_read_bit (uint8_t *bit_value_ptr)
+ows_read_bit (uint8_t *bit_value_ptr)
 {
   CPE (read_bit ());
   *bit_value_ptr = cbitv;
@@ -347,7 +347,7 @@ ows_new_read_bit (uint8_t *bit_value_ptr)
 }
 
 ows_error_t
-ows_new_write_byte (uint8_t byte_value)
+ows_write_byte (uint8_t byte_value)
 {
   cbytev = byte_value;
   CPE (write_byte ());
@@ -357,7 +357,7 @@ ows_new_write_byte (uint8_t byte_value)
 
 // FIXME: needs tested, though its trivially diff from its inner fctn
 ows_error_t
-ows_new_read_byte (uint8_t *byte_value_ptr)
+ows_read_byte (uint8_t *byte_value_ptr)
 {
   CPE (read_byte ());
   *byte_value_ptr = cbytev;
@@ -424,16 +424,6 @@ answer_search (void)
     _delay_us (ST_PRESENCE_PULSE_LENGTH);       \
     RELEASE_LINE ();                            \
   } while ( 0 )
-
-// FIXME: I think should add a compile-time option OWS_FILTER_LENGH or
-// something that would treat sufficiently short pulses (less than, say,
-// 1 us) as noise instead of registering them.  Or maybe just an option.
-// The DS18B20 seems to treat even the shortest pulses that I can produce
-// using an IO pin as real, but it might have some sort of filter short
-// of that that comes into play.  Perhaps just using the edge detection is
-// accomplishing something similar, but since well-behaved masters should
-// never produce 1 us pulses anyway, I don't see why we shouldn't play it
-// safe and filter them.
 
 ows_error_t
 ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
@@ -522,7 +512,8 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
           break;
         }
       default:
-        PFP_ASSERT_NOT_REACHED ();   // FIXME im debug change probly to assert0
+        assert (FALSE);  // Shouldn't be here
+        break;
     }
   }
 }
