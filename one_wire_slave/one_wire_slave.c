@@ -502,7 +502,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
             state = SWFR;
           }
           else {
-            // Note that bother success and non-mismatch results end up here.
+            // Note that both success and non-mismatch results end up here.
             return error;
           }
           break;

@@ -59,20 +59,11 @@ print_ows_error (ows_error_t result)
       // FIXME: ERROR_GOT_UNEXPECTED_RESET would be better
       PFP ("OWS_ERROR_GOT_RESET");
       break;
-    case OWS_ERROR_UNEXPECTED_PULSE_LENGTH:
-      PFP ("OWS_ERROR_UNEXPECTED_PULSE_LENGTH");
-      break;
     case OWS_ERROR_GOT_INVALID_ROM_COMMAND:
       PFP ("OWS_ERROR_GOT_INVALID_ROM_COMMAND");
       break;
-    case OWS_ERROR_RESET_DETECTED_AND_HANDLED:
-      PFP ("OWS_ERROR_RESET_DETECTED_AND_HANDLED");
-      break;
     case OWS_ERROR_ROM_ID_MISMATCH:
       PFP ("OWS_ERROR_ROM_ID_MISMATCH");
-      break;
-    case OWS_ERROR_NOT_ALARMED:
-      PFP ("OWS_ERROR_NOT_ALARMED");
       break;
     default:
       assert (FALSE);   // Shouldn't be here
@@ -214,7 +205,6 @@ main (void)
     result = ows_wait_for_function_transaction (&fcmd, jgur);
 
     if ( result != OWS_ERROR_NONE                       &&
-         result != OWS_ERROR_RESET_DETECTED_AND_HANDLED &&
          result != OWS_ERROR_TIMEOUT &&
          result != OWS_ERROR_GOT_RESET ) {
       // For diagnostic purposes we do this.  Normally printing something

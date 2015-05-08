@@ -153,9 +153,10 @@
 // If the use_eeprom_id argument to ows_init() is TRUE, this is the location
 // where the six byte part ID is looked up in EEPROM, otherwise it is ignored.
 // A different address (integer offset value) could be used here, but then
-// the write_random_id_to_eeprom target of generic.mk would need to change
-// as well or a different mechanism used to load the ID into EEPROM (see
-// comments above the ows_init() declaration below.
+// the write_random_id_to_eeprom and write_non_random_id_to_eeprom targets
+// in generic.mk would need to change as well or a different mechanism
+// used to load the ID into EEPROM (see comments above the ows_init()
+// declaration below).
 #define OWS_PART_ID_EEPROM_ADDRESS 0
 
 // Return type for functions in this interface which report errors.
@@ -165,9 +166,7 @@ typedef enum {
   OWS_ERROR_GOT_RESET,
   OWS_ERROR_UNEXPECTED_PULSE_LENGTH,
   OWS_ERROR_GOT_INVALID_ROM_COMMAND,
-  OWS_ERROR_RESET_DETECTED_AND_HANDLED,
   OWS_ERROR_ROM_ID_MISMATCH,
-  OWS_ERROR_NOT_ALARMED,
 } ows_error_t;
 
 // Initialize the one-wire slave interface.  This sets up the chosen
