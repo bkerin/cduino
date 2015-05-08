@@ -193,7 +193,7 @@ main (void)
   // setting, in order to exercise things: if everything works properly,
   // the master should still be able to communicate with us despite
   // regular timeouts and restarts of ows_wait_for_function_transaction().
-  // In practice OWS_NO_TIMEOUT could be used if the slave only needs to
+  // In practice OWS_TIMEOUT_NONE could be used if the slave only needs to
   // do things on demand (and doesn't want to sleep), or some value between
   // the minimum (1) and OWS_MAX_TIMEOUT_US.  Of course, if the slave does
   // anything time-consuming between ows_wait_for_function_transaction()
@@ -202,7 +202,7 @@ main (void)
   // FIXME: so maybe actually set it to the minimum.
   // FIXME: do the min and max timeout values still make sense?
   ows_set_timeout (32767);
-  //ows_set_timeout (OWS_NO_TIMEOUT);
+  //ows_set_timeout (OWS_TIMEOUT_NONE);
 
   // FIXME: debug
   uint32_t lc = 0;   // FIXME: for testing timeout time correctness only

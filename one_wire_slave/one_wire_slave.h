@@ -186,16 +186,18 @@ typedef enum {
 // way to load unique IDs onto devices (note that that target writes eight
 // random bytes, of which only the first six are used by this interface).
 // If use_eeprom_id is false, a default device ID with a non-family part
-// numberof OWS_DEFAULT_PART_ID is used (note that this arrangement is only
-// useful if you intend to use only one of your slaves on the bus).
+// numberof OWS_DEFAULT_PART_ID is used (note that this arrangement is
+// only useful if you intend to use only one of your slaves on the bus).
+// The timeout value is set to OWS_TIMEOUT_NONE (but may be changed using
+// osw_set_timeout() before other routines in this interface are called).
 void
 ows_init (uint8_t use_eeprom_id);
 
 // Value to pass to ows_set_timeout() when timeouts are not to be used.
-#define OWS_NO_TIMEOUT 0
+#define OWS_TIMEOUT_NONE 0
 
 // This is the minimum timout setting that can be passed to ows_set_timeout()
-// (besides OWS_NO_TIMEOUT, which disables timeouts).  Note that the
+// (besides OWS_TIMEOUT_NONE, which disables timeouts).  Note that the
 // ows_set_timeout() funtion implements timeouts of *approximately*
 // this lengh.  At twice the length of a reset pulse (the longest pulse
 // in the 1-wire protocol), this value is hopefully pretty conservative.
@@ -208,12 +210,12 @@ ows_init (uint8_t use_eeprom_id);
 
 // FIXME: change all uses of term one-wire to "1-wire" to match Maxim docs.
 
-// If time_us isn't OWS_NO_TIMEOUT, then any calls in this interface that
+// If time_us isn't OWS_TIMEOUT_NONE, then any calls in this interface that
 // waits for 1-wire events will timeout and return OWS_ERROR_TIMEOUT after
 // approximately this many microseconds without any activity on the line.
 // Note that events not addressed to this slave will still prevent a
 // timeout from occurring, so if your master continually talks to other
-// slaves you'll never get a timeout.  If it isn't OWS_NO_TIMEOUT, the
+// slaves you'll never get a timeout.  If it isn't OWS_TIMEOUT_NONE, the
 // timeout_t1t argument must be in [OWS_MIN_TIMEOUT_US, OWS_MAX_TIMEOUT_US].
 // This isn't intended to support short timeouts, it just gives a simple
 // way to do other things from the main thread occasionally.  If you really

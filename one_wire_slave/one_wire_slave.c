@@ -91,6 +91,8 @@ ows_init (uint8_t use_eeprom_id)
   // Note that since we're not going to actually use an ISR but instead
   // monitor the pin change interrupt flag, we don't need to actually enable
   // interrupts here (i.e. no sei() call required).
+
+  ows_set_timeout (OWS_TIMEOUT_NONE);
 }
 
 // The following ST_* (Slave Timing) macros contain timing values that
@@ -108,10 +110,10 @@ ows_init (uint8_t use_eeprom_id)
 // The DS18B20 datasheet says 15 to 60 us.
 #define ST_DELAY_BEFORE_PRESENCE_PULSE 28
 
-// The DS18B20 datasheet says 60 to 240 us.  It would be bad for us to
-// choose 240 us, since that would be as long as the minimum we require
-// for reset pulses, so we wouldn't be able to distinguish our own presence
-// pulse from a new reset pulse.
+// The DS18B20 datasheet says 60 to 240 us.  It would be bad for us to choose
+// 240 us, since that would be as long as the minimum we require for reset
+// pulses, so we wouldn't be able to distinguish our own presence pulse
+// from a reset pulse that the master might decide to send simultaneously.
 #define ST_PRESENCE_PULSE_LENGTH 116
 
 // This is the longest that this slave implementation ever holds the line
@@ -151,17 +153,14 @@ ows_init (uint8_t use_eeprom_id)
 #define SRFC  7   // State Reading Function Command
 volatile uint8_t state;
 
-// FIXME: I think OWS_NO_TIMEOUT should turn into OWS_TIMEOUT_NONE
-
-// Timeout, in timer1 ticks.  FIXME: this should be reset in _init, and
-// not initialized here ( to save a little flash).
-uint16_t timeout_t1t = OWS_NO_TIMEOUT;
+// Timeout, in timer1 ticks.
+uint16_t timeout_t1t;
 
 void
 ows_set_timeout (uint16_t time_us)
 {
   // Insist on the interface requirements.
-  if ( time_us != OWS_NO_TIMEOUT ) {
+  if ( time_us != OWS_TIMEOUT_NONE ) {
     assert (time_us >= OWS_MIN_TIMEOUT_US);
     assert (time_us <= OWS_MAX_TIMEOUT_US);
   }
@@ -238,7 +237,7 @@ wfpcoto (void)
       return OWS_ERROR_NONE;
     }
     else if ( UNLIKELY (TIMER1_STOPWATCH_TICKS () >= timeout_t1t) ) {
-      if ( timeout_t1t != OWS_NO_TIMEOUT ) {
+      if ( timeout_t1t != OWS_TIMEOUT_NONE ) {
         return OWS_ERROR_TIMEOUT;
       }
     }
