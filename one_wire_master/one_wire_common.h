@@ -49,7 +49,7 @@
 #define OWC_TICK_TIME_IN_US 1.0
 
 // WARNING: the argument to this macro must be a valid constant double
-// or constand integer expression that the compiler knows is constant at
+// or constant integer expression that the compiler knows is constant at
 // compile time.  Pause for exactly ticks ticks.
 #define OWC_TICK_DELAY(ticks) _delay_us (OWC_TICK_TIME_IN_US * ticks)
 
