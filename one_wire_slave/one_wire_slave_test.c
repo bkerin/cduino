@@ -1,10 +1,10 @@
 // Test/demo for the one_wire_slave.h interface.
 //
-// This program implements a simple one-wire slave device.  It acts a bit
-// like a Maxim DS18B20, but the temperature is always about 42.42 degrees
-// C :) There are some other slightly eccentric features of these tests,
-// since they are designed to account for the expectations of the test
-// program one_wire_master_test.c (from the one_wire_master module).
+// This program implements a simple 1-wire slave device.  It acts a bit like
+// a Maxim DS18B20, but the temperature is always about 42.42 degrees C :)
+// There are some other slightly eccentric features of these tests, since
+// they are designed to account for the expectations of the test program
+// one_wire_master_test.c (from the one_wire_master module).
 //
 // Physically, the test setup should consist of:
 //
@@ -12,9 +12,14 @@
 //     one_wire_master_test.c, but with the actual DS18B20 removed, and
 //
 //   * a second Arduino running this test program, connected to the first
-//     Arduino via a single wire (by default to OWS_PIN DIO_PIN_DIGITAL_2),
-//     and sharing a common ground FIXME: verify that we can power second
-//     arduino from first and all communication works.
+//     Arduino via a data line (by default to OWS_PIN DIO_PIN_DIGITAL_2),
+//     and a ground line.
+//
+// Depending on the USB to provide a common ground didn't work for me with
+// my laptop.  I had to add a physical wire connecting the Arduino grounds.
+// This is sort of weird but unlikely to be an issue in any real application
+// (where its unlikely that both master and slave will even be Arduinos,
+// let alone USB-powered ones).
 //
 // The slave Arduino should be reset first, then the master should be reset
 // when prompted to kick off the tests.
@@ -55,9 +60,8 @@ print_ows_error (ows_error_t result)
     case OWS_ERROR_TIMEOUT:
       PFP ("OWS_ERROR_TIMEOUT");
       break;
-    case OWS_ERROR_GOT_RESET:
-      // FIXME: ERROR_GOT_UNEXPECTED_RESET would be better
-      PFP ("OWS_ERROR_GOT_RESET");
+    case OWS_ERROR_GOT_UNEXPECTED_RESET:
+      PFP ("OWS_ERROR_GOT_UNEXPECTED_RESET");
       break;
     case OWS_ERROR_GOT_INVALID_ROM_COMMAND:
       PFP ("OWS_ERROR_GOT_INVALID_ROM_COMMAND");
@@ -147,7 +151,7 @@ main (void)
   // Initialize the interface, using the OWS_DEFAULT_PART_ID
   ows_init (FALSE);
   // Use this if you want to use an ID that you've loaded into EEPROM:
-  //ows_init (TRUE);   // Initialize the one-wire interface slave end
+  //ows_init (TRUE);   // Initialize the 1-wire interface slave end
   PFP ("ok, it returned.\n");
 
   // The one_wire_master_test.c program does a search for alarmed slaves.
@@ -206,7 +210,7 @@ main (void)
 
     if ( result != OWS_ERROR_NONE                       &&
          result != OWS_ERROR_TIMEOUT &&
-         result != OWS_ERROR_GOT_RESET ) {
+         result != OWS_ERROR_GOT_UNEXPECTED_RESET ) {
       // For diagnostic purposes we do this.  Normally printing something
       // out at this point might take too much time that could otherwise be
       // spent eating the error and waiting for the line to sort itself out :)
@@ -217,7 +221,7 @@ main (void)
       continue;
     }
 
-    if ( result == OWS_ERROR_GOT_RESET ) {
+    if ( result == OWS_ERROR_GOT_UNEXPECTED_RESET ) {
       // FIXME: because of the text that the slave outputs between things,
       // this path isn't really tested.
       jgur = TRUE;

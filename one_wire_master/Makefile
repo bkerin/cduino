@@ -7,7 +7,7 @@ include run_screen.mk
 # specify all of these options.
 
 # These setting are only useful when we want to connect two Arduinos at once
-# (in order to test both a one-wire master and a slave, for example).  In this
+# (in order to test both a 1-wire master and a slave, for example).  In this
 # situation we can't depend on build system autodetection, but must instead
 # state explicitly which device we want to program.  Our build system then
 # requires us to specify all of these options.  Note that the port device
@@ -42,7 +42,7 @@ CPPFLAGS += -DTEST_CONDITION_SINGLE_SLAVE
 # TEST_CONDITION_SINGLE_SLAVE code outputs the ID of the slave it finds --
 # it can be run multiple times with different slaves devices to find all
 # their IDs.  Note the IDs must also be assigned correctly to first and
-# second positions with respect to the discovery order of the one-wire bus
+# second positions with respect to the discovery order of the 1-wire bus
 # search algorithm.  It might be easiest to try both orders :) The individual
 # bytes of these IDs should be given in the order they occur in the ID.
 # The test program takes care of swapping them to account for endianness.

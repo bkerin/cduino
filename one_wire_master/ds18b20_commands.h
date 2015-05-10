@@ -1,5 +1,5 @@
 // This header contains some of the slave-specific command byte codes used by
-// the Maxim DS18B20 one-wire temperature sensor.  Only the commands required
+// the Maxim DS18B20 1-wire temperature sensor.  Only the commands required
 // by the test programs for the one_wire_master_test.c and one_wire_slave.c
 // programs are defined here.
 

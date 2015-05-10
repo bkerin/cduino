@@ -1,19 +1,19 @@
-// This file is now slightly out of sync with the actual one_wire_master.h
-// interface.  Updating it would be fairly easy, but since I already have
-// the slave timing number I need I haven't done it.
+// This file is now out of sync with the actual one_wire_master.h interface.
+// Updating it would be fairly easy, but since I already have the slave
+// timing number I need I haven't done it.
 #error This file needs to be updated before it can be used
 
 // This is a version of one_wire_master.c that has been armed with extra
-// code that can be used to determine the timing that one-wire slave
-// devices actually use.  It's actually only useful for figuring out how
-// slaves should work, but it lives here in the one_wire_master module
-// because we just used a hacked version of the master implementation
-// to figure out what the slaves should do.  We want to behave as much
-// like Maxim one-wire devices as possible, and presumably they had good
-// reasons for choosing the slave timing settings they chose.  Note that
-// we're looking for actual slave timing behavior here: this is different
-// than the prescribed timings that Maxim says master devices should use,
-// though of couse it's supposed to be compatible.
+// code that can be used to determine the timing that 1-wire slave devices
+// actually use.  It's actually only useful for figuring out how slaves
+// should work, but it lives here in the one_wire_master module because we
+// just used a hacked version of the master implementation to figure out
+// what the slaves should do.  We want to behave as much like Maxim 1-wire
+// devices as possible, and presumably they had good reasons for choosing
+// the slave timing settings they chose.  Note that we're looking for actual
+// slave timing behavior here: this is different than the prescribed timings
+// that Maxim says master devices should use, though of couse it's supposed
+// to be compatible.
 //
 // To use this program:
 //
@@ -222,7 +222,7 @@ owm_read_bit (void)
   // Probing to determine how long actual slaves require the line to be held
   // low to start a master-read slot.  Since this is last probe in this file
   // it'ss not commented out.  Note that these hard-coded bits assume that
-  // the default one-wire bit is being used.
+  // the default 1-wire bit is being used.
   DDRD |= _BV (DDD2);
   PORTD &= ~(_BV (PORTD2));
   //DRIVE_LINE_LOW ();

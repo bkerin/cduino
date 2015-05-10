@@ -1,5 +1,5 @@
 // This header describes fundamental characteristics and operations of
-// the one-wire protocol.  These values are (necessarily) identical in the
+// the 1-wire protocol.  These values are (necessarily) identical in the
 // one_wire_master and one_wire_slave modules, so they get their own header.
 
 #include <util/delay.h>
@@ -7,7 +7,7 @@
 #ifndef ONE_WIRE_COMMON_H
 #define ONE_WIRE_COMMON_H
 
-// Tick delays for various parts of the one-wire protocol, as described in
+// Tick delays for various parts of the 1-wire protocol, as described in
 // Table 2 on Maxim_Application_Note_AN126.pdf, page 3.
 #define OWC_TICK_DELAY_A   6
 #define OWC_TICK_DELAY_B  64
@@ -62,15 +62,15 @@
 #define OWC_ID_SIZE_BYTES 8
 
 // These are the standard ROM ID search and addressing commands common to
-// all one-wire devices, see the DS18B20 datasheet "ROM COMMANDS" section.
+// all 1-wire devices, see the DS18B20 datasheet "ROM COMMANDS" section.
 #define OWC_SEARCH_ROM_COMMAND   0xF0
 #define OWC_READ_ROM_COMMAND     0x33
 #define OWC_MATCH_ROM_COMMAND    0x55
 #define OWC_SKIP_ROM_COMMAND     0xCC
 #define OWC_ALARM_SEARCH_COMMAND 0xEC
 
-// ROM commands perform one-wire search and addressing operations and are
-// effectively part of the one-wire protocol, as opposed to other commands
+// ROM commands perform 1-wire search and addressing operations and are
+// effectively part of the 1-wire protocol, as opposed to other commands
 // which particular slave types may define to do particular things.
 #define OWC_IS_ROM_COMMAND(command) \
   ( command ==   OWC_SEARCH_ROM_COMMAND || \

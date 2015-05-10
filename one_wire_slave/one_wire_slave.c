@@ -14,9 +14,6 @@
 #include "one_wire_common.h"
 #include "one_wire_slave.h"
 #include "timer1_stopwatch.h"
-// FIXME: next two lines for debug only:
-#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
-#include "term_io.h"
 #include "util.h"
 
 // Aliases for some operations from one_wire_commoh.h (for readability).
@@ -184,16 +181,16 @@ uint16_t tr;       // Timer Reading (most recent)
 // when reading a bit, in microseconds.  We do like the master and give
 // OWC_TICK_DELAY_E from the time when the master is supposed to have the
 // line set.
-#define RBST_US (OWC_TICK_DELAY_A + OWC_TICK_DELAY_E)
+#define RBST_TICK_DELAY (OWC_TICK_DELAY_A + OWC_TICK_DELAY_E)
 
-// Zero Pulse Time.  Here we do what Figure 1 of
+// Zero Pulse Time in Ticks.  Here we do what Figure 1 of
 // Maxim_Application_Note_AN126.pdf proscribes, even though it seems stupid.
 // We might as well do it, since we can't change the fact that the master
 // holds the line low almost to the end of the time slot when writing a
 // zero anyway, giving us the same tight timing issue when transitioning
 // between a master-write-0 and a master-read-0 that we get here between
 // master-read-0 operations.
-#define ZPT_US \
+#define ZPTT \
   (OWC_TICK_DELAY_A + OWC_TICK_DELAY_E + OWC_TICK_DELAY_F - OWC_TICK_DELAY_D)
 
 // Clear Pin Change Flag and Reset Timer1
@@ -253,7 +250,7 @@ read_bit (void)
     CPE (wfpcoto ());
     if ( ls ) {
       if ( UNLIKELY (CFR ()) ) {
-        return OWS_ERROR_GOT_RESET;
+        return OWS_ERROR_GOT_UNEXPECTED_RESET;
       }
     }
     else {
@@ -267,10 +264,7 @@ read_bit (void)
       // a subsequent master-read-0 where the timing crunch really hits.
       // I haven't measure that directly, but presumably its similarly tight,
       // hence the sensitivity to register variable use.
-      // FIXME: maybe should use TICK_DELAY here,
-      // since RBST_US is ultimately derived from values in ticks (which
-      // only happen to be 1 us each now) same for other _delay_us uses
-      _delay_us (RBST_US);
+      OWC_TICK_DELAY (RBST_TICK_DELAY);
       cbitv = SAMPLE_LINE ();
       CPCFRT1 ();
       return OWS_ERROR_NONE;
@@ -285,13 +279,13 @@ write_bit (void)
     CPE (wfpcoto ());
     if ( UNLIKELY (ls) ) {
       if ( UNLIKELY (CFR ()) ) {
-        return OWS_ERROR_GOT_RESET;
+        return OWS_ERROR_GOT_UNEXPECTED_RESET;
       }
     }
     else {
       if ( LIKELY (! cbitv) ) {
         DRIVE_LINE_LOW ();
-        _delay_us (ZPT_US);
+        OWC_TICK_DELAY (ZPTT);
         RELEASE_LINE ();
         CPCFRT1 ();
       }

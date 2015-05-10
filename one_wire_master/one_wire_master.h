@@ -2,14 +2,14 @@
 //
 // Test driver: one_wire_master_test.c    Implementation: one_wire_master.c
 //
-// If you're new to one-wire you should first read the entire
-// Maxim_DS18B20_datasheet.pdf.  Its hard to use one-wire without at
-// least a rough understanding of how the line signalling and transaction
-// schemes work.
+// If you're new to 1-wire you should first read the entire
+// Maxim_DS18B20_datasheet.pdf.  Its hard to use 1-wire without at least a
+// rough understanding of how the line signalling and transaction schemes
+// work.
 //
 // This interface features high-level routines that can handle all the
-// back-and-forth required to scan the bus or initiate a one-wire command
-// transaction, and also lower-level one-wire functionality, such as bit-
+// back-and-forth required to scan the bus or initiate a 1-wire command
+// transaction, and also lower-level 1-wire functionality, such as bit-
 // and byte-at-a-time communication.  Note that the latter low-level
 // functions are typically required to usefully complete a transaction.
 // The higher-level routines are presented first in this interface.
@@ -168,7 +168,7 @@ owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd);
 // Reset and Individual Bit Functions
 //
 // These function perform reset or bit-at-a-time operations.  All the
-// fundamental timing used in the one-wire protocol is implemented in these
+// fundamental timing used in the 1-wire protocol is implemented in these
 // functions, other functions in this interface are implemented in terms
 // of these.
 //
@@ -229,8 +229,8 @@ owm_touch_byte (uint8_t data);
 owm_result_t
 owm_read_id (uint8_t *id_buf);
 
-// Find the "first" slave on the one-wire bus (in the sense of
-// the discovery order of the one-wire search algorithm described in
+// Find the "first" slave on the 1-wire bus (in the sense of
+// the discovery order of the 1-wire search algorithm described in
 // Maxim_Application_Note_AN187.pdf).  If a slave is discovered, its ID is
 // written into id_buf (which mucst be a pointer to OWC_ID_SIZE_BYTES bytes
 // of space) and OWM_RESULT_SUCCESS is returned, otherwise a non-zero error
@@ -240,8 +240,8 @@ owm_result_t
 owm_first (uint8_t *id_buf);
 
 // Require an immediately preceeding call to owm_first() or owm_next()
-// to have occurred.  Find the "next" slave on the one-wire bus (in the
-// sense of the discovery order of the one-wire search algorithm described
+// to have occurred.  Find the "next" slave on the 1-wire bus (in the
+// sense of the discovery order of the 1-wire search algorithm described
 // in Maxim_Application_Note_AN187.pdf).  This continues a search begun by
 // a previous call to owm_first().  If another slave is found, its ID is
 // written into id_buf (which must be a pointer to OWC_ID_SIZE_BYTES bytes

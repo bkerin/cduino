@@ -1,20 +1,20 @@
-// One-wire slave interface (software interface -- requires only one IO pin)
+// 1-wire slave interface (software interface -- requires only one IO pin)
 //
 // Test driver: one_wire_slave_test.c    Implementation: one_wire_slave.c
 //
 // WARNING: READ THIS ENTIRE INTRODUCTION.
 //
 // This interface provides a framework for creating slave devices compatible
-// with the Maxim one-wire slave protocol, or close (IMO its often more
+// with the Maxim 1-wire slave protocol, or close (IMO its often more
 // convenient to create almost-compatible devices which aren't quite so
 // worried about timing or honoring every request).  Maxim isn't helping
 // us create 1-wire slaves, its all based on Maxim Application note AN126
 // and mimicking the behavior of the Maxim DS18B20.
 //
-// If you're new to one-wire you should first read the entire
-// Maxim_DS18B20_datasheet.pdf.  Its hard to use one-wire without at
-// least a rough understanding of how the line signalling and transaction
-// schemes work.
+// If you're new to 1-wire you should first read the entire
+// Maxim_DS18B20_datasheet.pdf.  Its hard to use 1-wire without at least a
+// rough understanding of how the line signalling and transaction schemes
+// work.
 //
 // This interface provides three types of things:
 //
@@ -35,7 +35,7 @@
 // you control the master as well, you can probably dispense with
 // ows_wait_for_function_transaction().
 //
-// The one-wire protocol requires fast responses from the slave.  The time
+// The 1-wire protocol requires fast responses from the slave.  The time
 // between a master-request-send edge and the point at which the slave must
 // have the line pulled low to send a zero is only 15 us.  The turnaround time
 // between a master-write and a subsequent master-read is similarly tight.
@@ -165,20 +165,20 @@
 // declaration below).
 #define OWS_PART_ID_EEPROM_ADDRESS 0
 
-// Return type for functions in this interface which report errors.  FIXME:
-// should use x-macro here as in one_wire_master, and these should be results,
-// only some of which are errors (probably only GOT_INVALID_ROM_COMMAND,
-// or maybe GOT_RESET as well (which should maybe be GOT_UNEXPECTED_RESET)).
+// Return type for functions in this interface which report errors.
+// FIXME: should use x-macro here as in one_wire_master, and these
+// should be results, only some of which are errors (probably only
+// GOT_INVALID_ROM_COMMAND, or maybe GOT_UNEXPECTED_RESET as well).
 typedef enum {
   OWS_ERROR_NONE = 0,
   OWS_ERROR_TIMEOUT,
-  OWS_ERROR_GOT_RESET,
+  OWS_ERROR_GOT_UNEXPECTED_RESET,
   OWS_ERROR_GOT_INVALID_ROM_COMMAND,
   OWS_ERROR_ROM_ID_MISMATCH,
 } ows_error_t;
 
-// Initialize the one-wire slave interface.  This sets up the chosen
-// DIO pin, including pin change interrupts and global interrupt enable.
+// Initialize the 1-wire slave interface.  This sets up the chosen DIO
+// pin, including pin change interrupts and global interrupt enable.
 // If use_eeprom_id is true, the first six bytes of the AVR EEPROM are
 // read and used together with the OWS_FAMILY_CODE and a CRC to form a
 // slave ROM ID, which is loaded into RAM for speedy access.  In this
@@ -199,114 +199,81 @@ ows_init (uint8_t use_eeprom_id);
 
 // This is the minimum timout setting that can be passed to ows_set_timeout()
 // (besides OWS_TIMEOUT_NONE, which disables timeouts).  Note that the
-// ows_set_timeout() funtion implements timeouts of *approximately*
-// this lengh.  At twice the length of a reset pulse (the longest pulse
-// in the 1-wire protocol), this value is hopefully pretty conservative.
-// A shorter value would probably work, but as you approach the defined
-// lengths of pulses in the 1-wire protocol you're asking for trouble.
+// ows_set_timeout() funtion implements timeouts of *approximately* this
+// length.  At twice the length of a reset pulse (the longest pulse in the
+// 1-wire protocol), this value is pretty conservative.  A shorter value
+// would probably work, but as you approach the defined lengths of pulses
+// in the 1-wire protocol you're asking for trouble.
 #define OWS_MIN_TIMEOUT_US (OWC_TICK_DELAY_H * 2)
 
 // Analogous to OWS_MIN_TIMEOUT_US.
 #define OWS_MAX_TIMEOUT_US ((uint16_t) (UINT16_MAX / OWS_TIMER_TICKS_PER_US))
 
-// FIXME: change all uses of term one-wire to "1-wire" to match Maxim docs.
-
-// If time_us isn't OWS_TIMEOUT_NONE, then any calls in this interface that
-// waits for 1-wire events will timeout and return OWS_ERROR_TIMEOUT after
-// approximately this many microseconds without any activity on the line.
-// Note that events not addressed to this slave will still prevent a
-// timeout from occurring, so if your master continually talks to other
+// If time_us isn't OWS_TIMEOUT_NONE, then any call into this interface
+// that waits for a 1-wire event will timeout and return OWS_ERROR_TIMEOUT
+// after approximately this many microseconds without any change in the line
+// state.  Note that events not addressed to this slave will still prevent
+// a timeout from occurring, so if your master continually talks to other
 // slaves you'll never get a timeout.  If it isn't OWS_TIMEOUT_NONE, the
 // timeout_t1t argument must be in [OWS_MIN_TIMEOUT_US, OWS_MAX_TIMEOUT_US].
 // This isn't intended to support short timeouts, it just gives a simple
 // way to do other things from the main thread occasionally.  If you really
 // need microsecond response from the slave for other purposes than 1-wire,
-// give it its own slave processor :).
+// give your slave its own slave processor :).
 void
 ows_set_timeout (uint16_t time_us);
 
-// FIXME: update all this text to correspond to the new _2 version behavior
 // Wait for the initiation of a function command transaction intended
 // for our ROM ID (and possibly others as well if a OWS_SKIP_ROM_COMMAND
 // was sent), and return the function command itself in *command_ptr.
 // See Maxim_DS18B20_datasheet.pdf page 10, "TRANSACTION SEQUENCE" section.
 // In the meantime, automagically respond to resets and participate in any
 // slave searches (i.e. respond to any incoming OWC_SEARCH_ROM_COMMAND or
-// OWC_ALARM_SEARCH_COMMAND commands).  An error is generated if a pulse
-// with an abnormal lenght (i.e. normal bit communication or reset lengh)
-// is encountered.  An error is *not* generated when a potential transaction
-// is aborted by the master by a new reset pulse.  This policy allows this
-// routine to automagically handle all ROM SEARCH, READ ROM and the like,
-// but also permits the somewhat weird case in which the master sends a
-// command that is useless except for transaction initiation (a MATCH_ROM
-// or SKIP_ROM), then doesn't actually follow it with a function command.
-// An actual DS18B20 appears to tolerate this misbehavior as well, however.
-// On the other hand we *do not* tolerate function commands that aren't
-// preceeded by a ROM command.  The DS18B20 seems to tolerate them (when its
-// the only device on the bus), but its completely contrary to the proscribed
-// behavior for masters to do that, and makes the implementation of this
-// routine harder.  Use the lower-level portion of this interface if you
-// know you have only one slave and don't want to bother with addressing.
-// Masters that fail to send an entire byte after issuing a reset pulse
-// will cause this routine to hang until they get around to doing that
-// (or issuing another reset pulse).
+// OWC_ALARM_SEARCH_COMMAND commands).
 //
-// FIXME: perhaps for consistency we should be ignoring short pulses in this routine as well, since that's what ows_wait_for_reset() currently does.
+// The jgur (Just Got Unexpected Reset) argument should be FALSE unless
+// you just got an unexpected reset (see below).
 //
-// If timeout is not zero, this routine will return OWS_ERROR_TIMEOUT iff:
+// On success OWS_ERROR_NONE is returned.  Otherwise, one of the following
+// errors is returned:
 //
-//   * it's waiting for a reset pulse, and
+//   * OWS_ERROR_TIMEOUT if a timeout occurred (see ows_set_timeout() above).
 //
-//   * there is no recent line activity that hasn't been handled yet, and
+//   * OWS_ERROR_GOT_UNEXPECTED_RESET if we get a reset pulse from the
+//     master when we where expecting something else.  In this case, it
+//     probably makes sense to immediately call this function again with
+//     the jgur argument TRUE.
 //
-//   * the line stays high for more than timeout_us microseconds +/- one
-//     timer1 timer tick and a small amount of code overhead.
+//   * OWS_ERROR_GOT_INVALID_ROM_COMMAND if we get a command that doesn't
+//     satisfy OWC_IS_ROM_COMMAND(command) from one_wire_common.h.  This could
+//     result from a misbehaving master, or from data corruption on the line.
 //
-// Pending (negative) pulse ends in particular are always processed as
-// pulses, rather than triggering a timeout.
-//
-// If not zero, the timeout value is required to be no greater than
-// OWS_MAX_TIMEOUT_US.  This limit is required by the implementation in
-// order to ensure that timer1 overflow doesn't cause a timeout to be missed.
-//
-// Note that a timeout won't happen if other slaves are talking continually,
-// or if the master hangs this slave by stopping mid-byte or otherwise
-// misbehaving.  This timeout implementation is intended as a simple
-// way to integrate this routine into a loop in a slave that wants to do
-// other things (including perhaps going to sleep if there's no activity,
-// thereby gauranteeing that it won't be a truly well-behaved one-wire
-// slave, but who cares).  If you need guaranteed latency regardless of
-// FIXME: so how exactly will these timeouts interact with sleep?
-// arbitrary network activity, perhaps you should add another processor to
-// your design, or reconsider your use of one-wire for communication with
-// the single processor, or run an RTOS instead.
-// FIXME: update docs now timeout is a global setting
 ows_error_t
 ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur);
 
 // Write a single bit with value bit_value (when the master requests it).
 // Use ows_write_byte() instead for byte-at-a-time messages.  Returns
-// OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_RESET on error, or OWS_ERROR_NONE
-// otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
+// OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error, or
+// OWS_ERROR_NONE otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
 ows_error_t
 ows_write_bit (uint8_t bit_value);
 
 // Read a single bit into *bit_value_ptr (when the master sends it).
 // Use ows_read_byte() instead for byte-at-a-time messages.  Returns
-// OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_RESET on error, or OWS_ERROR_NONE
-// otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
+// OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error, or
+// OWS_ERROR_NONE otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
 ows_error_t
 ows_read_bit (uint8_t *bit_value_ptr);
 
 // Write a byte with value byte_value (when the master requests it).
-// Returns OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_RESET on error, or
-// OWS_ERROR_NONE otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
+// Returns OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error,
+// or OWS_ERROR_NONE otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
 ows_error_t
 ows_write_byte (uint8_t byte_value);
 
-// Reads a byte into *byte_value_ptr (when the master requests it).  Returns
-// OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_RESET on error, or OWS_ERROR_NONE
-// otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
+// Reads a byte into *byte_value_ptr (when the master requests it).
+// Returns OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error,
+// or OWS_ERROR_NONE otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
 ows_error_t
 ows_read_byte (uint8_t *byte_value_ptr);
 

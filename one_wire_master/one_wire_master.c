@@ -474,7 +474,7 @@ search (uint8_t alarmed_slaves_only)
   return search_result;
 }
 
-// Find the 'first' device on the one-wire bus.  If alarmed_slaves_only is
+// Find the 'first' device on the 1-wire bus.  If alarmed_slaves_only is
 // true, only slaves with an active alarm condition are found.  On success,
 // the discovered ROM ID is placed in rom_id and OWM_RESULT_SUCCESS is
 // returned, otherwise a non-zero result code is returned.
@@ -522,7 +522,7 @@ first (uint8_t alarmed_slaves_only)
   }
 }
 
-// Find the 'next' device on the one-wire bus.  If alarmed_slaves_only is
+// Find the 'next' device on the 1-wire bus.  If alarmed_slaves_only is
 // true, only slaves ith an active alarm condition are found.  On success,
 // th ediscovered ROM ID is placed in rom_id and and OWM_RESULT_SUCCESS IS
 // returned, otherwise a non-zero result code is returned.

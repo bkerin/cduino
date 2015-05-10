@@ -21,7 +21,7 @@ ARDUINO_BOOTLOADER=optiboot_atmega328.hex
 CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
 
 # Uncomment for testing with my particular non-arduino slave breadboard build
-ENABLE_NON_ARDUINO_OVERRIDES = defined
+#ENABLE_NON_ARDUINO_OVERRIDES = defined
 
 ##### Orverrides for Non-Arduino Slave {{{1
 
@@ -98,9 +98,9 @@ CPPFLAGS += -DOWM_TEST_CONDITION_SINGLE_SLAVE
 # For the multiple-slave tests to work, you must determine your actual
 # slave IDs beforehand and fill them in here.  The test output for the
 # OWM_TEST_CONDITION_SINGLE_SLAVE code outputs the ID of the slave it finds
-# -- it can be run multiple times with different slaves devices to find
-# all their IDs.  Note the IDs must also be assigned correctly to first and
-# second positions with respect to the discovery order of the one-wire bus
+# -- it can be run multiple times with different slaves devices to find all
+# their IDs.  Note the IDs must also be assigned correctly to first and
+# second positions with respect to the discovery order of the 1-wire bus
 # search algorithm.  It might be easiest to try both orders :) The individual
 # bytes of these IDs should be given in the order they occur in the ID.
 # The test program takes care of swapping them to account for endianness.

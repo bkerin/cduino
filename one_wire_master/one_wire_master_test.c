@@ -1,9 +1,9 @@
 // Test/demo for the one_wire_master.h interface.
 //
-// If you're new to one-wire you should first read the entire
-// Maxim_DS18B20_datasheet.pdf.  Its hard to use one-wire without at
-// least a rough understanding of how the line signalling and transaction
-// schemes work.
+// If you're new to 1-wire you should first read the entire
+// Maxim_DS18B20_datasheet.pdf.  Its hard to use 1-wire without at least a
+// rough understanding of how the line signalling and transaction schemes
+// work.
 //
 // This test program tests many lower-level functions before owm_scan_bus()
 // and owm_start_transaction(), which are the ones you probably want to
@@ -65,7 +65,7 @@ char result_buf[OWM_RESULT_DESCRIPTION_MAX_LENGTH + 1];
 #  define DS18B20_FAMILY_CODE UINT8_C (0x28)
 
 // These are properties of the DS18B20 that have nothing to do with the
-// one-wire bus in general.
+// 1-wire bus in general.
 #  define DS18B20_SCRATCHPAD_SIZE  9
 #  define DS18B20_SCRATCHPAD_T_LSB 0
 #  define DS18B20_SCRATCHPAD_T_MSB 1
@@ -144,7 +144,7 @@ main (void)
   PFP ("term_io_init() worked.\n");
   PFP ("\n");
 
-  owm_init ();   // Initialize the one-wire interface master end
+  owm_init ();   // Initialize the 1-wire interface master end
 
   PFP ("Trying owm_touch_reset()... ");
   uint8_t slave_presence = owm_touch_reset ();
@@ -262,7 +262,7 @@ main (void)
   owm_write_byte (DS18B20_COMMANDS_CONVERT_T_COMMAND);
   // The DS18B20 is now supposed to respond with a stream of 0 bits until
   // the conversion completes, after which it's supposed to send 1 bits.
-  // Note that this is probably a typical behavior for busy one-wire slaves.
+  // Note that this is probably a typical behavior for busy 1-wire slaves.
   uint8_t conversion_complete = 0;
   while ( ! (conversion_complete = owm_read_bit ()) ) {
     ;
