@@ -173,10 +173,10 @@ ows_set_timeout (uint16_t time_us)
 
 // See the comments above the reference to OWS_REGISTER_USE_ACKNOWLEDGED
 // in one_wire_slave.h for details about the register locking being used here.
-register uint8_t ls     asm("r2");   // Line State as of last reading, 1 or 0
-register uint8_t cbitv  asm("r3");   // Current Bit Value
-register uint8_t cbytev asm("r4");   // Current Byte Value
-register uint8_t cbiti  asm("r5");   // Curren Bit Index (of cbytev)
+register uint8_t ls      asm("r2");   // Line State as of last reading, 1 or 0
+register uint8_t cbitv   asm("r3");   // Current Bit Value
+register uint8_t cbytevu asm("r4");   // Current Byte Value, Usually
+register uint8_t cbiti   asm("r5");   // Current Bit Index
 
 uint16_t tr;       // Timer Reading (most recent)
 
@@ -303,10 +303,10 @@ write_bit (void)
 static ows_error_t
 read_byte (void)
 {
-  cbytev = 0;
+  cbytevu = 0;
   for ( cbiti = 0 ; cbiti < BITS_PER_BYTE ; cbiti++ ) {
     CPE (read_bit ());
-    cbytev |= (cbitv << cbiti);
+    cbytevu |= (cbitv << cbiti);
   }
 
   return OWS_ERROR_NONE;
@@ -316,17 +316,13 @@ static ows_error_t
 write_byte (void)
 {
   for ( cbiti = 0 ; cbiti < BITS_PER_BYTE ; cbiti++ ) {
-    cbitv = cbytev & (B00000001 << cbiti);
+    cbitv = cbytevu & (B00000001 << cbiti);
     CPE (write_bit ());
   }
 
   return OWS_ERROR_NONE;
 }
 
-// FIXME: this might be faster if it didn't take an arg and instead used
-// the global, then it becomes a can of worms if we want to expose this
-// function and require user to use the global, or make it a macro that
-// does that implicitly, who knows.
 ows_error_t
 ows_write_bit (uint8_t bit_value)
 {
@@ -349,7 +345,7 @@ ows_read_bit (uint8_t *bit_value_ptr)
 ows_error_t
 ows_write_byte (uint8_t byte_value)
 {
-  cbytev = byte_value;
+  cbytevu = byte_value;
   CPE (write_byte ());
 
   return OWS_ERROR_NONE;
@@ -360,7 +356,7 @@ ows_error_t
 ows_read_byte (uint8_t *byte_value_ptr)
 {
   CPE (read_byte ());
-  *byte_value_ptr = cbytev;
+  *byte_value_ptr = cbytevu;
 
   return OWS_ERROR_NONE;
 }
@@ -371,10 +367,12 @@ ows_read_byte (uint8_t *byte_value_ptr)
 static ows_error_t
 read_and_match_rom_id (void)
 {
-  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
+  // NOTE: we're using cbytevu as an index variable here (it's register
+  // locked and we don't want to completely change its mostly-right name :).
+  for ( cbytevu = 0 ; cbytevu < OWC_ID_SIZE_BYTES ; cbytevu++ ) {
     for ( cbiti = 0 ; cbiti < BITS_PER_BYTE ; cbiti++ ) {
       CPE (read_bit ());
-      if ( cbitv != ((rom_id[ii]) >> cbiti) ) {
+      if ( cbitv != ((rom_id[cbytevu]) >> cbiti) ) {
         return OWS_ERROR_ROM_ID_MISMATCH;
       }
     }
@@ -396,15 +394,17 @@ answer_search (void)
 {
   // ROM ID Size, in bits
   uint8_t const rids_bits = OWC_ID_SIZE_BYTES * BITS_PER_BYTE;
-  // FIXME: use inner loop var
-  for ( uint8_t ii = 0 ; ii < rids_bits ; ii++ ) {
-    uint8_t cridbv = ROM_ID_BIT (ii);   // Current ROM ID Bit Value
-    cbitv = cridbv;
+  for ( cbiti = 0 ; cbiti < rids_bits ; cbiti++ ) {
+    // NOTE: we're using cbytevu as storage for the current ROM ID bit value
+    // (it's register locked so we want to use it, but we don't want to
+    // completely change its mostly-right name :).
+    cbytevu = ROM_ID_BIT (cbiti);   // Current ROM ID Bit Value
+    cbitv = cbytevu;
     CPE (write_bit ());
     cbitv = ! cbitv;
     CPE (write_bit ());
     CPE (read_bit ());
-    if ( UNLIKELY (cbitv != cridbv) ) {
+    if ( UNLIKELY (cbitv != cbytevu) ) {
       // Mismatches aren't error -- see comment above in this function..
       return OWS_ERROR_NONE;
     }
@@ -452,7 +452,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
       case SRRC:
         {
           CPE (read_byte ());
-          switch ( cbytev ) {
+          switch ( cbytevu ) {
             case OWC_SEARCH_ROM_COMMAND:
               state = SDSRC;
               break;
@@ -480,7 +480,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
         break;
       case SDRRC:
         for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
-          cbytev = rom_id[ii];
+          cbytevu = rom_id[ii];
           CPE (write_byte ());
         }
         state = SRFC;
@@ -507,7 +507,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
       case SRFC:
         {
           CPE (read_byte ());
-          *command_ptr = cbytev;
+          *command_ptr = cbytevu;
           return OWS_ERROR_NONE;
           break;
         }
