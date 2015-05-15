@@ -20,6 +20,13 @@ ARDUINO_BOOTLOADER=optiboot_atmega328.hex
 # FIXME: comment this out again for the public release:
 CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
 
+# Because some variables are being locked into particular registers in
+# one_wire_slave.c, we have to ensure that the rest of program (i.e. code in
+# other source files) knows about this.  These options provide the required
+# voodoo (see the GCC manual "Defining Global Register Variables" section
+# for details).
+CFLAGS += -ffixed-r2 -ffixed-r3 -ffixed-r4 -ffixed-r5
+
 # Uncomment for testing with my particular non-arduino slave breadboard build
 ENABLE_NON_ARDUINO_OVERRIDES = defined
 

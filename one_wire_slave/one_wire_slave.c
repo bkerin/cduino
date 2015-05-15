@@ -37,16 +37,16 @@
 
 // See the comments above the reference to OWS_REGISTER_USE_ACKNOWLEDGED
 // in one_wire_slave.h for details about the register locking being used here.
-/*
 register uint8_t ls      asm("r2");   // Line State as of last reading, 1 or 0
 register uint8_t cbitv   asm("r3");   // Current Bit Value
 register uint8_t cbytevu asm("r4");   // Current Byte Value, Usually
 register uint8_t cbiti   asm("r5");   // Current Bit Index
-*/
+/*
 uint8_t ls      ;   // Line State as of last reading, 1 or 0
 uint8_t cbitv   ;   // Current Bit Value
 uint8_t cbytevu ;   // Current Byte Value, Usually
 uint8_t cbiti   ;   // Current Bit Index
+*/
 
 
 #ifdef OWS_BUILD_RESULT_DESCRIPTION_FUNCTION
