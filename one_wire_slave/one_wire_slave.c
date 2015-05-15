@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <avr/eeprom.h>
+#include <avr/pgmspace.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,63 @@
 #include "one_wire_slave.h"
 #include "timer1_stopwatch.h"
 #include "util.h"
+
+// To get things to work at 10MHz I had to lock these variables into registers
+// (see http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_regbind).
+// There are many gotchas associated with doing this.  See the "Defining
+// Global Register Variables" section of the GCC manual for more details.
+// These definition have to come at the start of this file.
+//
+// FIXME: go back to not doing it at 16 MHz I think.  Or perhaps we could
+// use the register keywork without the asm and things would work at 10 MHz?
+// Cause this crap is really problematic voodoo.  For example I don't think we
+// do this:
+//   A function that can alter the value of a global register variable
+//   cannot safely be called from a function compiled without this variable,
+//   because it could clobber the value the caller expects to find there on
+//   return. Therefore, the function that is the entry point into the part
+//   of the program that uses the global register variable must explicitly
+//   save and restore the value that belongs to its caller.
+// and if we did it might not be worth using the register locking.
+
+// See the comments above the reference to OWS_REGISTER_USE_ACKNOWLEDGED
+// in one_wire_slave.h for details about the register locking being used here.
+/*
+register uint8_t ls      asm("r2");   // Line State as of last reading, 1 or 0
+register uint8_t cbitv   asm("r3");   // Current Bit Value
+register uint8_t cbytevu asm("r4");   // Current Byte Value, Usually
+register uint8_t cbiti   asm("r5");   // Current Bit Index
+*/
+uint8_t ls      ;   // Line State as of last reading, 1 or 0
+uint8_t cbitv   ;   // Current Bit Value
+uint8_t cbytevu ;   // Current Byte Value, Usually
+uint8_t cbiti   ;   // Current Bit Index
+
+
+#ifdef OWS_BUILD_RESULT_DESCRIPTION_FUNCTION
+
+char *
+ows_result_as_string (ows_result_t result, char *buf)
+{
+  switch ( result ) {
+
+#  define X(result_code)                                                  \
+    case result_code:                                                     \
+      assert (strlen (#result_code) < OWS_RESULT_DESCRIPTION_MAX_LENGTH); \
+      strcpy_P (buf, PSTR (#result_code));                                \
+      break;
+    OWS_RESULT_CODES
+#  undef X
+
+    default:
+      assert (FALSE);   // Shouldn't be here
+      break;
+  }
+
+  return buf;
+}
+
+#endif
 
 // Aliases for some operations from one_wire_commoh.h (for readability).
 #define RELEASE_LINE()    OWC_RELEASE_LINE (OWS_PIN)
@@ -165,16 +223,6 @@ ows_set_timeout (uint16_t time_us)
   timeout_t1t = time_us * OWS_TIMER_TICKS_PER_US;
 }
 
-// To get things to work at 10MHz I had to lock these variables into registers
-// (see http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_regbind).
-
-// See the comments above the reference to OWS_REGISTER_USE_ACKNOWLEDGED
-// in one_wire_slave.h for details about the register locking being used here.
-register uint8_t ls      asm("r2");   // Line State as of last reading, 1 or 0
-register uint8_t cbitv   asm("r3");   // Current Bit Value
-register uint8_t cbytevu asm("r4");   // Current Byte Value, Usually
-register uint8_t cbiti   asm("r5");   // Current Bit Index
-
 uint16_t tr;       // Timer Reading (most recent)
 
 // Read Bit Sample Time.  Time from negative edge to slave sample point
@@ -205,7 +253,7 @@ uint16_t tr;       // Timer Reading (most recent)
 // of the last negative pulse was large enough that it was a reset.
 #define CFR() (tr >= US2T1T (OUR_RESET_PULSE_LENGTH_REQUIRED))
 
-static ows_error_t
+static ows_result_t
 wfpcoto (void)
 {
   while ( TRUE ) {
@@ -223,7 +271,7 @@ wfpcoto (void)
       }
       TIMER1_STOPWATCH_CLEAR_OVERFLOW_FLAG ();
       TIMER1_STOPWATCH_FAST_RESET ();   // do we want fast reset or normal?
-      return OWS_ERROR_NONE;
+      return OWS_RESULT_SUCCESS;
     }
     else if ( UNLIKELY (TIMER1_STOPWATCH_TICKS () >= timeout_t1t) ) {
       if ( timeout_t1t != OWS_TIMEOUT_NONE ) {
@@ -234,16 +282,16 @@ wfpcoto (void)
 }
 
 // Call call, Propagating Errors.  The call argument must be a call to a
-// function returning ows_error_t.
-#define CPE(call)                                 \
-  do {                                            \
-    ows_error_t XxX_err = call;                   \
-    if ( UNLIKELY (XxX_err != OWS_ERROR_NONE) ) { \
-      return XxX_err;                             \
-    }                                             \
+// function returning ows_result_t.
+#define CPE(call)                                     \
+  do {                                                \
+    ows_result_t XxX_err = call;                      \
+    if ( UNLIKELY (XxX_err != OWS_RESULT_SUCCESS) ) { \
+      return XxX_err;                                 \
+    }                                                 \
   } while ( 0 )
 
-static ows_error_t
+static ows_result_t
 read_bit (void)
 {
   while ( TRUE ) {
@@ -264,15 +312,15 @@ read_bit (void)
       // a subsequent master-read-0 where the timing crunch really hits.
       // I haven't measure that directly, but presumably its similarly tight,
       // hence the sensitivity to register variable use.
-      OWC_TICK_DELAY (RBST_TICK_DELAY);
+      TICK_DELAY (RBST_TICK_DELAY);
       cbitv = SAMPLE_LINE ();
       CPCFRT1 ();
-      return OWS_ERROR_NONE;
+      return OWS_RESULT_SUCCESS;
     }
   }
 }
 
-static ows_error_t
+static ows_result_t
 write_bit (void)
 {
   while ( TRUE ) {
@@ -285,16 +333,16 @@ write_bit (void)
     else {
       if ( LIKELY (! cbitv) ) {
         DRIVE_LINE_LOW ();
-        OWC_TICK_DELAY (ZPTT);
+        TICK_DELAY (ZPTT);
         RELEASE_LINE ();
         CPCFRT1 ();
       }
-      return OWS_ERROR_NONE;
+      return OWS_RESULT_SUCCESS;
     }
   }
 }
 
-static ows_error_t
+static ows_result_t
 read_byte (void)
 {
   cbytevu = 0;
@@ -303,10 +351,10 @@ read_byte (void)
     cbytevu |= (cbitv << cbiti);
   }
 
-  return OWS_ERROR_NONE;
+  return OWS_RESULT_SUCCESS;
 }
 
-static ows_error_t
+static ows_result_t
 write_byte (void)
 {
   for ( cbiti = 0 ; cbiti < BITS_PER_BYTE ; cbiti++ ) {
@@ -314,51 +362,51 @@ write_byte (void)
     CPE (write_bit ());
   }
 
-  return OWS_ERROR_NONE;
+  return OWS_RESULT_SUCCESS;
 }
 
-ows_error_t
+ows_result_t
 ows_write_bit (uint8_t bit_value)
 {
   cbitv = bit_value;
   CPE (write_bit ());
 
-  return OWS_ERROR_NONE;
+  return OWS_RESULT_SUCCESS;
 }
 
 // FIXME: needs tested, though its trivially diff from its inner fctn
-ows_error_t
+ows_result_t
 ows_read_bit (uint8_t *bit_value_ptr)
 {
   CPE (read_bit ());
   *bit_value_ptr = cbitv;
 
-  return OWS_ERROR_NONE;
+  return OWS_RESULT_SUCCESS;
 }
 
-ows_error_t
+ows_result_t
 ows_write_byte (uint8_t byte_value)
 {
   cbytevu = byte_value;
   CPE (write_byte ());
 
-  return OWS_ERROR_NONE;
+  return OWS_RESULT_SUCCESS;
 }
 
 // FIXME: needs tested, though its trivially diff from its inner fctn
-ows_error_t
+ows_result_t
 ows_read_byte (uint8_t *byte_value_ptr)
 {
   CPE (read_byte ());
   *byte_value_ptr = cbytevu;
 
-  return OWS_ERROR_NONE;
+  return OWS_RESULT_SUCCESS;
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static ows_error_t
+static ows_result_t
 read_and_match_rom_id (void)
 {
   // NOTE: we're using cbytevu as an index variable here (it's register
@@ -372,7 +420,7 @@ read_and_match_rom_id (void)
     }
   }
 
-  return OWS_ERROR_NONE;
+  return OWS_RESULT_SUCCESS;
 }
 
 // Evaluate to the value of Bit Number bn (0-indexed) of rom_id.
@@ -383,7 +431,7 @@ read_and_match_rom_id (void)
 // non-zero to indicate an alarm condition.
 uint8_t ows_alarm = 0;
 
-static ows_error_t
+static ows_result_t
 answer_search (void)
 {
   // ROM ID Size, in bits
@@ -399,12 +447,12 @@ answer_search (void)
     CPE (write_bit ());
     CPE (read_bit ());
     if ( UNLIKELY (cbitv != cbytevu) ) {
-      // Mismatches aren't error -- see comment above in this function..
-      return OWS_ERROR_NONE;
+      // Mismatches are successes -- see comment above in this function.
+      return OWS_RESULT_SUCCESS;
     }
   }
 
-  return OWS_ERROR_NONE;
+  return OWS_RESULT_SUCCESS;
 }
 
 // This is the proper response to a reset pulse.  It includes the delay and
@@ -419,7 +467,7 @@ answer_search (void)
     RELEASE_LINE ();                            \
   } while ( 0 )
 
-ows_error_t
+ows_result_t
 ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
 {
   uint8_t state = (jgur ? SPPP : SWFR);
@@ -481,19 +529,19 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
         break;
       case SDMRC:
         {
-          ows_error_t error = read_and_match_rom_id ();
-          if ( error == OWS_ERROR_ROM_ID_MISMATCH ) {
+          ows_result_t result = read_and_match_rom_id ();
+          if ( result == OWS_ERROR_ROM_ID_MISMATCH ) {
             state = SWFR;
           }
           else {
             // Note that both success and non-mismatch results end up here.
-            return error;
+            return result;
           }
           break;
         }
       case SDASC:
         if ( UNLIKELY (! ows_alarm) ) {
-          return OWS_ERROR_NONE;
+          return OWS_RESULT_SUCCESS;
         }
         CPE (answer_search ());
         state = SWFR;
@@ -502,7 +550,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
         {
           CPE (read_byte ());
           *command_ptr = cbytevu;
-          return OWS_ERROR_NONE;
+          return OWS_RESULT_SUCCESS;
           break;
         }
       default:

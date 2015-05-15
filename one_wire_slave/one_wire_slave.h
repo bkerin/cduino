@@ -165,17 +165,39 @@
 // declaration below).
 #define OWS_PART_ID_EEPROM_ADDRESS 0
 
-// Return type for functions in this interface which report errors.
-// FIXME: should use x-macro here as in one_wire_master, and these
-// should be results, only some of which are errors (probably only
-// GOT_INVALID_ROM_COMMAND, or maybe GOT_UNEXPECTED_RESET as well).
+// FIXME: decide which results are ERRORS (if any) and finish changing
+// the names of the codes
+
+// These are the result codes for many functions in this interface.  Public
+// interface methods that can return these describe the circumstances that
+// cause them.
+#define OWS_RESULT_CODES                                                     \
+  /* Note that this code must be first, so that it ends up with value 0.  */ \
+  X (OWS_RESULT_SUCCESS)                                                     \
+  X (OWS_ERROR_TIMEOUT)                                                      \
+  X (OWS_ERROR_GOT_UNEXPECTED_RESET)                                         \
+  X (OWS_ERROR_GOT_INVALID_ROM_COMMAND)                                      \
+  X (OWS_ERROR_ROM_ID_MISMATCH)
+
+// Return type representing the result of an operation.
 typedef enum {
-  OWS_ERROR_NONE = 0,
-  OWS_ERROR_TIMEOUT,
-  OWS_ERROR_GOT_UNEXPECTED_RESET,
-  OWS_ERROR_GOT_INVALID_ROM_COMMAND,
-  OWS_ERROR_ROM_ID_MISMATCH,
-} ows_error_t;
+#define X(result_code) result_code,
+  OWS_RESULT_CODES
+#undef X
+} ows_result_t;
+
+#ifdef OWS_BUILD_RESULT_DESCRIPTION_FUNCTION
+
+#  define OWS_RESULT_DESCRIPTION_MAX_LENGTH 81
+
+// Put the string form of result in buf.  The buf argument must point to
+// a memory space large enough to hold OWM_RESULT_DESCRIPTION_MAX_LENGTH +
+// 1 bytes.  Using this function will make your program quite a bit bigger.
+// As a convenience, buf is returned.
+char *
+ows_result_as_string (ows_result_t result, char *buf);
+
+#endif
 
 // Initialize the 1-wire slave interface.  This sets up the chosen DIO
 // pin, including pin change interrupts and global interrupt enable.
@@ -234,8 +256,8 @@ ows_set_timeout (uint16_t time_us);
 // The jgur (Just Got Unexpected Reset) argument should be FALSE unless
 // you just got an unexpected reset (see below).
 //
-// On success OWS_ERROR_NONE is returned.  Otherwise, one of the following
-// errors is returned:
+// On success OWS_RESULT_SUCCESS is returned.  Otherwise, one of the
+// following result codes is returned:
 //
 //   * OWS_ERROR_TIMEOUT if a timeout occurred (see ows_set_timeout() above).
 //
@@ -248,33 +270,37 @@ ows_set_timeout (uint16_t time_us);
 //     satisfy OWC_IS_ROM_COMMAND(command) from one_wire_common.h.  This could
 //     result from a misbehaving master, or from data corruption on the line.
 //
-ows_error_t
+ows_result_t
 ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur);
 
-// Write a single bit with value bit_value (when the master requests it).
-// Use ows_write_byte() instead for byte-at-a-time messages.  Returns
-// OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error, or
-// OWS_ERROR_NONE otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
-ows_error_t
+// Write a single bit with value bit_value (when the master requests
+// it).  Use ows_write_byte() instead for byte-at-a-time messages.
+// Returns OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error,
+// or OWS_RESULT_SUCCESS otherwise.  READ THE ENTIRE TEXT AT THE TOP OF
+// THIS FILE.
+ows_result_t
 ows_write_bit (uint8_t bit_value);
 
 // Read a single bit into *bit_value_ptr (when the master sends it).
 // Use ows_read_byte() instead for byte-at-a-time messages.  Returns
 // OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error, or
-// OWS_ERROR_NONE otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
-ows_error_t
+// OWS_RESULT_SUCCESS otherwise.  READ THE ENTIRE TEXT AT THE TOP OF
+// THIS FILE.
+ows_result_t
 ows_read_bit (uint8_t *bit_value_ptr);
 
 // Write a byte with value byte_value (when the master requests it).
 // Returns OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error,
-// or OWS_ERROR_NONE otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
-ows_error_t
+// or OWS_RESULT_SUCCESS otherwise.  READ THE ENTIRE TEXT AT THE TOP OF
+// THIS FILE.
+ows_result_t
 ows_write_byte (uint8_t byte_value);
 
 // Reads a byte into *byte_value_ptr (when the master requests it).
 // Returns OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error,
-// or OWS_ERROR_NONE otherwise.  READ THE ENTIRE TEXT AT THE TOP OF THIS FILE.
-ows_error_t
+// or OWS_RESULT_SUCCESS otherwise.  READ THE ENTIRE TEXT AT THE TOP OF
+// THIS FILE.
+ows_result_t
 ows_read_byte (uint8_t *byte_value_ptr);
 
 // If set to a non-zero value, this flag indicates an alarm condition.

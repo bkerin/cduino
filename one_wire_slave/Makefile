@@ -21,7 +21,7 @@ ARDUINO_BOOTLOADER=optiboot_atmega328.hex
 CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
 
 # Uncomment for testing with my particular non-arduino slave breadboard build
-#ENABLE_NON_ARDUINO_OVERRIDES = defined
+ENABLE_NON_ARDUINO_OVERRIDES = defined
 
 ##### Orverrides for Non-Arduino Slave {{{1
 
@@ -108,6 +108,12 @@ CPPFLAGS += -DOWM_TEST_CONDITION_SINGLE_SLAVE
 #CPPFLAGS += -DOWM_FIRST_SLAVE_ID=0x28542a8e060000b4
 # FIXME: this isnt thw OWM anymore, so remove or change
 #CPPFLAGS += -DOWM_SECOND_SLAVE_ID=0x289ae53005000015
+
+# If this is uncommented, we build a function which fetches a text description
+# of a ows_result_t.  This inevitably burns some program memory for the
+# strings (whether the function is called or not), so we provide this option
+# so it can be disabled easily.
+CPPFLAGS += -DOWS_BUILD_RESULT_DESCRIPTION_FUNCTION
 
 # Ensure that exactly one test condition is defined.
 # FIXME: this isnt thw OWM anymore, so remove or change

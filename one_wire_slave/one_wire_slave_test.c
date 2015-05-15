@@ -47,15 +47,18 @@
 #include "term_io.h"
 #include "util.h"
 
-static ows_error_t err = OWS_ERROR_NONE;
+char result_buf[OWS_RESULT_DESCRIPTION_MAX_LENGTH + 1];
+
+#define OWS_CHECK(result)                                        \
+  PFP_ASSERT_SUCCESS (result, ows_result_as_string, result_buf);
 
 // FIXME: this should be ows_result_as_string as in owm module
 static void
-print_ows_error (ows_error_t result)
+print_ows_error (ows_result_t result)
 {
   switch ( result ) {
-    case OWS_ERROR_NONE:
-      PFP ("OWS_ERROR_NONE");
+    case OWS_RESULT_SUCCESS:
+      PFP ("OWS_RESULT_SUCCESS");
       break;
     case OWS_ERROR_TIMEOUT:
       PFP ("OWS_ERROR_TIMEOUT");
@@ -75,32 +78,6 @@ print_ows_error (ows_error_t result)
   }
 }
 
-// This is like BASERT_FEEDING_WDT_SHOW_POINT() from util.h, but it also
-// tries to print a string version of the error and doesn't waste a huge
-// blob of code space every use.  FIXXME: it would be nice if util supplied
-// an efficient version like this, but it would have to stop being a
-// header-only module.
-static void
-bassert_feeding_wdt_show_point (uint8_t condition, char const *file, int line)
-{
-  if ( UNLIKELY (! (condition)) ) {
-    for ( ; ; ) {
-      size_t XxX_fnl = strlen (file);
-      BLINK_OUT_UINT32_FEEDING_WDT (XxX_fnl);
-      BLINK_OUT_UINT32_FEEDING_WDT (line);
-      print_ows_error (err);
-      PFP ("\n");
-    }
-  }
-}
-
-// Blinky-assert, Showing Point Efficiently.  This does a blinky-assert
-// showing the failure point in a code-space efficient way.  We need this
-// wrapper to the function to automatically add the __FILE__ and __LINE__
-// arguments.
-#define BASSERT_SPE(cond) \
-  bassert_feeding_wdt_show_point ((cond), __FILE__, __LINE__)
-
 static void
 send_fake_ds18b20_scratchpad_contents (void)
 {
@@ -116,10 +93,8 @@ send_fake_ds18b20_scratchpad_contents (void)
   uint8_t const t_lsb = B10100000;
   uint8_t const t_msb = B00000010;
 
-  err = ows_write_byte (t_lsb);
-  BASSERT_SPE (err == OWS_ERROR_NONE);
-  err = ows_write_byte (t_msb);
-  BASSERT_SPE (err == OWS_ERROR_NONE);
+  OWS_CHECK (ows_write_byte (t_lsb));
+  OWS_CHECK (ows_write_byte (t_msb));
 
   // Remaining Scratchpad Size (after temp. bytes).  This is a property of
   // the DS18B20.
@@ -129,8 +104,21 @@ send_fake_ds18b20_scratchpad_contents (void)
   // about anything except the temperature bytes, so we just send 0 for the
   // remaining bytes.
   for ( uint8_t ii = 0 ; ii < rss ; ii++ ) {
-    err = ows_write_byte (0);
-    BASSERT_SPE (err == OWS_ERROR_NONE);
+    // FIXME: WORK POINT: welllll, with + 0 after < rss above here everything
+    // works, removing it causes things to work only first time through.
+    // Alternately, one can remove the register declarations from the ls,
+    // cbitv, cbytevu, and cbiti declarations and then things work.
+    /*
+    ows_result_t result = ows_write_byte (0);
+    if ( result != OWS_RESULT_SUCCESS ) {
+      printf (
+          "failure at byte %hhi: %s\n",
+          ii,
+          ows_result_as_string (result, result_buf) );
+      PFP_ASSERT_NOT_REACHED ();
+    }
+    */
+    OWS_CHECK (ows_write_byte (0));
   }
 }
 
@@ -159,7 +147,7 @@ main (void)
   ows_alarm = 42;
 
   uint8_t fcmd;         // Function Command
-  ows_error_t result;   // Storage for function "results" (exit codes anyway)
+  ows_result_t result;   // Storage for function "results" (exit codes anyway)
 
   PFP ("\n");
 
@@ -196,8 +184,8 @@ main (void)
   // without compensating code (it wouldn't get presence pulses in time).
   // FIXME: so maybe actually set it to the minimum.
   // FIXME: do the min and max timeout values still make sense?
-  ows_set_timeout (32767);
-  //ows_set_timeout (OWS_TIMEOUT_NONE);
+  //ows_set_timeout (32767);
+  ows_set_timeout (OWS_TIMEOUT_NONE);
 
   // FIXME: debug
   uint32_t lc = 0;   // FIXME: for testing timeout time correctness only
@@ -208,7 +196,7 @@ main (void)
 
     result = ows_wait_for_function_transaction (&fcmd, jgur);
 
-    if ( result != OWS_ERROR_NONE                       &&
+    if ( result != OWS_RESULT_SUCCESS                       &&
          result != OWS_ERROR_TIMEOUT &&
          result != OWS_ERROR_GOT_UNEXPECTED_RESET ) {
       // For diagnostic purposes we do this.  Normally printing something
@@ -230,7 +218,7 @@ main (void)
 
     jgur = FALSE;
 
-    if ( result != OWS_ERROR_NONE ) {
+    if ( result != OWS_RESULT_SUCCESS ) {
       continue;
     }
 
@@ -259,7 +247,9 @@ main (void)
       default:
         // FIXME: this should maybe still be here but we shouldn't end up
         // in switch if we got a timeout above.
-        //BASSERT_SPE (0);   // Shouldn't be here unless the master screwed up
+        // FIXME: should this be assert FALSE?
+        DBL_TRAP ();
+        assert (FALSE);
         break;
 
     }
@@ -269,75 +259,6 @@ main (void)
 
   }
 
-  /* Tweaking wait_for_command and I don't want to update this old procedural
-   * way yet...
-
-  uint8_t command = ows_wait_for_command ();
-  BASSERT_SPE (command == OWC_READ_ROM_COMMAND);
-  err = ows_write_rom_id ();
-  BASSERT_SPE (err == OWS_ERROR_NONE);
-  command = ows_wait_for_command ();
-  BASSERT_SPE (command == OWC_READ_ROM_COMMAND);
-  err = ows_write_rom_id ();
-  BASSERT_SPE (err == OWS_ERROR_NONE);
-
-  // Next we expect a SEARCH_ROM command from the master (because it calls
-  // owm_first()).
-  command = ows_wait_for_command ();
-  BASSERT_SPE (command == OWC_SEARCH_ROM_COMMAND);
-  err = ows_answer_search ();
-  BASSERT_SPE (err == OWS_ERROR_NONE);
-
-  // Next we expect another SEARCH_ROM command from the master (because it
-  // calls owm_next()).
-  command = ows_wait_for_command ();
-  BASSERT_SPE (command == OWC_SEARCH_ROM_COMMAND);
-  err = ows_answer_search ();
-  BASSERT_SPE (err == OWS_ERROR_NONE);
-
-  // Next we expect a verify command, then a convert temperature command from
-  // the master (the verify is required as part of the transaction sequence
-  // (see the DS18B20 datasheet "Transaction Sequence" section).
-  command = ows_wait_for_command ();
-  BASSERT_SPE (command == DS18B20_COMMANDS_CONVERT_T_COMMAND);
-  // A real Maxim DS18B20 would take some time here to digitize the
-  // temperature measurement.  If it wasn't using parasite power, it would
-  // during that time respond to read bit commands from the master by
-  // sending zeros.  Fortunately we're just making up a number, which is
-  // instantaneous :) But seriously, this shows a weak point in our slave
-  // implementation: we aren't set up to send zeros and do anything else
-  // useful at the same time.  In theory the ISR in one_wire_slave.c could be
-  // programmed to automatically send zeros when requested (perhaps with an
-  // additional timer compare match interrupt or something to time the zero
-  // pulse being sent), but I think its not worth dealing with this.  If you
-  // really want DS18B20 behavior use a real one, otherwise just specify
-  // your own requirement for masters that want to interrogate your device.
-  // For example: "after issuing a convert_t_command, the master shall wait
-  // 0.42 ms for the conversion to complete before beginning any additional
-  // transaction sequence with the same slave".  Another possible strategy
-  // is to have your slave continually make conversions on its own (possibly
-  // at a cost in responsiveness to reset pulses, see the comments near the
-  // ows_wait_for_reset() declaration in one_wire_slave.h), in which case
-  // the results of recent measurements should be immediately available
-  // on request, and can be returned as part of the same transaction.
-  // Or you could try using a real-time OS instead.  Or you could just add
-  // one more microcontroller and have it communicate the recent results
-  // of it's measurements to the processor using this module on IO pins,
-  // so they are always immediately available :)
-  ows_write_bit (1);
-
-  // Next we expect a READ_SCRATCHPAD transaction sequence, in this case
-  // initiated with a READ_ROM command.
-  command = ows_wait_for_command ();
-  BASSERT_SPE (command == OWC_READ_ROM_COMMAND);
-  err = ows_write_rom_id ();
-  BASSERT_SPE (err == OWS_ERROR_NONE);
-  command = ows_wait_for_command ();
-  BASSERT_SPE (command == DS18B20_COMMANDS_READ_SCRATCHPAD_COMMAND);
-  send_fake_ds18b20_scratchpad_contents ();
-
   // Made it through, so start rapid blinking as promised!
-  BTRAP ();
-
-  */
+  //DBL_TRAP ();
 }
