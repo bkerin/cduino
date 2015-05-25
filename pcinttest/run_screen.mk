@@ -1,1 +1,0 @@
-../term_io/run_screen.mk
