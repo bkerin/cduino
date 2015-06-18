@@ -46,38 +46,17 @@ term_io_init (void);
 int
 term_io_getline (char *linebuf);
 
-// FIXME: This is intended as a version of printf_P() that tries to check
-// the types of the variadic arguments as GCC normally does.  It could then
-// be used in TERM_IO_PFP() etc.  However, there are some problems: one is
-// that PSTR() doesn't do what doxygen says it does: the actual pgmspace.h
-// as of 1.8.0 explicitly does something different that what the doc version
-// says, so if PSTR() is used for the format argument the detection doesn't
-// happen.  Also, we haven't verified actual RAM savings with this wrapper.
-// And finally, avr libc weirdly doesn't provide vprintf_P, though it does
-// provide vfprintf_P and also vsprintf_P, which is theoretically not a
-// problem but just weird.
-//
-// FIXME: it might be possible to turn printf_P into a do while ( 0 )
-// type thing containing a declaration for the string to go in flash,
-// since it looks like the reason PSTR() does goofy secret stuff is that
-// progmem on a type isn't supported in GCC.  Or if that doesn't work or
-// doesn't really save RAM I guess we could have one set of functions for
-// (carefully checked) test program output and another for debug output,
-// but god that's ugly and then people using the test as prototype would
-// end up screwing themselves.
-//
-// FIXME: so the current situation is:
-// this detects errors:
-//   printf_P_safer ( ((const PROGMEM char *) "biggy: %lu\n"), 42);
-// but might not actually save RAM, and this doesn't detect type errors:
-//   printf_P_safer ( PSTR ("biggy: %lu\n"), 42);
-//
-//int
-//printf_P_safer (char const *fmt, ...) __attribute__ ((format (printf, 1, 2)));
-
 // PrintF using Program memory.  This macro makes it easier to store the
-// format arguments to printf_P() calls in program space.
-#define TERM_IO_PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
+// format arguments to printf_P() calls in program space.  Unfortunately using
+// printf_P and PSTR causes the normal format-type match checking to not
+// happen.  PSTR doesn't really do what the AVR libc docs say it does either.
+// So we have this crud that supports building twice in a row with slightly
+// different options so we can get both intelligent warnings and RAM savings.
+#ifndef TRIGGER_PRINTF_WARNINGS
+#  define TERM_IO_PFP(format, ...) printf_P (PSTR (format), ## __VA_ARGS__)
+#else
+#  define TERM_IO_PFP(format, ...) printf (format, ## __VA_ARGS__)
+#endif
 
 // Print Trace Point message.  Useful for debugging.
 #define TERM_IO_PTP()                                   \
@@ -103,18 +82,20 @@ term_io_getline (char *linebuf);
 #define TERM_IO_PFP_ASSERT(condition)                 \
   do {                                                \
     if ( UNLIKELY (! (condition)) ) {                 \
-      PFP ("%s:%i: %s: Assertion `%s' failed.\n",     \
+      TERM_IO_PFP (                                   \
+          "%s:%i: %s: Assertion `%s' failed.\n",      \
           __FILE__, __LINE__, __func__, #condition ); \
       assert (FALSE);                                 \
     }                                                 \
   } while ( 0 )
 
 // Like TERM_IO_PFP_ASSERT(), but it trips whenever it's reached.
-#define TERM_IO_PFP_ASSERT_NOT_REACHED()                               \
-  do {                                                                 \
-    PFP ("%s:%i: %s: Assertion failed: code should not be reached.\n", \
-        __FILE__, __LINE__, __func__ );                                \
-    assert (FALSE);                                                    \
+#define TERM_IO_PFP_ASSERT_NOT_REACHED()                              \
+  do {                                                                \
+    TERM_IO_PFP (                                                     \
+        "%s:%i: %s: Assertion failed: code should not be reached.\n", \
+        __FILE__, __LINE__, __func__ );                               \
+    assert (FALSE);                                                   \
   } while ( 0 )
 
 // Assert that result is 0.  This macro is intended to make it easier to check
@@ -128,7 +109,7 @@ term_io_getline (char *linebuf);
   do {                                                                 \
     int XxX_result = result;                                           \
     if ( UNLIKELY (XxX_result) ) {                                     \
-      PFP (                                                            \
+      TERM_IO_PFP (                                                    \
           "%s:%i: %s: failure: %s\n",                                  \
           __FILE__, __LINE__, __func__,                                \
           string_fetcher (XxX_result, string_buf) );                   \

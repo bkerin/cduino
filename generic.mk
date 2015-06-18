@@ -673,12 +673,24 @@ replace_bootloader: $(ACTUAL_ARDUINO_BOOTLOADER)  binaries_suid_root_stamp
 
 COMPILE_C = $(CC) $(DIAGNOSTICS_FLAGS) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
+# This is just like COMPILE_C, but we have an extra define that causes
+# some printf-related macros to expand differently st we get the usual
+# nice warnings about format-type mismatches, but don't get program memory
+# strings.  This way we can compile things twice: once to get sensible
+# warnings (which we treat as errors probably), and then again to get actual
+# RAM-efficient code.
+COMPILE_C_FOR_PRINTF_WARNINGS =           \
+  $(CC) $(DIAGNOSTICS_FLAGS)              \
+        -DTRIGGER_PRINTF_WARNINGS         \
+        $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
 # FIXME: would we rather use a static pattern rule here?  They are generally
 # cleaner and result in much better error messages in some circumstances,
 # but are also less well understood.  This would take some thought as to
 # which sorts of errors are more likely and how confusing the results are
 # likely to be.
 %.o: %.c
+	$(COMPILE_C_FOR_PRINTF_WARNINGS)
 	$(COMPILE_C)
 
 COMPILE_CXX = $(CXX) $(DIAGNOSTICS_FLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
