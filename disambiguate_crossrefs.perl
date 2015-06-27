@@ -108,7 +108,7 @@ sub disambiguated_chunk ($$) # {{{1
 
         # Modules should never refer to things in the lessons.
         elsif ( $sfn !~ m/lesson\d+[ab]?\.[ch]\.html$/ ) {
-            if ( $rt =~ m/lesson\d+[ab]?\.[ch]\.html$/ ) {
+            if ( $rt =~ m/^lesson\d+[ab]?\.[ch]$/ ) {
                 ;
             }
             else {
