@@ -212,20 +212,3 @@ term_io_getline (char *linebuf)
     }
   }
 }
-
-// FIXME: this can't be implemented yet, see the comments by the prototype
-// in term_io.h for details.
-//int
-//printf_P_safer (char const *fmt, ...)
-//{
-//  va_list ap;
-//  va_start (ap, fmt);
-//
-//  // FIXME: its weird that we have to use vfprintf_P() instead of
-//  // vprintf_P(), but for some reason avrlibc 1.8.0 at least doesn't seem
-//  // to provide the latter
-//  int char_count = vfprintf_P (stdout, fmt, ap);
-//  va_end (ap);
-//
-//  return char_count;
-//}
