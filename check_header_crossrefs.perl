@@ -36,11 +36,6 @@ $sf !~ m/one_wire_common\.h/ or exit 0;
 # doesn't have a header or implementation file and doesn't follow the pattern.
 $sf !~ m/random_id_test\.c/ or exit 0;
 
-# We have a stupid test program called main.c in a test module at the moment
-# FIXME: try removing this exception to see if its gone, I think it was
-# pcinttest/main.c or so.
-$sf !~ m/main\.c/ or exit 0;
-
 # }}}1
 
 open(SF, "<$sf") or die "couldn't open $sf for reading";
