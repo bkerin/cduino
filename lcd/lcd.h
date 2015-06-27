@@ -57,7 +57,7 @@ lcd_home (void);
 // default no visual indication of the cursor position is given.  FIXME:
 // this is subject to current scolling I think, verify and document.
 void
-lcd_set_cursor_position (uint8_t column, uint8_t row); 
+lcd_set_cursor_position (uint8_t column, uint8_t row);
 
 // Turn the display off/on (leaving its contents intact but not displayed).
 void
@@ -119,7 +119,12 @@ lcd_printf (const char *format, ...)
 // memory space (probably declared using the AVR libc PSTR macro, for example
 // 'lcd_printf_P (PSTR ("foo: %d"), some_int)').  This saves some RAM,
 // but note that the expanded version of format still gets stored in RAM
-// before being sent to the LCD.
+// before being sent to the LCD.  FIXME: also, printf_P seems to not give
+// the usualy format-vs-type mismatch errors.  The generic.mk now has some
+// tricks to help with this (see near TRIGGER_PRINTF_WARNINGS in generic.h),
+// they should be applied here.  I think it would be good if none of the
+// lessons used printf_P(), for similar reasons, or at least they should
+// get comments about it.
 int
 lcd_printf_P (const char *format, ...)
   __attribute__ ((format (printf, 1, 2)));
