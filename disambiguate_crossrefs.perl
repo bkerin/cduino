@@ -49,7 +49,7 @@ sub disambiguated_chunk ($$) # {{{1
     # individual reference-target pair itself (without comparing it to other
     # targets for the same ref).
 
-    # Filter refs that can be see bad by intrinsic characteristics # {{{2
+    # Filter refs that can be seen bad by intrinsic characteristics # {{{2
     foreach ( @refs ) {
 
         m/$xrgx/;
@@ -65,7 +65,7 @@ sub disambiguated_chunk ($$) # {{{1
             ;
         }
 
-        # If its a AVR libc ISR declaration, nuke its like to other such
+        # If its an AVR libc ISR declaration, nuke its link to other such
         # declarations in other files.
         elsif ( $ccl =~ m/^\s*ISR\s*\(.+\)\s*$/ ) {
             ;
@@ -99,6 +99,16 @@ sub disambiguated_chunk ($$) # {{{1
         # to themselves.
         elsif ( $sfn =~ m/(lesson\d+[ab]?\.c)\.html$/ ) {
             if ( $rt ne $1 ) {
+                ;
+            }
+            else {
+                push(@nr, $_);
+            }
+        }
+
+        # Modules should never refer to things in the lessons.
+        elsif ( $sfn !~ m/lesson\d+[ab]?\.[ch]\.html$/ ) {
+            if ( $rt =~ m/lesson\d+[ab]?\.[ch]\.html$/ ) {
                 ;
             }
             else {
