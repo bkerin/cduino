@@ -107,6 +107,10 @@
 // to use these registers, users of this module are required to define
 // OWS_REGISTER_USE_ACKNOWLEDGED to ensure that they know what's going on
 // (see the Makefile for this module for a line to uncomment to do this).
+// Its also necessary to ensure that all code which calls functions that
+// use these variables knows about the situation: this is (hopefully)
+// accomplished by usigh the --ffixed-r2, --ffixed-r3, etc. options (see
+// the Makefile for this module).
 #ifndef OWS_REGISTER_USE_ACKNOWLEDGED
 #  error OWS_REGISTER_LOCKING_ACKNOWLEDGED must be defined by the user
 #endif

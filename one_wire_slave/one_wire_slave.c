@@ -23,31 +23,18 @@
 // Global Register Variables" section of the GCC manual for more details.
 // These definition have to come at the start of this file.
 //
-// FIXME: go back to not doing it at 16 MHz I think.  Or perhaps we could
-// use the register keywork without the asm and things would work at 10 MHz?
-// Cause this crap is really problematic voodoo.  For example I don't think we
-// do this:
-//   A function that can alter the value of a global register variable
-//   cannot safely be called from a function compiled without this variable,
-//   because it could clobber the value the caller expects to find there on
-//   return. Therefore, the function that is the entry point into the part
-//   of the program that uses the global register variable must explicitly
-//   save and restore the value that belongs to its caller.
-// and if we did it might not be worth using the register locking.
-
+// I believe doing this is ok, because:
+//
+//   http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_regbind
+//   https://gcc.gnu.org/wiki/avr-gcc#Call-Saved_Registers
+//
 // See the comments above the reference to OWS_REGISTER_USE_ACKNOWLEDGED
-// in one_wire_slave.h for details about the register locking being used here.
+// in one_wire_slave.h for details.
+//
 register uint8_t ls      asm("r2");   // Line State as of last reading, 1 or 0
 register uint8_t cbitv   asm("r3");   // Current Bit Value
 register uint8_t cbytevu asm("r4");   // Current Byte Value, Usually
 register uint8_t cbiti   asm("r5");   // Current Bit Index
-/*
-uint8_t ls      ;   // Line State as of last reading, 1 or 0
-uint8_t cbitv   ;   // Current Bit Value
-uint8_t cbytevu ;   // Current Byte Value, Usually
-uint8_t cbiti   ;   // Current Bit Index
-*/
-
 
 #ifdef OWS_BUILD_RESULT_DESCRIPTION_FUNCTION
 
