@@ -202,7 +202,7 @@ main (void)
       continue;
     }
 
-    jgur = FALSE;
+    jgur = FALSE;   // Gets set TRUE iff we Just Got an Unexpected Reset
 
     if ( result != OWS_RESULT_SUCCESS ) {
       continue;

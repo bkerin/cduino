@@ -95,7 +95,8 @@ CPPFLAGS += -DOWS_FAMILY_CODE=0x28
 CPPFLAGS += -DOWS_BUILD_RESULT_DESCRIPTION_FUNCTION
 
 # Ensure that exactly one test condition is defined.
-# FIXME: this isnt thw OWM anymore, so remove or change
-ifneq ($(words $(filter -DOWM_TEST_CONDITION_%,$(CPPFLAGS))),1)
-  $(error Exactly one OWM_TEST_CONDITION_* must be defined)
+# FIXME: remove this if we don't actually end up using multiple test conditions
+# for this slave
+ifneq ($(words $(filter -DOWS_TEST_CONDITION_%,$(CPPFLAGS))),1)
+  $(error Exactly one OWS_TEST_CONDITION_* must be defined)
 endif
