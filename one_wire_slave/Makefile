@@ -75,17 +75,12 @@ else
   CPPFLAGS += -DDBL_PIN=DIO_PIN_PD4
 endif
 
-
-# FIXME: USE OWS_ prefix for test conditions?  dio doesn't do it...
-
 # The one_wire_slave.h interface requires this to be defined at compile time.
 CPPFLAGS += -DOWS_PIN=DIO_PIN_DIGITAL_2
 
 # This module requires us to use a prescaler setting st we get at least
-# 1 us resolution on the timer.  This setting works for 16 MHz (gives a
-# 2 MHz timer1).  If the cpu were at 1MHz, would need to use a prescaler
-# setting of 1.  FIXME: 1 MHz cpu might not work anyway because of slowness
-# running other code, this needs tested/reasoned about a bit.
+# 1 us resolution on the timer.  This setting works for the full range of
+# CPU speeds tested (10 - 16 MHz).
 CPPFLAGS += -DTIMER1_STOPWATCH_PRESCALER_DIVIDER=8
 
 # This is the Maxim family code for the DS18B20.  Since our test/demo
