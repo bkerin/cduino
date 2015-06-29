@@ -15,11 +15,11 @@
 //     Arduino via a data line (by default to OWS_PIN DIO_PIN_DIGITAL_2),
 //     and a ground line.
 //
-// Depending on the USB to provide a common ground didn't work for me with
-// my laptop.  I had to add a physical wire connecting the Arduino grounds.
-// This is sort of weird but unlikely to be an issue in any real application
-// (where its unlikely that both master and slave will even be Arduinos,
-// let alone USB-powered ones).
+// Depending on the USB to provide a common ground didn't work consistently
+// for me with my laptop.  I had to add a physical wire connecting the
+// Arduino grounds.  This is sort of weird but unlikely to be an issue in
+// any real application (where its unlikely that both master and slave will
+// even be Arduinos, let alone USB-powered ones).
 //
 // The slave Arduino should be reset first, then the master should be reset
 // when prompted to kick off the tests.
@@ -161,22 +161,21 @@ main (void)
   // We're going to perform the remaining tests using the minimum timeout
   // setting, in order to exercise things: if everything works properly,
   // the master should still be able to communicate with us despite
-  // regular timeouts and restarts of ows_wait_for_function_transaction().
-  // In practice OWS_TIMEOUT_NONE could be used if the slave only needs to
-  // do things on demand (and doesn't want to sleep), or some value between
-  // the minimum (1) and OWS_MAX_TIMEOUT_US.  Of course, if the slave does
-  // anything time-consuming between ows_wait_for_function_transaction()
-  // calls, the delay might get to be to much for the master to tolerate
-  // without compensating code (it wouldn't get presence pulses in time).
-  // FIXME: so maybe actually set it to the minimum.
-  // FIXME: do the min and max timeout values still make sense?
-  //ows_set_timeout (32767);
-  ows_set_timeout (OWS_TIMEOUT_NONE);
+  // regular timeouts and restarts of ows_wait_for_function_transaction()
+  // (resulting from all the diagnostic output the the one_wire_master_test.c
+  // program does).  In practice OWS_TIMEOUT_NONE could be used if the slave
+  // only needs to do things on demand (and doesn't want to sleep), or some
+  // value between the minimum OWS_MIN_TIMEOUT_US and OWS_MAX_TIMEOUT_US.
+  // Of course, if the slave does anything time-consuming between
+  // ows_wait_for_function_transaction() calls, the delay might get to be too
+  // much for the master to tolerate without compensating code (it wouldn't
+  // get presence pulses in time).
+  ows_set_timeout (OWS_MIN_TIMEOUT_US);
 
   // FIXME: debug
   uint32_t lc = 0;   // FIXME: for testing timeout time correctness only
 
-  uint8_t jgur = FALSE;
+  uint8_t jgur = FALSE;   // Gets set TRUE iff we Just Got an Unexpected Reset
 
   for ( ; ; ) {
 
@@ -192,7 +191,7 @@ main (void)
       PFP ("Unexpected ows_wait_for_function_transaction() result: ");
       print_ows_error (result);
       PFP ("\n");
-      continue;
+      PFP_ASSERT_NOT_REACHED ();
     }
 
     if ( result == OWS_ERROR_GOT_UNEXPECTED_RESET ) {
@@ -204,14 +203,13 @@ main (void)
       jgur = TRUE;
       continue;
     }
-
-    jgur = FALSE;   // Gets set TRUE iff we Just Got an Unexpected Reset
+    else {
+      jgur = FALSE;
+    }
 
     if ( result != OWS_RESULT_SUCCESS ) {
       continue;
     }
-
-    //printf ("got function command %hhx\n", fcmd);
 
     switch ( fcmd ) {
 
