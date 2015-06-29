@@ -36,7 +36,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "debug_led.h"  // NOTE: only required for debugging this module
 #include "dio.h"
 #include "ds18b20_commands.h"
 #include "one_wire_slave.h"
@@ -108,8 +107,6 @@ send_fake_ds18b20_scratchpad_contents (void)
 int
 main (void)
 {
-  DBL_INIT ();  // NOTE: only required for debugging this module
-
   // This isn't what we're testing exactly, but we need to know if it's
   // working or not to interpret other results.
   term_io_init ();
