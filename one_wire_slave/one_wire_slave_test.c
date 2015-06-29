@@ -54,9 +54,8 @@ send_fake_ds18b20_scratchpad_contents (void)
   // Send the appropriate response to a read scratchpad command from the
   // master, at least as far as the one_wire_master_test.c program cares.
   // Note in particular that one_wire_master_test.c doesn't even care about
-  // the CRC that a real DS18B20 would send.  FIXME: maybe we should make
-  // the master actually check this since it would be a good idea to show
-  // how to do that anyway. (and compute it at this end)
+  // the CRC that a real DS18B20 would send.  Of course, in real life one
+  // would want to use a CRC of some sort.
 
   // Temperature least and most significant bits st the temperature comes
   // out to 42.0 degrees C (see Fig. 2 of Maxim DS18B20 datasheet).
@@ -106,7 +105,7 @@ main (void)
   PFP ("\n");
 
   PFP ("About to start timeout tests.  Ensure that the master is silent\n");
-  double const mdtms = 2042;   // Message Display Time in ms FIXME: up for prod
+  double const mdtms = 5042;   // Message Display Time in ms
   _delay_ms (mdtms);
   PFP ("Testing ows_wait_for_function_transaction() with minimum timeout... ");
   ows_set_timeout (OWS_MIN_TIMEOUT_US);
@@ -149,17 +148,8 @@ main (void)
 
     result = ows_wait_for_function_transaction (&fcmd, jgur);
 
-    result = OWS_ERROR_ROM_ID_MISMATCH;
-
-    // FIXME: I think OWS_ROM_ID_MISMATCH could happen at this point if we're
-    // testing this slave together with others, and it wouldn't really be
-    // a fatal error, so we should do something more intelligent with it,
-    // or else have a test case where it can happen and another where it
-    // shouldn't (since it might be a common result for bugs even in the
-    // one-slave case.
-
-    if ( result != OWS_RESULT_SUCCESS                       &&
-         result != OWS_ERROR_TIMEOUT &&
+    if ( result != OWS_RESULT_SUCCESS             &&
+         result != OWS_ERROR_TIMEOUT              &&
          result != OWS_ERROR_GOT_UNEXPECTED_RESET ) {
       // For diagnostic purposes we do this.  Normally printing something
       // out at this point might take too much time that could otherwise be

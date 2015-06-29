@@ -181,6 +181,8 @@
   X (OWS_ERROR_TIMEOUT)                                                      \
   X (OWS_ERROR_GOT_UNEXPECTED_RESET)                                         \
   X (OWS_ERROR_GOT_INVALID_ROM_COMMAND)                                      \
+  /* This one isn't actually returned by public functions: they silently */  \
+  /* continue operation when they hear talk addressed to another slave.  */  \
   X (OWS_ERROR_ROM_ID_MISMATCH)
 
 // Return type representing the result of an operation.
