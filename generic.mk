@@ -396,18 +396,6 @@ ASMFLAGS := -I. -mmcu=$(COMPILER_MCU)-x assembler-with-cpp           \
 LDFLAGS := -mmcu=$(COMPILER_MCU) $(AVRLIBC_PRINTF_LDFLAGS) -lm \
            -Wl,-Map,$(TRG).map
 
-ifeq ($(UPLOAD_METHOD), AVRISPmkII)
-  # This flag shows up somewhere in the arduino build files.  But it seems to
-  # cause trouble by making the built files different so things don't work when
-  # the upload method is changed.  And it makes the uploads take longer.  And
-  # it doesn't seem necessary.  And I originally thought it might be useful to
-  # avoid nuking the bootloader when using AVRISPmkII programming, but it turns
-  # out it's impossible to prevent that.  So it's not enabled at the moment.
-  # FIXME: so get rid of this garbage
-
-  #LDFLAGS += -Wl,--section-start=.text=0x7800
-endif
-
 
 ##### Rules {{{1
 
