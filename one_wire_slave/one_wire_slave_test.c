@@ -196,8 +196,11 @@ main (void)
     }
 
     if ( result == OWS_ERROR_GOT_UNEXPECTED_RESET ) {
-      // FIXME: because of the text that the slave outputs between things,
-      // this path isn't really tested.
+      // This path gets a little exercise from the test code in
+      // one_wire_master, because it starts out by just doing a reset pulse
+      // and looking for a presence pulse, then starts over doing a more
+      // complete transaction with another reset pulse, which as far as this
+      // slave module is concerned constitues an unexpected reset.
       jgur = TRUE;
       continue;
     }
