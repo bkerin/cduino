@@ -88,29 +88,6 @@ CPPFLAGS += -DTIMER1_STOPWATCH_PRESCALER_DIVIDER=8
 # we mainly use it to show how to set your own family code.
 CPPFLAGS += -DOWS_FAMILY_CODE=0x28
 
-# Exactly one of the following OWM_TEST_CONDITION_* macros must be defined.
-
-# FIXME: this isnt thw OWM anymore, so remove or change
-CPPFLAGS += -DOWM_TEST_CONDITION_SINGLE_SLAVE
-
-# Uncomment these to test a multi-slave bus configuration.
-# FIXME: this isnt thw OWM anymore, so remove or change
-#CPPFLAGS += -DOWM_TEST_CONDITION_MULTIPLE_SLAVES
-
-# For the multiple-slave tests to work, you must determine your actual
-# slave IDs beforehand and fill them in here.  The test output for the
-# OWM_TEST_CONDITION_SINGLE_SLAVE code outputs the ID of the slave it finds
-# -- it can be run multiple times with different slaves devices to find all
-# their IDs.  Note the IDs must also be assigned correctly to first and
-# second positions with respect to the discovery order of the 1-wire bus
-# search algorithm.  It might be easiest to try both orders :) The individual
-# bytes of these IDs should be given in the order they occur in the ID.
-# The test program takes care of swapping them to account for endianness.
-# FIXME: this isnt thw OWM anymore, so remove or change
-#CPPFLAGS += -DOWM_FIRST_SLAVE_ID=0x28542a8e060000b4
-# FIXME: this isnt thw OWM anymore, so remove or change
-#CPPFLAGS += -DOWM_SECOND_SLAVE_ID=0x289ae53005000015
-
 # If this is uncommented, we build a function which fetches a text description
 # of a ows_result_t.  This inevitably burns some program memory for the
 # strings (whether the function is called or not), so we provide this option
