@@ -261,7 +261,7 @@ wfpcoto (void)
     }
     else if ( UNLIKELY (TIMER1_STOPWATCH_TICKS () >= timeout_t1t) ) {
       if ( timeout_t1t != OWS_TIMEOUT_NONE ) {
-        return OWS_ERROR_TIMEOUT;
+        return OWS_RESULT_TIMEOUT;
       }
     }
   }
@@ -284,7 +284,7 @@ read_bit (void)
     CPE (wfpcoto ());
     if ( ls ) {
       if ( UNLIKELY (CFR ()) ) {
-        return OWS_ERROR_GOT_UNEXPECTED_RESET;
+        return OWS_RESULT_GOT_UNEXPECTED_RESET;
       }
     }
     else {
@@ -313,7 +313,7 @@ write_bit (void)
     CPE (wfpcoto ());
     if ( UNLIKELY (ls) ) {
       if ( UNLIKELY (CFR ()) ) {
-        return OWS_ERROR_GOT_UNEXPECTED_RESET;
+        return OWS_RESULT_GOT_UNEXPECTED_RESET;
       }
     }
     else {
@@ -401,7 +401,7 @@ read_and_match_rom_id (void)
     for ( cbiti = 0 ; cbiti < BITS_PER_BYTE ; cbiti++ ) {
       CPE (read_bit ());
       if ( cbitv != ((rom_id[cbytevu]) >> cbiti) ) {
-        return OWS_ERROR_ROM_ID_MISMATCH;
+        return OWS_RESULT_ROM_ID_MISMATCH;
       }
     }
   }
@@ -497,7 +497,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
               state = SDASC;
               break;
             default:
-              return OWS_ERROR_GOT_INVALID_ROM_COMMAND;
+              return OWS_RESULT_ERROR_GOT_INVALID_ROM_COMMAND;
               break;
           }
           break;
@@ -516,7 +516,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur)
       case SDMRC:
         {
           ows_result_t result = read_and_match_rom_id ();
-          if ( result == OWS_ERROR_ROM_ID_MISMATCH ) {
+          if ( result == OWS_RESULT_ROM_ID_MISMATCH ) {
             state = SWFR;
           }
           else {

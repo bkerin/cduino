@@ -110,12 +110,12 @@ main (void)
   PFP ("Testing ows_wait_for_function_transaction() with minimum timeout... ");
   ows_set_timeout (OWS_MIN_TIMEOUT_US);
   result = ows_wait_for_function_transaction (&fcmd, 0);
-  PFP_ASSERT (result = OWS_ERROR_TIMEOUT);
+  PFP_ASSERT (result = OWS_RESULT_TIMEOUT);
   PFP ("ok.\n");
   PFP ("Testing ows_wait_for_function_transaction() with maximum timeout... ");
   ows_set_timeout (OWS_MAX_TIMEOUT_US);
   result = ows_wait_for_function_transaction (&fcmd, 0);
-  PFP_ASSERT (result = OWS_ERROR_TIMEOUT);
+  PFP_ASSERT (result = OWS_RESULT_TIMEOUT);
   PFP ("ok.\n");
 
   // NOTE: its also possible to cause many resets in a row, and time them with
@@ -149,8 +149,8 @@ main (void)
     result = ows_wait_for_function_transaction (&fcmd, jgur);
 
     if ( result != OWS_RESULT_SUCCESS             &&
-         result != OWS_ERROR_TIMEOUT              &&
-         result != OWS_ERROR_GOT_UNEXPECTED_RESET ) {
+         result != OWS_RESULT_TIMEOUT              &&
+         result != OWS_RESULT_GOT_UNEXPECTED_RESET ) {
       // For diagnostic purposes we do this.  Normally printing something
       // out at this point might take too much time that could otherwise be
       // spent eating the error and waiting for the line to sort itself out :)
@@ -162,7 +162,7 @@ main (void)
       PFP_ASSERT_NOT_REACHED ();
     }
 
-    if ( result == OWS_ERROR_GOT_UNEXPECTED_RESET ) {
+    if ( result == OWS_RESULT_GOT_UNEXPECTED_RESET ) {
       // This path gets a little exercise from the test code in
       // one_wire_master, because it starts out by just doing a reset pulse
       // and looking for a presence pulse, then starts over doing a more

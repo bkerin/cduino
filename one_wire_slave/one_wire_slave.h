@@ -169,21 +169,20 @@
 // declaration below).
 #define OWS_PART_ID_EEPROM_ADDRESS 0
 
-// FIXME: decide which results are ERRORS (if any) and finish changing
-// the names of the codes
-
 // These are the result codes for many functions in this interface.  Public
 // interface methods that can return these describe the circumstances that
 // cause them.
+
 #define OWS_RESULT_CODES                                                     \
   /* Note that this code must be first, so that it ends up with value 0.  */ \
   X (OWS_RESULT_SUCCESS)                                                     \
-  X (OWS_ERROR_TIMEOUT)                                                      \
-  X (OWS_ERROR_GOT_UNEXPECTED_RESET)                                         \
-  X (OWS_ERROR_GOT_INVALID_ROM_COMMAND)                                      \
+  X (OWS_RESULT_TIMEOUT)                                                     \
+  X (OWS_RESULT_GOT_UNEXPECTED_RESET)                                        \
   /* This one isn't actually returned by public functions: they silently */  \
   /* continue operation when they hear talk addressed to another slave.  */  \
-  X (OWS_ERROR_ROM_ID_MISMATCH)
+  X (OWS_RESULT_ROM_ID_MISMATCH)                                             \
+  /* Only master misbehavior or noise should cause this one.  */             \
+  X (OWS_RESULT_ERROR_GOT_INVALID_ROM_COMMAND)
 
 // Return type representing the result of an operation.
 typedef enum {
@@ -238,7 +237,7 @@ ows_init (uint8_t use_eeprom_id);
 #define OWS_MAX_TIMEOUT_US ((uint16_t) (UINT16_MAX / OWS_TIMER_TICKS_PER_US))
 
 // If time_us isn't OWS_TIMEOUT_NONE, then any call into this interface
-// that waits for a 1-wire event will timeout and return OWS_ERROR_TIMEOUT
+// that waits for a 1-wire event will timeout and return OWS_RESULT_TIMEOUT
 // after approximately this many microseconds without any change in the line
 // state.  Note that events not addressed to this slave will still prevent
 // a timeout from occurring, so if your master continually talks to other
@@ -265,14 +264,14 @@ ows_set_timeout (uint16_t time_us);
 // On success OWS_RESULT_SUCCESS is returned.  Otherwise, one of the
 // following result codes is returned:
 //
-//   * OWS_ERROR_TIMEOUT if a timeout occurred (see ows_set_timeout() above).
+//   * OWS_RESULT_TIMEOUT if a timeout occurred (see ows_set_timeout() above).
 //
-//   * OWS_ERROR_GOT_UNEXPECTED_RESET if we get a reset pulse from the
+//   * OWS_RESULT_GOT_UNEXPECTED_RESET if we get a reset pulse from the
 //     master when we where expecting something else.  In this case, it
 //     probably makes sense to immediately call this function again with
 //     the jgur argument TRUE.
 //
-//   * OWS_ERROR_GOT_INVALID_ROM_COMMAND if we get a command that doesn't
+//   * OWS_RESULT_ERROR_GOT_INVALID_ROM_COMMAND if we get a command that doesn't
 //     satisfy OWC_IS_ROM_COMMAND(command) from one_wire_common.h.  This could
 //     result from a misbehaving master, or from data corruption on the line.
 //
@@ -281,7 +280,7 @@ ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur);
 
 // Write a single bit with value bit_value (when the master requests
 // it).  Use ows_write_byte() instead for byte-at-a-time messages.
-// Returns OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error,
+// Returns OWS_RESULT_TIMEOUT or OWS_RESULT_GOT_UNEXPECTED_RESET on error,
 // or OWS_RESULT_SUCCESS otherwise.  READ THE ENTIRE TEXT AT THE TOP OF
 // THIS FILE.
 ows_result_t
@@ -289,21 +288,21 @@ ows_write_bit (uint8_t bit_value);
 
 // Read a single bit into *bit_value_ptr (when the master sends it).
 // Use ows_read_byte() instead for byte-at-a-time messages.  Returns
-// OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error, or
+// OWS_RESULT_TIMEOUT or OWS_RESULT_GOT_UNEXPECTED_RESET on error, or
 // OWS_RESULT_SUCCESS otherwise.  READ THE ENTIRE TEXT AT THE TOP OF
 // THIS FILE.
 ows_result_t
 ows_read_bit (uint8_t *bit_value_ptr);
 
 // Write a byte with value byte_value (when the master requests it).
-// Returns OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error,
+// Returns OWS_RESULT_TIMEOUT or OWS_RESULT_GOT_UNEXPECTED_RESET on error,
 // or OWS_RESULT_SUCCESS otherwise.  READ THE ENTIRE TEXT AT THE TOP OF
 // THIS FILE.
 ows_result_t
 ows_write_byte (uint8_t byte_value);
 
 // Reads a byte into *byte_value_ptr (when the master requests it).
-// Returns OWS_ERROR_TIMEOUT or OWS_ERROR_GOT_UNEXPECTED_RESET on error,
+// Returns OWS_RESULT_TIMEOUT or OWS_RESULT_GOT_UNEXPECTED_RESET on error,
 // or OWS_RESULT_SUCCESS otherwise.  READ THE ENTIRE TEXT AT THE TOP OF
 // THIS FILE.
 ows_result_t
