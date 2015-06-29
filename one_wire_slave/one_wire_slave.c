@@ -10,7 +10,6 @@
 #include <util/crc16.h>
 #include <util/delay.h>
 
-#include "debug_led.h"
 #include "dio.h"
 #include "one_wire_common.h"
 #include "one_wire_slave.h"
