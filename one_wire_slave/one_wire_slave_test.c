@@ -104,20 +104,6 @@ send_fake_ds18b20_scratchpad_contents (void)
   // about anything except the temperature bytes, so we just send 0 for the
   // remaining bytes.
   for ( uint8_t ii = 0 ; ii < rss ; ii++ ) {
-    // FIXME: WORK POINT: welllll, with + 0 after < rss above here everything
-    // works, removing it causes things to work only first time through.
-    // Alternately, one can remove the register declarations from the ls,
-    // cbitv, cbytevu, and cbiti declarations and then things work.
-    /*
-    ows_result_t result = ows_write_byte (0);
-    if ( result != OWS_RESULT_SUCCESS ) {
-      printf (
-          "failure at byte %hhi: %s\n",
-          ii,
-          ows_result_as_string (result, result_buf) );
-      PFP_ASSERT_NOT_REACHED ();
-    }
-    */
     OWS_CHECK (ows_write_byte (0));
   }
 }
