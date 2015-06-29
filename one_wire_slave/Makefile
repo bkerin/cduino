@@ -28,7 +28,7 @@ CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
 CFLAGS += -ffixed-r2 -ffixed-r3 -ffixed-r4 -ffixed-r5
 
 # Uncomment for testing with my particular non-arduino slave breadboard build
-ENABLE_NON_ARDUINO_OVERRIDES = defined
+#ENABLE_NON_ARDUINO_OVERRIDES = defined
 
 ##### Orverrides for Non-Arduino Slave {{{1
 
@@ -97,6 +97,6 @@ CPPFLAGS += -DOWS_BUILD_RESULT_DESCRIPTION_FUNCTION
 # Ensure that exactly one test condition is defined.
 # FIXME: remove this if we don't actually end up using multiple test conditions
 # for this slave
-ifneq ($(words $(filter -DOWS_TEST_CONDITION_%,$(CPPFLAGS))),1)
-  $(error Exactly one OWS_TEST_CONDITION_* must be defined)
-endif
+#ifneq ($(words $(filter -DOWS_TEST_CONDITION_%,$(CPPFLAGS))),1)
+#  $(error Exactly one OWS_TEST_CONDITION_* must be defined)
+#endif
