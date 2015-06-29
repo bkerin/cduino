@@ -21,18 +21,15 @@
 // any real application (where its unlikely that both master and slave will
 // even be Arduinos, let alone USB-powered ones).
 //
-// The slave Arduino should be reset first, then the master should be reset
-// when prompted to kick off the tests.
+// The slave Arduino should be reset first.  Timeouts are tested first,
+// during which the master must be silent (maybe hold it's reset button
+// down :).  Then the master should be reset when prompted.
 //
 // Because the slave needs to respond quickly to requests from the master,
 // it can't take the time to provide incremental diagnostic output via
-// term_io.h like other module tests do.  Instead, it will give you some
-// nice blinky-LED feedback about the point of failure on the on-board LED
-// (connected to PB5, aka DIGITAL_5) , or simple enthusiastic rapid blinking
-// if everything works :) See the coments for BASSERT_FEEDING_WDT_SHOW_POINT()
-// in util.h for details about the failure feedback.  If everthing works
-// here, you might want to take a look at the diagnostic output from the
-// master to verify that the final results got to it correctly.
+// term_io.h like other module tests do.  For the most part you only get
+// output when there's a failure, and should look at the output on the
+// master side to verify that it's talking to the slave.
 //
 
 #include <assert.h>
@@ -138,25 +135,29 @@ main (void)
   PFP ("\n");
 
   // FIXME: timeout tests disabled for now
-  /*
   PFP ("About to start timeout tests.  Ensure that the master is silent\n");
   double const mdtms = 2042;   // Message Display Time in ms FIXME: up for prod
   _delay_ms (mdtms);
   PFP ("Testing ows_wait_for_function_transaction() with minimum timeout... ");
-  timeout = 1;   // Minimum setting
-  result = ows_wait_for_function_transaction (&fcmd, timeout);
+  ows_set_timeout (OWS_MIN_TIMEOUT_US);
+  result = ows_wait_for_function_transaction (&fcmd, 0);
   PFP_ASSERT (result = OWS_ERROR_TIMEOUT);
   PFP ("ok.\n");
   PFP ("Testing ows_wait_for_function_transaction() with maximum timeout... ");
-  timeout = OWS_MAX_TIMEOUT_US;
-  result = ows_wait_for_function_transaction (&fcmd, timeout);
+  ows_set_timeout (OWS_MAX_TIMEOUT_US);
+  result = ows_wait_for_function_transaction (&fcmd, 0);
   PFP_ASSERT (result = OWS_ERROR_TIMEOUT);
   PFP ("ok.\n");
-  */
+
+  // NOTE: its also possible to cause many resets in a row, and time them with
+  // a stopwatch to verify that the timeouts actually have the approximate
+  // duration expected (at least for OWS_MAX_TIMEOUT_US anyway).  I've done
+  // this, but I don't think it's worth automating it here.
 
   PFP ("\n");
 
-  PFP ("Ready to start master-slave tests, reset the master now\n");
+  PFP ("Ready to start master-slave tests, reset the master now and look\n");
+  PFP ("at it's output to verify correct operation.\n");
 
   // We're going to perform the remaining tests using the minimum timeout
   // setting, in order to exercise things: if everything works properly,
@@ -171,9 +172,6 @@ main (void)
   // much for the master to tolerate without compensating code (it wouldn't
   // get presence pulses in time).
   ows_set_timeout (OWS_MIN_TIMEOUT_US);
-
-  // FIXME: debug
-  uint32_t lc = 0;   // FIXME: for testing timeout time correctness only
 
   uint8_t jgur = FALSE;   // Gets set TRUE iff we Just Got an Unexpected Reset
 
@@ -223,29 +221,14 @@ main (void)
 
       case DS18B20_COMMANDS_READ_SCRATCHPAD_COMMAND:
         send_fake_ds18b20_scratchpad_contents ();
-        // FIXME: Maybe it doesn't make sense for this version to blink,
-        // since it makes it essentially throws an annoying gotcha into it if
-        // its being used as a demo program?  In which case the text at the
-        // top of this file would need to change.  At the moment it doesn't
-        // blink in case we're twiddling the master, that can sometimes make
-        // life easier.
         break;
 
       default:
-        // FIXME: this should maybe still be here but we shouldn't end up
-        // in switch if we got a timeout above.
-        // FIXME: should this be assert FALSE?
-        DBL_TRAP ();
-        assert (FALSE);
+        PFP_ASSERT_NOT_REACHED ();
         break;
 
     }
 
-    lc++;  // FIXME: debug
-    if ( lc == 1000 ) { printf ("got 1000 timeouts\n"); }  // FIXME: debug
-
   }
 
-  // Made it through, so start rapid blinking as promised!
-  //DBL_TRAP ();
 }
