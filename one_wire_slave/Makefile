@@ -66,15 +66,6 @@ AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
 include generic.mk
 
-# Pin to use for debug LED output.
-ifndef ENABLE_NON_ARDUINO_OVERRIDES
-  # FIXME: this will be the default probably once blinky debug has its
-  # own module.  Assuming it seems smart to have it have a default.
-  CPPFLAGS += -DDBL_PIN=DIO_PIN_PB5
-else
-  CPPFLAGS += -DDBL_PIN=DIO_PIN_PD4
-endif
-
 # The one_wire_slave.h interface requires this to be defined at compile time.
 CPPFLAGS += -DOWS_PIN=DIO_PIN_DIGITAL_2
 
@@ -88,15 +79,8 @@ CPPFLAGS += -DTIMER1_STOPWATCH_PRESCALER_DIVIDER=8
 # we mainly use it to show how to set your own family code.
 CPPFLAGS += -DOWS_FAMILY_CODE=0x28
 
-# If this is uncommented, we build a function which fetches a text description
+# If this is uncommented, we build a function that fetches a text description
 # of a ows_result_t.  This inevitably burns some program memory for the
 # strings (whether the function is called or not), so we provide this option
 # so it can be disabled easily.
 CPPFLAGS += -DOWS_BUILD_RESULT_DESCRIPTION_FUNCTION
-
-# Ensure that exactly one test condition is defined.
-# FIXME: remove this if we don't actually end up using multiple test conditions
-# for this slave
-#ifneq ($(words $(filter -DOWS_TEST_CONDITION_%,$(CPPFLAGS))),1)
-#  $(error Exactly one OWS_TEST_CONDITION_* must be defined)
-#endif
