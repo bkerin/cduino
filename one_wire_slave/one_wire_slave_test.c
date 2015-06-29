@@ -48,32 +48,6 @@ char result_buf[OWS_RESULT_DESCRIPTION_MAX_LENGTH + 1];
 #define OWS_CHECK(result)                                        \
   PFP_ASSERT_SUCCESS (result, ows_result_as_string, result_buf);
 
-// FIXME: this should be ows_result_as_string as in owm module
-static void
-print_ows_error (ows_result_t result)
-{
-  switch ( result ) {
-    case OWS_RESULT_SUCCESS:
-      PFP ("OWS_RESULT_SUCCESS");
-      break;
-    case OWS_ERROR_TIMEOUT:
-      PFP ("OWS_ERROR_TIMEOUT");
-      break;
-    case OWS_ERROR_GOT_UNEXPECTED_RESET:
-      PFP ("OWS_ERROR_GOT_UNEXPECTED_RESET");
-      break;
-    case OWS_ERROR_GOT_INVALID_ROM_COMMAND:
-      PFP ("OWS_ERROR_GOT_INVALID_ROM_COMMAND");
-      break;
-    case OWS_ERROR_ROM_ID_MISMATCH:
-      PFP ("OWS_ERROR_ROM_ID_MISMATCH");
-      break;
-    default:
-      assert (FALSE);   // Shouldn't be here
-      break;
-  }
-}
-
 static void
 send_fake_ds18b20_scratchpad_contents (void)
 {
@@ -131,7 +105,6 @@ main (void)
 
   PFP ("\n");
 
-  // FIXME: timeout tests disabled for now
   PFP ("About to start timeout tests.  Ensure that the master is silent\n");
   double const mdtms = 2042;   // Message Display Time in ms FIXME: up for prod
   _delay_ms (mdtms);
@@ -176,6 +149,15 @@ main (void)
 
     result = ows_wait_for_function_transaction (&fcmd, jgur);
 
+    result = OWS_ERROR_ROM_ID_MISMATCH;
+
+    // FIXME: I think OWS_ROM_ID_MISMATCH could happen at this point if we're
+    // testing this slave together with others, and it wouldn't really be
+    // a fatal error, so we should do something more intelligent with it,
+    // or else have a test case where it can happen and another where it
+    // shouldn't (since it might be a common result for bugs even in the
+    // one-slave case.
+
     if ( result != OWS_RESULT_SUCCESS                       &&
          result != OWS_ERROR_TIMEOUT &&
          result != OWS_ERROR_GOT_UNEXPECTED_RESET ) {
@@ -183,8 +165,9 @@ main (void)
       // out at this point might take too much time that could otherwise be
       // spent eating the error and waiting for the line to sort itself out :)
       PFP ("\n");
-      PFP ("Unexpected ows_wait_for_function_transaction() result: ");
-      print_ows_error (result);
+      PFP (
+          "Unexpected ows_wait_for_function_transaction() result: %s",
+          ows_result_as_string (result, result_buf) );
       PFP ("\n");
       PFP_ASSERT_NOT_REACHED ();
     }
