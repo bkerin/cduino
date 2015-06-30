@@ -19,10 +19,9 @@ include run_screen.mk
 # the slave Arduino in next and it ends up as /dev/ttyACM1.  When in doubt,
 # try plugging and unplugging the Arduinos and doing ls /dev to see which
 # files appear/dissapear.
-# FIXME: comment these back out when done testing slave
-ARDUINO_PORT = /dev/ttyACM0
-ARDUINO_BAUD = 115200
-ARDUINO_BOOTLOADER = optiboot_atmega328.hex
+#ARDUINO_PORT = /dev/ttyACM0
+#ARDUINO_BAUD = 115200
+#ARDUINO_BOOTLOADER = optiboot_atmega328.hex
 
 AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
