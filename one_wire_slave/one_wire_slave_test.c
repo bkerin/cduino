@@ -43,6 +43,9 @@
 #include "term_io.h"
 #include "util.h"
 
+// See the definition of this macro in util.h to understand why its here.
+WATCHDOG_TIMER_MCUSR_MANTRA
+
 char result_buf[OWS_RESULT_DESCRIPTION_MAX_LENGTH + 1];
 
 #define OWS_CHECK(result)                                        \
