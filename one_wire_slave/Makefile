@@ -6,9 +6,13 @@ include run_screen.mk
 # same time, so we can use our master and slave implementations together.
 # To support that, we have to use a different port for the second Arduino,
 # and not depend on autodetection.  Our build system then requires us to
-# specify all of these options.  Note that the port device file assigned to
-# a given Arduino can depend on the order in which it was plugged in, and on
-# other devices present on USB.  When in doubt, try plugging and unplugging
+# specify all of these options.  Note that there are some similar variables
+# in the Makefile for the one_wire_master module which must be uncommented
+# and set correctly as well.  Note also that the port device file assigned
+# to a given Arduino can depend on the order in which it was plugged in, and
+# on other devices present on USB.  In my case I plug in the master Arduino
+# first and it ends up as /dev/ttyACM0. I plug the slave Arduino in next and
+# it ends up as /dev/ttyACM1.  When in doubt, try plugging and unplugging
 # the Arduinos and doing ls /dev to see which files appear/dissapear.
 ARDUINO_PORT = /dev/ttyACM1
 ARDUINO_BAUD = 115200
@@ -17,8 +21,7 @@ ARDUINO_BOOTLOADER=optiboot_atmega328.hex
 # This line must be uncommented to ensure that people using this module
 # know that some variables are being locked into user registers.  See the
 # reference to OWS_REGISTER_USE_ACKNOWLEDGED in one_wire_slave.h for details.
-# FIXME: comment this out again for the public release:
-CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
+#CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
 
 # Because some variables are being locked into particular registers in
 # one_wire_slave.c, we have to ensure that the rest of program (i.e. code in
