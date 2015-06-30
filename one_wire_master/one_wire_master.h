@@ -261,7 +261,7 @@ owm_next (uint8_t *id_buf);
 // search state is restored (so for example the next call to owm_next()
 // should behave as if the call to this routine never occurred).
 owm_result_t
-owm_verify (uint8_t *id_buf);
+owm_verify (uint8_t const *id_buf);
 
 // Like owm_first(), but only finds slaves with an active alarm condition.
 owm_result_t

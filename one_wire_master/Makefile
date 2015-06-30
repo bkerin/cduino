@@ -6,15 +6,20 @@ include run_screen.mk
 # and not depend on autodetection.  Our build system then requires us to
 # specify all of these options.
 
-# These setting are only useful when we want to connect two Arduinos at once
-# (in order to test both a 1-wire master and a slave, for example).  In this
-# situation we can't depend on build system autodetection, but must instead
-# state explicitly which device we want to program.  Our build system then
-# requires us to specify all of these options.  Note that the port device
-# file assigned to a given Arduino can depend on the order in which it
-# was plugged in, and on other devices present on USB.  When in doubt, try
-# plugging and unplugging the Arduinos and doing ls /dev to see which files
-# appear/dissapear.  FIXME: comment these back out when done testing slave
+# These setting are only useful when we want to connect two Arduinos at
+# once (in order to test both a 1-wire master and a slave, for example).
+# In this situation we can't depend on build system autodetection, but
+# must instead state explicitly which device we want to program.  Our build
+# system then requires us to specify all of these options.  Note that there
+# are some similar variables in the Makefile for the one_wire_slave module
+# which must be uncommented and set correctly as well.  Note also that the
+# port device file assigned to a given Arduino can depend on the order in
+# which it was plugged in, and on other devices present on USB.  In my case
+# I plug in the master Arduino first and it ends up as /dev/ttyACM0. I plug
+# the slave Arduino in next and it ends up as /dev/ttyACM1.  When in doubt,
+# try plugging and unplugging the Arduinos and doing ls /dev to see which
+# files appear/dissapear.
+# FIXME: comment these back out when done testing slave
 ARDUINO_PORT = /dev/ttyACM0
 ARDUINO_BAUD = 115200
 ARDUINO_BOOTLOADER = optiboot_atmega328.hex
@@ -48,6 +53,12 @@ CPPFLAGS += -DTEST_CONDITION_SINGLE_SLAVE
 # The test program takes care of swapping them to account for endianness.
 #CPPFLAGS += -DFIRST_SLAVE_ID=0x28542a8e060000b4
 #CPPFLAGS += -DSECOND_SLAVE_ID=0x289ae53005000015
+
+# When testing a slave implemented using the one_wire_slave module together
+# other slaves, it may be useful to have one of the slave IDs set to the
+# default ID implemented in that module:
+#CPPFLAGS += -DFIRST_SLAVE_ID=0x28444444222222bb
+#CPPFLAGS += -DSECOND_SLAVE_ID=0x28542a8e060000b4
 
 # Ensure that exactly one test condition is defined.
 ifneq ($(words $(filter -DTEST_CONDITION_%,$(CPPFLAGS))),1)

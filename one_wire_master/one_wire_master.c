@@ -9,9 +9,6 @@
 #include "dio.h"
 #include "one_wire_common.h"
 #include "one_wire_master.h"
-// Its convenient to use term_io if we need to debug:  FIXME: disable prod
-#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
-#include "term_io.h"
 #include "util.h"
 
 #ifdef OWM_BUILD_RESULT_DESCRIPTION_FUNCTION
@@ -654,7 +651,7 @@ owm_next (uint8_t *id_buf)
 }
 
 owm_result_t
-owm_verify (uint8_t *id_buf)
+owm_verify (uint8_t const *id_buf)
 {
   memcpy (rom_id, id_buf, OWC_ID_SIZE_BYTES);
 

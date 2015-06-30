@@ -382,20 +382,14 @@ main (void)
 
   uint64_t rid;   // ROM ID
 
-  // FIXME: this test condition still need consolidated to use OWM_CHECK
-  // and PFP_ASSERT(cond)
-
   PFP ("Trying owm_first()... ");
-  uint8_t slave_found = owm_first ((uint8_t *) &rid);
-  if ( ! slave_found ) {
-    PFP ("failed: didn't discover any slaves");
-    PFP_ASSERT_NOT_REACHED ();
-  }
+  OWM_CHECK (owm_first ((uint8_t *) &rid));  // One-wire Master Result
   if ( rid != first_slave_id ) {
     PFP ("failed: discovered first slave ID was ");
     print_slave_id (rid);
     PFP (", not the expected ");
     print_slave_id (first_slave_id);
+    PFP ("\n");
     PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, found 1st slave with expected ID ");
@@ -403,11 +397,7 @@ main (void)
   PFP (".\n");
 
   PFP ("Trying owm_next()... ");
-  slave_found = owm_next ((uint8_t *) &rid);
-  if ( ! slave_found ) {
-    PFP ("failed: didn't discover a second slave");
-    PFP_ASSERT_NOT_REACHED ();
-  }
+  OWM_CHECK (owm_next ((uint8_t *) &rid));
   if ( rid != second_slave_id ) {
     PFP ("failed: discovered second slave ID was ");
     print_slave_id (rid);
@@ -422,27 +412,21 @@ main (void)
   // Verify that owm_next() (following the owm_first() call above) returns
   // false, since there are only two slaves on the bus.
   PFP ("Trying owm_next() again... ");
-  slave_found = owm_next ((uint8_t *) &rid);
-  if ( slave_found ) {
-    PFP ("failed: unexpectedly returned true");
+  owm_result_t result = owm_next ((uint8_t *) &rid);
+  if ( result != OWM_RESULT_NO_SUCH_SLAVE ) {
+    PFP (
+        "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE\n",
+        owm_result_as_string (result, result_buf) );
     PFP_ASSERT_NOT_REACHED ();
   }
   PFP ("ok, no next slave found.\n");
 
   PFP("Trying owm_verify(first_slave_id)... ");
-  slave_found = owm_verify ((uint8_t *) &rid);
-  if ( ! slave_found ) {
-    PFP ("failed: didn't find slave");
-    PFP_ASSERT_NOT_REACHED ();
-  }
+  OWM_CHECK (owm_verify ((uint8_t *) &first_slave_id));
   PFP ("ok, found it.\n");
 
   PFP("Trying owm_verify(second_slave_id)... ");
-  slave_found = owm_verify ((uint8_t *) &rid);
-  if ( ! slave_found ) {
-    PFP ("failed: didn't find slave");
-    PFP_ASSERT_NOT_REACHED ();
-  }
+  OWM_CHECK (owm_verify ((uint8_t *) &second_slave_id));
   PFP ("ok, found it.\n");
 
   PFP ("All tests passed.\n");
