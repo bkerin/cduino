@@ -22,14 +22,11 @@
 // is still connected, it should be possible to run
 //
 //   make -rR run_screen
-// FIXME: ensure that other modules that use screen mention how to run it
 //
 // from the module directory to see the test results.
+// FIXME: ensure that other modules that use screen mention how to run it
 //
-// If everything works correctly, the Arduino should also blink out the
-// absolute value of the sensed temperature in degrees Celcius multiplied
-// by 10000 on the on-board led (connected to PB5).  Single quick blinks
-// are zeros, slower series of blinks are other digits.
+// The entire test sequence repeats perpetually.
 //
 // It's also possible to compile this module differently to test its
 // performance with multiple slaves.  See the notes in the Makefile for
@@ -153,234 +150,217 @@ main (void)
 
 #ifdef TEST_CONDITION_SINGLE_SLAVE
 
-  for ( ; ; ) {  // FIXME: for debug: do it forever...
+  // All the tests are re-run forever.  This can be convenient when checking
+  // for effects of line lenght, etc. that don't crop up every time.
+  for ( ; ; ) {
 
-  PFP ("Trying DS18B20 initialization... ");
-  uint64_t slave_rid = ds18b20_init_and_rom_command ();
-  PFP ("ok, succeeded.  Slave ID: ");
-  print_slave_id (slave_rid);
-  PFP ("\n");
-
-  uint64_t rid;   // ROM ID (of slave)
-
-  // We can use owm_read_id() because we know we have exactly one slave.
-  PFP ("Trying owm_read_id()... ");
-  OWM_CHECK (owm_read_id ((uint8_t *) &rid));  // One-wire Master Result
-  PFP_ASSERT (rid == slave_rid);   // Should be the same as last time
-  PFP ("ok, found slave with previously discovered ID.\n");
-
-  PFP ("Trying owm_first()... ");
-  OWM_CHECK (owm_first ((uint8_t *) &rid));
-  PFP_ASSERT (rid == slave_rid);   // Should be the same as last time
-  PFP ("ok, found slave with previously discovered ID.\n");
-
-  // Verify that owm_next() (following the owm_first() call above) returns
-  // OWM_RESULT_NO_SUCH_SLAVE, since there is only one slave on the bus.
-  PFP ("Trying owm_next()... ");
-  owm_result_t result = owm_next ((uint8_t *) &rid);
-  if ( result != OWM_RESULT_NO_SUCH_SLAVE ) {
-    PFP (
-        "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE\n",
-        owm_result_as_string (result, result_buf) );
-    PFP_ASSERT_NOT_REACHED ();
-  }
-  PFP ("ok, no next slave found.\n");
-
-  // The normal test arrangement doesn't feature any alarmed slaves.  Its kind
-  // of a pain to program the alarm condition on real DS18B20 devices and
-  // I haven't done so.  The one_wire_slave_test.c program contains a line
-  // that can be uncommented to cause and slave created using that interface
-  // to consider itself alarmed, however.
-  PFP ("Trying owm_first_alarmed()... ");
-  result = owm_first_alarmed ((uint8_t *) &rid);
-  if ( result == OWM_RESULT_NO_SUCH_SLAVE ) {
-    PFP ("no alarmed slaves found (usually ok, see source).\n");
-  }
-  else if ( result == OWM_RESULT_SUCCESS ) {
-    PFP ("found alarmed slave (ID: ");
+    PFP ("Trying DS18B20 initialization... ");
+    uint64_t slave_rid = ds18b20_init_and_rom_command ();
+    PFP ("ok, succeeded.  Slave ID: ");
     print_slave_id (slave_rid);
-    PFP (").\n");
-  }
-  else {
-    PFP (
-        "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE or "
-        "OWM_RESULT_SUCCESS\n",
-        owm_result_as_string (result, result_buf) );
-    PFP_ASSERT_NOT_REACHED ();
-  }
-  if ( result == OWM_RESULT_SUCCESS ) {
-    // If owm_first_alarmed() found an alarmed slave, its reasonable to look
-    // for another one, which we try here.
-    PFP ("Trying own_next_alarmed()... ");
-    result = owm_next_alarmed ((uint8_t *) &rid);
+    PFP ("\n");
+
+    uint64_t rid;   // ROM ID (of slave)
+
+    // We can use owm_read_id() because we know we have exactly one slave.
+    PFP ("Trying owm_read_id()... ");
+    OWM_CHECK (owm_read_id ((uint8_t *) &rid));  // One-wire Master Result
+    PFP_ASSERT (rid == slave_rid);   // Should be the same as last time
+    PFP ("ok, found slave with previously discovered ID.\n");
+
+    PFP ("Trying owm_first()... ");
+    OWM_CHECK (owm_first ((uint8_t *) &rid));
+    PFP_ASSERT (rid == slave_rid);   // Should be the same as last time
+    PFP ("ok, found slave with previously discovered ID.\n");
+
+    // Verify that owm_next() (following the owm_first() call above) returns
+    // OWM_RESULT_NO_SUCH_SLAVE, since there is only one slave on the bus.
+    PFP ("Trying owm_next()... ");
+    owm_result_t result = owm_next ((uint8_t *) &rid);
     if ( result != OWM_RESULT_NO_SUCH_SLAVE ) {
       PFP (
           "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE\n",
           owm_result_as_string (result, result_buf) );
       PFP_ASSERT_NOT_REACHED ();
     }
-    PFP ("ok, no next alarmed slave found.\n");
-  }
+    PFP ("ok, no next slave found.\n");
 
-  // owm_verify() should work with either a single or multiple slaves.
-  PFP ("Trying owm_verify() with previously discoved ID... ");
-  OWM_CHECK (owm_verify ((uint8_t *) &rid));
-  PFP ("ok, ID verified.\n");
+    // The normal test arrangement doesn't feature any alarmed slaves.  Its kind
+    // of a pain to program the alarm condition on real DS18B20 devices and
+    // I haven't done so.  The one_wire_slave_test.c program contains a line
+    // that can be uncommented to cause and slave created using that interface
+    // to consider itself alarmed, however.
+    PFP ("Trying owm_first_alarmed()... ");
+    result = owm_first_alarmed ((uint8_t *) &rid);
+    if ( result == OWM_RESULT_NO_SUCH_SLAVE ) {
+      PFP ("no alarmed slaves found (usually ok, see source).\n");
+    }
+    else if ( result == OWM_RESULT_SUCCESS ) {
+      PFP ("found alarmed slave (ID: ");
+      print_slave_id (slave_rid);
+      PFP (").\n");
+    }
+    else {
+      PFP (
+          "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE or "
+          "OWM_RESULT_SUCCESS\n",
+          owm_result_as_string (result, result_buf) );
+      PFP_ASSERT_NOT_REACHED ();
+    }
+    if ( result == OWM_RESULT_SUCCESS ) {
+      // If owm_first_alarmed() found an alarmed slave, its reasonable to look
+      // for another one, which we try here.
+      PFP ("Trying own_next_alarmed()... ");
+      result = owm_next_alarmed ((uint8_t *) &rid);
+      if ( result != OWM_RESULT_NO_SUCH_SLAVE ) {
+        PFP (
+            "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE\n",
+            owm_result_as_string (result, result_buf) );
+        PFP_ASSERT_NOT_REACHED ();
+      }
+      PFP ("ok, no next alarmed slave found.\n");
+    }
 
-  // Verify that owm_verify() works as expected when given a nonexistend RID.
-  PFP ("Trying owm_verify() with nonexistent ID... ");
-  uint64_t nerid = rid + 42;   // NonExistent RID
-  result = owm_verify ((uint8_t *) &nerid);
-  if ( result != OWM_RESULT_NO_SUCH_SLAVE ) {
+    // owm_verify() should work with either a single or multiple slaves.
+    PFP ("Trying owm_verify() with previously discoved ID... ");
+    OWM_CHECK (owm_verify ((uint8_t *) &rid));
+    PFP ("ok, ID verified.\n");
+
+    // Verify that owm_verify() works as expected when given a nonexistend RID.
+    PFP ("Trying owm_verify() with nonexistent ID... ");
+    uint64_t nerid = rid + 42;   // NonExistent RID
+    result = owm_verify ((uint8_t *) &nerid);
+    if ( result != OWM_RESULT_NO_SUCH_SLAVE ) {
+      PFP (
+          "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE\n",
+          owm_result_as_string (result, result_buf) );
+      PFP_ASSERT_NOT_REACHED ();
+    }
+    PFP ("ok, no such slave found.\n");
+
+    PFP ("Trying owm_scan_bus()... ");
+    uint64_t **rom_ids;
+    OWM_CHECK (owm_scan_bus ((uint8_t ***) (&rom_ids)));
+    PFP_ASSERT (*(rom_ids[0]) == rid);
+    PFP_ASSERT (rom_ids[1] == NULL);
+    PFP ("ok.\n");
+
+    // Repeatedly doing owm_scan_bus() and owm_free_rom_ids_list() has also
+    // been tried to check for leaks.
+    PFP ("Trying owm_free_rom_ids_list()... ");
+    owm_free_rom_ids_list ((uint8_t **) rom_ids);
+    PFP ("seemed to work.\n");
+
+    PFP ("Starting temperature conversion... ");
+    // NOTE: the DS18B20 doesn't seem to require an addressing command before
+    // the "Convert T" command here, which is contrary to its own datasheet.
+    // I guess if there's only one slave on the bus it works ok, but its sort of
+    // weird, so we go ahead and do the addressing again.
+    uint64_t slave_rid_2nd_reading = ds18b20_init_and_rom_command ();
+    PFP_ASSERT (slave_rid_2nd_reading == slave_rid);
+    owm_write_byte (DS18B20_COMMANDS_CONVERT_T_COMMAND);
+    // The DS18B20 is now supposed to respond with a stream of 0 bits until
+    // the conversion completes, after which it's supposed to send 1 bits.
+    // Note that this is probably a typical behavior for busy 1-wire slaves.
+    uint8_t conversion_complete = 0;
+    while ( ! (conversion_complete = owm_read_bit ()) ) {
+      ;
+    }
+    PFP ("conversion complete.\n");
+
+    // Now we try the conversion command a few more times using different
+    // flavors of the highest-level, generic transaction initiation routine.
+    // Of course, after all these conversions the temperature should
+    // still come out the same.  If it doesn't, that could indicate that
+    // owm_start_transaction() isn't working right.
+
+    PFP ("Trying owm_start_transaction() with READ_ROM... ");
+    uint64_t slave_rid_3rd_reading;
+    OWM_CHECK (
+        owm_start_transaction (
+          OWC_READ_ROM_COMMAND,
+          (uint8_t *) &slave_rid_3rd_reading,
+          DS18B20_COMMANDS_CONVERT_T_COMMAND ) );
+    PFP_ASSERT (slave_rid_3rd_reading == slave_rid);
+    conversion_complete = 0;
+    while ( ! (conversion_complete = owm_read_bit ()) ) {
+      ;
+    }
+    PFP ("seemed ok.\n");
+
+    PFP ("Trying owm_start_transaction() with MATCH_ROM... ");
+    OWM_CHECK (
+        owm_start_transaction (
+          OWC_MATCH_ROM_COMMAND,
+          (uint8_t *) &slave_rid,
+          DS18B20_COMMANDS_CONVERT_T_COMMAND ) );
+    conversion_complete = 0;
+    while ( ! (conversion_complete = owm_read_bit ()) ) {
+      ;
+    }
+    PFP ("seemed ok.\n");
+
+    PFP ("Trying owm_start_transaction() with SKIP_ROM... ");
+    OWM_CHECK (
+        owm_start_transaction (
+          OWC_SKIP_ROM_COMMAND,
+          NULL,
+          DS18B20_COMMANDS_CONVERT_T_COMMAND ) );
+    conversion_complete = 0;
+    while ( ! (conversion_complete = owm_read_bit ()) ) {
+      ;
+    }
+    PFP ("seemed ok.\n");
+
+    // We can now read the slave scratchpad memory.  This requires us to first
+    // perform the initialization and read rom commands again as described
+    // in the DS18B20 datasheet.  The slave ROM code better be the same on
+    // second reading :)
+    PFP ("Reading DS18B20 scratchpad memory... ");
+    uint64_t slave_rid_4th_reading = ds18b20_init_and_rom_command ();
+    PFP_ASSERT (slave_rid_4th_reading == slave_rid);
+    ds18b20_get_scratchpad_contents ();
+    PFP ("done.\n");
+
+    // Convenient names for the temperature bytes
+    uint8_t t_lsb = spb[DS18B20_SCRATCHPAD_T_LSB];
+    uint8_t t_msb = spb[DS18B20_SCRATCHPAD_T_MSB];
+
+    uint8_t tin = (t_msb & B10000000);   // Temperature Is Negative
+
+    // Absolute value of temperature (in degrees C) times 2^4.  This is just
+    // what the DS18B20 likes to spit out.  See Fig. 2 of the DS18B20 datasheet.
+    int16_t atemp_t2tt4 = (((int16_t) t_msb) << BITS_PER_BYTE) | t_lsb;
+    if ( tin ) {   // If negative...
+      // ...just make it positive (it's 2's compliment)
+      atemp_t2tt4 = (~atemp_t2tt4) + 1;
+    }
+
+    // Uncomment some of this to test the the 2's compliment features
+    // themselves, ignoring the real sensor output (but assuming we make it
+    // to this point :).  Table 1 of the DS18B20 datasheet has a number of
+    // example values.
+    //
+    //atemp_t2tt4 = INT16_C (0xFF5E);    // Means -10.125 (blinks out 101250)
+    //atemp_t2tt4 = (~atemp_t2tt4) + 1;  // Knowns to be negative so abs it
+    //
+    //atemp_t2tt4 = INT16_C (0x0191);    // Means 25.0625 (blinks out 250625)
+
+    // Absolute value of temperature, in degrees C.  These factors of 2.0 are
+    // due to the meaning the DS18B20 assigns to the individual field bits.
+    double atemp = atemp_t2tt4 / (2.0 * 2.0 * 2.0 * 2.0);
+
+    // NOTE: I think avrlibc doesn't suppor the # printf flag.  No big loss, but
+    // it means the blinked-out output might have a different number of digits
     PFP (
-        "failed: returned %s instead of OWM_RESULT_NO_SUCH_SLAVE\n",
-        owm_result_as_string (result, result_buf) );
-    PFP_ASSERT_NOT_REACHED ();
-  }
-  PFP ("ok, no such slave found.\n");
+        "Temperature reading: %#.6g degrees C (subject to rounding issues).\n",
+        (tin ? -1.0 : 1.0) * atemp);
 
-  PFP ("Trying owm_scan_bus()... ");
-  uint64_t **rom_ids;
-  OWM_CHECK (owm_scan_bus ((uint8_t ***) (&rom_ids)));
-  PFP_ASSERT (*(rom_ids[0]) == rid);
-  PFP_ASSERT (rom_ids[1] == NULL);
-  PFP ("ok.\n");
+    PFP ("All tests passed (assuming temperature looks sane :).\n");
+    PFP ("\n");
 
-  // Repeatedly doing owm_scan_bus() and owm_free_rom_ids_list() has also
-  // been tried to check for leaks.
-  PFP ("Trying owm_free_rom_ids_list()... ");
-  owm_free_rom_ids_list ((uint8_t **) rom_ids);
-  PFP ("seemed to work.\n");
-
-  PFP ("Starting temperature conversion... ");
-  // NOTE: the DS18B20 doesn't seem to require an addressing command before
-  // the "Convert T" command here, which is contrary to its own datasheet.
-  // I guess if there's only one slave on the bus it works ok, but its sort of
-  // weird, so we go ahead and do the addressing again.
-  uint64_t slave_rid_2nd_reading = ds18b20_init_and_rom_command ();
-  PFP_ASSERT (slave_rid_2nd_reading == slave_rid);
-  owm_write_byte (DS18B20_COMMANDS_CONVERT_T_COMMAND);
-  // The DS18B20 is now supposed to respond with a stream of 0 bits until
-  // the conversion completes, after which it's supposed to send 1 bits.
-  // Note that this is probably a typical behavior for busy 1-wire slaves.
-  uint8_t conversion_complete = 0;
-  while ( ! (conversion_complete = owm_read_bit ()) ) {
-    ;
-  }
-  PFP ("conversion complete.\n");
-
-  // Now we try the conversion command a few more times using different
-  // flavors of the highest-level, generic transaction initiation routine.
-  // Of course, after all these conversions the temperature should
-  // still come out the same.  If it doesn't, that could indicate that
-  // owm_start_transaction() isn't working right.
-
-  PFP ("Trying owm_start_transaction() with READ_ROM... ");
-  uint64_t slave_rid_3rd_reading;
-  OWM_CHECK (
-      owm_start_transaction (
-        OWC_READ_ROM_COMMAND,
-        (uint8_t *) &slave_rid_3rd_reading,
-        DS18B20_COMMANDS_CONVERT_T_COMMAND ) );
-  PFP_ASSERT (slave_rid_3rd_reading == slave_rid);
-  conversion_complete = 0;
-  while ( ! (conversion_complete = owm_read_bit ()) ) {
-    ;
-  }
-  PFP ("seemed ok.\n");
-
-  PFP ("Trying owm_start_transaction() with MATCH_ROM... ");
-  OWM_CHECK (
-      owm_start_transaction (
-        OWC_MATCH_ROM_COMMAND,
-        (uint8_t *) &slave_rid,
-        DS18B20_COMMANDS_CONVERT_T_COMMAND ) );
-  conversion_complete = 0;
-  while ( ! (conversion_complete = owm_read_bit ()) ) {
-    ;
-  }
-  PFP ("seemed ok.\n");
-
-  PFP ("Trying owm_start_transaction() with SKIP_ROM... ");
-  OWM_CHECK (
-      owm_start_transaction (
-        OWC_SKIP_ROM_COMMAND,
-        NULL,
-        DS18B20_COMMANDS_CONVERT_T_COMMAND ) );
-  conversion_complete = 0;
-  while ( ! (conversion_complete = owm_read_bit ()) ) {
-    ;
-  }
-  PFP ("seemed ok.\n");
-
-  // We can now read the slave scratchpad memory.  This requires us to first
-  // perform the initialization and read rom commands again as described in
-  // the DS18B20 datasheet.  The slave ROM code better be the same on second
-  // reading :)
-  PFP ("Reading DS18B20 scratchpad memory... ");
-  uint64_t slave_rid_4th_reading = ds18b20_init_and_rom_command ();
-  PFP_ASSERT (slave_rid_4th_reading == slave_rid);
-  ds18b20_get_scratchpad_contents ();
-  PFP ("done.\n");
-
-  // Convenient names for the temperature bytes
-  uint8_t t_lsb = spb[DS18B20_SCRATCHPAD_T_LSB];
-  uint8_t t_msb = spb[DS18B20_SCRATCHPAD_T_MSB];
-
-  uint8_t tin = (t_msb & B10000000);   // Temperature Is Negative
-
-  // Absolute value of temperature (in degrees C) times 2^4.  This is just
-  // what the DS18B20 likes to spit out.  See Fig. 2 of the DS18B20 datasheet.
-  int16_t atemp_t2tt4 = (((int16_t) t_msb) << BITS_PER_BYTE) | t_lsb;
-  if ( tin ) {   // If negative...
-    // ...just make it positive (it's 2's compliment)
-    atemp_t2tt4 = (~atemp_t2tt4) + 1;
-  }
-
-  // Uncomment some of this to test the the 2's compliment and blinky-output
-  // features themselves, ignoring the real sensor output (but assuming
-  // we make it to this point :).  Table 1 of the DS18B20 datasheet has a
-  // number of example values.
-  //
-  //atemp_t2tt4 = INT16_C (0xFF5E);    // Means -10.125 (blinks out 101250)
-  //atemp_t2tt4 = (~atemp_t2tt4) + 1;  // Knowns to be negative so abs it
-  //
-  //atemp_t2tt4 = INT16_C (0x0191);    // Means 25.0625 (blinks out 250625)
-
-  // Absolute value of temperature, in degrees C.  These factors of 2.0 are
-  // due to the meaning the DS18B20 assigns to the individual field bits.
-  double atemp = atemp_t2tt4 / (2.0 * 2.0 * 2.0 * 2.0);
-
-  // NOTE: I think avrlibc doesn't suppor the # printf flag.  No big loss, but
-  // it means the blinked-out output might have a different number of digits
-  PFP (
-      "Temperature reading: %#.6g degrees C (subject to rounding issues).\n",
-      (tin ? -1.0 : 1.0) * atemp);
-
-  PFP ("All tests passed (assuming temperature looks sane :).\n");
-  PFP ("\n");
-  PFP (
-      "Will now blink out abs(temperature) forever. Note that due to\n"
-      "rounding/formatting issues the number of blinked-out digits or values\n"
-      "of those digits might differ slightly from the printf()-generated\n"
-      "version.\n" );
-
-  // atemp Times 10000
-  uint32_t att10000 = round(atemp * 10000);
-
-  // Blink out the absolute value of the current temperate times 10000
-  // (effectively including four decimal places).
-  // FIXME: disabled in favor of do it forever below
-  att10000 = att10000;
-  /*
-  for ( ; ; ) {
-    // Feeding the wdt is harmless even when it's not initialized.
-    //BLINK_OUT_UINT32_FEEDING_WDT (att10000);
-  }
-  */
-
-  //printf ("o");   // FIXME: iteraction measurement
-  _delay_ms (1);   // FIXME: debug: delay between forever iterations
+    double const dbi = 2.42;   // Delay between iterations
+    _delay_ms (dbi);
   }
 
 #endif
