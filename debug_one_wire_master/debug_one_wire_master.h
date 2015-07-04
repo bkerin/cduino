@@ -11,6 +11,13 @@
 #ifndef DEBUG_ONE_WIRE_MASTER_H
 #define DEBUG_ONE_WIRE_MASTER_H
 
+// See the notes in the Makefile for this module for details about why we
+// require variable from the OWM_* namespace to be set here.
+#ifndef OWM_PIN
+#  error OWM_PIN not defined (it must be explicitly set to one of \
+         the DIO_PIN_* tuple macros before this header is included)
+#endif
+
 // This magic value is used to indicate that the debugging line is private
 // and the first slave found on the bus should be the target of communication.
 #define DOWM_ONLY_SLAVE 0x00
@@ -33,7 +40,7 @@
 void
 dowm_init (void);
 
-// This is the maximum message length allowed (odwn_printf() allocated a
+// This is the maximum message length allowed (odwn_printf() allocates a
 // buffer about this size, in addition to the RAM the format string uses...).
 // This cannot be defined to be greater than or equal to UINT8_MAX.
 #ifndef DOWM_MAX_MESSAGE_LENGTH
