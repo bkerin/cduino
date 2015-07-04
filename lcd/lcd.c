@@ -16,42 +16,42 @@
 // support :)
 
 // Commands
-#define LCD_CLEARDISPLAY 0x01
-#define LCD_RETURNHOME 0x02
-#define LCD_ENTRYMODESET 0x04
+#define LCD_CLEARDISPLAY   0x01
+#define LCD_RETURNHOME     0x02
+#define LCD_ENTRYMODESET   0x04
 #define LCD_DISPLAYCONTROL 0x08
-#define LCD_CURSORSHIFT 0x10
-#define LCD_FUNCTIONSET 0x20
-#define LCD_SETCGRAMADDR 0x40
-#define LCD_SETDDRAMADDR 0x80
+#define LCD_CURSORSHIFT    0x10
+#define LCD_FUNCTIONSET    0x20
+#define LCD_SETCGRAMADDR   0x40
+#define LCD_SETDDRAMADDR   0x80
 
 // Flags for display entry mode
-#define LCD_ENTRYRIGHT 0x00
-#define LCD_ENTRYLEFT 0x02
+#define LCD_ENTRYRIGHT          0x00
+#define LCD_ENTRYLEFT           0x02
 #define LCD_ENTRYSHIFTINCREMENT 0x01
 #define LCD_ENTRYSHIFTDECREMENT 0x00
 
 // Flags for display/cursor on/off control
-#define LCD_DISPLAYON 0x04
+#define LCD_DISPLAYON  0x04
 #define LCD_DISPLAYOFF 0x00
-#define LCD_CURSORON 0x02
-#define LCD_CURSOROFF 0x00
-#define LCD_BLINKON 0x01
-#define LCD_BLINKOFF 0x00
+#define LCD_CURSORON   0x02
+#define LCD_CURSOROFF  0x00
+#define LCD_BLINKON    0x01
+#define LCD_BLINKOFF   0x00
 
 // Flags for display/cursor shift
 #define LCD_DISPLAYMOVE 0x08
-#define LCD_CURSORMOVE 0x00
-#define LCD_MOVERIGHT 0x04
-#define LCD_MOVELEFT 0x00
+#define LCD_CURSORMOVE  0x00
+#define LCD_MOVERIGHT   0x04
+#define LCD_MOVELEFT    0x00
 
 // Flags for function set
 #define LCD_8BITMODE 0x10
 #define LCD_4BITMODE 0x00
-#define LCD_2LINE 0x08
-#define LCD_1LINE 0x00
+#define LCD_2LINE    0x08
+#define LCD_1LINE    0x00
 #define LCD_5x10DOTS 0x04
-#define LCD_5x8DOTS 0x00
+#define LCD_5x8DOTS  0x00
 
 static uint8_t functionset_flags;
 static uint8_t displaycontrol_flags;
@@ -96,7 +96,7 @@ write_4_bits (uint8_t value)
   pulse_enable ();
 }
 
-// Send eight bits of data to the LCD.  This could be a command or text data.  
+// Send eight bits of data to the LCD.  This could be a command or text data.
 static void
 send (uint8_t value, uint8_t mode)
 {
@@ -119,7 +119,7 @@ lcd_init (void)
 {
   LCD_RS_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
   LCD_ENABLE_INIT (DIO_OUTPUT, DIO_DONT_CARE, LOW);
-  
+
   functionset_flags = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS;
 
   // SEE PAGE 45/46 FOR INITIALIZATION SPECIFICATION!  According to the
@@ -127,11 +127,11 @@ lcd_init (void)
   // sending commands. And arduino can turn on way befer 4.5V so we'll wait
   // 50 ms.
   _delay_ms (50);
-  
+
   // We pull both RS and R/W low to begin commands.
   LCD_RS_SET_LOW ();
   LCD_ENABLE_SET_LOW ();
- 
+
   // This is done according to the Hitachi HD44780 datasheet figure 24, pg 46.
   // NOTE: Except it seems to me that what was used in LiquidCrystal.cpp in
   // the arduino-1.0 source didn't match what the datasheet required: the
@@ -144,10 +144,10 @@ lcd_init (void)
   write_4_bits (0x03);
   _delay_ms (5);
   // Third go!
-  write_4_bits (0x03); 
+  write_4_bits (0x03);
   _delay_us (150);
   // Finally, set to 4-bit interface.
-  write_4_bits (0x02); 
+  write_4_bits (0x02);
 
   // NOTE: By my reading of the above datasheet, the initialization timing
   // should look like the below code.  But the Arduino library way has
@@ -159,7 +159,7 @@ lcd_init (void)
   //write_4_bits (0x03);
   //_delay_us (150);
   //
-  //write_4_bits (0x03); 
+  //write_4_bits (0x03);
   //write_4_bits (0x02);
 
   // NOTE: The order of these next commands may be important at first
@@ -168,13 +168,13 @@ lcd_init (void)
   // performed in single commands.
 
   // Finally, set # lines, font size, etc.
-  command (LCD_FUNCTIONSET | functionset_flags);  
+  command (LCD_FUNCTIONSET | functionset_flags);
 
   // Turn the display on with no cursor or blinking cursor.
-  displaycontrol_flags = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;  
+  displaycontrol_flags = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
   command (LCD_DISPLAYCONTROL | displaycontrol_flags);
 
-  // Clear display. 
+  // Clear display.
   lcd_clear ();
 
   // Initialize to supported text direction (for romance languages).
@@ -196,7 +196,7 @@ void
 lcd_home (void)
 {
   // Set cursor position to zero and undo any scrolling that is in effect.
-  command (LCD_RETURNHOME);  
+  command (LCD_RETURNHOME);
   _delay_us (2000);  // This command takes a long time.
 }
 
@@ -210,7 +210,7 @@ lcd_set_cursor_position (uint8_t col, uint8_t row)
 
   // Positions of the beginnings of rows in LCD DRAM.
   const int const row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
-  
+
   command (LCD_SETDDRAMADDR | (col + row_offsets[row]));
 }
 
