@@ -118,8 +118,8 @@ owm_init (void);
 // Attempt to find all slaves present on the bus and store their ROM IDs in
 // a newly allocated NULL-terminated list.  If at least one slave is found
 // and no errors occur during the scan, then OWM_RESULT_SUCCESS is returned
-// and *rom_ids is set to the first element of the new list, otherwise a
-// non-zero result code is returned and no new memory is allocated.
+// and *rom_ids_ptr is set to the first element of the new list, otherwise
+// a non-zero result code is returned and no new memory is allocated.
 owm_result_t
 owm_scan_bus (uint8_t ***rom_ids_ptr);
 
@@ -157,9 +157,9 @@ owm_free_rom_ids_list (uint8_t **rom_ids);
 // likely be required.  Note that this routine cannot by itself ensure that
 // the slave has received any OWC_MATCH_ROM_COMMAND or OWC_SKIP_ROM_COMMAND
 // command correctly, since those don't elicit any response from the slave
-// (though they do change its state).  The function_command likely does
-// elicit a response, but this routine doesn't read it, so correct receipt
-// of that command also cannot be verified by this routine.
+// (though they do change its state).  The function_cmd likely does elicit
+// a response, but this routine doesn't read it, so correct receipt of that
+// command also cannot be verified by this routine.
 owm_result_t
 owm_start_transaction (uint8_t rom_cmd, uint8_t *rom_id, uint8_t function_cmd);
 
