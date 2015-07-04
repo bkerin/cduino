@@ -55,6 +55,11 @@
 // UPLOAD_METHOD definition in generic.mk).  Note that an extern declaration
 // must be added to access this variable from other source files.
 //
+// Note that if the WDTON (watchdog timer always on) fust is programmed, the
+// wdt_disable() call that this code makes will have no effect.  However,
+// in this case the program will obviously need to be written to feed the
+// watchdog anyway.  The mcusr_mirror should still be usable in this case.
+//
 #define WATCHDOG_TIMER_MCUSR_MANTRA                           \
                                                               \
   uint8_t mcusr_mirror __attribute__ ((section (".noinit"))); \
