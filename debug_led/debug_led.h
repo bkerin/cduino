@@ -1,4 +1,4 @@
-// Use a single debug LED to collect diagnostic information in various ways
+// Use a single LED to collect status or diagnostic information in various ways
 //
 // Test driver: debug_led_test.c    Implementation: debug_led.c
 //
