@@ -179,14 +179,6 @@
 #define BASSERT(condition)                                          \
   do { if ( UNLIKELY (! (condition)) ) { BTRAP (); } } while ( 0 )
 
-// FIXME: this blinky debug interface now needs dio.h and should become
-// its own module
-// FIXME: don't forget to check for unndeeded headers when you remove this crud.
-#include "dio.h"
-
-#define DBL_ON() do { DIO_SET_HIGH (DBL_PIN); } while ( 0 )
-#define DBL_OFF() do { DIO_SET_LOW (DBL_PIN); } while ( 0 )
-
 // Do a busy wait for about Delay Time (dt) milliseconds while feeding the
 // watchdog timer about every 5 milliseconds.  Useful for some assertion
 // stuff we do and probably a sign of profound pathology everywhere else.
