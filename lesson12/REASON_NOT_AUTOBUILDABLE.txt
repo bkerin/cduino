@@ -1,0 +1,5 @@
+requires AVRISPmkII upload method.
+
+This file's existance indicates to the release build system that this module
+cannot be auto-built for rlease testing, for the reason indicated on the
+first line of this file.

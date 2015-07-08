@@ -52,34 +52,61 @@ new_module:
           echo 'include generic.mk' >Makefile
 
 # Do a clean, then a full program build, then another clean in each module
-# directory.  The idea is to try to catch interface changes.  This isn't
-# a complete test of course, but it helps catch obvious stuff at least.
-# FIXME: At the moment we don't build dio because it comes with some
-# fatal warning thingies, or lesson12 because it requires the AVRISPmkII
-# programming method (though with the Uno it supposedly doesn't anymore :).
-# We should perhaps require a manually placed stamp to represent that these
-# modules have been checked out.
+# directory except those marked with a REASON_NOT_AUTOBUILDABLE.txt file.
+# The idea is to try to catch interface changes.  This isn't a complete
+# test of course, but it helps catch obvious stuff at least.
 .PHONY: build_all_programs
 build_all_test_programs: MODULE_DIRS = \
   $(shell echo $$(for gmk in $$(find . -name "generic.mk" -print | \
                                   grep --invert-match '^\./generic.mk'); do \
                     dirname $$gmk; \
                   done))
+# Some modules require the user to define specific things to make sure they
+# know what's going on, we call these ACK(nowldege)_DEFINES :)  FIXME: these
+# should use more uniform nwming: module prefix and _ACKNOWLEDGED postfix
+build_all_test_programs: ACK_DEFINES = \
+  -DUNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED \
+  -DUNDERSTAND_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED \
+  -DOWS_REGISTER_USE_ACKNOWLEDGED
 build_all_test_programs:
 	# Because many targets normally do a full rebuild of all the tests, we
 	# support this envirnoment variable which can be used to circumvent our
-	# own careful checking.  When appropriate :)
-	test -n "$$SKIP_TEST_PROGRAMS_BUILD" || ( \
-          for md in $(MODULE_DIRS); do \
-            echo "$$md" | grep --silent 'dio$$' || \
-            echo "$$md" | grep --silent 'lesson12$$' || ( \
-              $(MAKE) -rR -C $$md clean && \
-              $(MAKE) -rR -C $$md program_to_upload.out && \
-              $(MAKE) -rR -C $$md clean \
-            ) || \
-            exit 1; \
-          done \
+	# own careful checking.  When appropriate :)  Note that the assignment
+	# to CPPFLAGS used to pass the the ACK_DEFINES must be done as an
+	# environment variable, because when Make is given assignments as
+	# arguments it overrides settings in the Makefile (even if += is used).
+	test -n "$$SKIP_TEST_PROGRAMS_BUILD" || (           \
+          for md in $(MODULE_DIRS); do                      \
+            (                                               \
+              [ -e "$$md/REASON_NOT_AUTOBUILDABLE.txt" ] && \
+              (                                             \
+                echo -n Skipping $$md because '' &&         \
+                head -n 1 $$md/REASON_NOT_AUTOBUILDABLE.txt \
+              )                                             \
+            ) ||                                            \
+            (                                               \
+              $(MAKE) -rR -C $$md clean &&                  \
+              (                                             \
+                CPPFLAGS+='$(ACK_DEFINES)'                  \
+                $(MAKE) -rR -C $$md program_to_upload.out   \
+              ) &&                                          \
+              $(MAKE) -rR -C $$md clean                     \
+            ) ||                                            \
+            exit 1;                                         \
+          done                                              \
         )
+	$(MAKE) list_not_autobuildable_test_program_markers
+
+# Because unbuildable test programs present an obviouls risk of untestedness,
+# we have this target that just lists them and we execute it and the end
+# of lots of rules.
+list_not_autobuildable_test_program_markers:
+	@echo
+	@echo WARNING: unbuildable test program markers exist:
+	@echo
+	@find . -name "REASON_NOT_AUTOBUILDABLE.txt" -print
+	@echo
+
 
 # Clean up all the modules.
 .PHONY: clean_all_modules
@@ -97,6 +124,7 @@ git_push: build_all_test_programs clean_all_modules
 	! (git status | grep 'Changed but not updated:')
 	! (git status | grep 'Changes to be committed:')
 	git push origin master
+	$(MAKE) list_not_autobuildable_test_program_markers
 
 # Verify that all the source html files except the lessons, private headers,
 # and the somewhat anomolous but useful blink.c and some other junk that
@@ -252,6 +280,7 @@ targzball: build_all_test_programs clean_all_modules xlinked_source_html
         cd .. && \
         mv $$DN $$DN-$(VERSION) && \
         tar czvf $$DN-$(VERSION).tgz $$DN-$(VERSION)
+	$(MAKE) list_not_autobuildable_test_program_markers
 
 # Upload the targzball and documentation to the web site.  The unstable
 # snapshot that we provide is uploaded first, since it should never be
@@ -264,6 +293,7 @@ upload: targzball upload_html update_unstable git_push
         ssh $(WEB_SSH) rm -f '$(WEB_ROOT)/releases/LATEST_IS_*' && \
         ssh $(WEB_SSH) ln -s --force $$DN-$(VERSION).tgz \
                        $(WEB_ROOT)/releases/LATEST_IS_$$DN-$(VERSION).tgz
+	$(MAKE) list_not_autobuildable_test_program_markers
 
 # Update the unstable snapshot by building and uploading an unstable targzball.
 .PHONY: update_unstable
@@ -277,6 +307,7 @@ update_unstable: build_all_test_programs clean_all_modules
           mv $$DN $$UNSTABLE_NAME && \
           tar czvf $$UNSTABLE_NAME.tgz $$UNSTABLE_NAME && \
           scp $$UNSTABLE_NAME.tgz $(WEB_SSH):$(WEB_ROOT)/unstable/
+	$(MAKE) list_not_autobuildable_test_program_markers
 
 .PHONY: view_web_page
 ifndef WEB_BROWSER
