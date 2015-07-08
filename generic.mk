@@ -356,7 +356,7 @@ OPTLEVEL := s
 # this file.
 #
 # FIXME: this needs GCC 4.9.  Enable it when that is common.  Also add it
-# to LDFLAGS or the command that invokes the linker if its supported there.
+# to LDFLAGS or the command that invokes the linker if it's supported there.
 #DIAGNOSTICS_FLAGS += -fdiagnostics-color=auto
 
 # Clients can add their own CPPFLAGS.  Note that order sometimes matters
