@@ -31,7 +31,7 @@
 //     slave-specific protocol (step 3 of the transaction sequence describe in
 //     Maxim_DS18B20_datasheet.pdf, page 10).
 //
-// Note that ff you only have a network with exactly one slave and
+// Note that fff you only have a network with exactly one slave and
 // you control the master as well, you can probably dispense with
 // ows_wait_for_function_transaction().
 //
@@ -60,7 +60,7 @@
 //
 // This module uses timer/counter1 to time events on the wire.  If you want
 // to use this timer for other things as well it should work, but you'll
-// need to reinitialized the timer yourself after using this interface,
+// need to reinitialize the timer yourself after using this interface,
 // and call ows_init() again before using this interface again.  Of course
 // in the meantime, you're slave won't be able to respond to 1-wire events.
 //
@@ -129,7 +129,7 @@
 // them accurately.
 #define OWS_T1SFR 1000000
 #if F_CPU / TIMER1_STOPWATCH_PRESCALER_DIVIDER < OWS_T1SFR
-#  error F_CPU / TIMER1_STOPWATCH_PRESCALER_DIVIDER is too small
+#  error F_CPU / TIMER1_STOPWATCH_PRESCALER_DIVIDER too small
 #endif
 
 // Clients probably don't need to use this directly.
@@ -205,19 +205,20 @@ ows_result_as_string (ows_result_t result, char *buf);
 #endif
 
 // Initialize the 1-wire slave interface.  This sets up the chosen DIO
-// pin, including pin change interrupts and global interrupt enable.
-// If use_eeprom_id is true, the first six bytes of the AVR EEPROM are
-// read and used together with the OWS_FAMILY_CODE and a CRC to form a
-// slave ROM ID, which is loaded into RAM for speedy access.  In this
+// pin, including the pin change interrupt flag (but not global interrupt
+// enable, since no actual handler is used).  If use_eeprom_id is true,
+// the six bytes of the AVR EEPROM starting at OWS_PART_ID_EEPROM_ADDRESS
+// are read and used together with the OWS_FAMILY_CODE and a CRC to form
+// a slave ROM ID, which is loaded into RAM for speedy access.  In this
 // case, interrupts will be blocked for a while while the EEPROM is read.
 // See the write_random_id_to_eeprom target of generic.mk for a convenient
 // way to load unique IDs onto devices (note that that target writes eight
 // random bytes, of which only the first six are used by this interface).
 // If use_eeprom_id is false, a default device ID with a non-family part
-// numberof OWS_DEFAULT_PART_ID is used (note that this arrangement is
-// only useful if you intend to use only one of your slaves on the bus).
-// The timeout value is set to OWS_TIMEOUT_NONE (but may be changed using
-// osw_set_timeout() before other routines in this interface are called).
+// number of OWS_DEFAULT_PART_ID is used (note that this arrangement can only
+// be used with one of your slaves on the bus at a time).  The timeout value
+// is set to OWS_TIMEOUT_NONE (but may be changed using osw_set_timeout()
+// before other routines in this interface are called).
 void
 ows_init (uint8_t use_eeprom_id);
 
