@@ -36,7 +36,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "dio.h"
 #include "ds18b20_commands.h"
 #include "one_wire_slave.h"
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
