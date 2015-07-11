@@ -100,18 +100,18 @@
 
 // To make slaves work at 10 MHz, I had to explicitly lock some variables
 // into registers r2, r3, r4, and r5.  The tests work without doing this
-// at 12 MHz and 16 MHz, but because I don't trust the compiler not to do
-// things differently depending on client code shape/size, I've decided
-// it's safest to just do it for all frequencies by default.  Because
-// this can fail horribly if other code in the same program is trying
-// to use these registers, users of this module are required to define
-// OWS_REGISTER_USE_ACKNOWLEDGED to ensure that they know what's going on
+// at 12 MHz and 16 MHz, but because I don't trust the compiler not
+// to do things differently depending on client code shape/size, I've
+// decided it's safest to just do it for all frequencies by default.
+// Because this can fail horribly if other code in the same program is
+// trying to use these registers, users of this module are required to define
+// OWS_REGISTER_LOCKING_ACKNOWLEDGED to ensure that they know what's going on
 // (see the Makefile for this module for a line to uncomment to do this).
 // Its also necessary to ensure that all code which calls functions that
 // use these variables knows about the situation: this is (hopefully)
 // accomplished by usigh the --ffixed-r2, --ffixed-r3, etc. gcc options
 // (see the Makefile for this module).
-#ifndef OWS_REGISTER_USE_ACKNOWLEDGED
+#ifndef OWS_REGISTER_LOCKING_ACKNOWLEDGED
 #  error OWS_REGISTER_LOCKING_ACKNOWLEDGED must be defined by the user
 #endif
 

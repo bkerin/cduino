@@ -18,10 +18,10 @@ ARDUINO_PORT = /dev/ttyACM1
 ARDUINO_BAUD = 115200
 ARDUINO_BOOTLOADER=optiboot_atmega328.hex
 
-# This line must be uncommented to ensure that people using this module
-# know that some variables are being locked into user registers.  See the
-# reference to OWS_REGISTER_USE_ACKNOWLEDGED in one_wire_slave.h for details.
-#CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
+# This line must be uncommented to ensure that people using this module know
+# that some variables are being locked into user registers.  See the reference
+# to OWS_REGISTER_LOCKING_ACKNOWLEDGED in one_wire_slave.h for details.
+#CPPFLAGS += -DOWS_REGISTER_LOCKING_ACKNOWLEDGED
 
 # Because some variables are being locked into particular registers in
 # one_wire_slave.c, we have to ensure that the rest of program (i.e. code in

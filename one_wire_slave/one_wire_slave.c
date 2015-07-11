@@ -27,7 +27,7 @@
 //   http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_regbind
 //   https://gcc.gnu.org/wiki/avr-gcc#Call-Saved_Registers
 //
-// See the comments above the reference to OWS_REGISTER_USE_ACKNOWLEDGED
+// See the comments above the reference to OWS_REGISTER_LOCKING_ACKNOWLEDGED
 // in one_wire_slave.h for details.
 //
 register uint8_t ls      asm("r2");   // Line State as of last reading, 1 or 0
