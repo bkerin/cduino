@@ -242,6 +242,8 @@ uint16_t tr;       // Timer Reading (most recent)
 static ows_result_t
 wfpcoto (void)
 {
+  // Wait For Pin Change Or Time Out
+
   while ( TRUE ) {
     if ( LIKELY (DIO_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN)) ) {
       ls = SAMPLE_LINE ();
