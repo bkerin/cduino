@@ -1,1 +1,1 @@
-../one_wire_slave/term_io.c
+../term_io/term_io.c
