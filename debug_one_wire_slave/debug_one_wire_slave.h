@@ -28,15 +28,16 @@
 #  define DOWS_MAX_MESSAGE_LENGTH 242
 #endif
 
-// Initialize the module, and start waiting for messages.  The
-// *message_handler should handle the given message as appropriate (save
-// it, relay it, whatever), then return 0 on success or non-zero otherwise.
-// This function only returns if message_handler returns non-zero, in which
-// case it returns the value returned by message_handler.  Other 1-wire errors
-// are silently ignored and and the operation that caused them retried.
-// FIXME: its somewhat goofy to have an _init function returning, either
-// eat all errors or add another function that can return errors.
-void
+// Initialize the module, and start waiting for messages.
+// The *message_handler should handle the given NULL-byte-terminated
+// message as appropriate (save it, relay it, whatever), then return
+// 0 on success or non-zero otherwise.  This function only returns if
+// message_handler returns non-zero, in which case it returns the value
+// returned by message_handler.  Other 1-wire errors are silently ignored
+// and and the operation that caused them retried.  FIXME: its somewhat
+// goofy to have an _init function returning, either eat all errors or add
+// another function that can return errors.
+int
 dows_init (int (*message_handler)(char const *message));
 
 // This is an example of a useful message_handler that can be passed to

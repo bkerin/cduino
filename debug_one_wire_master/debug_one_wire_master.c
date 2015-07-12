@@ -6,6 +6,9 @@
 
 #include "one_wire_master.h"
 #include "debug_one_wire_master.h"
+// FIXME: remove after debugged:
+#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+#include "term_io.h"
 
 // FIXME: do we really want to call this interface debgu_?  log_ might be
 // more correct given its generality.  The debug_led is sorta unfortunate
@@ -96,7 +99,9 @@ dowm_printf (char const *format, ...)
   // has relayed the message successfully.
   uint8_t const ack_byte_value = 0x42;
   uint8_t rb = owm_read_byte ();  // Response Byte
-  assert (rb == ack_byte_value);
+  if ( rb == ack_byte_value ) { rb = rb; }  // FIXME: remove this debug junk
+  PFP ("got ack byte %hhu\n", rb);
+  //assert (rb == ack_byte_value);
 
   return chars_written;
 }

@@ -1,6 +1,8 @@
 # vim:foldmethod=marker
 
-# This is really only required for debugging.
+# This module is designed to handle log messages, and printing them out to
+# a terminal connected to the slave arduino is a good thing to do with them,
+# so we likely want this.
 include run_screen.mk
 
 # It's convenient to have both a master and a slave connected at the same
@@ -18,14 +20,14 @@ include run_screen.mk
 # which files appear/dissapear.
 ARDUINO_PORT = /dev/ttyACM1
 ARDUINO_BAUD = 115200
-ARDUINO_BOOTLOADER=optiboot_atmega328.hex
+ARDUINO_BOOTLOADER = optiboot_atmega328.hex
 
 include generic.mk
 
 # The one_wire_slave.h interface requires us to explicitly acknowledge that
 # weird register use is required.
 #
-# FIXME: WORK POINT: thi addition to CPPFLAGS and CFLAGS could presumably go
+# FIXME: the addition to CPPFLAGS and CFLAGS could presumably go
 # after include of generic.mk in one_wire_slave module, and this would be
 # the more typical way to do it I think, since we normally only put things
 # that are supposed to prevent default assignments before that inluce.  Also,
@@ -34,8 +36,9 @@ include generic.mk
 # that any module using one_wire_slave will have to set CFLAGS to include
 # the -ffixed-r2, -ffixed-r2 etc. options, and maybe change the name of
 # that variable.
+# FIXME: also the ACK here shouldn't be enabled by default
 CFLAGS += -ffixed-r2 -ffixed-r3 -ffixed-r4 -ffixed-r5
-CPPFLAGS += -DOWS_REGISTER_USE_ACKNOWLEDGED
+CPPFLAGS += -DOWS_REGISTER_LOCKING_ACKNOWLEDGED
 
 # The one_wire_slave module requires a sufficiently fast timer1.
 CPPFLAGS += -DTIMER1_STOPWATCH_PRESCALER_DIVIDER=8

@@ -1,3 +1,8 @@
+
+# This is only required for debugging this module itself.  If you can talk
+# to the master using screen you don't need this module.
+include run_screen.mk
+
 AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
 # These setting are only useful when we want to connect two Arduinos

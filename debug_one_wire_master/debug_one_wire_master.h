@@ -6,7 +6,8 @@
 // device that lacks most communication interfaces.  Only one data wire
 // (and ground and power leads) is required.  At the other end of the line
 // there should be an Arduino running the debug_one_wire_slave.h interface.
-// That Arduino then relays messages out via its USB-to-serial interface.
+// That Arduino then relays or stores messages somehow (via its USB-to-serial
+// interface using term_io.h for example).
 
 #ifndef DEBUG_ONE_WIRE_MASTER_H
 #define DEBUG_ONE_WIRE_MASTER_H
