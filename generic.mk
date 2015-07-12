@@ -413,9 +413,9 @@ PRINT_ARDUINO_DTR_TOGGLE_WEIRDNESS_WARNING :=                                 \
   echo "" ;                                                                   \
   echo "  * You don't have write permission for the Arduino device file." ;   \
   echo "    If you have a 'Permission denied' message above that refers to" ; \
-  echo "    a file in /dev (perhaps /dev/ACM0 or /dev/USB0) this is likely" ; \
-  echo "    the problem.  Make sure the Arduino is plugged in, and then" ;    \
-  echo "    take a look at the mentioned file with 'ls -l' and see if" ;      \
+  echo "    a file in /dev (perhaps /dev/ttyACM0 or /dev/ttyUSB0) this is " ; \
+  echo "    likely the problem.  Make sure the Arduino is plugged in, and " ; \
+  echo "    then take a look at the mentioned file with 'ls -l' and see if" ; \
   echo "    there is a group you can add yourself to to get write" ;          \
   echo "    permission (on debian I had to add myself to the 'dialout'" ;     \
   echo "    group).  Note that for group membership to take effect for you" ; \
