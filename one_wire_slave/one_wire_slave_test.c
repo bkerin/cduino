@@ -184,10 +184,14 @@ main (void)
     switch ( fcmd ) {
 
       case DS18B20_COMMANDS_CONVERT_T_COMMAND:
-        // Because we're just making up a number, we convert instantly, so we
-        // can immediately send the one that the DS18B20 sends when it's done
-        // converting :) See the comment below near the next reference to the
-        // DS18B20_CONVERT_T_COMMAND below for a longer discussion about this.
+        // Here we dodge a significant issue that comes up with slaves
+        // implemented using this module.  Because we're just making up a
+        // number, we convert instantly, so we can immediately send the one
+        // that the DS18B20 sends when it's done converting.  In reality, this
+        // conversion would take time, and the send-0-until-done-then-send-1
+        // approach that the real DS18B20 uses is not implementable with
+        // this module: see the header comments in one_wire_slave.h for the
+        // reasons for this and what to do instead.
         ows_write_bit (1);
         break;
 
