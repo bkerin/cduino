@@ -242,15 +242,17 @@ uint16_t tr;       // Timer Reading (most recent)
 static ows_result_t
 wfpcoto (void)
 {
-  // Wait For Pin Change Or Time Out
+  // Wait For Pin Change Or Time Out.  If a change is detected record the
+  // timer reading and return OWS_RESULT_SUCCESS, if a timeout is detected
+  // return OWS_RESULT_TIMEOUT.
 
   while ( TRUE ) {
     if ( LIKELY (DIO_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN)) ) {
       ls = SAMPLE_LINE ();
-      // Note: we could in in theory check for resets right here since callers
-      // of this routine always have to do it.  The we could dispense with tr.
-      // But there aren't any real savings and I don't want to risk making
-      // the optimizer do something different.
+      // Note: we could in in theory check for resets right here since
+      // callers of this routine always have to do it.  Then we could
+      // dispense with tr.  But there aren't any real savings and I don't
+      // want to risk making the optimizer do something different.
       DIO_CLEAR_PIN_CHANGE_INTERRUPT_FLAG (OWS_PIN);
       tr = TIMER1_STOPWATCH_TICKS ();
       // If we've had timer overflow, treat it as a really long pulse.
