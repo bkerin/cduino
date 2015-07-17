@@ -58,6 +58,38 @@
 // recommend using 5V and running at 16 MHz.  You'll get better resistance
 // to line noise that way as well.
 //
+// If your slave has any actual work to do on the that requires much
+// time, it won't be possible to honor every request that occurs while
+// that work is ongoing.  This is a consequence of the nature of this
+// slave implementation: it's single-threaded and doesn't use interrupts.
+// This keeps things simple, but means that reset pulses, read/write slot
+// pulses, etc., can only be accurately detected when a call into this
+// interface is actually in progress.  You probably don't really care:
+// you just have to ensure that your master knows that slaves implemented
+// using this interface will become unresponsive while handling requests
+// to perform long-running operations.  Provided you account for the time
+// required for such operations when talking to the slave in question
+// there is no problem.  If you really need fast responses all the time,
+// give the slave it's one helper processor to handle long-running operations.
+//
+// As a consequence of the above, there is one notable behavior of the
+// Maxim DS18B20 that this interface cannot support: it's habit of sending
+// zeros (after the master initiates a read_bit operation) to indicate an
+// incomplete, ongoing conversion.  The same strategy could in theory be
+// used by this slave framework to indicate any incomplete operation, but
+// it's a pain.  To implement it, the slave would either have to respond
+// quickly to master-initiated read events while trying to simultaneously
+// carry on with the incomplete operation, or just hold the line low the
+// entire time.  The former approach is needlessly parallel and complex,
+// and the latter would dominate the entire network, making reset pulses
+// impossible for other slaves to detect.  Instead, simply give the slave
+// enough time to do whatever it's been asked to do: make it part of the
+// transaction protocol for the transaction in question that the master
+// is required to wait an appropriate amount of time after requesting a
+// time-consuming operation before trying to read results.  The read-out
+// can if necessary be made a separate transaction to allow other network
+// communication to proceed in the meantime.
+//
 // This module uses timer/counter1 to time events on the wire.  If you want
 // to use this timer for other things as well it should work, but you'll
 // need to reinitialize the timer yourself after using this interface,
@@ -246,7 +278,7 @@ ows_init (uint8_t use_eeprom_id);
 // timeout_t1t argument must be in [OWS_MIN_TIMEOUT_US, OWS_MAX_TIMEOUT_US].
 // This isn't intended to support short timeouts, it just gives a simple
 // way to do other things from the main thread occasionally.  If you really
-// need microsecond response from the slave for other purposes than 1-wire,
+// need microsecond response from the slave for purposes other than 1-wire,
 // give your slave its own slave processor :).
 void
 ows_set_timeout (uint16_t time_us);
