@@ -235,11 +235,13 @@ AVRLIBC_PRINTF_LDFLAGS ?=
 # and such.
 CPP_DEBUG_DEFINE_FLAGS ?=
 
-# Arrange for VERSION_CONTROL_COMMIT to be set at compile-time if
-# possible.  By default this is set such that if git rev-parse works in
-# the build directory and the build directory is clean the CPP macro
-# VERSION_CONTROL_COMMIT gets defined to the first 16 hex digits of
-# the git commit pointed to by git HEAD, or is undefined otherwise.
+# NOTE: See also CPP_GIT_DESCRIPTION_DEFINE_FLAGS.  It's probably better
+# for most purposes, though it has the disadvantage of producing a
+# slightly longer string.  Arrange for VERSION_CONTROL_COMMIT to be set
+# at compile-time if possible.  By default this is set such that if git
+# rev-parse works in the build directory and the build directory is clean the
+# CPP macro VERSION_CONTROL_COMMIT gets defined to the first 16 hex digits
+# of the git commit pointed to by git HEAD, or is undefined otherwise.
 # The version control commit can then be retrieved from the source as
 # a string literal using EXPAND_AND_STRINGIFY (VERSION_CONTROL_COMMIT)
 # (from util.h).  Note that if VERSION_CONTROL_COMMIT is undefined, it will
@@ -248,6 +250,15 @@ CPP_VERSION_CONTROL_COMMIT_DEFINE_FLAGS ?=                                \
   `(git rev-parse 2>/dev/null) &&                                         \
    (git status | grep -q 'nothing to commit, working directory clean') && \
    echo -DVERSION_CONTROL_COMMIT=$$(git rev-parse --short=16 HEAD)`
+
+# This is similar to CPP_VERSION_CONTROL_COMMIT_DEFINE_FLAGS, but it give uses
+# the output of git-describe (in GIT_DESCRIPTION), which has the advantage
+# of being tag-relative and always being defined even for untagged or dirty
+# trees.  Note that putting dirty trees on release hardware is particularly
+# inadvisable, however, since those configurations aren't recoverable after
+# the fact.
+CPP_GIT_DESCRIPTION_DEFINE_FLAGS ?= \
+  -DGIT_DESCRIPTION=$$(git describe --dirty --tags --always)
 
 
 ##### Computed File Names and Settings {{{1
@@ -363,6 +374,7 @@ OPTLEVEL := s
 # for compiler flags, so it could matter whether they do so before or after
 # the include statement that includes this file.
 CPPFLAGS += $(CPP_VERSION_CONTROL_COMMIT_DEFINE_FLAGS) \
+            $(CPP_GIT_DESCRIPTION_DEFINE_FLAGS)        \
             $(CPP_DEBUG_DEFINE_FLAGS)                  \
             $(CPU_FREQ_DEFINE)                         \
             -I.
