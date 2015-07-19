@@ -6,6 +6,7 @@
 #ifndef TERM_IO_H
 #define TERM_IO_H
 
+#include <assert.h>
 #include <avr/pgmspace.h>
 #include <stdio.h>
 #include <stdlib.h>
