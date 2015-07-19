@@ -47,8 +47,6 @@ WATCHDOG_TIMER_MCUSR_MANTRA
 #define OWS_CHECK(result)                                        \
   PFP_ASSERT_SUCCESS (result, ows_result_as_string, result_buf);
 
-// FIXME: WORK POINT: master and slave dont seem to talk to each other
-
 int
 main (void)
 {
@@ -60,6 +58,9 @@ main (void)
   PFP ("term_io_init() worked.\n");
   PFP ("\n");
 
+  PFP ("git description: " EXPAND_AND_STRINGIFY (VERSION_CONTROL_COMMIT) "\n");
+  PFP ("git description: " EXPAND_AND_STRINGIFY (GIT_DESCRIPTION) "\n");
+
   PFP ("Trying dowm_init()... ");
   // Initialize the interface, using the OWS_DEFAULT_PART_ID
   dowm_init ();
@@ -70,6 +71,7 @@ main (void)
 
   uint32_t tmn = 1;   // Test Message Number
   for ( ; ; ) {
+    // FIXME: changed to Messs to test last bit effects of lenght message
     PFP ("About to send message \"Message %" PRIu32 "\"...", tmn);
     dowm_printf ("Message %" PRIu32 "\n", tmn);
     PFP (" sent and acknowledge received.\n");

@@ -40,10 +40,10 @@
 int
 dows_init (int (*message_handler)(char const *message));
 
-// This is an example of a useful message_handler that can be passed to
-// dows_init.  This handler just relays the given NULL-byte-terminated
-// message via the term_io.h interface.  The term_io_init() function is
-// automagically called on the first time through this routine.
+// This is an example of a useful message_handler that can be passed
+// to dows_init.  This handler just relays the given NULL-byte-terminated
+// message via printf() as set up by term_io.h interface.  Clients must ensure
+// that the term_io_init() function is called before this function runs.
 int
 relay_via_term_io (char const *message);
 

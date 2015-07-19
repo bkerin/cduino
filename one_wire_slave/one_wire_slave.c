@@ -304,7 +304,12 @@ read_bit (void)
       // hence the sensitivity to register variable use.
       TICK_DELAY (RBST_TICK_DELAY);
       cbitv = SAMPLE_LINE ();
+      // FIXME: well this seems weird to me.  If the master sends a 0,
+      // the timer will end up getting reset by this, but if it sends a 1,
+      // it won't, because the positive edge won't have happened yet, how
+      // can that be right?  But its been a while since I first coded it...
       CPCFRT1 ();
+      while ( ! SAMPLE_LINE () ) { ; }   // FIXME: debug for above issue.. .
       return OWS_RESULT_SUCCESS;
     }
   }

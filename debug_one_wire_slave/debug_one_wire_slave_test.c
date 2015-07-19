@@ -51,6 +51,11 @@ main (void)
 {
   // This isn't what we're testing exactly, but we need to know if it's
   // working or not to interpret other results.
+
+  // NOTE: in this case we're using term_io both for the output of this test
+  // program, and for message handling via the relay_via_term_io callback.
+  // This call would therefore be required for other similar (non-test)
+  // programs which use this callback to handle messages.
   term_io_init ();
   PFP ("\n");
   PFP ("\n");
@@ -59,7 +64,7 @@ main (void)
 
   PFP ("Trying dows_init()... ");
   PFP ("\n");
-  // Initialize the interface, using the OWS_DEFAULT_PART_ID
+  // Initialize the interface.  Note that in this case
   dows_init (relay_via_term_io);
   // Use this if you want to use an ID that you've loaded into EEPROM:
   //ows_init (TRUE);   // Initialize the 1-wire interface slave end

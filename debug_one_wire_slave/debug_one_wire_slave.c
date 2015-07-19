@@ -42,7 +42,7 @@ dows_init (int (*message_handler)(char const *message))
     DOWONRGROE (ows_wait_for_function_transaction (&cmd, jgur));
 
     // This is the function command code we expect to get from the master
-    // to indicate the start of a a "printf" transaction.  Note that the
+    // to indicate the start of a "printf" transaction.  Note that the
     // debug_one_wire_master.h must agree to use this value and implement
     // its end of the transaction protocol.
     uint8_t const printf_function_cmd = 0x44;
@@ -66,24 +66,14 @@ dows_init (int (*message_handler)(char const *message))
     // we add it.
     message_buffer[ml] = '\0';
 
+    PFP ("ml: %hhu, message: %s, cp1\n", ml, message_buffer);
+
     // Handle the message by calling the supplied handler function.
+    message_handler = message_handler;
     int mhr = message_handler (message_buffer);
     if ( mhr ) {
       return mhr;
     }
-
-    // FIXME: WORK POINT: well the master ends up seeing all 1s rather than
-    // our ack value, which isn't too shocking since it tries to read the
-    // ack byte while message_handler is running.  It could instead get
-    // the ack in a seperate transaction.  Or perhaps this means we should
-    // implement what the DS18B20 does and give the slave a way to hold line
-    // low while it does something, thereby sending 0s (and hogging the bus)
-    // until it gets unbusy and resumes normal responses.  At least I think
-    // that's how the DS18B20 0 signaling works. This is sort of a goofy
-    // way of doing things in my opinion since it hogs the bus, looks like
-    // a grounded line if the master doesn't keep its state straight, and
-    // would complicate the slave interface slightly (if not just done buy
-    // extra-interface bit twiddling), but DS18B20 does it that way I think.
 
     // Now we're supposed to send back a specific ack byte to indicate that
     // we've relayed the message successfully.
@@ -93,6 +83,9 @@ dows_init (int (*message_handler)(char const *message))
     ows_result = ows_write_byte (ack_byte_value);
     if ( ows_result != OWS_RESULT_SUCCESS ) {
       if ( ows_result == OWS_RESULT_GOT_UNEXPECTED_RESET ) {
+        // FIXME: WORK POINT: this goes off, even with the busy loop that we
+        // added to one_wire_slave.c to try to defuse the problem...  is that
+        // fix right?  why couldn't it be?
         PFP ("got unexpected reset\n");
       }
       PHP ();
@@ -113,13 +106,6 @@ retry:
 int
 relay_via_term_io (char const *message)
 {
-  static uint8_t tioi = FALSE;   // Term-IO Initialized
-
-  if ( ! tioi ) {
-    term_io_init ();
-    tioi = TRUE;
-  }
-
   int cp = printf ("%s", message);
   if ( cp < 0 ) {
     return 1;

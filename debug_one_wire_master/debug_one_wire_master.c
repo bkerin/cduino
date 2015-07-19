@@ -93,6 +93,9 @@ dowm_printf (char const *format, ...)
 
   _delay_us (ibd_us);
 
+  double const ms_per_byte = 100.042;
+  _delay_ms (DOWM_MAX_MESSAGE_LENGTH * ms_per_byte);
+
   // FIXME: note that we don't use any CRC.  We really should.
 
   // Now the slave is supposed to send back an ack byte to indicate that it
