@@ -103,7 +103,7 @@ dowm_printf (char const *format, ...)
   uint8_t const ack_byte_value = 0x42;
   uint8_t rb = owm_read_byte ();  // Response Byte
   if ( rb == ack_byte_value ) { rb = rb; }  // FIXME: remove this debug junk
-  PFP ("got ack byte %hhu\n", rb);
+  PFP ("got ack byte %#hhx\n", rb);
   //assert (rb == ack_byte_value);
 
   return chars_written;

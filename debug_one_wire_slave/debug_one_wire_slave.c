@@ -39,7 +39,9 @@ dows_init (int (*message_handler)(char const *message))
     // FIXME: need to check what's going on inside all these goofy
     // DOWONRGROE() things.
 
-    DOWONRGROE (ows_wait_for_function_transaction (&cmd, jgur));
+    //DOWONRGROE (ows_wait_for_function_transaction (&cmd, jgur));
+    ows_result = ows_wait_for_function_transaction (&cmd, jgur);
+    PFP_ASSERT (ows_result == 0);
 
     // This is the function command code we expect to get from the master
     // to indicate the start of a "printf" transaction.  Note that the
@@ -53,12 +55,16 @@ dows_init (int (*message_handler)(char const *message))
 
     // Read message length from master
     uint8_t ml;
-    DOWONRGROE (ows_read_byte (&ml));
+    //DOWONRGROE (ows_read_byte (&ml));
+    ows_result = ows_read_byte (&ml);
+    PFP_ASSERT (ows_result == 0);
 
     // Read the message itself from master
     char message_buffer[DOWS_MAX_MESSAGE_LENGTH + 1];
     for ( uint8_t ii = 0 ; ii < ml ; ii++ ) {
-      DOWONRGROE (ows_read_byte (((uint8_t *) message_buffer) + ii));
+      //DOWONRGROE (ows_read_byte (((uint8_t *) message_buffer) + ii));
+      ows_result = ows_read_byte (((uint8_t *) message_buffer) + ii);
+      PFP_ASSERT (ows_result == 0);
     }
 
     // The protocol sends the length first, and so doesn't send the

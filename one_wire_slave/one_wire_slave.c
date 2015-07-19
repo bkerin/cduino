@@ -13,6 +13,9 @@
 #include "dio.h"
 #include "one_wire_common.h"
 #include "one_wire_slave.h"
+// FIXME: next two lines for debug only
+#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+#include "term_io.h"
 #include "timer1_stopwatch.h"
 #include "util.h"
 
@@ -308,8 +311,14 @@ read_bit (void)
       // the timer will end up getting reset by this, but if it sends a 1,
       // it won't, because the positive edge won't have happened yet, how
       // can that be right?  But its been a while since I first coded it...
+      // FIXME: WORK POINT: wellll waiting for the line to be high then
+      // before clearing the pin change here solves the problem with a
+      // write-delay-read sequence causing the slave to see a false reset,
+      // but is it the best way to deal with that issue?  Could it hang the
+      // slave in some situation?  Do we care about hanging the slave when
+      // the line is stuck low?  Does this work at 10 MHz?
+      while ( ! SAMPLE_LINE () ) { ; }
       CPCFRT1 ();
-      while ( ! SAMPLE_LINE () ) { ; }   // FIXME: debug for above issue.. .
       return OWS_RESULT_SUCCESS;
     }
   }
@@ -354,7 +363,13 @@ write_byte (void)
 {
   for ( cbiti = 0 ; cbiti < BITS_PER_BYTE ; cbiti++ ) {
     cbitv = cbytevu & (B00000001 << cbiti);
-    CPE (write_bit ());
+    ows_result_t result = write_bit ();
+    if ( result != 0 ) {
+      PFP ("cbiti: %hhu\n", cbiti);
+      PFP ("result: %hhu\n", result);
+      PHP ();
+    }
+    //CPE (write_bit ());
   }
 
   return OWS_RESULT_SUCCESS;
