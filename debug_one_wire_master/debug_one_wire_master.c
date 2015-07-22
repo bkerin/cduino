@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <util/crc16.h>
 
 #include "one_wire_master.h"
 #include "debug_one_wire_master.h"
@@ -81,15 +82,26 @@ dowm_printf (char const *format, ...)
 
   _delay_us (ibd_us);
 
-  // Now we send the message length as a byte.
+  // CRC (initial value for _crc16_update() from AVR libc)
+  uint16_t crc = 0xffff;
+
+  // First part is the message length as a byte.
   assert (DOWM_MAX_MESSAGE_LENGTH < UINT8_MAX);
+  crc = _crc16_update (crc, chars_written);
   owm_write_byte ((uint8_t) chars_written);
 
-  // Now we send the message itself.
+  // Next part is the message itself.
   for ( uint8_t ii = 0 ; ii < chars_written ; ii++ ) {
     _delay_us (ibd_us);
+    crc = _crc16_update (crc, message_buffer[ii]);
     owm_write_byte (message_buffer[ii]);
   }
+
+  // Finally we send the CRC, high byte first.
+  _delay_us (ibd_us);
+  owm_write_byte (HIGH_BYTE (crc));
+  _delay_us (ibd_us);
+  owm_write_byte (LOW_BYTE (crc));
 
   _delay_us (ibd_us);
 
@@ -98,8 +110,6 @@ dowm_printf (char const *format, ...)
   while ( owm_read_bit () ) {
     ;
   }
-
-  // FIXME: note that we don't use any CRC.  We really should.
 
   // Now the slave is supposed to send back an ack byte to indicate that it
   // has relayed the message successfully.
