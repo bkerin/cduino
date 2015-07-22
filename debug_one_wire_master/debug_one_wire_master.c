@@ -63,7 +63,7 @@ dowm_printf (char const *format, ...)
 
 #else
 
-#  error not tested yet
+#  error this branch not tested yet
 
   slave_id = __builtin_bswap64 (UINT64_C (DOWM_TARGET_SLAVE));
 
@@ -93,7 +93,16 @@ dowm_printf (char const *format, ...)
 
   _delay_us (ibd_us);
 
-  double const ms_per_byte = 100.042;
+  // FIXME: this is the busy wait thing we're implementing
+  // Wait for the slave to send the zero it sends when it's done handling
+  // the message.
+  /*
+  while ( owm_read_bit () ) {
+    ;
+  }
+  */
+
+  double const ms_per_byte = 10.042;
   _delay_ms (DOWM_MAX_MESSAGE_LENGTH * ms_per_byte);
 
   // FIXME: note that we don't use any CRC.  We really should.

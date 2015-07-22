@@ -263,7 +263,7 @@ wfpcoto (void)
         tr = UINT16_MAX;
       }
       TIMER1_STOPWATCH_CLEAR_OVERFLOW_FLAG ();
-      TIMER1_STOPWATCH_FAST_RESET ();   // do we want fast reset or normal?
+      TIMER1_STOPWATCH_FAST_RESET ();
       return OWS_RESULT_SUCCESS;
     }
     else if ( UNLIKELY (TIMER1_STOPWATCH_TICKS () >= timeout_t1t) ) {
@@ -307,17 +307,20 @@ read_bit (void)
       // hence the sensitivity to register variable use.
       TICK_DELAY (RBST_TICK_DELAY);
       cbitv = SAMPLE_LINE ();
-      // FIXME: well this seems weird to me.  If the master sends a 0,
-      // the timer will end up getting reset by this, but if it sends a 1,
-      // it won't, because the positive edge won't have happened yet, how
-      // can that be right?  But its been a while since I first coded it...
-      // FIXME: WORK POINT: wellll waiting for the line to be high then
-      // before clearing the pin change here solves the problem with a
-      // write-delay-read sequence causing the slave to see a false reset,
-      // but is it the best way to deal with that issue?  Could it hang the
-      // slave in some situation?  Do we care about hanging the slave when
-      // the line is stuck low?  Does this work at 10 MHz?
-      while ( ! SAMPLE_LINE () ) { ; }
+      // This is a little weird: here we handle the positive edge that has
+      // already occurred (if the master was sending a 1), or wait for the
+      // positive edge that is still to come (if the master was sending
+      // a 0).  Note that in the former case the timer value recorded in tr
+      // by wfpcoto() will actually be high, but it doesn't matter since it
+      // still won't be long enough to count as a reset.  In the latter case,
+      // the master might actually be sending us an asynchronous reset, so we
+      // go ahead and handle it.  Along the way we handle propogate timeout
+      // errors as advertised in the interface.  FIXME: consider interaction
+      // between timeouts and timer.  Should timeouts reset the timer?
+      CPE (wfpcoto ());
+      if ( UNLIKELY (CFR ()) ) {
+        return OWS_RESULT_GOT_UNEXPECTED_RESET;
+      }
       CPCFRT1 ();
       return OWS_RESULT_SUCCESS;
     }
@@ -363,13 +366,7 @@ write_byte (void)
 {
   for ( cbiti = 0 ; cbiti < BITS_PER_BYTE ; cbiti++ ) {
     cbitv = cbytevu & (B00000001 << cbiti);
-    ows_result_t result = write_bit ();
-    if ( result != 0 ) {
-      PFP ("cbiti: %hhu\n", cbiti);
-      PFP ("result: %hhu\n", result);
-      PHP ();
-    }
-    //CPE (write_bit ());
+    CPE (write_bit ());
   }
 
   return OWS_RESULT_SUCCESS;
@@ -413,6 +410,12 @@ ows_read_byte (uint8_t *byte_value_ptr)
   return OWS_RESULT_SUCCESS;
 }
 
+ows_result_t
+ows_unbusy (void)
+{
+  CPCFRT1 ();
+  return ows_write_bit (0);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 

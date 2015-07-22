@@ -31,7 +31,7 @@
 //     slave-specific protocol (step 3 of the transaction sequence describe in
 //     Maxim_DS18B20_datasheet.pdf, page 10).
 //
-// Note that fff you only have a network with exactly one slave and
+// Note that iff you only have a network with exactly one slave and
 // you control the master as well, you can probably dispense with
 // ows_wait_for_function_transaction().
 //
@@ -49,7 +49,7 @@
 // writes when communicating with slaves implemented using this framework.
 // Note that once ows_wait_for_function_transaction() returns (successfully),
 // the details of the subsequent transaction protocol are slave-dependent:
-// it's prefectly legitimate to require the master to pause for, say,
+// it's perfectly legitimate to require the master to pause for, say,
 // 10 us between read/write-bit/byte calls.
 //
 // According to section 28.3 of the ATMega328P datasheet, 10 MHz operation
@@ -59,18 +59,18 @@
 // to line noise that way as well.
 //
 // If your slave has any actual work to do on the that requires much
-// time, it won't be possible to honor every request that occurs while
-// that work is ongoing.  This is a consequence of the nature of this
+// uninterrupted time, it won't be possible to honor every request that occurs
+// while that work is ongoing.  This is a consequence of the nature of this
 // slave implementation: it's single-threaded and doesn't use interrupts.
-// This keeps things simple, but means that reset pulses, read/write slot
-// pulses, etc., can only be accurately detected when a call into this
-// interface is actually in progress.  You probably don't really care:
-// you just have to ensure that your master knows that slaves implemented
-// using this interface will become unresponsive while handling requests
-// to perform long-running operations.  Provided you account for the time
-// required for such operations when talking to the slave in question
-// there is no problem.  If you really need fast responses all the time,
-// give the slave it's one helper processor to handle long-running operations.
+// Instead, it simply monitors the pin change flag that gets set by hardware
+// when a pin change occurs.  This keeps things simple, but means that reset
+// pulses, read/write slot pulses, etc., can only be accurately detected
+// when a call into this interface is actually in progress.  You probably
+// don't really care: you just have to ensure that your master knows that
+// slaves implemented using this interface will become unresponsive while
+// handling requests to perform long-running operations.  If you really need
+// fast responses all the time, give the slave it's own helper processor
+// to handle long-running operations.
 //
 // As a consequence of the above, there is one notable behavior of the
 // Maxim DS18B20 that this interface cannot support: it's habit of sending
@@ -81,20 +81,37 @@
 // quickly to master-initiated read events while trying to simultaneously
 // carry on with the incomplete operation, or just hold the line low the
 // entire time.  The former approach is needlessly parallel and complex,
-// and the latter would dominate the entire network, making reset pulses
-// impossible for other slaves to detect.  Instead, simply give the slave
-// enough time to do whatever it's been asked to do: make it part of the
-// transaction protocol for the transaction in question that the master
-// is required to wait an appropriate amount of time after requesting a
-// time-consuming operation before trying to read results.  The read-out
-// can if necessary be made a separate transaction to allow other network
-// communication to proceed in the meantime.
+// and the latter would dominate the entire network and reset all the other
+// slaves.  There are a couple of alternative approaches that can be used.
+//
+// The simplest approach is to just give the slave enough time to do whatever
+// it's been asked to do: make it part of the transaction protocol for the
+// transaction in question that the master is required to wait an appropriate
+// amount of time after requesting a time-consuming operation before trying to
+// read results.  The read-out can if necessary be made a separate transaction
+// to allow other network communication to proceed in the meantime.
+//
+// The other option is to take advantage of the fact that when a slave ignores
+// a read slot from the master, the master ends up interpreting the result
+// as a one.  The slave can write a zero when its done being busy to let the
+// master know its done.  The master should continually issue owm_read_bit()
+// calls until it sees this zero.  The only problem is that when the slave
+// stops being busy, it may find a dangling pin change event and high-valued
+// timer/counter1, which would cause it to wrongly believe a reset pulse
+// has been sent.  To prevent this, use the ows_unbusy() function at the end
+// of the long-running operation to safely clear the pin change interrupt,
+// reset the timer, and send the zero bit.  Note that the slave will not
+// correctly respond to reset pulses while busy, and will disrupt any other
+// network operation that's attempted with the zero bit it sends on wake-up.
+// This approach effectively monopolizes the network, but it doesn't reset
+// other slaves and has the advantage of allowing the master to get the
+// read-out from the slave as quickly as possible (which may be useful when
+// the minimum time required for the operation isn't know a priori).
 //
 // This module uses timer/counter1 to time events on the wire.  If you want
 // to use this timer for other things as well it should work, but you'll
 // need to reinitialize the timer yourself after using this interface,
-// and call ows_init() again before using this interface again.  Of course
-// in the meantime, you're slave won't be able to respond to 1-wire events.
+// and call ows_init() again before using this interface again.
 //
 // This module uses the pin change interrupt flag for the chosen OWS_PIN
 // to detect changes on the wire.  Therefore, you can't (easily) use the
@@ -106,14 +123,17 @@
 // FIXME: revisit this advice once we've actually tested wake-up: it might
 // for example be required to actually have ISRs enabled, in which case an
 // interface function (or maybe two, with one being for clean-up after the
-// wake-up) will be required
-// If you're on batteries, you'll probably want to put the slave to
-// sleep when nothing is happening.  If brown-out detection is enabled,
-// the wake-up time will probably be fast enough that the slave will have
-// time to respond correctly to a reset pulse from the master.  If not,
-// it probably won't, since wake-up times in that situation tend to be 4 ms
-// or longer.  The BOD costs some power to operate.  If you want to avoid
-// that, I suggest simple declaring that your slave in slightly disobedient
+// wake-up) will be required If you're on batteries, you'll probably want to
+// put the slave to sleep when nothing is happening.  If brown-out detection
+// is enabled, the wake-up time will probably be fast enough that the slave
+// will have time to respond correctly to a reset pulse from the master.
+// If not, it probably won't, since wake-up times in that situation tend
+// to be 4 ms or longer FIXME: add ref to datasheet tables.  The BOD
+// costs some power to operate.  If you want to avoid that, I suggest
+// simply declaring that your slave is slightly disobedient and requires
+// OWM_AWAKEN_SLAVES() FIXME: implement OWM_AWAKEN_SLAVES(), I think it
+// could just be a owm_write_bit(1) or equivalent perhaps followed by a
+// suitable _delay_ms(4.2) or so?  be called before normal interaction begins.
 //
 
 #ifndef ONE_WIRE_SLAVE_H
@@ -277,7 +297,7 @@ ows_init (uint8_t use_eeprom_id);
 // slaves you'll never get a timeout.  If it isn't OWS_TIMEOUT_NONE, the
 // timeout_t1t argument must be in [OWS_MIN_TIMEOUT_US, OWS_MAX_TIMEOUT_US].
 // This isn't intended to support short timeouts, it just gives a simple
-// way to do other things from the main thread occasionally.  If you really
+// way to do other things besides 1-wire stuff occasionally.  If you really
 // need microsecond response from the slave for purposes other than 1-wire,
 // give your slave its own slave processor :).
 void
@@ -347,5 +367,15 @@ ows_read_byte (uint8_t *byte_value_ptr);
 // to any OWC_ALARM_SEARCH_COMMAND issued by thier master (this process is
 // started automagically in ows_wait_for_function_command()).
 extern uint8_t ows_alarm;
+
+// Declare the slave to be done being busy.  This is only useful for a
+// particular approach to handling long-running operations; see the summary
+// at the top of this file.  This first clears the pin change interrupt
+// flag and resets timer/counter1, thereby ensuring that the slave doesn't
+// incorrectly interpret a subsequent positive edge as the end of a reset
+// pulse (unless the pulse continues for a full reset pulse worth of time
+// from the time of this call), the writes a single 0 bit.
+ows_result_t
+ows_unbusy (void);
 
 #endif // ONE_WIRE_SLAVE_H

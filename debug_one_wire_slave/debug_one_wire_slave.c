@@ -4,6 +4,7 @@
 
 #include "one_wire_slave.h"
 #include "debug_one_wire_slave.h"
+// FIXME: get rid of TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP before
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 
@@ -81,6 +82,10 @@ dows_init (int (*message_handler)(char const *message))
       return mhr;
     }
 
+    // Once the message is sent we are dont being busy.
+    // FIXME: this is the busy wait thing we're about to implement
+    //ows_unbusy ();
+
     // Now we're supposed to send back a specific ack byte to indicate that
     // we've relayed the message successfully.
     uint8_t const ack_byte_value = 0x42;
@@ -89,16 +94,12 @@ dows_init (int (*message_handler)(char const *message))
     ows_result = ows_write_byte (ack_byte_value);
     if ( ows_result != OWS_RESULT_SUCCESS ) {
       if ( ows_result == OWS_RESULT_GOT_UNEXPECTED_RESET ) {
-        // FIXME: WORK POINT: this goes off, even with the busy loop that we
-        // added to one_wire_slave.c to try to defuse the problem...  is that
-        // fix right?  why couldn't it be?
         PFP ("got unexpected reset\n");
       }
       PHP ();
     }
 
 
-    // FIXME: get rid of TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP before
     // release
     PTP ();
 
