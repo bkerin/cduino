@@ -93,17 +93,11 @@ dowm_printf (char const *format, ...)
 
   _delay_us (ibd_us);
 
-  // FIXME: this is the busy wait thing we're implementing
   // Wait for the slave to send the zero it sends when it's done handling
   // the message.
-  /*
   while ( owm_read_bit () ) {
     ;
   }
-  */
-
-  double const ms_per_byte = 10.042;
-  _delay_ms (DOWM_MAX_MESSAGE_LENGTH * ms_per_byte);
 
   // FIXME: note that we don't use any CRC.  We really should.
 
@@ -111,9 +105,8 @@ dowm_printf (char const *format, ...)
   // has relayed the message successfully.
   uint8_t const ack_byte_value = 0x42;
   uint8_t rb = owm_read_byte ();  // Response Byte
-  if ( rb == ack_byte_value ) { rb = rb; }  // FIXME: remove this debug junk
-  PFP ("got ack byte %#hhx\n", rb);
-  //assert (rb == ack_byte_value);
+  // FIXME: should maybe be returning rather than asserting
+  assert (rb == ack_byte_value);
 
   return chars_written;
 }

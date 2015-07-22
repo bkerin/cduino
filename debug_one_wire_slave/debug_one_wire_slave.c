@@ -68,12 +68,15 @@ dows_init (int (*message_handler)(char const *message))
       PFP_ASSERT (ows_result == 0);
     }
 
+    // At this point we become busy handling the message that the master has
+    // sent, which might take a while depending on what message_handler does.
+    // So we're taking advantage of the send-ones-then-a-zero busy wait
+    // approach described in the summary at the top of one_wire_slave.h.
+
     // The protocol sends the length first, and so doesn't send the
     // terminating NULL byte.  But the message_handler requires it.  So now
     // we add it.
     message_buffer[ml] = '\0';
-
-    PFP ("ml: %hhu, message: %s, cp1\n", ml, message_buffer);
 
     // Handle the message by calling the supplied handler function.
     message_handler = message_handler;
@@ -82,9 +85,8 @@ dows_init (int (*message_handler)(char const *message))
       return mhr;
     }
 
-    // Once the message is sent we are dont being busy.
-    // FIXME: this is the busy wait thing we're about to implement
-    //ows_unbusy ();
+    // Once the message is sent we are done being busy.
+    ows_unbusy ();
 
     // Now we're supposed to send back a specific ack byte to indicate that
     // we've relayed the message successfully.
@@ -98,10 +100,6 @@ dows_init (int (*message_handler)(char const *message))
       }
       PHP ();
     }
-
-
-    // release
-    PTP ();
 
 retry:
     continue;
