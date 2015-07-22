@@ -315,8 +315,7 @@ read_bit (void)
       // still won't be long enough to count as a reset.  In the latter case,
       // the master might actually be sending us an asynchronous reset, so
       // we go ahead and test for it.  Along the way we propogate timeout
-      // errors as advertised in the interface.  FIXME: consider interaction
-      // between timeouts and timer.  Should timeouts reset the timer?
+      // errors as advertised in the interface.
       CPE (wfpcoto ());
       if ( UNLIKELY (CFR ()) ) {
         return OWS_RESULT_GOT_UNEXPECTED_RESET;

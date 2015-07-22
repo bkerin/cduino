@@ -31,10 +31,6 @@
 //     slave-specific protocol (step 3 of the transaction sequence describe in
 //     Maxim_DS18B20_datasheet.pdf, page 10).
 //
-// Note that iff you only have a network with exactly one slave and
-// you control the master as well, you can probably dispense with
-// ows_wait_for_function_transaction().
-//
 // The 1-wire protocol requires fast responses from the slave.  The time
 // between a master-request-send edge and the point at which the slave must
 // have the line pulled low to send a zero is only 15 us.  The turnaround time
@@ -107,6 +103,13 @@
 // other slaves and has the advantage of allowing the master to get the
 // read-out from the slave as quickly as possible (which may be useful when
 // the minimum time required for the operation isn't know a priori).
+//
+// Iff you only have a network with exactly one slave and you
+// control the master as well, you can probably dispense with
+// ows_wait_for_function_transaction() and simply start talking whenever
+// you want :) It should still be possible to use timeouts and ows_unbusy()
+// if you're slave needs to regularly do things without prompting from
+// the master.
 //
 // This module uses timer/counter1 to time events on the wire.  If you want
 // to use this timer for other things as well it should work, but you'll
@@ -228,7 +231,9 @@
 #define OWS_RESULT_CODES                                                     \
   /* Note that this code must be first, so that it ends up with value 0.  */ \
   X (OWS_RESULT_SUCCESS)                                                     \
+  /* See ows_set_timeout() for details how timeouts work.  */                \
   X (OWS_RESULT_TIMEOUT)                                                     \
+  /* This occurs when we unexpectedly get a long (reset) pulse.           */ \
   X (OWS_RESULT_GOT_UNEXPECTED_RESET)                                        \
   /* This one isn't actually returned by public functions: they silently */  \
   /* continue operation when they hear talk addressed to another slave.  */  \
@@ -289,13 +294,16 @@ ows_init (uint8_t use_eeprom_id);
 // Analogous to OWS_MIN_TIMEOUT_US.
 #define OWS_MAX_TIMEOUT_US ((uint16_t) (UINT16_MAX / OWS_TIMER_TICKS_PER_US))
 
-// If time_us isn't OWS_TIMEOUT_NONE, then any call into this interface
-// that waits for a 1-wire event will timeout and return OWS_RESULT_TIMEOUT
-// after approximately this many microseconds without any change in the line
-// state.  Note that events not addressed to this slave will still prevent
-// a timeout from occurring, so if your master continually talks to other
-// slaves you'll never get a timeout.  If it isn't OWS_TIMEOUT_NONE, the
-// timeout_t1t argument must be in [OWS_MIN_TIMEOUT_US, OWS_MAX_TIMEOUT_US].
+// If time_us isn't OWS_TIMEOUT_NONE, then any call into this interface that
+// waits for a 1-wire event will timeout and return OWS_RESULT_TIMEOUT after
+// approximately this many microseconds without any change in the line state.
+// Note that events not addressed to this slave will still prevent a timeout
+// from occurring, so if your master continually talks to other slaves you'll
+// never get a timeout.  If it isn't OWS_TIMEOUT_NONE, the timeout_t1t
+// argument must be in [OWS_MIN_TIMEOUT_US, OWS_MAX_TIMEOUT_US].  After a
+// timeout, ows_wait_for_function_transaction() and ows_unbusy() are the only
+// functions in this interface with defined behavior (because they begin by
+// clearing the pin change interrupt flag and resetting timer/counter1).
 // This isn't intended to support short timeouts, it just gives a simple
 // way to do other things besides 1-wire stuff occasionally.  If you really
 // need microsecond response from the slave for purposes other than 1-wire,
@@ -324,9 +332,10 @@ ows_set_timeout (uint16_t time_us);
 //     probably makes sense to immediately call this function again with
 //     the jgur argument TRUE.
 //
-//   * OWS_RESULT_ERROR_GOT_INVALID_ROM_COMMAND if we get a command that doesn't
-//     satisfy OWC_IS_ROM_COMMAND(command) from one_wire_common.h.  This could
-//     result from a misbehaving master, or from data corruption on the line.
+//   * OWS_RESULT_ERROR_GOT_INVALID_ROM_COMMAND if we get a command that
+//     doesn't satisfy OWC_IS_ROM_COMMAND(command) from one_wire_common.h.
+//     This could result from a misbehaving master, or from data corruption on
+//     the line.
 //
 ows_result_t
 ows_wait_for_function_transaction (uint8_t *command_ptr, uint8_t jgur);
