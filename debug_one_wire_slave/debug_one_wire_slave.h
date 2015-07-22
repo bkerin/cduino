@@ -45,6 +45,6 @@ dows_init (int (*message_handler)(char const *message));
 // message via printf() as set up by term_io.h interface.  Clients must ensure
 // that the term_io_init() function is called before this function runs.
 int
-relay_via_term_io (char const *message);
+dows_relay_via_term_io (char const *message);
 
 #endif // DEBUG_ONE_WIRE_SLAVE_H

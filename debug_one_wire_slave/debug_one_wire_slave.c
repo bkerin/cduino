@@ -4,8 +4,8 @@
 
 #include "one_wire_slave.h"
 #include "debug_one_wire_slave.h"
-// FIXME: get rid of TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP before
-#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+// This next line may be useful for debugging:
+//#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 
 #include <util/crc16.h>
@@ -60,7 +60,6 @@ dows_init (int (*message_handler)(char const *message))
     DOWONRGROE (ows_read_byte (&ml));
     crc = _crc16_update (crc, ml);
 
-
     // Read the message itself from master
     char message_buffer[DOWS_MAX_MESSAGE_LENGTH + 1];
     for ( uint8_t ii = 0 ; ii < ml ; ii++ ) {
@@ -85,7 +84,7 @@ dows_init (int (*message_handler)(char const *message))
     // we add it.
     message_buffer[ml] = '\0';
 
-    // Handle the message by calling the supplied handler function.
+    // Handle the message by calling the supplied handler.
     message_handler = message_handler;
     int mhr = message_handler (message_buffer);
     if ( mhr ) {
@@ -95,8 +94,8 @@ dows_init (int (*message_handler)(char const *message))
     // Once the message is sent we are done being busy.
     ows_unbusy ();
 
-    // Now we're supposed to send back a specific ack byte to indicate that
-    // we've relayed the message successfully.
+    // Now we're supposed to send back this specific ack byte to indicate
+    // that we've relayed the message successfully.
     uint8_t const ack_byte_value = 0x42;
 
     DOWONRGROE (ows_write_byte (ack_byte_value));
@@ -109,7 +108,7 @@ retry:
 }
 
 int
-relay_via_term_io (char const *message)
+dows_relay_via_term_io (char const *message)
 {
   int cp = printf ("%s", message);
   if ( cp < 0 ) {

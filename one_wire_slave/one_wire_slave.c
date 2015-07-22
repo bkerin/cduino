@@ -13,9 +13,9 @@
 #include "dio.h"
 #include "one_wire_common.h"
 #include "one_wire_slave.h"
-// FIXME: next two lines for debug only
-#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
-#include "term_io.h"
+// These two lines are useful for debugging:
+//#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+//#include "term_io.h"
 #include "timer1_stopwatch.h"
 #include "util.h"
 
@@ -381,7 +381,6 @@ ows_write_bit (uint8_t bit_value)
   return OWS_RESULT_SUCCESS;
 }
 
-// FIXME: needs tested, though its trivially diff from its inner fctn
 ows_result_t
 ows_read_bit (uint8_t *bit_value_ptr)
 {
@@ -400,7 +399,6 @@ ows_write_byte (uint8_t byte_value)
   return OWS_RESULT_SUCCESS;
 }
 
-// FIXME: needs tested, though its trivially diff from its inner fctn
 ows_result_t
 ows_read_byte (uint8_t *byte_value_ptr)
 {

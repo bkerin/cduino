@@ -65,7 +65,7 @@ main (void)
   PFP ("Trying dows_init()... ");
   PFP ("\n");
   // Initialize the interface.  Note that in this case
-  dows_init (relay_via_term_io);
+  dows_init (dows_relay_via_term_io);
   // Use this if you want to use an ID that you've loaded into EEPROM:
   //ows_init (TRUE);   // Initialize the 1-wire interface slave end
   // FIXME: ultimately we probably want _init and the listener function to

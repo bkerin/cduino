@@ -80,14 +80,13 @@ dowm_printf (char const *format, ...)
   // per the recommendation in one_wire_slave.h.
   double const ibd_us = 10.0;
 
-  _delay_us (ibd_us);
-
-  // CRC (initial value for _crc16_update() from AVR libc)
+  // CRC (initial value as specified for _crc16_update() from AVR libc)
   uint16_t crc = 0xffff;
 
   // First part is the message length as a byte.
   assert (DOWM_MAX_MESSAGE_LENGTH < UINT8_MAX);
   crc = _crc16_update (crc, chars_written);
+  _delay_us (ibd_us);
   owm_write_byte ((uint8_t) chars_written);
 
   // Next part is the message itself.
@@ -111,9 +110,11 @@ dowm_printf (char const *format, ...)
     ;
   }
 
+
   // Now the slave is supposed to send back an ack byte to indicate that it
   // has relayed the message successfully.
   uint8_t const ack_byte_value = 0x42;
+  _delay_us (ibd_us);
   uint8_t rb = owm_read_byte ();  // Response Byte
   // FIXME: should maybe be returning rather than asserting
   assert (rb == ack_byte_value);
