@@ -313,8 +313,8 @@ read_bit (void)
       // a 0).  Note that in the former case the timer value recorded in tr
       // by wfpcoto() will actually be high, but it doesn't matter since it
       // still won't be long enough to count as a reset.  In the latter case,
-      // the master might actually be sending us an asynchronous reset, so we
-      // go ahead and handle it.  Along the way we handle propogate timeout
+      // the master might actually be sending us an asynchronous reset, so
+      // we go ahead and test for it.  Along the way we propogate timeout
       // errors as advertised in the interface.  FIXME: consider interaction
       // between timeouts and timer.  Should timeouts reset the timer?
       CPE (wfpcoto ());

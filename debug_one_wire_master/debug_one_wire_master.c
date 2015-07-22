@@ -110,7 +110,6 @@ dowm_printf (char const *format, ...)
     ;
   }
 
-
   // Now the slave is supposed to send back an ack byte to indicate that it
   // has relayed the message successfully.
   uint8_t const ack_byte_value = 0x42;
@@ -121,4 +120,3 @@ dowm_printf (char const *format, ...)
 
   return chars_written;
 }
-
