@@ -53,9 +53,6 @@ main (void)
   PFP ("term_io_init() worked.\n");
   PFP ("\n");
 
-  PFP ("git description: " EXPAND_AND_STRINGIFY (VERSION_CONTROL_COMMIT) "\n");
-  PFP ("git description: " EXPAND_AND_STRINGIFY (GIT_DESCRIPTION) "\n");
-
   PFP ("Trying dowm_init()... ");
   // Initialize the interface, using the OWS_DEFAULT_PART_ID
   dowm_init ();
