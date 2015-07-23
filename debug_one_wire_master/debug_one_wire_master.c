@@ -23,6 +23,8 @@ dowm_init (void)
   owm_init ();
 }
 
+// FIXME: error propagationin this module hasn't been considered
+
 int
 dowm_printf (char const *format, ...)
 {
@@ -39,6 +41,12 @@ dowm_printf (char const *format, ...)
 
   uint64_t slave_id;   // Slave we're going to talk to
 
+  // This is the function command code we send to the slave so indicate the
+  // start of a a "printf" transaction.  Note that the debug_one_wire_slave.h
+  // must agree to use this value and implement its end of the transaction
+  // protocol.
+  uint8_t const printf_function_cmd = 0x44;
+
 #if DOWM_TARGET_SLAVE == DOWM_ONLY_SLAVE
 
   uint64_t **rom_ids;
@@ -47,12 +55,6 @@ dowm_printf (char const *format, ...)
 
   slave_id = *(rom_ids[0]);
   assert (rom_ids[1] == NULL);   // We were promised a private line
-
-  // This is the function command code we send to the slave so indicate the
-  // start of a a "printf" transaction.  Note that the debug_one_wire_slave.h
-  // must agree to use this value and implement its end of the transaction
-  // protocol.
-  uint8_t const printf_function_cmd = 0x44;
 
   owr = owm_start_transaction (
       OWC_READ_ROM_COMMAND,
@@ -63,8 +65,6 @@ dowm_printf (char const *format, ...)
   owm_free_rom_ids_list ((uint8_t **) rom_ids);
 
 #else
-
-#  error this branch not tested yet
 
   slave_id = __builtin_bswap64 (UINT64_C (DOWM_TARGET_SLAVE));
 
@@ -110,8 +110,8 @@ dowm_printf (char const *format, ...)
     ;
   }
 
-  // Now the slave is supposed to send back an ack byte to indicate that it
-  // has relayed the message successfully.
+  // Now the slave is supposed to send back a particular ack byte to indicate
+  // that it has relayed the message successfully.
   uint8_t const ack_byte_value = 0x42;
   _delay_us (ibd_us);
   uint8_t rb = owm_read_byte ();  // Response Byte

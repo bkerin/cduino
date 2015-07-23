@@ -35,3 +35,11 @@ include generic.mk
 # multiple 1-wire networks, so the pin used for debuggging via this interface
 # must be the same as the one used for other 1-wire communcation (if any).
 CPPFLAGS += -DOWM_PIN=DIO_PIN_DIGITAL_2
+
+# Uncomment this to address logging messages to a particular slave (as
+# opposed to the default behavior, which assumes the device running the
+# debug_one_wire_slave code is the only slave on the bus).  The value here
+# is the default used by the one_wire_slave.h and debug_one_wire_slave.h
+# interfaces.
+# FIXME: WORK POINT: doesn't work, slave doesn't seem to hear anything
+#CPPFLAGS += -DDOWM_TARGET_SLAVE=0x28444444222222bb
