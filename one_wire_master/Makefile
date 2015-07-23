@@ -54,8 +54,10 @@ CPPFLAGS += -DTEST_CONDITION_SINGLE_SLAVE
 #CPPFLAGS += -DSECOND_SLAVE_ID=0x289ae53005000015
 
 # When testing a slave implemented using the one_wire_slave module together
-# other slaves, it may be useful to have one of the slave IDs set to the
-# default ID implemented in that module:
+# other slaves, it may be useful to have one of the slave IDs set to
+# the ROM ID used by the Makefile for the test program in that module.
+# Note that this is slightly different than the default ROM ID used by the
+# one_wire_slave.h interface.
 #CPPFLAGS += -DFIRST_SLAVE_ID=0x28444444222222bb
 #CPPFLAGS += -DSECOND_SLAVE_ID=0x28542a8e060000b4
 
