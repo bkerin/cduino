@@ -1,4 +1,4 @@
-// Implementation of the interface described in debug_one_wire_master.h.
+// Implementation of the interface described in one_wire_master_logger.h.
 
 #include <assert.h>
 #include <inttypes.h>
@@ -6,16 +6,10 @@
 #include <util/crc16.h>
 
 #include "one_wire_master.h"
-#include "debug_one_wire_master.h"
+#include "one_wire_master_logger.h"
 // FIXME: remove after debugged:
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
-
-// FIXME: do we really want to call this interface debgu_?  log_ might be
-// more correct given its generality.  The debug_led is sorta unfortunate
-// for the same reason, since it could be used for status maybe should also
-// be called status_ or so.  Though the led is less likelty to be useful
-// for status than this interface is for logging I think.
 
 void
 dowm_init (void)
@@ -42,7 +36,7 @@ dowm_printf (char const *format, ...)
   uint64_t slave_id;   // Slave we're going to talk to
 
   // This is the function command code we send to the slave so indicate the
-  // start of a a "printf" transaction.  Note that the debug_one_wire_slave.h
+  // start of a a "printf" transaction.  Note that the one_wire_slave_logger.h
   // must agree to use this value and implement its end of the transaction
   // protocol.
   uint8_t const printf_function_cmd = 0x44;

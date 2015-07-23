@@ -1,17 +1,17 @@
-// Test/demo for the debug_one_wire_master.h interface.
+// Test/demo for the one_wire_master_logger.h interface.
 //
 // This program implements a 1-wire master that sends messages out over a
 // 1-wire bus.  These message can then be picked up and handled by a second
-// Arduino providing a debug_one_wire_slave.h interface.
+// Arduino providing a one_wire_slave_logger.h interface.
 //
 // Physically, the test setup should consist of:
 //
 //   * one Arduino running this test program acting as the master.  To see
 //     debugging output from this Arduino, it may be connected to a computer
 //     via USB, though of course in a real system if you can do that you
-//     wouldn't need this module...
+//     probably wouldn't need this module...
 //
-//   * a second Arduino running the debug_one_wire_slave_test.c test program,
+//   * a second Arduino running the one_wire_slave_logger_test.c test program,
 //     connected to the first Arduino via a data line (by default to OWS_PIN
 //     DIO_PIN_DIGITAL_2), and a ground line
 //
@@ -34,18 +34,13 @@
 // from the master.
 //
 
-#include "debug_one_wire_master.h"
+#include "one_wire_master_logger.h"
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 #include "util.h"
 
 // See the definition of this macro in util.h to understand why its here.
 WATCHDOG_TIMER_MCUSR_MANTRA
-
-// FIXME: we wont need this, better to tell user to just go run the
-// one_wire_slave tests if they get any error return out of init I think.
-#define OWS_CHECK(result)                                        \
-  PFP_ASSERT_SUCCESS (result, ows_result_as_string, result_buf);
 
 int
 main (void)
@@ -71,7 +66,6 @@ main (void)
 
   uint32_t tmn = 1;   // Test Message Number
   for ( ; ; ) {
-    // FIXME: changed to Messs to test last bit effects of lenght message
     PFP ("About to send message \"Message %" PRIu32 "\"...", tmn);
     dowm_printf ("Message %" PRIu32 "\n", tmn);
     PFP (" sent and acknowledge received.\n");

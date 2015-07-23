@@ -1,13 +1,14 @@
-// Interface for debug logging via one_wire_master.h
+// Interface for logging via one_wire_master.h
 //
-// Test driver: debug_one_wire_master_test.c    Implementation: debug_one_wire_master.c
+// Test driver: one_wire_master_logger_test.c    Implementation: one_wire_master_logger.c
 //
-// This module is intended to be used to get debugging output out of a
-// device that lacks most communication interfaces.  Only one data wire
-// (and ground and power leads) is required.  At the other end of the line
-// there should be an Arduino running the debug_one_wire_slave.h interface.
-// That Arduino then relays or stores messages somehow (via its USB-to-serial
-// interface using term_io.h for example).
+// This module is intended to be used to get log message out of a
+// 1-wire device.  It's probably most useful for devices that lacks most
+// communication interfaces.  Only one data wire (and ground and power
+// leads) is required.  At the other end of the line there should be an
+// Arduino running the one_wire_slave_logger.h interface.  That Arduino
+// then relays or stores messages somehow (via its USB-to-serial interface
+// using term_io.h for example).
 
 #ifndef DEBUG_ONE_WIRE_MASTER_H
 #define DEBUG_ONE_WIRE_MASTER_H
@@ -19,20 +20,20 @@
          the DIO_PIN_* tuple macros before this header is included)
 #endif
 
-// This magic value is used to indicate that the debugging line is private
+// This magic value is used to indicate that the 1-wire line is private
 // and the first slave found on the bus should be the target of communication.
 #define DOWM_ONLY_SLAVE 0x00
 
-// By default, DOWM_TARGET_SLAVE gets set to DOWM_ONLY_SLAVE.
-// If DOWM_TARGET_SLAVE is not DOWM_ONLY_SLAVE, it should be set to
-// the 64 bit ID of the slave to be targeted (see the Makefile from the
-// one_wire_master module for for examples of the Make options needed to
-// do this).  This lets you add a debug logger to a 1-wire network with
-// other devices on it.  Note that if your master already uses 1-wire, you
-// probably have to use the existing network for debug logging, because the
-// current one_wire_master.h interface doesn't support multiple one-wire
-// interface instances on different pins (without making copies and using
-// an editor to add "_2" to a bunch of stuff :).
+// By default, DOWM_TARGET_SLAVE gets set to DOWM_ONLY_SLAVE.  If
+// DOWM_TARGET_SLAVE is not DOWM_ONLY_SLAVE, it should be set to the 64 bit
+// ID of the slave to be targeted (see the Makefile from the one_wire_master
+// module for for examples of the Make options needed to do this).  This lets
+// you add a logger to a 1-wire network with other devices on it.  Note that
+// if your master already uses 1-wire, you probably have to use the existing
+// network for logging, because the current one_wire_master.h interface
+// doesn't support multiple 1-wire interface instances on different pins
+// (without making copies and using an editor to add "_2" to a bunch of
+// stuff :).
 #ifndef DOWM_TARGET_SLAVE
 #  define DOWM_TARGET_SLAVE DOWM_ONLY_SLAVE
 #endif
