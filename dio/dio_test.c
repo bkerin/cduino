@@ -73,24 +73,24 @@ main (void)
 {
   // It's a sin in my book to distribute untested code without clearly
   // acknowledging the fact.
-#ifndef UNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED
+#ifndef DIO_PB6_PB7_PC6_MACROS_UNTESTED_ACKNOWLEDGED
 #  error The PB6, PB7, and PC6 control macros are identical in form to the \
    other macros in this interface, but have not been tested because the \
    arduino hardware uses them for other purposes (see comments in dio.h for \
    details).  The Makefile for this module includes a line which may be \
-   uncommented to override this error trap: search for UNDERSTAND_ in the \
+   uncommented to override this error trap: search for ACKNOWLEDGED in the \
    Makefile.
 #endif
 
 // It's a sin in my book to distribute untested code without clearly
 // acknowledging the fact.
-#ifndef UNDERSTAND_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED
+#ifndef DIO_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED_ACKNOWLEDGED
 #  error It is not possible to test the operation of PB5, PD0, or PD1 with a \
    weak tie to ground with arduino hardware, because those pins are connected \
    to ground by other paths. So the pullup control on these pins is somewhat \
    untested.  I think this is ok since all the other pins are tested in \
    highly similar code.  The Makefile for this module includes a line which \
-   may be uncommented to override this error trap: search for UNDERSTAND_ in \
+   may be uncommented to override this error trap: search for ACKNOWLEDGED in \
    the Makefile.
 #endif
 

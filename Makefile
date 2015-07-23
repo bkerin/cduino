@@ -62,11 +62,10 @@ build_all_test_programs: MODULE_DIRS = \
                     dirname $$gmk; \
                   done))
 # Some modules require the user to define specific things to make sure they
-# know what's going on, we call these ACK(nowldege)_DEFINES :)  FIXME: these
-# should use more uniform nwming: module prefix and _ACKNOWLEDGED postfix
+# know what's going on, we call these ACK(nowldege)_DEFINES :)
 build_all_test_programs: ACK_DEFINES = \
-  -DUNDERSTAND_PB6_PB7_PC6_MACROS_UNTESTED \
-  -DUNDERSTAND_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED \
+  -DDIO_PB6_PB7_PC6_MACROS_UNTESTED_ACKNOWLEDGED \
+  -DDIO_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED_ACKNOWLEDGED \
   -DOWS_REGISTER_USE_ACKNOWLEDGED
 build_all_test_programs:
 	# Because many targets normally do a full rebuild of all the tests, we
