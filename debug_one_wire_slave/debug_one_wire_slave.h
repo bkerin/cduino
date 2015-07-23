@@ -28,20 +28,26 @@
 #  define DOWS_MAX_MESSAGE_LENGTH 242
 #endif
 
-// Initialize the module, and start waiting for messages.
-// The *message_handler should handle the given NULL-byte-terminated
-// message as appropriate (save it, relay it, whatever), then return
-// 0 on success or non-zero otherwise.  This function only returns if
-// message_handler returns non-zero, in which case it returns the value
-// returned by message_handler.  Other 1-wire errors are silently ignored
-// and and the operation that caused them retried.  FIXME: its somewhat
-// goofy to have an _init function returning, either eat all errors or add
-// another function that can return errors.
+// The dows_init() command can return these error codes in addition to
+// those defined in ows_result_t.  These errors should only occur in the
+// event of data corruption on the line.  The values are high enough not
+// to intersect with the numeric values defined in ows_result_t :)
+#define DOWS_RESULT_ERROR_INVALID_FUNCTION_CMD 142
+#define DOWS_RESULT_ERROR_CRC_MISMATCH         143
+
+// Initialize (or reinitialize) the module, and start waiting for messages.
+// The *message_handler should handle the given NULL-byte-terminated message
+// as appropriate (save it, relay it, whatever), then return 0 on success or
+// negative value otherwise.  This function only returns on error, in which
+// case it returns the (negative) value returned by *message_handler (if
+// it failed), or one of the ows_result_t codes if there's a 1-wire error,
+// or one of the DOWS_RESULT_ERROR_* values otherwise.  Unexpected 1-wire
+// resets do not result in an error, but are retried.
 int
 dows_init (int (*message_handler)(char const *message));
 
-// This is an example of a useful message_handler that can be passed
-// to dows_init.  This handler just relays the given NULL-byte-terminated
+// This is an example of a useful message_handler that can be passed to
+// dows_init().  This handler just relays the given NULL-byte-terminated
 // message via printf() as set up by term_io.h interface.  Clients must ensure
 // that the term_io_init() function is called before this function runs.
 int
