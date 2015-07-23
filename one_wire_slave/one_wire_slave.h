@@ -101,8 +101,11 @@
 // network operation that's attempted with the zero bit it sends on wake-up.
 // This approach effectively monopolizes the network, but it doesn't reset
 // other slaves and has the advantage of allowing the master to get the
-// read-out from the slave as quickly as possible (which may be useful when
-// the minimum time required for the operation isn't know a priori).
+// read-out from the slave as quickly as possible (which may be useful
+// when the minimum time required for the operation isn't know a priori).
+// Note that with this arrangement, the master is waiting for a reading that
+// comes down to a single sampling of the line.  It's prudent to provide
+// some sort of timeout or watchdog functionality at the master end.
 //
 // Iff you only have a network with exactly one slave and you
 // control the master as well, you can probably dispense with
