@@ -5,7 +5,7 @@
 #include "one_wire_slave.h"
 #include "debug_one_wire_slave.h"
 // This next line may be useful for debugging:
-#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+//#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 
 #include <util/crc16.h>

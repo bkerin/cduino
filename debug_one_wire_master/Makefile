@@ -36,10 +36,10 @@ include generic.mk
 # must be the same as the one used for other 1-wire communcation (if any).
 CPPFLAGS += -DOWM_PIN=DIO_PIN_DIGITAL_2
 
-# Uncomment this to address logging messages to a particular slave (as
-# opposed to the default behavior, which assumes the device running the
+# Uncomment and set this to address logging messages to a particular slave
+# (as opposed to the default behavior, which assumes the device running the
 # debug_one_wire_slave code is the only slave on the bus).  The value here
 # is the default used by the one_wire_slave.h and debug_one_wire_slave.h
-# interfaces.
-# FIXME: WORK POINT: doesn't work, slave doesn't seem to hear anything
-#CPPFLAGS += -DDOWM_TARGET_SLAVE=0x28444444222222bb
+# interfaces (though to be cute and illustrative, the test program Makefile
+# in the one_wire_slave module uses a different value).
+#CPPFLAGS += -DDOWM_TARGET_SLAVE=0x4244444422222218
