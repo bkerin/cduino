@@ -143,6 +143,7 @@
 #define ONE_WIRE_SLAVE_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "dio.h"
 #include "one_wire_common.h"
@@ -278,6 +279,14 @@ ows_result_as_string (ows_result_t result, char *buf);
 // before other routines in this interface are called).
 void
 ows_init (uint8_t use_eeprom_id);
+
+// Return the ROM ID of the slave as a new NULL-byte-terminated string (to
+// be freed with free()).  This function is theoretically unnesessary, but
+// the mechanism by which the ROM ID is determined is somewhat convoluted.
+// This may be useful to help figure out what's going on :) In particular,
+// this will show you the value of the CRC byte that you've ended up with.
+char *
+ows_rom_id_as_string (void);
 
 // Value to pass to ows_set_timeout() when timeouts are not to be used.
 #define OWS_TIMEOUT_NONE 0

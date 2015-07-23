@@ -139,6 +139,25 @@ ows_init (uint8_t use_eeprom_id)
   ows_set_timeout (OWS_TIMEOUT_NONE);
 }
 
+char *
+ows_rom_id_as_string (void)
+{
+  // Each byte takes two characters to represent, and the +3 allows two bytes
+  // for leading "0x" and one for terminating NULL byte.
+  char *result = malloc (2 * OWC_ID_SIZE_BYTES + 3);
+
+  result[0] = '0';
+  result[1] = 'x';
+
+  for ( uint8_t ii = 0 ; ii < OWC_ID_SIZE_BYTES ; ii++ ) {
+    // Each byte takes two characters to represent, and we add +2 so we
+    // don't stomp the leading 0x that we've already got
+    sprintf(&(result[2 * ii + 2]), "%2" PRIx8, rom_id[ii]);
+  }
+
+  return result;
+}
+
 // The following ST_* (Slave Timing) macros contain timing values that
 // actual Maxim DS18B20 devices have been found to use, or values that
 // we have derived logically from our understanding of the protocol; see

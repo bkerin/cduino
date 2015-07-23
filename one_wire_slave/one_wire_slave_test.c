@@ -97,6 +97,13 @@ main (void)
   //ows_init (TRUE);   // Initialize the 1-wire interface slave end
   PFP ("ok, it returned.\n");
 
+  PFP ("Trying ows_rom_id_as_string()... ");
+  char *rias = ows_rom_id_as_string ();
+  PFP ("ok, got \"%s\".\n", rias);
+  free (rias);
+
+  PFP ("\n");
+
   // The one_wire_master_test.c program does a search for alarmed slaves.
   // Uncomment this line to cause this slave to consider itself alarmed :)
   ows_alarm = 42;
