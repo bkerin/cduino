@@ -45,7 +45,7 @@
 
   <h2>Cduino vs. Real Time OS</h2>
 
-  Compared to real-time operating systems, cduino is again simpler: it isn't an
+  Compared to real-time operating systems, Cduino is again simpler: it isn't an
   operating system and you get to do the task management yourself.  Since many
   microcontroller applications do exactly one or two things, this usually isn't
   hard.  Cduino avoids using interrupts wherever possible, which means that
@@ -55,12 +55,20 @@
   other low-latency tasks, maybe you should invest another $1 in a second
   microcontroller :)  <p />
 
+  <h2>Cduino vs. Atmel Software Framework</h2>
+
+  I haven't tried the <a href="http://www.atmel.com/tools/avrsoftwareframework.aspx?tab=overview">Atmel Software Framework</a>, but software-wise it looks
+  architecturally similar to Cduino and really nice :)  It's generalized across
+  many Atmel chips (Cduino is ATMega-centric), but doesn't support external
+  hardare (Cduino supports a smattering of Arduino Shields with a particular
+  focus on communication interfaces).
+
   <h2>Cduino as a Reference</h2>
 
   It's reasonable to "use" Cduino simply as a collection of precise, tested
-  recipes that describe how to use various hardware features.  The source code
-  is carefully commented and linked from the API documentation.  When the
-  hardware requires something surprising, there are explanatory comments.<p />
+  recipes that describe how to use various hardware.  The source code is
+  carefully commented and linked from the API documentation.  When the hardware
+  requires something surprising, there are explanatory comments.<p />
 
 </body>
 
