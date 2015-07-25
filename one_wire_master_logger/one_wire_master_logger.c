@@ -7,8 +7,8 @@
 
 #include "one_wire_master.h"
 #include "one_wire_master_logger.h"
-// FIXME: remove after debugged:
-#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
+// This next line may be useful for debugging:
+//#define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 
 void

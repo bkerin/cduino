@@ -53,14 +53,13 @@ main (void)
   PFP ("term_io_init() worked.\n");
   PFP ("\n");
 
+  // Initialize the interface
   PFP ("Trying owml_init()... ");
-  // Initialize the interface, using the OWS_DEFAULT_PART_ID
   owml_init ();
-  // Use this if you want to use an ID that you've loaded into EEPROM:
-  //ows_init (TRUE);   // Initialize the 1-wire interface slave end
   PFP ("ok, it returned.\n");
   PFP ("\n");
 
+  // Send test messages forever
   uint32_t tmn = 1;   // Test Message Number
   for ( ; ; ) {
     PFP ("About to send message \"Message %" PRIu32 "\"...", tmn);
