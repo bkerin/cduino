@@ -2,13 +2,13 @@
 //
 // This program implements a 1-wire slave relay that copies messages
 // received over 1-wire out using term_io.h.  Note that by supplying a
-// different function pointer argument to dows_init() messages can easily
+// different function pointer argument to owsl_init() messages can easily
 // be relayed to a different interface or device.
 //
 // Physically, the test setup should consist of:
 //
 //   * one Arduino acting as the master, and set up as described in
-//     debug_one_wire_master_test.c
+//     one_wire_master_logger_test.c
 //
 //   * a second Arduino running this test program, connected to the first
 //     Arduino via a data line (by default to OWS_PIN DIO_PIN_DIGITAL_2),
@@ -62,14 +62,14 @@ main (void)
   PFP ("term_io_init() worked.\n");
   PFP ("\n");
 
-  PFP ("Trying dows_init()... ");
+  PFP ("Trying owsl_init()... ");
   PFP ("\n");
   // Initialize the interface.  Note that in this case
-  dows_init (dows_relay_via_term_io);
+  owsl_init (owsl_relay_via_term_io);
   // Use this if you want to use an ID that you've loaded into EEPROM:
   //ows_init (TRUE);   // Initialize the 1-wire interface slave end
   // FIXME: ultimately we probably want _init and the listener function to
-  // be seperate.  As it is dows_init() doesn't return so we dont see this:
+  // be seperate.  As it is owsl_init() doesn't return so we dont see this:
   PFP ("ok, it returned, we should be relaying messages now...\n");
 
 }

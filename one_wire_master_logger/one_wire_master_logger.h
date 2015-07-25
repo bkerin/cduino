@@ -3,7 +3,7 @@
 // Test driver: one_wire_master_logger_test.c    Implementation: one_wire_master_logger.c
 //
 // This module is intended to be used to get log message out of a
-// 1-wire device.  It's probably most useful for devices that lacks most
+// 1-wire device.  It's probably most useful for devices that lack most
 // communication interfaces.  Only one data wire (and ground and power
 // leads) is required.  At the other end of the line there should be an
 // Arduino running the one_wire_slave_logger.h interface.  That Arduino
@@ -56,8 +56,5 @@ owml_init (void);
 int
 owml_printf (char const *format, ...)
   __attribute__ ((format (printf, 1, 2)));   // For printf format warnings
-
-// FIXME: WORK POINT: in process of renaming still have to change all
-// prefixes in this module and everything in debug_one_wire_slave
 
 #endif // ONE_WIRE_MASTER_LOGGER_H

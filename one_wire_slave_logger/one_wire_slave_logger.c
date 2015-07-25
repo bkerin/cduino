@@ -1,4 +1,4 @@
-// Implementation of the interface described in debug_one_wire_master.h.
+// Implementation of the interface described in one_wire_master_logger.h.
 
 #include <string.h>
 
@@ -27,7 +27,7 @@
   } while ( 0 )
 
 int
-dows_init (int (*message_handler)(char const *message))
+owsl_init (int (*message_handler)(char const *message))
 {
   ows_init (FALSE);
 
@@ -41,12 +41,12 @@ dows_init (int (*message_handler)(char const *message))
 
     // This is the function command code we expect to get from the master
     // to indicate the start of a "printf" transaction.  Note that the
-    // debug_one_wire_master.h must agree to use this value and implement
+    // one_wire_master_logger.h must agree to use this value and implement
     // its end of the transaction protocol.
     uint8_t const printf_function_cmd = 0x44;
 
     if ( cmd != printf_function_cmd ) {
-      return DOWS_RESULT_ERROR_INVALID_FUNCTION_CMD;
+      return OWSL_RESULT_ERROR_INVALID_FUNCTION_CMD;
     }
 
     // CRC (initial value as specified for _crc16_update() from AVR libc)
@@ -58,7 +58,7 @@ dows_init (int (*message_handler)(char const *message))
     crc = _crc16_update (crc, ml);
 
     // Read the message itself from master
-    char message_buffer[DOWS_MAX_MESSAGE_LENGTH + 1];
+    char message_buffer[OWSL_MAX_MESSAGE_LENGTH + 1];
     for ( uint8_t ii = 0 ; ii < ml ; ii++ ) {
       CPMF (ows_read_byte (((uint8_t *) message_buffer) + ii));
       crc = _crc16_update (crc, (uint8_t) (message_buffer[ii]));
@@ -70,7 +70,7 @@ dows_init (int (*message_handler)(char const *message))
     uint16_t received_crc
       = ((uint16_t) crc_hb << BITS_PER_BYTE) | ((uint16_t) crc_lb);
     if ( crc != received_crc ) {
-      return DOWS_RESULT_ERROR_CRC_MISMATCH;
+      return OWSL_RESULT_ERROR_CRC_MISMATCH;
     }
 
     // At this point we become busy handling the message that the master has
@@ -106,11 +106,10 @@ arm_jgur:
     jgur = TRUE;
   }
 
-
 }
 
 int
-dows_relay_via_term_io (char const *message)
+owsl_relay_via_term_io (char const *message)
 {
   int cp = printf ("%s", message);
   if ( cp < 0 ) {

@@ -6,11 +6,11 @@
 include run_screen.mk
 
 # It's convenient to have both a master and a slave connected at the same
-# time, so we can test our debug_one_wire_master and debug_one_wire_slave
+# time, so we can test our one_wire_master_logger and one_wire_slave_logger
 # implementations together.  To support that, we have to use a different
 # port for the second Arduino, and not depend on autodetection.  Our build
 # system then requires us to specify all of these options.  Note that there
-# are some similar variables in the Makefile for the debug_one_wire_master
+# are some similar variables in the Makefile for the one_wire_master_logger
 # module which must be uncommented and set correctly as well.  Note also that
 # the port device file assigned to a given Arduino can depend on the order
 # in which it was plugged in, and on other devices present on USB.  In my
