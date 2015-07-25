@@ -16,7 +16,7 @@ include run_screen.mk
 # the Arduinos and doing ls /dev to see which files appear/dissapear.
 ARDUINO_PORT = /dev/ttyACM1
 ARDUINO_BAUD = 115200
-ARDUINO_BOOTLOADER=optiboot_atmega328.hex
+ARDUINO_BOOTLOADER = optiboot_atmega328.hex
 
 # This line must be uncommented to ensure that people using this module know
 # that some variables are being locked into user registers.  See the reference
