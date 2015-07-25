@@ -10,8 +10,8 @@
 // then relays or stores messages somehow (via its USB-to-serial interface
 // using term_io.h for example).
 
-#ifndef DEBUG_ONE_WIRE_MASTER_H
-#define DEBUG_ONE_WIRE_MASTER_H
+#ifndef ONE_WIRE_MASTER_LOGGER_H
+#define ONE_WIRE_MASTER_LOGGER_H
 
 // See the notes in the Makefile for this module for details about why we
 // require variable from the OWM_* namespace to be set here.
@@ -57,4 +57,6 @@ int
 dowm_printf (char const *format, ...)
   __attribute__ ((format (printf, 1, 2)));   // For printf format warnings
 
-#endif // DEBUG_ONE_WIRE_MASTER_H
+// FIXME: WORK POINT: in process of renaming still have to change all prefixes in this module and everything in debug_one_wire_slave
+
+#endif // ONE_WIRE_MASTER_LOGGER_H
