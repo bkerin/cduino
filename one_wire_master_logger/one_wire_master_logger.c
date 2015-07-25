@@ -12,7 +12,7 @@
 #include "term_io.h"
 
 void
-dowm_init (void)
+owml_init (void)
 {
   owm_init ();
 }
@@ -20,7 +20,7 @@ dowm_init (void)
 // FIXME: error propagationin this module hasn't been considered
 
 int
-dowm_printf (char const *format, ...)
+owml_printf (char const *format, ...)
 {
   char message_buffer[DOWM_MAX_MESSAGE_LENGTH + 1];
 

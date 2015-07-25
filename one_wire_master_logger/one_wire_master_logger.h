@@ -40,7 +40,7 @@
 
 // Initialize (or reinitialize) the 1-wire network to be used.
 void
-dowm_init (void);
+owml_init (void);
 
 // This is the maximum message length allowed (odwn_printf() allocates a
 // buffer about this size, in addition to the RAM the format string uses...).
@@ -54,9 +54,10 @@ dowm_init (void);
 // character printed is returned, on error an assertion violation is produced
 // or a negative value is returned.  FIXME: maybe do one or the other?
 int
-dowm_printf (char const *format, ...)
+owml_printf (char const *format, ...)
   __attribute__ ((format (printf, 1, 2)));   // For printf format warnings
 
-// FIXME: WORK POINT: in process of renaming still have to change all prefixes in this module and everything in debug_one_wire_slave
+// FIXME: WORK POINT: in process of renaming still have to change all
+// prefixes in this module and everything in debug_one_wire_slave
 
 #endif // ONE_WIRE_MASTER_LOGGER_H
