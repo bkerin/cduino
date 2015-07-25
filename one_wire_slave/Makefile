@@ -18,18 +18,6 @@ ARDUINO_PORT = /dev/ttyACM1
 ARDUINO_BAUD = 115200
 ARDUINO_BOOTLOADER = optiboot_atmega328.hex
 
-# This line must be uncommented to ensure that people using this module know
-# that some variables are being locked into user registers.  See the reference
-# to OWS_REGISTER_LOCKING_ACKNOWLEDGED in one_wire_slave.h for details.
-#CPPFLAGS += -DOWS_REGISTER_LOCKING_ACKNOWLEDGED
-
-# Because some variables are being locked into particular registers in
-# one_wire_slave.c, we have to ensure that the rest of program (i.e. code in
-# other source files) knows about this.  These options provide the required
-# voodoo (see the GCC manual "Defining Global Register Variables" section
-# for details).
-CFLAGS += -ffixed-r2 -ffixed-r3 -ffixed-r4 -ffixed-r5
-
 # Uncomment for testing with my particular non-arduino slave breadboard build
 #ENABLE_NON_ARDUINO_OVERRIDES = defined
 
@@ -68,6 +56,14 @@ endif
 AVRLIBC_PRINTF_LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
 include generic.mk
+
+# This line must be uncommented to ensure that people using this
+# module know that some variables are being locked into user registers,
+# requireing particular CFLAGS to be supplied to all source files which
+# call into this interface (directly on indirectly).  See the reference to
+# OWS_REGISTER_LOCKING_ACKNOWLEDGED in one_wire_slave.h for details.
+#CPPFLAGS += -DOWS_REGISTER_LOCKING_ACKNOWLEDGED
+CFLAGS += -ffixed-r2 -ffixed-r3 -ffixed-r4 -ffixed-r5
 
 # The one_wire_slave.h interface requires this to be defined at compile time.
 CPPFLAGS += -DOWS_PIN=DIO_PIN_DIGITAL_2

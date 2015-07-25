@@ -25,20 +25,9 @@ ARDUINO_BOOTLOADER = optiboot_atmega328.hex
 include generic.mk
 
 # The one_wire_slave.h interface requires us to explicitly acknowledge that
-# weird register use is required.
-#
-# FIXME: the addition to CPPFLAGS and CFLAGS could presumably go
-# after include of generic.mk in one_wire_slave module, and this would be
-# the more typical way to do it I think, since we normally only put things
-# that are supposed to prevent default assignments before that inluce.  Also,
-# above assignment to BOOTLOADER should get spaces around the equal, I think.
-# Also, we should mention around the OWS_REGISTER_USE_ACKNOWLEDGED commands
-# that any module using one_wire_slave will have to set CFLAGS to include
-# the -ffixed-r2, -ffixed-r2 etc. options, and maybe change the name of
-# that variable.
-# FIXME: also the ACK here shouldn't be enabled by default
+# register locking is being used and weird CFLAGS are required.
+#CPPFLAGS += -DOWS_REGISTER_LOCKING_ACKNOWLEDGED
 CFLAGS += -ffixed-r2 -ffixed-r3 -ffixed-r4 -ffixed-r5
-CPPFLAGS += -DOWS_REGISTER_LOCKING_ACKNOWLEDGED
 
 # The one_wire_slave module requires a sufficiently fast timer1.
 CPPFLAGS += -DTIMER1_STOPWATCH_PRESCALER_DIVIDER=8
