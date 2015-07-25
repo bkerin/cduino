@@ -61,11 +61,27 @@ Cduino:
   where <code>some_module</code> is the one that already comes closest to doing
   what you want.</li>
 
-  <li>Grab code from other modules as needed and mix it in.  Note that you are
+  <li>
+
+  Grab code from other modules as needed and mix it in.  Note that you are
   responsible for keeping track of the dependencies of this additional code.
-  Generally this means checking for included headers and their corresponding
-  source files, which should appear as symbolic links in the other module's
-  subdirectories.</li>
+  Generally this means:
+
+    <ul>
+
+      <li>checking for included headers and their corresponding source files,
+      which should appear as symbolic links in the mixed-in module's
+      subdirectories</li>
+
+      <li>ensuring that any compile-time configuration required for the module
+      you're mixing in happens for your new module.  Most interface headers are
+      written to detect unset configuration variables, but many also use
+      default settings that you may want to be aware of.  Take a look in the
+      Makefile and the interface header for the module being mixed in.</li>
+
+    </ul>
+
+  </li>
 
 </ol>
 
@@ -124,6 +140,9 @@ public use:
   write some random bytes to the beginning of the EEPROM.  This can be used to
   give a part a unique ID (which the ATMega328P normally lacks).  See the
   comments near this target in <code>generic.mk</code> for details.</li>
+
+  <li><code>read_id_from_eeprom</code> -- Use an AVRISPmkII programmer to read
+  an ID previously written with <code>write_random_id_to_eeprom</code>.</li>
 
   <li><code>replace_bootloader</code> -- replace the bootloader on the ATMega
   on the arduino.  This is useful if an upload method that nukes the bootloader
