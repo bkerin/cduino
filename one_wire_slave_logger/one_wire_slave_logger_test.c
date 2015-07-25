@@ -41,11 +41,6 @@
 // See the definition of this macro in util.h to understand why its here.
 WATCHDOG_TIMER_MCUSR_MANTRA
 
-// FIXME: we wont need this, better to tell user to just go run the
-// one_wire_slave tests if they get any error return out of init I think.
-#define OWS_CHECK(result)                                        \
-  PFP_ASSERT_SUCCESS (result, ows_result_as_string, result_buf);
-
 int
 main (void)
 {
