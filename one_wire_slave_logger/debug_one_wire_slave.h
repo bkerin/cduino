@@ -10,8 +10,8 @@
 // that can do something useful with the messages received (e.g. echo them
 // to the serial-to-USB device).
 
-#ifndef DEBUG_ONE_WIRE_SLAVE_H
-#define DEBUG_ONE_WIRE_SLAVE_H
+#ifndef ONE_WIRE_SLAVE_LOGGER_H
+#define ONE_WIRE_SLAVE_LOGGER_H
 
 // See the notes in the Makefile for this module for details about why we
 // require variable from the OWS_* namespace to be set here.
@@ -53,4 +53,4 @@ dows_init (int (*message_handler)(char const *message));
 int
 dows_relay_via_term_io (char const *message);
 
-#endif // DEBUG_ONE_WIRE_SLAVE_H
+#endif // ONE_WIRE_SLAVE_LOGGER_H

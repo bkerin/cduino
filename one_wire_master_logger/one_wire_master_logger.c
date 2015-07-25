@@ -22,12 +22,12 @@ owml_init (void)
 int
 owml_printf (char const *format, ...)
 {
-  char message_buffer[DOWM_MAX_MESSAGE_LENGTH + 1];
+  char message_buffer[OWML_MAX_MESSAGE_LENGTH + 1];
 
   va_list ap;
   va_start (ap, format);
   int chars_written
-    = vsnprintf (message_buffer, DOWM_MAX_MESSAGE_LENGTH, format, ap);
+    = vsnprintf (message_buffer, OWML_MAX_MESSAGE_LENGTH, format, ap);
   va_end (ap);
   assert (chars_written >= 0);
 
@@ -41,7 +41,7 @@ owml_printf (char const *format, ...)
   // protocol.
   uint8_t const printf_function_cmd = 0x44;
 
-#if DOWM_TARGET_SLAVE == DOWM_ONLY_SLAVE
+#if OWML_TARGET_SLAVE == OWML_ONLY_SLAVE
 
   uint64_t **rom_ids;
   owr = owm_scan_bus ((uint8_t ***) (&rom_ids));
@@ -60,7 +60,7 @@ owml_printf (char const *format, ...)
 
 #else
 
-  slave_id = __builtin_bswap64 (UINT64_C (DOWM_TARGET_SLAVE));
+  slave_id = __builtin_bswap64 (UINT64_C (OWML_TARGET_SLAVE));
 
   owr = owm_start_transaction (
       OWC_MATCH_ROM_COMMAND,
@@ -78,7 +78,7 @@ owml_printf (char const *format, ...)
   uint16_t crc = 0xffff;
 
   // First part is the message length as a byte.
-  assert (DOWM_MAX_MESSAGE_LENGTH < UINT8_MAX);
+  assert (OWML_MAX_MESSAGE_LENGTH < UINT8_MAX);
   crc = _crc16_update (crc, chars_written);
   _delay_us (ibd_us);
   owm_write_byte ((uint8_t) chars_written);

@@ -22,10 +22,10 @@
 
 // This magic value is used to indicate that the 1-wire line is private
 // and the first slave found on the bus should be the target of communication.
-#define DOWM_ONLY_SLAVE 0x00
+#define OWML_ONLY_SLAVE 0x00
 
-// By default, DOWM_TARGET_SLAVE gets set to DOWM_ONLY_SLAVE.  If
-// DOWM_TARGET_SLAVE is not DOWM_ONLY_SLAVE, it should be set to the 64 bit
+// By default, OWML_TARGET_SLAVE gets set to OWML_ONLY_SLAVE.  If
+// OWML_TARGET_SLAVE is not OWML_ONLY_SLAVE, it should be set to the 64 bit
 // ID of the slave to be targeted (see the Makefile from the one_wire_master
 // module for for examples of the Make options needed to do this).  This lets
 // you add a logger to a 1-wire network with other devices on it.  Note that
@@ -34,8 +34,8 @@
 // doesn't support multiple 1-wire interface instances on different pins
 // (without making copies and using an editor to add "_2" to a bunch of
 // stuff :).
-#ifndef DOWM_TARGET_SLAVE
-#  define DOWM_TARGET_SLAVE DOWM_ONLY_SLAVE
+#ifndef OWML_TARGET_SLAVE
+#  define OWML_TARGET_SLAVE OWML_ONLY_SLAVE
 #endif
 
 // Initialize (or reinitialize) the 1-wire network to be used.
@@ -45,8 +45,8 @@ owml_init (void);
 // This is the maximum message length allowed (odwn_printf() allocates a
 // buffer about this size, in addition to the RAM the format string uses...).
 // This cannot be defined to be greater than or equal to UINT8_MAX.
-#ifndef DOWM_MAX_MESSAGE_LENGTH
-#  define DOWM_MAX_MESSAGE_LENGTH 242
+#ifndef OWML_MAX_MESSAGE_LENGTH
+#  define OWML_MAX_MESSAGE_LENGTH 242
 #endif
 
 // Print (send) a message, and wait for the slave to return an acknowledgement

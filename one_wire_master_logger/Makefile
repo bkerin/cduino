@@ -42,4 +42,4 @@ CPPFLAGS += -DOWM_PIN=DIO_PIN_DIGITAL_2
 # is the default used by the one_wire_slave.h and one_wire_slave_logger.h
 # interfaces (though to be cute and illustrative, the test program Makefile
 # in the one_wire_slave module uses a different value).
-#CPPFLAGS += -DDOWM_TARGET_SLAVE=0x4244444422222218
+#CPPFLAGS += -DOWML_TARGET_SLAVE=0x4244444422222218
