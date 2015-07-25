@@ -1,4 +1,4 @@
-// Test/demo for the debug_one_wire_slave.h interface.
+// Test/demo for the one_wire_slave_logger.h interface.
 //
 // This program implements a 1-wire slave relay that copies messages
 // received over 1-wire out using term_io.h.  Note that by supplying a
@@ -33,7 +33,7 @@
 // from the master.
 //
 
-#include "debug_one_wire_slave.h"
+#include "one_wire_slave_logger.h"
 #define TERM_IO_POLLUTE_NAMESPACE_WITH_DEBUGGING_GOOP
 #include "term_io.h"
 #include "util.h"
