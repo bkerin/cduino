@@ -201,7 +201,7 @@
 // order in which the initialiazation macros do things.
 //
 // When initializing a pin for input, the pin is first set for input, then
-// the internal pullup resistor enabled if requested.  Due to the fact that
+// the internal pull-up resistor enabled if requested.  Due to the fact that
 // the PORTxn bits are recycled and interpreted differently depending on the
 // data direction (as set by the DDxn bits), this order of operations means
 // that the pin might float for a few microseconds (which might possibly
