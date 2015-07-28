@@ -46,7 +46,7 @@ owm_result_as_string (owm_result_t result, char *buf)
   OWC_RELEASE_LINE (OWM_PIN)
 #else
 #  define RELEASE_LINE() \
-  DIO_INIT (pin, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE)
+  DIO_INIT (OWM_PIN, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE)
 #endif
 
 #define DRIVE_LINE_LOW()  OWC_DRIVE_LINE_LOW (OWM_PIN)
