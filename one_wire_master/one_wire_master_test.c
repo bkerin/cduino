@@ -14,8 +14,10 @@
 // pin of the arduino (by default DIO_PIN_DIGITAL_2 -- see the Makefile for
 // this module to change this value).  The D18B20 is required to be powered
 // externally, not using parasite power.  The DS18B20 must be in its default
-// (factory) state.  A 4.7 kohm pull-up resistor must be used on the Arduino
-// side of the wire.  See Figure 5 of the DS18B20 datasheet, revision 042208.
+// (factory) state.  Normally a 4.7 kohm pull-up resistor must be used on
+// the Arduino side of the wire.  See Figure 5 of the DS18B20 datasheet,
+// revision 042208.  You might get away with using the internal pullup
+// instead; see near OWM_USE_INTERNAL_PULLUP in one_wire_master.c for details.
 //
 // Test results are ouput via the term_io.h interface (which is not required
 // by the module itself).  If the USB cable used for programming the Arduino

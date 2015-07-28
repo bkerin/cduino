@@ -107,11 +107,10 @@ owm_result_as_string (owm_result_t result, char *buf);
 #endif
 
 // Intialize the one wire master interface.  All this does is set up the
-// chosen DIO pin.  It starts out set as an input without the internal pull-up
-// enabled.  It would probably be possible to use the internal pull-up on
-// the AVR microcontroller for short-line communication at least, but the
-// datasheet for the part I've used for testing (Maxim DS18B20) calls for a
-// much stronger pull-up, so for simplicity the internal pull-up is disabled.
+// chosen DIO pin.  It starts out set as an input.  If OWM_USE_INTERNAL_PULLUP
+// is defined at compile-time, the internal pullup will be enabled on
+// the pin when it's configured as an input.  See the comments near
+// OWM_USE_INTERNAL_PULLUP in one_wire_master.c for details.
 void
 owm_init (void);
 

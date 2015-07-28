@@ -36,8 +36,19 @@ owm_result_as_string (owm_result_t result, char *buf)
 
 #endif
 
-// Aliases for some operations from one_wire_commoh.h (for readability).
-#define RELEASE_LINE()    OWC_RELEASE_LINE (OWM_PIN)
+// Here we support use of the internal pullup on the IO pin, if requested.
+// This may be convenient for some cases where the wires are short.
+// However, the internal pullup is much weaker than the 4.7 kohm pullup
+// 1-wire normally calls for, so the lengh and number of nodes the network
+// can support will probably be severely limited.
+#ifndef OWM_USE_INTERNAL_PULLUP
+#  define RELEASE_LINE() \
+  OWC_RELEASE_LINE (OWM_PIN)
+#else
+#  define RELEASE_LINE() \
+  DIO_INIT (pin, DIO_INPUT, DIO_ENABLE_PULLUP, DIO_DONT_CARE)
+#endif
+
 #define DRIVE_LINE_LOW()  OWC_DRIVE_LINE_LOW (OWM_PIN)
 #define SAMPLE_LINE()     OWC_SAMPLE_LINE (OWM_PIN)
 #define TICK_DELAY(ticks) OWC_TICK_DELAY (ticks)
