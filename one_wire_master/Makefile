@@ -36,7 +36,7 @@ CPPFLAGS += -DOWM_PIN=DIO_PIN_DIGITAL_2
 # so it can be disabled easily.
 CPPFLAGS += -DOWM_BUILD_RESULT_DESCRIPTION_FUNCTION
 
-# If this is uncommented, the internal pullup resistor on the IO pin
+# If this is uncommented, the internal pull-up resistor on the IO pin
 # will be used, saving you an external 4.7 kohm resistor.  There are
 # significant trade-offs associated with using this: see the comments near
 # OWM_USE_INTERNAL_PULLUP in one_wire_master.c.

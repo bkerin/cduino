@@ -34,7 +34,7 @@
 // especially at slower processor frequencies.
 
 // Release (tri-state) pin.  Note that this does not enable the internal
-// pullup.  See the commends near owm_init() in one_wire_master.h.
+// pull-up.  See the commends near owm_init() in one_wire_master.h.
 #define OWC_RELEASE_LINE(pin) \
   DIO_INIT (pin, DIO_INPUT, DIO_DISABLE_PULLUP, DIO_DONT_CARE)
 

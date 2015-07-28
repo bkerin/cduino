@@ -108,8 +108,8 @@ owm_result_as_string (owm_result_t result, char *buf);
 
 // Intialize the one wire master interface.  All this does is set up the
 // chosen DIO pin.  It starts out set as an input.  If OWM_USE_INTERNAL_PULLUP
-// is defined at compile-time, the internal pullup will be enabled on
-// the pin when it's configured as an input.  See the comments near
+// is defined at compile-time, the internal pull-up will be enabled
+// on the pin when it's configured as an input.  See the comments near
 // OWM_USE_INTERNAL_PULLUP in one_wire_master.c for details.
 void
 owm_init (void);
