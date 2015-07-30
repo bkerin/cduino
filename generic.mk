@@ -649,9 +649,7 @@ endif
 # bootloader some way or other.
 #
 # FIXME: ATmegaBOOT_168_atmega328.hex seems unchanged in latest distribution,
-# but we should autotrack FIXME: by settin (SUT1, SUT0) to (1, 1), we
-# would seem to be stomping a reserved state.  Why not just leave in (1, 0)
-# (meaning slowly rising power)?
+# but we should autotrack
 replace_bootloader: $(ACTUAL_ARDUINO_BOOTLOADER)  binaries_suid_root_stamp
 	$(AVRDUDE) -c avrispmkII -p $(PROGRAMMER_MCU) -P $(AVRISPMKII_PORT) \
                    -e -u \
