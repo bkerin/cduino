@@ -1,4 +1,4 @@
-// Interface to a 16x2 character HD44780 compatible display.
+// Interface to a 16x2 character HD44780.pdf compatible display.
 //
 // Test driver: lcd_test.c    Implementation: lcd.c
 //
@@ -11,9 +11,10 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-// We require clients to set some macros at compile time to specify which pins
-// are being used to control the LCD.  The Makefile in the dio module direcory
-// shows one way to do this.
+// We require clients to set some macros at compile time to specify which
+// pins are being used to control the LCD.  The Makefile in the dio module
+// direcory shows one way to do this.  FIXME: obviously this could benefit
+// from our new pin-object-tubple-macro-thingies.
 #if ! (defined (LCD_RS_INIT) && \
        defined (LCD_RS_SET) && \
        defined (LCD_RS_SET_HIGH) && \
@@ -91,10 +92,10 @@ lcd_scroll_right (void);
 #define LCD_CHARACTER_RIGHT_ARROW 0x7E
 #define LCD_CHARACTER_LEFT_ARROW 0x7F
 
-// Messages that are longer than this will probably be truncated.  The HD4470
-// spec guarantees only 80 eight bit characters of RAM.  I'm not sure
-// if you can put them all on one line or not, so we allow half of that.
-// There may be some even tighter limitation of which I'm not aware.
+// Messages that are longer than this will probably be truncated.
+// The HD44780.pdf spec guarantees only 80 eight bit characters of RAM.
+// I'm not sure if you can put them all on one line or not, so we allow half
+// of that.  There may be some even tighter limitation of which I'm not aware.
 #define LCD_MAX_MESSAGE_LENGTH 40
 
 // Write a single character to the LCD at the current cursor position.
