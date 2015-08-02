@@ -33,6 +33,7 @@ SHELL= /bin/bash
 
 WEB_SSH := brittonk@box201.bluehost.com
 WEB_ROOT := public_html/cduino
+WEB_BASE_URL := http://brittonkerin.com/cduino/
 
 # Set up a new module (create directory and install minimum requires sym links
 # and minimal Makefile).  The make variable NEW_MODULE_NAME must be set
@@ -66,7 +67,7 @@ build_all_test_programs: MODULE_DIRS = \
 build_all_test_programs: ACK_DEFINES = \
   -DDIO_PB6_PB7_PC6_MACROS_UNTESTED_ACKNOWLEDGED \
   -DDIO_PB5_PD0_PD1_WEAK_LOW_470_KOHM_CONDITIONS_UNTESTED_ACKNOWLEDGED \
-  -DOWS_REGISTER_USE_ACKNOWLEDGED
+  -DOWS_REGISTER_LOCKING_ACKNOWLEDGED
 build_all_test_programs:
 	# Because many targets normally do a full rebuild of all the tests, we
 	# support this envirnoment variable which can be used to circumvent our
@@ -257,7 +258,8 @@ xlinked_source_html:
 	rm $@/*.[ch]
 	rm $@/tags
 
-# FIXME: this should run checklink script after install
+# FIXME: WORK POINT: check that this link checking works, and maybe reformat
+# the long line it has in it
 # Note this doesn't nuke old pages with different names.
 .PHONY: upload_html
 upload_html: git_push xlinked_source_html check_api_doc_completeness
@@ -265,6 +267,16 @@ upload_html: git_push xlinked_source_html check_api_doc_completeness
 	ssh $(WEB_SSH) rm -rf '$(WEB_ROOT)/xlinked_source_html/'
 	scp -r xlinked_source_html $(WEB_SSH):$(WEB_ROOT)
 	ssh $(WEB_SSH) ln -s --force home_page.html $(WEB_ROOT)/index.html
+	# Note that this link checking stuff has some manual excludes for
+	# broken web sites.
+	checklink \
+          $(addprefix $(WEB_BASE_URL)/, $(shell ls -1 *.html)) \
+          --exclude='www\.st\.com\/web\/catalog' | \
+          grep --silent 'Valid links\.'
+	checklink \
+          $(addprefix $(WEB_BASE_URL)/, $(shell ls -1 xlinked_source_html/*.html)) \
+          --exclude='www\.st\.com\/web\/catalog' | \
+          grep --silent 'Valid links\.'
 
 # Make a release targzball.  The make variable VERSION must be set (probably
 # from the command line, e.g. make targzball VERSION=0.42.42').
