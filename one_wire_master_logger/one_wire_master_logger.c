@@ -17,7 +17,7 @@ owml_init (void)
   owm_init ();
 }
 
-// FIXME: error propagationin this module hasn't been considered
+// FIXME: WORK POINT: error propagationin this module hasn't been considered
 
 int
 owml_printf (char const *format, ...)
