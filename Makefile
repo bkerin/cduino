@@ -123,6 +123,7 @@ clean_all_modules:
 git_push: build_all_test_programs clean_all_modules
 	! (git status | grep 'Changed but not updated:')
 	! (git status | grep 'Changes to be committed:')
+	! (git status | grep 'Changes not staged for commit:')
 	git push origin master
 	$(MAKE) list_not_autobuildable_test_program_markers
 
